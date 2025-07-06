@@ -7,8 +7,8 @@
                             data-kt-swapper="true" data-kt-swapper-mode="prepend"
                             data-kt-swapper-parent="{default: '#kt_content_container', lg: '#kt_header_container'}">
                             <!--begin::Heading-->
-                            <h1 class="d-flex flex-column text-gray-900 fw-bold my-0 fs-1">Hello, Paul
-                                <small class="text-muted fs-6 fw-semibold pt-1">You’ve got 24 New Sales</small>
+                            <h1 class="d-flex flex-column text-gray-900 fw-bold my-0 fs-1">Olá, Bruno Rangel
+                                <small class="text-muted fs-6 fw-semibold pt-1">Você está logado no sistema</small>
                             </h1>
                             <!--end::Heading-->
                         </div>
@@ -67,7 +67,7 @@
                                     <!--end::Icon-->
                                     <!--begin::Input-->
                                     <input type="text" class="form-control bg-transparent ps-13 fs-7 h-40px"
-                                        name="search" value="" placeholder="Quick Search"
+                                        name="search" value="" placeholder="Busca rápida"
                                         data-kt-search-element="input" />
                                     <!--end::Input-->
                                     <!--begin::Spinner-->
@@ -389,7 +389,7 @@
                                             <!--begin::Heading-->
                                             <div class="d-flex flex-stack fw-semibold mb-4">
                                                 <!--begin::Label-->
-                                                <span class="text-muted fs-6 me-2">Recently Searched:</span>
+                                                <span class="text-muted fs-6 me-2">Busca Recente:</span>
                                                 <!--end::Label-->
                                                 <!--begin::Toolbar-->
                                                 <div class="d-flex" data-kt-search-element="toolbar">
@@ -431,147 +431,13 @@
                                                     <!--begin::Title-->
                                                     <div class="d-flex flex-column">
                                                         <a href="#"
-                                                            class="fs-6 text-gray-800 text-hover-primary fw-semibold">BoomApp
-                                                            by Keenthemes</a>
+                                                            class="fs-6 text-gray-800 text-hover-primary fw-semibold">Tela de Arquivo</a>
                                                         <span class="fs-7 text-muted fw-semibold">#45789</span>
                                                     </div>
                                                     <!--end::Title-->
                                                 </div>
                                                 <!--end::Item-->
-                                                <!--begin::Item-->
-                                                <div class="d-flex align-items-center mb-5">
-                                                    <!--begin::Symbol-->
-                                                    <div class="symbol symbol-40px me-4">
-                                                        <span class="symbol-label bg-light">
-                                                            <i class="ki-duotone ki-chart-simple fs-2 text-primary">
-                                                                <span class="path1"></span>
-                                                                <span class="path2"></span>
-                                                                <span class="path3"></span>
-                                                                <span class="path4"></span>
-                                                            </i>
-                                                        </span>
-                                                    </div>
-                                                    <!--end::Symbol-->
-                                                    <!--begin::Title-->
-                                                    <div class="d-flex flex-column">
-                                                        <a href="#"
-                                                            class="fs-6 text-gray-800 text-hover-primary fw-semibold">"Kept
-                                                            API Project Meeting</a>
-                                                        <span class="fs-7 text-muted fw-semibold">#84050</span>
-                                                    </div>
-                                                    <!--end::Title-->
-                                                </div>
-                                                <!--end::Item-->
-                                                <!--begin::Item-->
-                                                <div class="d-flex align-items-center mb-5">
-                                                    <!--begin::Symbol-->
-                                                    <div class="symbol symbol-40px me-4">
-                                                        <span class="symbol-label bg-light">
-                                                            <i class="ki-duotone ki-chart fs-2 text-primary">
-                                                                <span class="path1"></span>
-                                                                <span class="path2"></span>
-                                                            </i>
-                                                        </span>
-                                                    </div>
-                                                    <!--end::Symbol-->
-                                                    <!--begin::Title-->
-                                                    <div class="d-flex flex-column">
-                                                        <a href="#"
-                                                            class="fs-6 text-gray-800 text-hover-primary fw-semibold">"KPI
-                                                            Monitoring App Launch</a>
-                                                        <span class="fs-7 text-muted fw-semibold">#84250</span>
-                                                    </div>
-                                                    <!--end::Title-->
-                                                </div>
-                                                <!--end::Item-->
-                                                <!--begin::Item-->
-                                                <div class="d-flex align-items-center mb-5">
-                                                    <!--begin::Symbol-->
-                                                    <div class="symbol symbol-40px me-4">
-                                                        <span class="symbol-label bg-light">
-                                                            <i class="ki-duotone ki-chart-line-down fs-2 text-primary">
-                                                                <span class="path1"></span>
-                                                                <span class="path2"></span>
-                                                            </i>
-                                                        </span>
-                                                    </div>
-                                                    <!--end::Symbol-->
-                                                    <!--begin::Title-->
-                                                    <div class="d-flex flex-column">
-                                                        <a href="#"
-                                                            class="fs-6 text-gray-800 text-hover-primary fw-semibold">Project
-                                                            Reference FAQ</a>
-                                                        <span class="fs-7 text-muted fw-semibold">#67945</span>
-                                                    </div>
-                                                    <!--end::Title-->
-                                                </div>
-                                                <!--end::Item-->
-                                                <!--begin::Item-->
-                                                <div class="d-flex align-items-center mb-5">
-                                                    <!--begin::Symbol-->
-                                                    <div class="symbol symbol-40px me-4">
-                                                        <span class="symbol-label bg-light">
-                                                            <i class="ki-duotone ki-sms fs-2 text-primary">
-                                                                <span class="path1"></span>
-                                                                <span class="path2"></span>
-                                                            </i>
-                                                        </span>
-                                                    </div>
-                                                    <!--end::Symbol-->
-                                                    <!--begin::Title-->
-                                                    <div class="d-flex flex-column">
-                                                        <a href="#"
-                                                            class="fs-6 text-gray-800 text-hover-primary fw-semibold">"FitPro
-                                                            App Development</a>
-                                                        <span class="fs-7 text-muted fw-semibold">#84250</span>
-                                                    </div>
-                                                    <!--end::Title-->
-                                                </div>
-                                                <!--end::Item-->
-                                                <!--begin::Item-->
-                                                <div class="d-flex align-items-center mb-5">
-                                                    <!--begin::Symbol-->
-                                                    <div class="symbol symbol-40px me-4">
-                                                        <span class="symbol-label bg-light">
-                                                            <i class="ki-duotone ki-bank fs-2 text-primary">
-                                                                <span class="path1"></span>
-                                                                <span class="path2"></span>
-                                                            </i>
-                                                        </span>
-                                                    </div>
-                                                    <!--end::Symbol-->
-                                                    <!--begin::Title-->
-                                                    <div class="d-flex flex-column">
-                                                        <a href="#"
-                                                            class="fs-6 text-gray-800 text-hover-primary fw-semibold">Shopix
-                                                            Mobile App</a>
-                                                        <span class="fs-7 text-muted fw-semibold">#45690</span>
-                                                    </div>
-                                                    <!--end::Title-->
-                                                </div>
-                                                <!--end::Item-->
-                                                <!--begin::Item-->
-                                                <div class="d-flex align-items-center mb-5">
-                                                    <!--begin::Symbol-->
-                                                    <div class="symbol symbol-40px me-4">
-                                                        <span class="symbol-label bg-light">
-                                                            <i class="ki-duotone ki-chart-line-down fs-2 text-primary">
-                                                                <span class="path1"></span>
-                                                                <span class="path2"></span>
-                                                            </i>
-                                                        </span>
-                                                    </div>
-                                                    <!--end::Symbol-->
-                                                    <!--begin::Title-->
-                                                    <div class="d-flex flex-column">
-                                                        <a href="#"
-                                                            class="fs-6 text-gray-800 text-hover-primary fw-semibold">"Landing
-                                                            UI Design" Launch</a>
-                                                        <span class="fs-7 text-muted fw-semibold">#24005</span>
-                                                    </div>
-                                                    <!--end::Title-->
-                                                </div>
-                                                <!--end::Item-->
+                                                
                                             </div>
                                             <!--end::Items-->
                                         </div>
