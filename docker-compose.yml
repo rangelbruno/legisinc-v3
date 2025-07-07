@@ -6,7 +6,7 @@ services:
       args:
         USER_ID: ${USER_ID:-1000}
         GROUP_ID: ${GROUP_ID:-1000}
-    container_name: laravel-app
+    container_name: legisinc-app
     restart: unless-stopped
     working_dir: /var/www/html
     volumes:
@@ -15,7 +15,7 @@ services:
       - ./storage:/var/www/html/storage
       - ./bootstrap/cache:/var/www/html/bootstrap/cache
     ports:
-      - "8090:80"
+      - "8000:80"
       - "8443:443"
     environment:
       - APP_ENV=local

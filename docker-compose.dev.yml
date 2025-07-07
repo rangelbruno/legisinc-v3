@@ -6,7 +6,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: laravel-app-dev
+    container_name: legisinc-app-dev
     restart: unless-stopped
     working_dir: /var/www/html
     volumes:
@@ -14,8 +14,8 @@ services:
       - ./docker/php/php.ini:/usr/local/etc/php/php.ini
       - vendor:/var/www/html/vendor
     ports:
-      - "80:80"
-      - "443:443"
+      - "3001:80"
+      - "3444:443"
     environment:
       - APP_ENV=local
       - APP_DEBUG=true

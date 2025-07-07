@@ -5,7 +5,7 @@
 # Variáveis
 COMPOSE_FILE = docker-compose.yml
 COMPOSE_DEV_FILE = docker-compose.dev.yml
-APP_CONTAINER = laravel-app
+APP_CONTAINER = legisinc-app
 
 # Comandos padrão
 help: ## Exibe esta ajuda
