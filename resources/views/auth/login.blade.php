@@ -40,7 +40,8 @@
                     <div class="w-lg-500px p-10">
                         <!--begin::Form-->
                         <form class="form w-100" novalidate="novalidate" id="kt_sign_in_form"
-                            data-kt-redirect-url="index.html" action="#">
+                            method="POST" action="{{ route('auth.login') }}">
+                            @csrf
                             <!--begin::Heading-->
                             <div class="text-center mb-11">
                                 <!--begin::Title-->
@@ -51,11 +52,23 @@
                                 <!--end::Subtitle=-->
                             </div>
                             <!--begin::Heading-->
+                            
+                            @if (session('success'))
+                                <div class="alert alert-success mb-8">
+                                    {{ session('success') }}
+                                </div>
+                            @endif
+                            
+                            @if ($errors->has('email'))
+                                <div class="alert alert-danger mb-8">
+                                    {{ $errors->first('email') }}
+                                </div>
+                            @endif
                             <!--begin::Input group=-->
                             <div class="fv-row mb-8">
                                 <!--begin::Email-->
                                 <input type="text" placeholder="Email" name="email" autocomplete="off"
-                                    class="form-control bg-transparent" />
+                                    class="form-control bg-transparent" value="{{ old('email') }}" />
                                 <!--end::Email-->
                             </div>
                             <!--end::Input group=-->
@@ -90,7 +103,7 @@
                             <!--end::Submit button-->
                             <!--begin::Sign up-->
                             <div class="text-gray-500 text-center fw-semibold fs-6">Not a Member yet?
-                                <a href="authentication/layouts/corporate/sign-up.html" class="link-primary">Sign up</a>
+                                <a href="{{ route('auth.register') }}" class="link-primary">Sign up</a>
                             </div>
                             <!--end::Sign up-->
                         </form>
@@ -217,6 +230,15 @@
                     <!--end::Text-->
                 </div>
                 <!--end::Content-->
+                
+                <!--begin::API Status Indicator-->
+                <div class="position-absolute bottom-0 end-0 me-8 mb-8">
+                    <div class="d-flex align-items-center bg-dark bg-opacity-50 rounded-pill px-3 py-2">
+                        <div id="api-status-indicator" class="rounded-circle me-2" style="width: 12px; height: 12px; background-color: #6c757d;"></div>
+                        <span class="text-white fs-7 fw-semibold" id="api-status-text">Verificando API...</span>
+                    </div>
+                </div>
+                <!--end::API Status Indicator-->
             </div>
             <!--end::Aside-->
         </div>
@@ -227,7 +249,109 @@
     <!--begin::Javascript-->
     <script src="{{ asset('assets/plugins/global/plugins.bundle.js') }}"></script>
     <script src="{{ asset('assets/js/scripts.bundle.js') }}"></script>
-    <script src="{{ asset('assets/js/custom/authentication/sign-in/general.js') }}"></script>
+    
+    <!--begin::API Status Script-->
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const statusIndicator = document.getElementById('api-status-indicator');
+        const statusText = document.getElementById('api-status-text');
+        
+        // Cores para os diferentes status
+        const colors = {
+            checking: '#6c757d',  // Cinza
+            online: '#28a745',    // Verde
+            offline: '#dc3545',   // Vermelho
+            warning: '#ffc107'    // Amarelo
+        };
+        
+        // Textos para os diferentes status
+        const texts = {
+            checking: 'Verificando API...',
+            online: 'API Online',
+            offline: 'API Offline',
+            warning: 'API com Problemas'
+        };
+        
+        // Função para atualizar o status visual
+        function updateStatus(status) {
+            statusIndicator.style.backgroundColor = colors[status];
+            statusText.textContent = texts[status];
+            
+            // Adicionar animação de pulso para status checking
+            if (status === 'checking') {
+                statusIndicator.style.animation = 'pulse 2s infinite';
+            } else {
+                statusIndicator.style.animation = 'none';
+            }
+        }
+        
+        // Função para verificar o status da API
+        async function checkApiStatus() {
+            try {
+                updateStatus('checking');
+                
+                // Tentar endpoint de health check da API
+                const response = await fetch('/api-test/health', {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    },
+                    timeout: 5000
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    if (data.success && data.healthy) {
+                        updateStatus('online');
+                    } else {
+                        updateStatus('warning');
+                    }
+                } else {
+                    updateStatus('offline');
+                }
+            } catch (error) {
+                console.warn('API Status Check Error:', error);
+                updateStatus('offline');
+            }
+        }
+        
+        // Verificar status imediatamente
+        checkApiStatus();
+        
+        // Verificar status a cada 30 segundos
+        setInterval(checkApiStatus, 30000);
+        
+        // Adicionar tooltip ao indicador
+        statusIndicator.parentElement.title = 'Status da API - Clique para verificar novamente';
+        
+        // Permitir verificação manual clicando no indicador
+        statusIndicator.parentElement.addEventListener('click', function() {
+            checkApiStatus();
+        });
+        
+        // Adicionar estilos CSS para a animação
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes pulse {
+                0% { opacity: 1; transform: scale(1); }
+                50% { opacity: 0.5; transform: scale(1.1); }
+                100% { opacity: 1; transform: scale(1); }
+            }
+            
+            #api-status-indicator {
+                transition: all 0.3s ease;
+            }
+            
+            #api-status-indicator:hover {
+                transform: scale(1.2);
+            }
+        `;
+        document.head.appendChild(style);
+    });
+    </script>
+    <!--end::API Status Script-->
     <!--end::Javascript-->
 </body>
 <!--end::Body-->
