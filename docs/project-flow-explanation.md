@@ -59,11 +59,11 @@ O coração dessa flexibilidade está na abstração do cliente da API.
 graph TD
     subgraph "Aplicação Laravel"
         Controller -->|1. Injeta| ServiceInterface(ApiClientInterface);
-        ServiceProvider[AppServiceProvider] -- "3. Decide com base no .env" --> Client;
+        ServiceProvider[AppServiceProvider] -->|"3. Decide com base no .env"| Client;
     end
 
     subgraph "Contêiner de Serviço"
-        ServiceInterface -- "2. Resolve para" -->|Via AppServiceProvider| Client(NodeApiClient);
+        ServiceInterface -->|"2. Resolve para via AppServiceProvider"| Client(NodeApiClient);
     end
 
     subgraph "Configuração"
@@ -76,8 +76,8 @@ graph TD
         ExternalAPI["Servidor da API Externa (Node.js)"];
     end
 
-    Client -- "Se API_MODE='mock'" --> MockAPI;
-    Client -- "Se API_MODE='external'" --> ExternalAPI;
+    Client -->|"Se API_MODE='mock'"| MockAPI;
+    Client -->|"Se API_MODE='external'"| ExternalAPI;
 ```
 
 ### Como Alternar o Modo da API
