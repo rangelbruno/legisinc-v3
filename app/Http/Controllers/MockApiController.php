@@ -757,4 +757,476 @@ class MockApiController extends Controller
             'parlamentares_reset' => true
         ]);
     }
+    
+    /**
+     * Listar todas as comissões
+     */
+    public function comissoes(Request $request): JsonResponse
+    {
+        $comissoes = $this->getDefaultComissoes();
+        
+        // Aplicar filtros se fornecidos
+        if ($request->has('tipo')) {
+            $comissoes = array_filter($comissoes, function($comissao) use ($request) {
+                return $comissao['tipo'] === $request->input('tipo');
+            });
+        }
+        
+        if ($request->has('status')) {
+            $comissoes = array_filter($comissoes, function($comissao) use ($request) {
+                return $comissao['status'] === $request->input('status');
+            });
+        }
+        
+        return response()->json([
+            'data' => array_values($comissoes),
+            'meta' => [
+                'total' => count($comissoes),
+                'page' => 1,
+                'per_page' => 50
+            ]
+        ]);
+    }
+    
+    /**
+     * Obter comissão específica
+     */
+    public function getComissao(int $id): JsonResponse
+    {
+        $comissoes = $this->getDefaultComissoes();
+        
+        foreach ($comissoes as $comissao) {
+            if ($comissao['id'] == $id) {
+                return response()->json([
+                    'data' => $comissao
+                ]);
+            }
+        }
+        
+        return response()->json([
+            'error' => 'Comissão não encontrada'
+        ], 404);
+    }
+    
+    /**
+     * Criar nova comissão
+     */
+    public function createComissao(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'nome' => 'required|string|max:200',
+            'tipo' => 'required|string',
+            'finalidade' => 'required|string'
+        ]);
+        
+        if ($validator->fails()) {
+            return response()->json([
+                'error' => 'Validation failed',
+                'details' => $validator->errors()
+            ], 400);
+        }
+        
+        $comissoes = Cache::get('mock_api_comissoes', $this->getDefaultComissoes());
+        
+        $novaComissao = [
+            'id' => count($comissoes) + 1,
+            'nome' => $request->input('nome'),
+            'descricao' => $request->input('descricao', ''),
+            'tipo' => $request->input('tipo'),
+            'status' => $request->input('status', 'ativa'),
+            'presidente' => $request->input('presidente_id') ? $this->getParlamentarById($request->input('presidente_id')) : null,
+            'vice_presidente' => $request->input('vice_presidente_id') ? $this->getParlamentarById($request->input('vice_presidente_id')) : null,
+            'relator' => $request->input('relator_id') ? $this->getParlamentarById($request->input('relator_id')) : null,
+            'membros' => $request->input('membros', []),
+            'total_membros' => count($request->input('membros', [])),
+            'finalidade' => $request->input('finalidade'),
+            'data_criacao' => now()->format('Y-m-d'),
+            'created_at' => now()->toISOString(),
+            'updated_at' => now()->toISOString()
+        ];
+        
+        $comissoes[] = $novaComissao;
+        Cache::put('mock_api_comissoes', $comissoes, now()->addHours(24));
+        
+        return response()->json([
+            'data' => $novaComissao,
+            'message' => 'Comissão criada com sucesso'
+        ], 201);
+    }
+    
+    /**
+     * Atualizar comissão
+     */
+    public function updateComissao(Request $request, int $id): JsonResponse
+    {
+        $comissoes = Cache::get('mock_api_comissoes', $this->getDefaultComissoes());
+        
+        foreach ($comissoes as $index => $comissao) {
+            if ($comissao['id'] == $id) {
+                $comissoes[$index] = array_merge($comissao, $request->all(), [
+                    'updated_at' => now()->toISOString()
+                ]);
+                
+                Cache::put('mock_api_comissoes', $comissoes, now()->addHours(24));
+                
+                return response()->json([
+                    'data' => $comissoes[$index],
+                    'message' => 'Comissão atualizada com sucesso'
+                ]);
+            }
+        }
+        
+        return response()->json([
+            'error' => 'Comissão não encontrada'
+        ], 404);
+    }
+    
+    /**
+     * Deletar comissão
+     */
+    public function deleteComissao(int $id): JsonResponse
+    {
+        $comissoes = Cache::get('mock_api_comissoes', $this->getDefaultComissoes());
+        
+        foreach ($comissoes as $index => $comissao) {
+            if ($comissao['id'] == $id) {
+                unset($comissoes[$index]);
+                $comissoes = array_values($comissoes);
+                
+                Cache::put('mock_api_comissoes', $comissoes, now()->addHours(24));
+                
+                return response()->json([
+                    'message' => 'Comissão deletada com sucesso'
+                ]);
+            }
+        }
+        
+        return response()->json([
+            'error' => 'Comissão não encontrada'
+        ], 404);
+    }
+    
+    /**
+     * Listar comissões por tipo
+     */
+    public function comissoesByTipo(string $tipo): JsonResponse
+    {
+        $comissoes = $this->getDefaultComissoes();
+        
+        $comissoesFiltradas = array_filter($comissoes, function($comissao) use ($tipo) {
+            return $comissao['tipo'] === $tipo;
+        });
+        
+        return response()->json([
+            'data' => array_values($comissoesFiltradas),
+            'meta' => [
+                'tipo' => $tipo,
+                'total' => count($comissoesFiltradas)
+            ]
+        ]);
+    }
+    
+    /**
+     * Listar comissões por status
+     */
+    public function comissoesByStatus(string $status): JsonResponse
+    {
+        $comissoes = $this->getDefaultComissoes();
+        
+        $comissoesFiltradas = array_filter($comissoes, function($comissao) use ($status) {
+            return $comissao['status'] === $status;
+        });
+        
+        return response()->json([
+            'data' => array_values($comissoesFiltradas),
+            'meta' => [
+                'status' => $status,
+                'total' => count($comissoesFiltradas)
+            ]
+        ]);
+    }
+    
+    /**
+     * Obter membros de uma comissão
+     */
+    public function membrosComissao(int $id): JsonResponse
+    {
+        $comissoes = $this->getDefaultComissoes();
+        
+        foreach ($comissoes as $comissao) {
+            if ($comissao['id'] == $id) {
+                return response()->json([
+                    'membros' => $comissao['membros'] ?? [],
+                    'meta' => [
+                        'comissao_id' => $id,
+                        'total_membros' => count($comissao['membros'] ?? [])
+                    ]
+                ]);
+            }
+        }
+        
+        return response()->json([
+            'error' => 'Comissão não encontrada'
+        ], 404);
+    }
+    
+    /**
+     * Obter reuniões de uma comissão
+     */
+    public function reunioesComissao(int $id): JsonResponse
+    {
+        // Dados simulados de reuniões
+        $reunioes = [
+            [
+                'id' => 1,
+                'data' => '2024-01-15',
+                'hora' => '14:00',
+                'local' => 'Sala de Reuniões 1',
+                'pauta' => 'Discussão sobre projeto de lei educacional',
+                'status' => 'realizada'
+            ],
+            [
+                'id' => 2,
+                'data' => '2024-01-22',
+                'hora' => '10:00',
+                'local' => 'Plenário',
+                'pauta' => 'Análise de relatórios técnicos',
+                'status' => 'realizada'
+            ]
+        ];
+        
+        return response()->json([
+            'reunioes' => $reunioes,
+            'meta' => [
+                'comissao_id' => $id,
+                'total_reunioes' => count($reunioes)
+            ]
+        ]);
+    }
+    
+    /**
+     * Buscar comissões
+     */
+    public function searchComissoes(Request $request): JsonResponse
+    {
+        $termo = $request->input('q', '');
+        $comissoes = $this->getDefaultComissoes();
+        
+        if (empty($termo)) {
+            return response()->json([
+                'data' => [],
+                'meta' => ['total' => 0, 'termo' => '']
+            ]);
+        }
+        
+        $comissoesFiltradas = array_filter($comissoes, function($comissao) use ($termo) {
+            return stripos($comissao['nome'], $termo) !== false ||
+                   stripos($comissao['descricao'], $termo) !== false ||
+                   stripos($comissao['finalidade'], $termo) !== false;
+        });
+        
+        return response()->json([
+            'data' => array_values($comissoesFiltradas),
+            'meta' => [
+                'total' => count($comissoesFiltradas),
+                'termo' => $termo
+            ]
+        ]);
+    }
+    
+    /**
+     * Obter estatísticas das comissões
+     */
+    public function estatisticasComissoes(): JsonResponse
+    {
+        $comissoes = $this->getDefaultComissoes();
+        
+        $estatisticas = [
+            'total' => count($comissoes),
+            'ativas' => count(array_filter($comissoes, fn($c) => $c['status'] === 'ativa')),
+            'permanentes' => count(array_filter($comissoes, fn($c) => $c['tipo'] === 'permanente')),
+            'temporarias' => count(array_filter($comissoes, fn($c) => $c['tipo'] === 'temporaria')),
+            'especiais' => count(array_filter($comissoes, fn($c) => $c['tipo'] === 'especial')),
+            'cpi' => count(array_filter($comissoes, fn($c) => $c['tipo'] === 'cpi'))
+        ];
+        
+        return response()->json([
+            'data' => $estatisticas
+        ]);
+    }
+    
+    /**
+     * Obter dados padrão das comissões
+     */
+    private function getDefaultComissoes(): array
+    {
+        return Cache::get('mock_api_comissoes', [
+            [
+                'id' => 1,
+                'nome' => 'Comissão de Educação e Cultura',
+                'descricao' => 'Responsável por analisar projetos relacionados à educação e cultura',
+                'tipo' => 'permanente',
+                'status' => 'ativa',
+                'presidente' => [
+                    'id' => 2,
+                    'nome' => 'Maria Santos Oliveira',
+                    'partido' => 'PSDB'
+                ],
+                'vice_presidente' => null,
+                'relator' => null,
+                'membros' => ['João Silva Santos', 'Maria Santos Oliveira', 'Ana Paula Costa'],
+                'total_membros' => 3,
+                'finalidade' => 'Analisar e emitir pareceres sobre projetos de lei relacionados à educação, cultura, desporto e turismo',
+                'data_criacao' => '2024-01-01',
+                'created_at' => now()->toISOString(),
+                'updated_at' => now()->toISOString()
+            ],
+            [
+                'id' => 2,
+                'nome' => 'Comissão de Saúde e Assistência Social',
+                'descricao' => 'Responsável por analisar projetos relacionados à saúde e assistência social',
+                'tipo' => 'permanente',
+                'status' => 'ativa',
+                'presidente' => [
+                    'id' => 4,
+                    'nome' => 'Ana Paula Costa',
+                    'partido' => 'PSL'
+                ],
+                'vice_presidente' => null,
+                'relator' => null,
+                'membros' => ['Ana Paula Costa', 'Roberto Mendes Lima'],
+                'total_membros' => 2,
+                'finalidade' => 'Analisar e emitir pareceres sobre projetos de lei relacionados à saúde pública e assistência social',
+                'data_criacao' => '2024-01-01',
+                'created_at' => now()->toISOString(),
+                'updated_at' => now()->toISOString()
+            ],
+            [
+                'id' => 3,
+                'nome' => 'Comissão de Finanças e Orçamento',
+                'descricao' => 'Responsável por analisar projetos relacionados às finanças municipais',
+                'tipo' => 'permanente',
+                'status' => 'ativa',
+                'presidente' => [
+                    'id' => 3,
+                    'nome' => 'Carlos Eduardo Pereira',
+                    'partido' => 'MDB'
+                ],
+                'vice_presidente' => [
+                    'id' => 5,
+                    'nome' => 'Roberto Mendes Lima',
+                    'partido' => 'PDT'
+                ],
+                'relator' => null,
+                'membros' => ['Carlos Eduardo Pereira', 'Roberto Mendes Lima', 'João Silva Santos'],
+                'total_membros' => 3,
+                'finalidade' => 'Analisar e emitir pareceres sobre o orçamento municipal e projetos que impactem as finanças públicas',
+                'data_criacao' => '2024-01-01',
+                'created_at' => now()->toISOString(),
+                'updated_at' => now()->toISOString()
+            ],
+            [
+                'id' => 4,
+                'nome' => 'CPI da Transparência Pública',
+                'descricao' => 'Comissão Parlamentar de Inquérito para investigar a transparência nos órgãos públicos',
+                'tipo' => 'cpi',
+                'status' => 'ativa',
+                'presidente' => [
+                    'id' => 1,
+                    'nome' => 'João Silva Santos',
+                    'partido' => 'PT'
+                ],
+                'vice_presidente' => null,
+                'relator' => [
+                    'id' => 2,
+                    'nome' => 'Maria Santos Oliveira',
+                    'partido' => 'PSDB'
+                ],
+                'membros' => ['João Silva Santos', 'Maria Santos Oliveira', 'Carlos Eduardo Pereira'],
+                'total_membros' => 3,
+                'finalidade' => 'Investigar irregularidades na aplicação de recursos públicos e garantir a transparência dos atos administrativos',
+                'data_criacao' => '2024-02-15',
+                'created_at' => now()->toISOString(),
+                'updated_at' => now()->toISOString()
+            ],
+            [
+                'id' => 5,
+                'nome' => 'Comissão Especial de Meio Ambiente',
+                'descricao' => 'Comissão temporária para tratar de questões ambientais urgentes',
+                'tipo' => 'especial',
+                'status' => 'ativa',
+                'presidente' => [
+                    'id' => 5,
+                    'nome' => 'Roberto Mendes Lima',
+                    'partido' => 'PDT'
+                ],
+                'vice_presidente' => null,
+                'relator' => null,
+                'membros' => ['Roberto Mendes Lima', 'Ana Paula Costa'],
+                'total_membros' => 2,
+                'finalidade' => 'Analisar projetos relacionados ao meio ambiente e sustentabilidade urbana',
+                'data_criacao' => '2024-03-01',
+                'created_at' => now()->toISOString(),
+                'updated_at' => now()->toISOString()
+            ]
+        ]);
+    }
+    
+    /**
+     * Helper para buscar parlamentar por ID
+     */
+    private function getParlamentarById(int $id): ?array
+    {
+        $parlamentares = Cache::remember('mock_parlamentares', 3600, function() {
+            return [
+                [
+                    'id' => 1,
+                    'nome' => 'João Silva Santos',
+                    'partido' => 'PT',
+                    'status' => 'ativo',
+                    'cargo' => 'Vereador'
+                ],
+                [
+                    'id' => 2,
+                    'nome' => 'Maria Santos Oliveira',
+                    'partido' => 'PSDB',
+                    'status' => 'ativo',
+                    'cargo' => 'Vereadora'
+                ],
+                [
+                    'id' => 3,
+                    'nome' => 'Carlos Eduardo Pereira',
+                    'partido' => 'MDB',
+                    'status' => 'ativo',
+                    'cargo' => 'Presidente da Câmara'
+                ],
+                [
+                    'id' => 4,
+                    'nome' => 'Ana Paula Costa',
+                    'partido' => 'PSL',
+                    'status' => 'licenciada',
+                    'cargo' => 'Vereadora'
+                ],
+                [
+                    'id' => 5,
+                    'nome' => 'Roberto Mendes Lima',
+                    'partido' => 'PDT',
+                    'status' => 'ativo',
+                    'cargo' => 'Vice-Presidente'
+                ]
+            ];
+        });
+        
+        foreach ($parlamentares as $parlamentar) {
+            if ($parlamentar['id'] == $id) {
+                return [
+                    'id' => $parlamentar['id'],
+                    'nome' => $parlamentar['nome'],
+                    'partido' => $parlamentar['partido']
+                ];
+            }
+        }
+        
+        return null;
+    }
 } 

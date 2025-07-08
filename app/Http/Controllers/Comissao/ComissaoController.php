@@ -216,10 +216,19 @@ class ComissaoController extends Controller
                 return $this->comissaoService->formatForDisplay($comissao);
             });
             
+            $tipoFormatado = match($tipo) {
+                'permanente' => 'Permanentes',
+                'temporaria' => 'Temporárias',
+                'especial' => 'Especiais',
+                'cpi' => 'CPIs',
+                default => ucfirst($tipo)
+            };
+
             return view('modules.comissoes.por-tipo', [
                 'comissoes' => $comissoesFormatadas,
-                'tipo' => ucfirst($tipo),
-                'title' => 'Comissões ' . ucfirst($tipo)
+                'tipo' => $tipo,
+                'tipoFormatado' => $tipoFormatado,
+                'title' => 'Comissões ' . $tipoFormatado
             ]);
             
         } catch (ApiException $e) {

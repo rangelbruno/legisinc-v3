@@ -70,6 +70,9 @@ class SimpleRolesAndPermissionsSeeder extends Seeder
             
             // Comissões
             ['name' => 'comissoes.view', 'guard_name' => 'web'],
+            ['name' => 'comissoes.create', 'guard_name' => 'web'],
+            ['name' => 'comissoes.edit', 'guard_name' => 'web'],
+            ['name' => 'comissoes.delete', 'guard_name' => 'web'],
             ['name' => 'comissoes.participar', 'guard_name' => 'web'],
             ['name' => 'comissoes.presidir', 'guard_name' => 'web'],
             ['name' => 'comissoes.relatar', 'guard_name' => 'web'],
@@ -205,6 +208,9 @@ class SimpleRolesAndPermissionsSeeder extends Seeder
                 'usuarios.create',
                 'usuarios.edit',
                 'comissoes.view',
+                'comissoes.create',
+                'comissoes.edit',
+                'comissoes.delete',
                 'comissoes.participar',
                 'mesa.view',
                 'mesa.gerenciar',

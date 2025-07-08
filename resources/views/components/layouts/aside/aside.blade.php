@@ -131,9 +131,10 @@
                 </div>
                 <!--end:Menu item-->
                 
-                <!--begin:Menu item - Comissões (futuro)-->
-                <div class="menu-item">
-                    <a class="menu-link" href="#" onclick="showComingSoon('Comissões')">
+                <!--begin:Menu item - Comissões-->
+                @can('comissoes.view')
+                <div data-kt-menu-trigger="click" class="menu-item menu-accordion {{ request()->routeIs('comissoes.*') ? 'here show' : '' }}">
+                    <span class="menu-link">
                         <span class="menu-icon">
                             <i class="ki-duotone ki-category fs-2">
                                 <span class="path1"></span>
@@ -143,9 +144,46 @@
                             </i>
                         </span>
                         <span class="menu-title">Comissões</span>
-                        <span class="badge badge-light-warning ms-auto">Em breve</span>
-                    </a>
+                        <span class="menu-arrow"></span>
+                    </span>
+                    <div class="menu-sub menu-sub-accordion">
+                        <div class="menu-item">
+                            <a class="menu-link {{ request()->routeIs('comissoes.index') ? 'active' : '' }}" href="{{ route('comissoes.index') }}">
+                                <span class="menu-bullet">
+                                    <span class="bullet bullet-dot"></span>
+                                </span>
+                                <span class="menu-title">Lista de Comissões</span>
+                            </a>
+                        </div>
+                        @can('comissoes.create')
+                        <div class="menu-item">
+                            <a class="menu-link {{ request()->routeIs('comissoes.create') ? 'active' : '' }}" href="{{ route('comissoes.create') }}">
+                                <span class="menu-bullet">
+                                    <span class="bullet bullet-dot"></span>
+                                </span>
+                                <span class="menu-title">Nova Comissão</span>
+                            </a>
+                        </div>
+                        @endcan
+                        <div class="menu-item">
+                            <a class="menu-link {{ request()->routeIs('comissoes.por-tipo', 'permanente') ? 'active' : '' }}" href="{{ route('comissoes.por-tipo', 'permanente') }}">
+                                <span class="menu-bullet">
+                                    <span class="bullet bullet-dot"></span>
+                                </span>
+                                <span class="menu-title">Permanentes</span>
+                            </a>
+                        </div>
+                        <div class="menu-item">
+                            <a class="menu-link {{ request()->routeIs('comissoes.por-tipo', 'cpi') ? 'active' : '' }}" href="{{ route('comissoes.por-tipo', 'cpi') }}">
+                                <span class="menu-bullet">
+                                    <span class="bullet bullet-dot"></span>
+                                </span>
+                                <span class="menu-title">CPIs</span>
+                            </a>
+                        </div>
+                    </div>
                 </div>
+                @endcan
                 <!--end:Menu item-->
                 
                 <!--begin:Menu item - Relatórios-->

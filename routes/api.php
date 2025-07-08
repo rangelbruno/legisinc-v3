@@ -32,4 +32,21 @@ Route::prefix('mock-api')->group(function () {
     
     // Rotas da mesa diretora
     Route::get('/mesa-diretora', [MockApiController::class, 'mesaDiretora']);
+    
+    // Rotas de comissões
+    Route::get('/comissoes', [MockApiController::class, 'comissoes']);
+    Route::post('/comissoes', [MockApiController::class, 'createComissao']);
+    
+    // Rotas especializadas de comissões (devem vir antes das rotas com parâmetros)
+    Route::get('/comissoes/estatisticas', [MockApiController::class, 'estatisticasComissoes']);
+    Route::get('/comissoes/search', [MockApiController::class, 'searchComissoes']);
+    Route::get('/comissoes/tipo/{tipo}', [MockApiController::class, 'comissoesByTipo']);
+    Route::get('/comissoes/status/{status}', [MockApiController::class, 'comissoesByStatus']);
+    
+    // Rotas com parâmetros ID (devem vir por último)
+    Route::get('/comissoes/{id}', [MockApiController::class, 'getComissao']);
+    Route::put('/comissoes/{id}', [MockApiController::class, 'updateComissao']);
+    Route::delete('/comissoes/{id}', [MockApiController::class, 'deleteComissao']);
+    Route::get('/comissoes/{id}/membros', [MockApiController::class, 'membrosComissao']);
+    Route::get('/comissoes/{id}/reunioes', [MockApiController::class, 'reunioesComissao']);
 }); 
