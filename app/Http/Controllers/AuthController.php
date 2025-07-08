@@ -2,18 +2,14 @@
 
 namespace App\Http\Controllers;
 
-use App\Services\ApiClient\Providers\NodeApiClient;
-use App\Services\ApiClient\Exceptions\ApiException;
+use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 
 class AuthController extends Controller
 {
-    public function __construct(
-        private NodeApiClient $nodeApi
-    ) {}
-
     /**
      * Mostrar página de login
      */
@@ -40,30 +36,21 @@ class AuthController extends Controller
             'password' => 'required|string'
         ]);
 
-        try {
-            $response = $this->nodeApi->login(
-                $request->input('email'),
-                $request->input('password')
-            );
+        $credentials = $request->only('email', 'password');
 
-            if ($response->isSuccess()) {
-                // Armazenar informações do usuário na sessão
-                Session::put('api_authenticated', true);
-                Session::put('api_user', $response->getData());
-                
-                return redirect()->route('dashboard')
-                    ->with('success', 'Login realizado com sucesso!');
-            }
+        if (Auth::attempt($credentials)) {
+            $request->session()->regenerate();
 
-            return back()->withErrors([
-                'email' => 'Credenciais inválidas.'
-            ])->withInput();
+            // Atualizar último acesso
+            Auth::user()->atualizarUltimoAcesso();
 
-        } catch (ApiException $e) {
-            return back()->withErrors([
-                'email' => 'Erro ao conectar com a API: ' . $e->getMessage()
-            ])->withInput();
+            return redirect()->intended(route('dashboard'))
+                ->with('success', 'Login realizado com sucesso!');
         }
+
+        return back()->withErrors([
+            'email' => 'Credenciais inválidas.'
+        ])->withInput();
     }
 
     /**
@@ -74,7 +61,7 @@ class AuthController extends Controller
         // Validação com mensagens personalizadas
         $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|email|max:255',
+            'email' => 'required|email|max:255|unique:users',
             'password' => 'required|string|min:8|confirmed',
             'password_confirmation' => 'required|string'
         ], [
@@ -82,6 +69,7 @@ class AuthController extends Controller
             'name.max' => 'O nome não pode ter mais de 255 caracteres.',
             'email.required' => 'O email é obrigatório.',
             'email.email' => 'Por favor, insira um email válido.',
+            'email.unique' => 'Este email já está cadastrado no sistema.',
             'password.required' => 'A senha é obrigatória.',
             'password.min' => 'A senha deve ter pelo menos 8 caracteres.',
             'password.confirmed' => 'A confirmação de senha não confere.',
@@ -89,50 +77,27 @@ class AuthController extends Controller
         ]);
 
         try {
-            $response = $this->nodeApi->register(
-                $request->input('name'),
-                $request->input('email'),
-                $request->input('password')
-            );
-
-            if ($response->isSuccess()) {
-                return redirect()->route('auth.register')
-                    ->with('success', 'Usuário registrado com sucesso! Seus dados foram salvos no sistema.');
-            }
-
-            // Tratar diferentes tipos de erro da API
-            $errorData = $response->getData();
-            
-            if (isset($errorData['error'])) {
-                $errorMessage = $errorData['error'];
-                
-                // Verificar se é erro de usuário já existente
-                if (str_contains($errorMessage, 'already exists') || str_contains($errorMessage, 'já existe')) {
-                    return back()->withErrors([
-                        'email' => 'Este email já está cadastrado no sistema.'
-                    ])->withInput($request->except('password', 'password_confirmation'));
-                }
-                
-                // Outros erros da API
-                return back()->withErrors([
-                    'email' => 'Erro ao registrar usuário: ' . $errorMessage
-                ])->withInput($request->except('password', 'password_confirmation'));
-            }
-
-            return back()->withErrors([
-                'email' => 'Falha ao registrar usuário. Tente novamente.'
-            ])->withInput($request->except('password', 'password_confirmation'));
-
-        } catch (ApiException $e) {
-            Log::error('Erro na API durante registro', [
-                'error' => $e->getMessage(),
-                'context' => $e->getContext(),
-                'email' => $request->input('email')
+            // Criar usuário com perfil PUBLICO por padrão
+            $user = User::create([
+                'name' => $request->input('name'),
+                'email' => $request->input('email'),
+                'password' => Hash::make($request->input('password')),
+                'ativo' => true,
             ]);
 
-            return back()
-                ->with('error', 'Erro de conexão com a API. Tente novamente em alguns instantes.')
-                ->withInput($request->except('password', 'password_confirmation'));
+            // Atribuir role PUBLICO por padrão
+            $publicRole = \DB::table('roles')->where('name', User::PERFIL_PUBLICO)->first();
+            if ($publicRole) {
+                \DB::table('model_has_roles')->insert([
+                    'role_id' => $publicRole->id,
+                    'model_type' => 'App\\Models\\User',
+                    'model_id' => $user->id,
+                ]);
+            }
+
+            return redirect()->route('auth.register')
+                ->with('success', 'Usuário registrado com sucesso! Você pode fazer login agora.');
+
         } catch (\Exception $e) {
             Log::error('Erro inesperado durante registro', [
                 'error' => $e->getMessage(),
@@ -148,12 +113,12 @@ class AuthController extends Controller
     /**
      * Logout
      */
-    public function logout()
+    public function logout(Request $request)
     {
-        $this->nodeApi->logout();
+        Auth::logout();
         
-        Session::forget('api_authenticated');
-        Session::forget('api_user');
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
         
         return redirect()->route('auth.login')
             ->with('success', 'Logout realizado com sucesso!');

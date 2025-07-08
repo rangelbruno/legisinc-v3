@@ -4,7 +4,7 @@
 <!--begin::Head-->
 
 <head>
-    <title>Meu Template</title>
+    <title>@yield('title', 'Sistema Parlamentar')</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta property="og:locale" content="pt-BR">
@@ -49,7 +49,7 @@
                     <div class="container-xxl" id="kt_content_container">
                         <!--begin::Row-->
                         <div class="row gy-5 g-xl-10">
-                            {{ $slot }}
+                            @yield('content')
                         </div>
                         <!--end::Row-->
                     </div>

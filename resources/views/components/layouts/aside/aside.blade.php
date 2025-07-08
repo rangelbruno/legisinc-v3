@@ -5,7 +5,7 @@
     <!--begin::Brand-->
     <div class="aside-logo flex-column-auto px-9 mb-9" id="kt_aside_logo">
         <!--begin::Logo-->
-        <a href="index.html">
+        <a href="{{ route('dashboard') }}">
             <img alt="Logo" src="assets/media/logos/demo3.svg" class="h-20px logo theme-light-show" />
             <img alt="Logo" src="assets/media/logos/demo3-dark.svg" class="h-20px logo theme-dark-show" />
         </a>
@@ -22,84 +22,231 @@
             <!--begin::Menu-->
             <div class="menu menu-column menu-rounded menu-sub-indention menu-active-bg fw-semibold my-auto"
                 id="#kt_aside_menu" data-kt-menu="true">
-                <!--begin:Menu item-->
-                <div data-kt-menu-trigger="click" class="menu-item here show menu-accordion">
-                    <!--begin:Menu link-->
-                    <span class="menu-link">
+                
+                <!--begin:Menu item - Dashboard-->
+                <div class="menu-item">
+                    <a class="menu-link {{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}">
                         <span class="menu-icon">
-                            <i class="ki-duotone ki-black-right fs-2"></i>
+                            <i class="ki-duotone ki-home fs-2">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                            </i>
                         </span>
-                        <span class="menu-title">Dashboards</span>
-                        <span class="menu-arrow"></span>
-                    </span>
-                    <!--end:Menu link-->
-                    <!--begin:Menu sub-->
-                    <div class="menu-sub menu-sub-accordion">
-                        <!--begin:Menu item-->
-                        <div class="menu-item">
-                            <!--begin:Menu link-->
-                            <a class="menu-link active" href="index.html">
-                                <span class="menu-bullet">
-                                    <span class="bullet bullet-dot"></span>
-                                </span>
-                                <span class="menu-title">Default</span>
-                            </a>
-                            <!--end:Menu link-->
-                        </div>
-                        <!--end:Menu item-->
-                    </div>
-                    <!--end:Menu sub-->
+                        <span class="menu-title">Dashboard</span>
+                    </a>
                 </div>
                 <!--end:Menu item-->
                 
-                <!--begin:Menu item-->
-                <div data-kt-menu-trigger="click" class="menu-item menu-accordion">
-                    <!--begin:Menu link-->
+                <!--begin:Menu item - Parlamentares-->
+                @can('parlamentares.view')
+                <div data-kt-menu-trigger="click" class="menu-item menu-accordion {{ request()->routeIs('parlamentares.*') ? 'here show' : '' }}">
                     <span class="menu-link">
                         <span class="menu-icon">
-                            <i class="ki-duotone ki-black-right fs-2"></i>
+                            <i class="ki-duotone ki-people fs-2">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                                <span class="path3"></span>
+                                <span class="path4"></span>
+                                <span class="path5"></span>
+                            </i>
                         </span>
-                        <span class="menu-title">Help</span>
+                        <span class="menu-title">Parlamentares</span>
                         <span class="menu-arrow"></span>
                     </span>
-                    <!--end:Menu link-->
-                    <!--begin:Menu sub-->
                     <div class="menu-sub menu-sub-accordion">
-                        <!--begin:Menu item-->
                         <div class="menu-item">
-                            <!--begin:Menu link-->
-                            <a class="menu-link" href=""
-                                target="_blank" title="Check out over 200 in-house components" data-bs-toggle="tooltip"
-                                data-bs-trigger="hover" data-bs-dismiss="click" data-bs-placement="right">
+                            <a class="menu-link {{ request()->routeIs('parlamentares.index') ? 'active' : '' }}" href="{{ route('parlamentares.index') }}">
                                 <span class="menu-bullet">
                                     <span class="bullet bullet-dot"></span>
                                 </span>
-                                <span class="menu-title">Components</span>
+                                <span class="menu-title">Lista de Parlamentares</span>
                             </a>
-                            <!--end:Menu link-->
                         </div>
-                        <!--end:Menu item-->
-                        <!--begin:Menu item-->
+                        @can('parlamentares.create')
                         <div class="menu-item">
-                            <!--begin:Menu link-->
-                            <a class="menu-link" href=""
-                                target="_blank" title="Check out the complete documentation" data-bs-toggle="tooltip"
-                                data-bs-trigger="hover" data-bs-dismiss="click" data-bs-placement="right">
+                            <a class="menu-link {{ request()->routeIs('parlamentares.create') ? 'active' : '' }}" href="{{ route('parlamentares.create') }}">
                                 <span class="menu-bullet">
                                     <span class="bullet bullet-dot"></span>
                                 </span>
-                                <span class="menu-title">Documentação</span>
+                                <span class="menu-title">Novo Parlamentar</span>
                             </a>
-                            <!--end:Menu link-->
                         </div>
-                        <!--end:Menu item-->
-                        
+                        @endcan
+                        <div class="menu-item">
+                            <a class="menu-link {{ request()->routeIs('parlamentares.mesa-diretora') ? 'active' : '' }}" href="{{ route('parlamentares.mesa-diretora') }}">
+                                <span class="menu-bullet">
+                                    <span class="bullet bullet-dot"></span>
+                                </span>
+                                <span class="menu-title">Mesa Diretora</span>
+                            </a>
+                        </div>
                     </div>
-                    <!--end:Menu sub-->
+                </div>
+                @endcan
+                <!--end:Menu item-->
+                
+                <!--begin:Menu item - Projetos (futuro)-->
+                <div class="menu-item">
+                    <a class="menu-link" href="#" onclick="showComingSoon('Projetos')">
+                        <span class="menu-icon">
+                            <i class="ki-duotone ki-document fs-2">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                            </i>
+                        </span>
+                        <span class="menu-title">Projetos</span>
+                        <span class="badge badge-light-warning ms-auto">Em breve</span>
+                    </a>
                 </div>
                 <!--end:Menu item-->
+                
+                <!--begin:Menu item - Sessões (futuro)-->
+                <div class="menu-item">
+                    <a class="menu-link" href="#" onclick="showComingSoon('Sessões')">
+                        <span class="menu-icon">
+                            <i class="ki-duotone ki-calendar fs-2">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                            </i>
+                        </span>
+                        <span class="menu-title">Sessões</span>
+                        <span class="badge badge-light-warning ms-auto">Em breve</span>
+                    </a>
+                </div>
+                <!--end:Menu item-->
+                
+                <!--begin:Menu item - Votações (futuro)-->
+                <div class="menu-item">
+                    <a class="menu-link" href="#" onclick="showComingSoon('Votações')">
+                        <span class="menu-icon">
+                            <i class="ki-duotone ki-poll fs-2">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                                <span class="path3"></span>
+                            </i>
+                        </span>
+                        <span class="menu-title">Votações</span>
+                        <span class="badge badge-light-warning ms-auto">Em breve</span>
+                    </a>
+                </div>
+                <!--end:Menu item-->
+                
+                <!--begin:Menu item - Comissões (futuro)-->
+                <div class="menu-item">
+                    <a class="menu-link" href="#" onclick="showComingSoon('Comissões')">
+                        <span class="menu-icon">
+                            <i class="ki-duotone ki-category fs-2">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                                <span class="path3"></span>
+                                <span class="path4"></span>
+                            </i>
+                        </span>
+                        <span class="menu-title">Comissões</span>
+                        <span class="badge badge-light-warning ms-auto">Em breve</span>
+                    </a>
+                </div>
+                <!--end:Menu item-->
+                
+                <!--begin:Menu item - Relatórios-->
+                @can('sistema.relatorios')
+                <div class="menu-item">
+                    <a class="menu-link" href="#" onclick="showComingSoon('Relatórios')">
+                        <span class="menu-icon">
+                            <i class="ki-duotone ki-chart fs-2">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                            </i>
+                        </span>
+                        <span class="menu-title">Relatórios</span>
+                        <span class="badge badge-light-warning ms-auto">Em breve</span>
+                    </a>
+                </div>
+                @endcan
+                <!--end:Menu item-->
+                
+                <!--begin:Menu item - Configurações-->
+                @can('sistema.configuracoes')
+                <div data-kt-menu-trigger="click" class="menu-item menu-accordion">
+                    <span class="menu-link">
+                        <span class="menu-icon">
+                            <i class="ki-duotone ki-setting-2 fs-2">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                            </i>
+                        </span>
+                        <span class="menu-title">Configurações</span>
+                        <span class="menu-arrow"></span>
+                    </span>
+                    <div class="menu-sub menu-sub-accordion">
+                        @can('usuarios.view')
+                        <div class="menu-item">
+                            <a class="menu-link" href="#" onclick="showComingSoon('Gestão de Usuários')">
+                                <span class="menu-bullet">
+                                    <span class="bullet bullet-dot"></span>
+                                </span>
+                                <span class="menu-title">Usuários</span>
+                            </a>
+                        </div>
+                        @endcan
+                        @can('usuarios.manage_permissions')
+                        <div class="menu-item">
+                            <a class="menu-link" href="#" onclick="showComingSoon('Permissões')">
+                                <span class="menu-bullet">
+                                    <span class="bullet bullet-dot"></span>
+                                </span>
+                                <span class="menu-title">Permissões</span>
+                            </a>
+                        </div>
+                        @endcan
+                        <div class="menu-item">
+                            <a class="menu-link" href="#" onclick="showComingSoon('Sistema')">
+                                <span class="menu-bullet">
+                                    <span class="bullet bullet-dot"></span>
+                                </span>
+                                <span class="menu-title">Sistema</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                @endcan
+                <!--end:Menu item-->
+                
+                <!--begin:Menu item - Meu Perfil-->
+                @auth
+                <div class="menu-item">
+                    <a class="menu-link {{ request()->routeIs('user.profile') ? 'active' : '' }}" href="{{ route('user.profile') }}">
+                        <span class="menu-icon">
+                            <i class="ki-duotone ki-profile-circle fs-2">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                                <span class="path3"></span>
+                            </i>
+                        </span>
+                        <span class="menu-title">Meu Perfil</span>
+                    </a>
+                </div>
+                @endauth
+                <!--end:Menu item-->
+                
             </div>
             <!--end::Menu-->
+            
+            <!--begin::Coming Soon Script-->
+            <script>
+            function showComingSoon(feature) {
+                Swal.fire({
+                    title: feature + ' - Em Desenvolvimento',
+                    text: 'Esta funcionalidade está sendo desenvolvida e estará disponível em breve.',
+                    icon: 'info',
+                    confirmButtonText: 'Ok',
+                    customClass: {
+                        confirmButton: 'btn btn-primary'
+                    }
+                });
+            }
+            </script>
+            <!--end::Coming Soon Script-->
         </div>
         <!--end::Aside Menu-->
     </div>

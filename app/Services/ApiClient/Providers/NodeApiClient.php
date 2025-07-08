@@ -129,6 +129,10 @@ class NodeApiClient extends AbstractApiClient
                 '/register' => '/register',
                 '/login' => '/login',
                 '/users' => '/users',
+                '/parlamentares' => '/parlamentares',
+                '/parlamentares/partido' => '/parlamentares/partido',
+                '/parlamentares/status' => '/parlamentares/status',
+                '/mesa-diretora' => '/mesa-diretora',
             ];
             
             return $endpointMap[$endpoint] ?? $endpoint;
@@ -139,6 +143,10 @@ class NodeApiClient extends AbstractApiClient
                 '/register' => $urls[$apiMode]['register'] ?? '/register',
                 '/login' => $urls[$apiMode]['login'] ?? '/login',
                 '/users' => $urls[$apiMode]['users'] ?? '/users',
+                '/parlamentares' => $urls[$apiMode]['parlamentares'] ?? '/parlamentares',
+                '/parlamentares/partido' => $urls[$apiMode]['parlamentares/partido'] ?? '/parlamentares/partido',
+                '/parlamentares/status' => $urls[$apiMode]['parlamentares/status'] ?? '/parlamentares/status',
+                '/mesa-diretora' => $urls[$apiMode]['mesa-diretora'] ?? '/mesa-diretora',
             ];
             
             return $endpointMap[$endpoint] ?? $endpoint;
@@ -291,6 +299,91 @@ class NodeApiClient extends AbstractApiClient
     {
         $endpoint = $this->buildEndpointUrl('/users');
         return $this->delete("{$endpoint}/{$id}");
+    }
+
+    // ============================================================================
+    // MÉTODOS DE PARLAMENTARES
+    // ============================================================================
+
+    /**
+     * Obter todos os parlamentares
+     */
+    public function getParlamentares(array $filters = []): ApiResponse
+    {
+        $endpoint = $this->buildEndpointUrl('/parlamentares');
+        return $this->get($endpoint, $filters);
+    }
+
+    /**
+     * Obter parlamentar específico por ID
+     */
+    public function getParlamentar(int $id): ApiResponse
+    {
+        $endpoint = $this->buildEndpointUrl('/parlamentares');
+        return $this->get("{$endpoint}/{$id}");
+    }
+
+    /**
+     * Criar novo parlamentar
+     */
+    public function createParlamentar(array $data): ApiResponse
+    {
+        $endpoint = $this->buildEndpointUrl('/parlamentares');
+        return $this->post($endpoint, $data);
+    }
+
+    /**
+     * Atualizar parlamentar
+     */
+    public function updateParlamentar(int $id, array $data): ApiResponse
+    {
+        $endpoint = $this->buildEndpointUrl('/parlamentares');
+        return $this->put("{$endpoint}/{$id}", $data);
+    }
+
+    /**
+     * Deletar parlamentar
+     */
+    public function deleteParlamentar(int $id): ApiResponse
+    {
+        $endpoint = $this->buildEndpointUrl('/parlamentares');
+        return $this->delete("{$endpoint}/{$id}");
+    }
+
+    /**
+     * Obter parlamentares por partido
+     */
+    public function getParlamentaresByPartido(string $partido): ApiResponse
+    {
+        $endpoint = $this->buildEndpointUrl('/parlamentares/partido');
+        return $this->get("{$endpoint}/{$partido}");
+    }
+
+    /**
+     * Obter parlamentares por status
+     */
+    public function getParlamentaresByStatus(string $status): ApiResponse
+    {
+        $endpoint = $this->buildEndpointUrl('/parlamentares/status');
+        return $this->get("{$endpoint}/{$status}");
+    }
+
+    /**
+     * Obter mesa diretora
+     */
+    public function getMesaDiretora(): ApiResponse
+    {
+        $endpoint = $this->buildEndpointUrl('/mesa-diretora');
+        return $this->get($endpoint);
+    }
+
+    /**
+     * Obter comissões de um parlamentar
+     */
+    public function getComissoesParlamentar(int $parlamentarId): ApiResponse
+    {
+        $endpoint = $this->buildEndpointUrl('/parlamentares');
+        return $this->get("{$endpoint}/{$parlamentarId}/comissoes");
     }
 
     // ============================================================================

@@ -5,16 +5,30 @@
         <div class="d-flex align-items-center">
             <!--begin::Avatar-->
             <div class="symbol symbol-circle symbol-40px">
-                <img src="assets/media/avatars/300-1.jpg" alt="photo" />
+                @auth
+                    <div class="symbol-label fs-3 fw-bold text-white bg-{{ auth()->user()->getCorPerfil() }}">
+                        {{ auth()->user()->avatar }}
+                    </div>
+                @else
+                    <img src="assets/media/avatars/300-1.jpg" alt="photo" />
+                @endauth
             </div>
             <!--end::Avatar-->
             <!--begin::User info-->
             <div class="ms-2">
                 <!--begin::Name-->
-                <a href="#" class="text-gray-800 text-hover-primary fs-6 fw-bold lh-1">Bruno Rangel</a>
+                @auth
+                    <a href="{{ route('user.profile') }}" class="text-gray-800 text-hover-primary fs-6 fw-bold lh-1">{{ auth()->user()->name }}</a>
+                @else
+                    <a href="#" class="text-gray-800 text-hover-primary fs-6 fw-bold lh-1">Usuário</a>
+                @endauth
                 <!--end::Name-->
                 <!--begin::Major-->
-                <span class="text-muted fw-semibold d-block fs-7 lh-1">Enginer de Software</span>
+                @auth
+                    <span class="text-muted fw-semibold d-block fs-7 lh-1">{{ auth()->user()->getPerfilFormatado() }}</span>
+                @else
+                    <span class="text-muted fw-semibold d-block fs-7 lh-1">Faça login</span>
+                @endauth
                 <!--end::Major-->
             </div>
             <!--end::User info-->
@@ -38,15 +52,28 @@
                     <div class="menu-content d-flex align-items-center px-3">
                         <!--begin::Avatar-->
                         <div class="symbol symbol-50px me-5">
-                            <img alt="Logo" src="assets/media/avatars/300-1.jpg" />
+                            @auth
+                                <div class="symbol-label fs-3 fw-bold text-white bg-{{ auth()->user()->getCorPerfil() }}">
+                                    {{ auth()->user()->avatar }}
+                                </div>
+                            @else
+                                <img alt="Logo" src="assets/media/avatars/300-1.jpg" />
+                            @endauth
                         </div>
                         <!--end::Avatar-->
                         <!--begin::Username-->
                         <div class="d-flex flex-column">
-                            <div class="fw-bold d-flex align-items-center fs-5">Bruno Rangel
-                                <span class="badge badge-light-success fw-bold fs-8 px-2 py-1 ms-2">Pro</span>
-                            </div>
-                            <a href="#" class="fw-semibold text-muted text-hover-primary fs-7">bruno@gmail.com</a>
+                            @auth
+                                <div class="fw-bold d-flex align-items-center fs-5">{{ auth()->user()->name }}
+                                    <span class="badge badge-light-{{ auth()->user()->getCorPerfil() }} fw-bold fs-8 px-2 py-1 ms-2">{{ auth()->user()->getPerfilFormatado() }}</span>
+                                </div>
+                                <a href="#" class="fw-semibold text-muted text-hover-primary fs-7">{{ auth()->user()->email }}</a>
+                            @else
+                                <div class="fw-bold d-flex align-items-center fs-5">Usuário
+                                    <span class="badge badge-light-secondary fw-bold fs-8 px-2 py-1 ms-2">Visitante</span>
+                                </div>
+                                <a href="#" class="fw-semibold text-muted text-hover-primary fs-7">Faça login</a>
+                            @endauth
                         </div>
                         <!--end::Username-->
                     </div>
@@ -55,24 +82,49 @@
                 <!--begin::Menu separator-->
                 <div class="separator my-2"></div>
                 <!--end::Menu separator-->
+                @auth
                 <!--begin::Menu item-->
                 <div class="menu-item px-5">
-                    <a href="account/overview.html" class="menu-link px-5">Meu Perfil</a>
+                    <a href="{{ route('user.profile') }}" class="menu-link px-5">
+                        <i class="ki-duotone ki-profile-circle me-2 fs-4">
+                            <span class="path1"></span>
+                            <span class="path2"></span>
+                            <span class="path3"></span>
+                        </i>
+                        Meu Perfil
+                    </a>
                 </div>
                 <!--end::Menu item-->
                 <!--begin::Menu separator-->
                 <div class="separator my-2"></div>
                 <!--end::Menu separator-->
                 <!--begin::Menu item-->
-                <div class="menu-item px-5 my-1">
-                    <a href="account/settings.html" class="menu-link px-5">Configurações</a>
+                <div class="menu-item px-5">
+                    <form method="POST" action="{{ route('auth.logout') }}">
+                        @csrf
+                        <a href="#" class="menu-link px-5" onclick="event.preventDefault(); this.closest('form').submit();">
+                            <i class="ki-duotone ki-entrance-left me-2 fs-4">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                            </i>
+                            Sair
+                        </a>
+                    </form>
                 </div>
                 <!--end::Menu item-->
+                @else
                 <!--begin::Menu item-->
                 <div class="menu-item px-5">
-                    <a href="authentication/layouts/corporate/sign-in.html" class="menu-link px-5">Sair</a>
+                    <a href="{{ route('auth.login') }}" class="menu-link px-5">
+                        <i class="ki-duotone ki-entrance-right me-2 fs-4">
+                            <span class="path1"></span>
+                            <span class="path2"></span>
+                        </i>
+                        Fazer Login
+                    </a>
                 </div>
                 <!--end::Menu item-->
+                @endauth
             </div>
             <!--end::User account menu-->
         </div>
