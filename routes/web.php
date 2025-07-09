@@ -5,6 +5,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\UserApiController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\Parlamentar\ParlamentarController;
+use App\Http\Controllers\User\UserController as UserManagementController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -80,6 +81,26 @@ Route::prefix('comissoes')->name('comissoes.')->middleware('auth')->group(functi
     Route::get('/{id}/edit', [App\Http\Controllers\Comissao\ComissaoController::class, 'edit'])->name('edit')->middleware('check.permission:comissoes.edit');
     Route::put('/{id}', [App\Http\Controllers\Comissao\ComissaoController::class, 'update'])->name('update')->middleware('check.permission:comissoes.edit');
     Route::delete('/{id}', [App\Http\Controllers\Comissao\ComissaoController::class, 'destroy'])->name('destroy')->middleware('check.permission:comissoes.delete');
+});
+
+// Usuários routes (protected with auth only - TODO: add permissions later)
+Route::prefix('usuarios')->name('usuarios.')->middleware('auth')->group(function () {
+    Route::get('/', [UserManagementController::class, 'index'])->name('index');
+    Route::get('/create', [UserManagementController::class, 'create'])->name('create');
+    Route::post('/', [UserManagementController::class, 'store'])->name('store');
+    Route::get('/search', [UserManagementController::class, 'buscar'])->name('search');
+    Route::get('/estatisticas', [UserManagementController::class, 'estatisticas'])->name('estatisticas');
+    Route::get('/perfil/{perfil}', [UserManagementController::class, 'porPerfil'])->name('por-perfil');
+    Route::get('/validar-email', [UserManagementController::class, 'validarEmail'])->name('validar-email');
+    Route::get('/validar-documento', [UserManagementController::class, 'validarDocumento'])->name('validar-documento');
+    Route::get('/{id}', [UserManagementController::class, 'show'])->name('show');
+    Route::get('/{id}/edit', [UserManagementController::class, 'edit'])->name('edit');
+    Route::put('/{id}', [UserManagementController::class, 'update'])->name('update');
+    Route::delete('/{id}', [UserManagementController::class, 'destroy'])->name('destroy');
+    Route::post('/{id}/status', [UserManagementController::class, 'alterarStatus'])->name('alterar-status');
+    Route::post('/{id}/resetar-senha', [UserManagementController::class, 'resetarSenha'])->name('resetar-senha');
+    Route::post('/exportar', [UserManagementController::class, 'exportar'])->name('exportar');
+    Route::post('/importar', [UserManagementController::class, 'importar'])->name('importar');
 });
 
 // Mock API routes moved to routes/api.php to avoid CSRF middleware

@@ -130,6 +130,63 @@
                             </div>
                             <!--end:Menu item-->
 
+                            <!--begin:Menu item - Comissões-->
+                            <div data-kt-menu-trigger="click" class="menu-item menu-accordion {{ request()->routeIs('comissoes.*') ? 'here show' : '' }}">
+                                <!--begin:Menu link-->
+                                <span class="menu-link">
+                                    <span class="menu-icon">
+                                        <i class="ki-duotone ki-handshake fs-2">
+                                            <span class="path1"></span>
+                                            <span class="path2"></span>
+                                        </i>
+                                    </span>
+                                    <span class="menu-title">Comissões</span>
+                                    <span class="menu-arrow"></span>
+                                </span>
+                                <!--end:Menu link-->
+                                <!--begin:Menu sub-->
+                                <div class="menu-sub menu-sub-accordion {{ request()->routeIs('comissoes.*') ? 'show' : '' }}">
+                                    <!--begin:Menu item-->
+                                    <div class="menu-item">
+                                        <!--begin:Menu link-->
+                                        <a class="menu-link {{ request()->routeIs('comissoes.index') ? 'active' : '' }}" href="{{ route('comissoes.index') }}">
+                                            <span class="menu-bullet">
+                                                <span class="bullet bullet-dot"></span>
+                                            </span>
+                                            <span class="menu-title">Lista de Comissões</span>
+                                        </a>
+                                        <!--end:Menu link-->
+                                    </div>
+                                    <!--end:Menu item-->
+                                    <!--begin:Menu item-->
+                                    <div class="menu-item">
+                                        <!--begin:Menu link-->
+                                        <a class="menu-link {{ request()->routeIs('comissoes.create') ? 'active' : '' }}" href="{{ route('comissoes.create') }}">
+                                            <span class="menu-bullet">
+                                                <span class="bullet bullet-dot"></span>
+                                            </span>
+                                            <span class="menu-title">Nova Comissão</span>
+                                        </a>
+                                        <!--end:Menu link-->
+                                    </div>
+                                    <!--end:Menu item-->
+                                    <!--begin:Menu item-->
+                                    <div class="menu-item">
+                                        <!--begin:Menu link-->
+                                        <a class="menu-link {{ request()->routeIs('comissoes.por-tipo') ? 'active' : '' }}" href="{{ route('comissoes.por-tipo', 'permanente') }}">
+                                            <span class="menu-bullet">
+                                                <span class="bullet bullet-dot"></span>
+                                            </span>
+                                            <span class="menu-title">Por Tipo</span>
+                                        </a>
+                                        <!--end:Menu link-->
+                                    </div>
+                                    <!--end:Menu item-->
+                                </div>
+                                <!--end:Menu sub-->
+                            </div>
+                            <!--end:Menu item-->
+
                             <!--begin:Menu item - Projetos (Futuro)-->
                             <div class="menu-item">
                                 <!--begin:Menu link-->
@@ -196,7 +253,7 @@
                             <!--end:Menu separator-->
 
                             <!--begin:Menu item - Usuários-->
-                            <div data-kt-menu-trigger="click" class="menu-item menu-accordion {{ request()->routeIs('user-api.*') ? 'here show' : '' }}">
+                            <div data-kt-menu-trigger="click" class="menu-item menu-accordion {{ request()->routeIs('usuarios.*') || request()->routeIs('user-api.*') ? 'here show' : '' }}">
                                 <!--begin:Menu link-->
                                 <span class="menu-link">
                                     <span class="menu-icon">
@@ -210,15 +267,27 @@
                                 </span>
                                 <!--end:Menu link-->
                                 <!--begin:Menu sub-->
-                                <div class="menu-sub menu-sub-accordion {{ request()->routeIs('user-api.*') ? 'show' : '' }}">
+                                <div class="menu-sub menu-sub-accordion {{ request()->routeIs('usuarios.*') || request()->routeIs('user-api.*') ? 'show' : '' }}">
                                     <!--begin:Menu item-->
                                     <div class="menu-item">
                                         <!--begin:Menu link-->
-                                        <a class="menu-link {{ request()->routeIs('user-api.users') ? 'active' : '' }}" href="{{ route('user-api.users') }}">
+                                        <a class="menu-link {{ request()->routeIs('usuarios.index') ? 'active' : '' }}" href="{{ route('usuarios.index') }}">
                                             <span class="menu-bullet">
                                                 <span class="bullet bullet-dot"></span>
                                             </span>
-                                            <span class="menu-title">Lista de Usuários</span>
+                                            <span class="menu-title">Gestão de Usuários</span>
+                                        </a>
+                                        <!--end:Menu link-->
+                                    </div>
+                                    <!--end:Menu item-->
+                                    <!--begin:Menu item-->
+                                    <div class="menu-item">
+                                        <!--begin:Menu link-->
+                                        <a class="menu-link {{ request()->routeIs('usuarios.create') ? 'active' : '' }}" href="{{ route('usuarios.create') }}">
+                                            <span class="menu-bullet">
+                                                <span class="bullet bullet-dot"></span>
+                                            </span>
+                                            <span class="menu-title">Novo Usuário</span>
                                         </a>
                                         <!--end:Menu link-->
                                     </div>
@@ -230,7 +299,7 @@
                                             <span class="menu-bullet">
                                                 <span class="bullet bullet-dot"></span>
                                             </span>
-                                            <span class="menu-title">Gestão de Usuários</span>
+                                            <span class="menu-title">API de Usuários</span>
                                         </a>
                                         <!--end:Menu link-->
                                     </div>
@@ -265,9 +334,9 @@
                             <!--end:Menu item-->
 
                             <!--begin:Menu item - Configurações-->
-                            <div class="menu-item">
+                            <div data-kt-menu-trigger="click" class="menu-item menu-accordion {{ request()->routeIs('configuracoes.*') ? 'here show' : '' }}">
                                 <!--begin:Menu link-->
-                                <a class="menu-link" href="#">
+                                <span class="menu-link">
                                     <span class="menu-icon">
                                         <i class="ki-duotone ki-setting-2 fs-2">
                                             <span class="path1"></span>
@@ -275,11 +344,49 @@
                                         </i>
                                     </span>
                                     <span class="menu-title">Configurações</span>
-                                    <span class="menu-badge">
-                                        <span class="badge badge-light-warning">Config</span>
-                                    </span>
-                                </a>
+                                    <span class="menu-arrow"></span>
+                                </span>
                                 <!--end:Menu link-->
+                                <!--begin:Menu sub-->
+                                <div class="menu-sub menu-sub-accordion {{ request()->routeIs('configuracoes.*') ? 'show' : '' }}">
+                                    <!--begin:Menu item-->
+                                    <div class="menu-item">
+                                        <!--begin:Menu link-->
+                                        <a class="menu-link {{ request()->routeIs('usuarios.index') ? 'active' : '' }}" href="{{ route('usuarios.index') }}">
+                                            <span class="menu-bullet">
+                                                <span class="bullet bullet-dot"></span>
+                                            </span>
+                                            <span class="menu-title">Usuários</span>
+                                        </a>
+                                        <!--end:Menu link-->
+                                    </div>
+                                    <!--end:Menu item-->
+                                    <!--begin:Menu item-->
+                                    <div class="menu-item">
+                                        <!--begin:Menu link-->
+                                        <a class="menu-link" href="#" onclick="showComingSoon('Permissões')">
+                                            <span class="menu-bullet">
+                                                <span class="bullet bullet-dot"></span>
+                                            </span>
+                                            <span class="menu-title">Permissões</span>
+                                        </a>
+                                        <!--end:Menu link-->
+                                    </div>
+                                    <!--end:Menu item-->
+                                    <!--begin:Menu item-->
+                                    <div class="menu-item">
+                                        <!--begin:Menu link-->
+                                        <a class="menu-link" href="#" onclick="showComingSoon('Sistema')">
+                                            <span class="menu-bullet">
+                                                <span class="bullet bullet-dot"></span>
+                                            </span>
+                                            <span class="menu-title">Sistema</span>
+                                        </a>
+                                        <!--end:Menu link-->
+                                    </div>
+                                    <!--end:Menu item-->
+                                </div>
+                                <!--end:Menu sub-->
                             </div>
                             <!--end:Menu item-->
 
@@ -289,6 +396,21 @@
                     <!--end::Aside Menu-->
                 </div>
                 <!--end::Aside menu-->
+                <!--begin::Coming Soon Script-->
+                <script>
+                function showComingSoon(feature) {
+                    Swal.fire({
+                        title: feature + ' - Em Desenvolvimento',
+                        text: 'Esta funcionalidade está sendo desenvolvida e estará disponível em breve.',
+                        icon: 'info',
+                        confirmButtonText: 'Ok',
+                        customClass: {
+                            confirmButton: 'btn btn-primary'
+                        }
+                    });
+                }
+                </script>
+                <!--end::Coming Soon Script-->
                 <!--begin::Footer-->
                 <div class="aside-footer flex-column-auto px-9" id="kt_aside_footer">
                     <a href="{{ route('auth.logout') }}" 

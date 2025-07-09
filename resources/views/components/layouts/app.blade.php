@@ -49,7 +49,7 @@
                     <div class="container-xxl" id="kt_content_container">
                         <!--begin::Row-->
                         <div class="row gy-5 g-xl-10">
-                            @yield('content')
+                            {{ $slot }}
                         </div>
                         <!--end::Row-->
                     </div>

@@ -219,7 +219,7 @@
                     <div class="menu-sub menu-sub-accordion">
                         @can('usuarios.view')
                         <div class="menu-item">
-                            <a class="menu-link" href="#" onclick="showComingSoon('Gestão de Usuários')">
+                            <a class="menu-link {{ request()->routeIs('usuarios.index') ? 'active' : '' }}" href="{{ route('usuarios.index') }}">
                                 <span class="menu-bullet">
                                     <span class="bullet bullet-dot"></span>
                                 </span>
