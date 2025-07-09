@@ -198,6 +198,10 @@ class Projeto extends Model
 
     public function scopeVisiveisPorUsuario($query, $user)
     {
+        if (!$user) {
+            return $query->whereIn('status', ['aprovado', 'rejeitado', 'arquivado']);
+        }
+
         if ($user->isAdmin()) {
             return $query;
         }

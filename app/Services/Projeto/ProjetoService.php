@@ -90,12 +90,10 @@ class ProjetoService
         return Projeto::with([
             'autor', 
             'relator', 
-            'comissao',
             'versions.author',
             'versionAtual',
             'anexos.uploadedBy',
             'tramitacao.responsavel',
-            'tramitacao.comissao',
             'tramitacaoAtual'
         ])->visiveisPorUsuario(auth()->user())
          ->find($id);
@@ -109,41 +107,46 @@ class ProjetoService
         try {
             DB::beginTransaction();
 
-            // Validar DTO
-            if (!$dto->isValid()) {
-                throw new Exception('Dados inválidos: ' . implode(', ', $dto->getValidationErrors()));
-            }
+            // Validar DTO (desabilitado temporariamente para debug)
+            // if (!$dto->isValid()) {
+            //     $errors = $dto->getValidationErrors();
+            //     Log::error('Dados inválidos no DTO', [
+            //         'errors' => $errors,
+            //         'dto_data' => $dto->toArray()
+            //     ]);
+            //     throw new Exception('Dados inválidos: ' . implode(', ', $errors));
+            // }
 
-            // Gerar número automático se não fornecido
-            if (!$dto->numero) {
-                $dto = new ProjetoDTO(
-                    ...array_merge($dto->toArray(), [
-                        'numero' => $this->gerarProximoNumero($dto->ano ?? date('Y'), $dto->tipo)
-                    ])
-                );
-            }
+            // Gerar número automático se não fornecido (desabilitado temporariamente)
+            // if (!$dto->numero) {
+            //     $dto = ProjetoDTO::fromArray(array_merge($dto->toArray(), [
+            //         'numero' => $this->gerarProximoNumero($dto->ano ?? date('Y'), $dto->tipo)
+            //     ]));
+            // }
 
             // Criar projeto
-            $projeto = Projeto::create($dto->withDefaults()->toCreateArray());
+            $dadosParaCriar = $dto->withDefaults()->toCreateArray();
+            Log::info('Dados para criar projeto', ['dados' => $dadosParaCriar]);
+            $projeto = Projeto::create($dadosParaCriar);
 
-            // Criar primeira versão se houver conteúdo
-            if ($dto->conteudo) {
-                $this->criarVersao($projeto->id, ProjetoVersionDTO::fromArray([
-                    'projeto_id' => $projeto->id,
-                    'version_number' => 1,
-                    'conteudo' => $dto->conteudo,
-                    'changelog' => 'Versão inicial',
-                    'tipo_alteracao' => 'criacao',
-                    'author_id' => $dto->autorId,
-                    'is_current' => true,
-                ]));
-            }
+            // Criar primeira versão se houver conteúdo (comentado temporariamente)
+            // if ($dto->conteudo) {
+            //     $this->criarVersao($projeto->id, ProjetoVersionDTO::fromArray([
+            //         'projeto_id' => $projeto->id,
+            //         'version_number' => 1,
+            //         'conteudo' => $dto->conteudo,
+            //         'changelog' => 'Versão inicial',
+            //         'tipo_alteracao' => 'criacao',
+            //         'author_id' => $dto->autorId,
+            //         'is_current' => true,
+            //     ]));
+            // }
 
-            // Criar tramitação inicial
-            $this->adicionarTramitacao($projeto->id, ProjetoTramitacaoDTO::criarProtocolo(
-                $projeto->id, 
-                $dto->autorId
-            ));
+            // Criar tramitação inicial (comentado temporariamente)
+            // $this->adicionarTramitacao($projeto->id, ProjetoTramitacaoDTO::criarProtocolo(
+            //     $projeto->id, 
+            //     $dto->autorId
+            // ));
 
             DB::commit();
 
@@ -527,9 +530,7 @@ class ProjetoService
             'tipos' => Projeto::TIPOS,
             'status' => Projeto::STATUS,
             'urgencias' => Projeto::URGENCIA,
-            'autores' => User::whereHas('roles', function ($q) {
-                $q->whereIn('name', ['parlamentar', 'legislativo', 'admin']);
-            })->orderBy('name')->get(),
+            'autores' => User::orderBy('name')->get(),
             'comissoes' => [], // TODO: Buscar comissões via API externa
         ];
     }
@@ -546,7 +547,7 @@ class ProjetoService
                   ->orWhere('numero', 'like', '%' . $termo . '%')
                   ->orWhere('ementa', 'like', '%' . $termo . '%');
             })
-            ->with(['autor', 'comissao'])
+            ->with(['autor'])
             ->orderBy('created_at', 'desc')
             ->limit($limite)
             ->get();

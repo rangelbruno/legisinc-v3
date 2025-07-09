@@ -171,7 +171,7 @@ class ProjetoDTO
             numero: $this->numero,
             ano: $this->ano ?? (int) date('Y'),
             tipo: $this->tipo ?? 'projeto_lei_ordinaria',
-            autorId: $this->autorId ?? auth()->id(),
+            autorId: $this->autorId ?? (auth()->check() ? auth()->id() : null),
             relatorId: $this->relatorId,
             comissaoId: $this->comissaoId,
             status: $this->status ?? 'rascunho',

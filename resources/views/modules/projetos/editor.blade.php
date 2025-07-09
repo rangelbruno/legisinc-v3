@@ -3,166 +3,65 @@
 <head>
     <meta charset="utf-8" />
     <title>Editor - {{ $projeto->titulo }}</title>
-    <meta name="description" content="Editor de conteúdo avançado para projetos de lei" />
-    <meta name="keywords" content="editor, projeto, lei, legislativo" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="csrf-token" content="{{ csrf_token() }}">
     
-    <!-- Favicon -->
-    <link rel="shortcut icon" href="/assets/media/logos/favicon.ico" />
-    
-    <!-- Fonts -->
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,400,500,600,700" />
-    
-    <!-- Global Stylesheets Bundle -->
-    <link href="/assets/plugins/global/plugins.bundle.css" rel="stylesheet" type="text/css" />
-    <link href="/assets/css/style.bundle.css" rel="stylesheet" type="text/css" />
-    
-    <!-- TipTap Editor -->
-    <script src="https://unpkg.com/@tiptap/core@2.1.0/dist/index.umd.js"></script>
-    <script src="https://unpkg.com/@tiptap/starter-kit@2.1.0/dist/index.umd.js"></script>
-    <script src="https://unpkg.com/@tiptap/extension-text-align@2.1.0/dist/index.umd.js"></script>
-    <script src="https://unpkg.com/@tiptap/extension-underline@2.1.0/dist/index.umd.js"></script>
-    <script src="https://unpkg.com/@tiptap/extension-table@2.1.0/dist/index.umd.js"></script>
-    <script src="https://unpkg.com/@tiptap/extension-table-row@2.1.0/dist/index.umd.js"></script>
-    <script src="https://unpkg.com/@tiptap/extension-table-cell@2.1.0/dist/index.umd.js"></script>
-    <script src="https://unpkg.com/@tiptap/extension-table-header@2.1.0/dist/index.umd.js"></script>
-    
     <style>
+        * {
+            box-sizing: border-box;
+        }
+        
         body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f5f5;
             margin: 0;
-            font-family: Inter, sans-serif;
-            background: #f8f9fa;
+            padding: 20px;
         }
         
-        .editor-container {
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
-        
-        .editor-header {
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
             background: white;
-            padding: 15px 20px;
-            border-bottom: 1px solid #e5e5e5;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: #f8f9fa;
+            padding: 20px;
+            border-bottom: 1px solid #e9ecef;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            position: sticky;
-            top: 0;
-            z-index: 1000;
         }
         
-        .editor-title {
-            font-size: 18px;
-            font-weight: 600;
-            color: #1e1e2d;
+        .header h1 {
             margin: 0;
+            font-size: 20px;
+            color: #333;
         }
         
-        .editor-actions {
+        .header .meta {
+            font-size: 14px;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        .actions {
             display: flex;
             gap: 10px;
             align-items: center;
         }
         
-        .editor-toolbar {
-            background: white;
-            padding: 10px 20px;
-            border-bottom: 1px solid #e5e5e5;
-            display: flex;
-            gap: 5px;
-            flex-wrap: wrap;
-            position: sticky;
-            top: 65px;
-            z-index: 999;
-        }
-        
-        .toolbar-btn {
-            padding: 8px 12px;
-            border: 1px solid #e5e5e5;
-            background: white;
-            cursor: pointer;
-            border-radius: 4px;
-            font-size: 14px;
-            transition: all 0.2s;
-        }
-        
-        .toolbar-btn:hover {
-            background: #f5f5f5;
-        }
-        
-        .toolbar-btn.active {
-            background: #009ef7;
-            color: white;
-            border-color: #009ef7;
-        }
-        
-        .toolbar-separator {
-            width: 1px;
-            height: 30px;
-            background: #e5e5e5;
-            margin: 0 5px;
-        }
-        
-        .editor-content {
-            flex: 1;
-            padding: 20px;
-            overflow-y: auto;
-        }
-        
-        .editor-wrapper {
-            max-width: 800px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 0 20px rgba(0,0,0,0.1);
-            min-height: calc(100vh - 200px);
-        }
-        
-        .ProseMirror {
-            padding: 40px;
-            outline: none;
-            line-height: 1.6;
-            font-size: 16px;
-        }
-        
-        .ProseMirror h1, .ProseMirror h2, .ProseMirror h3 {
-            margin-top: 30px;
-            margin-bottom: 15px;
-            font-weight: 600;
-        }
-        
-        .ProseMirror p {
-            margin-bottom: 15px;
-        }
-        
-        .ProseMirror ul, .ProseMirror ol {
-            margin: 15px 0;
-            padding-left: 30px;
-        }
-        
-        .ProseMirror table {
-            border-collapse: collapse;
-            width: 100%;
-            margin: 20px 0;
-        }
-        
-        .ProseMirror table td, .ProseMirror table th {
-            border: 1px solid #ddd;
-            padding: 8px 12px;
-        }
-        
-        .ProseMirror table th {
-            background: #f5f5f5;
-            font-weight: 600;
-        }
-        
-        .status-indicator {
+        .status {
             display: flex;
             align-items: center;
             gap: 8px;
             font-size: 14px;
+            color: #666;
         }
         
         .status-dot {
@@ -172,351 +71,431 @@
             background: #28a745;
         }
         
-        .save-indicator {
+        .status-dot.saving {
             background: #ffc107;
         }
         
-        .error-indicator {
+        .status-dot.error {
             background: #dc3545;
         }
         
         .btn {
             padding: 8px 16px;
-            border-radius: 4px;
             border: none;
+            border-radius: 4px;
             cursor: pointer;
-            font-weight: 500;
+            font-size: 14px;
             text-decoration: none;
             display: inline-flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
             transition: all 0.2s;
         }
         
         .btn-primary {
-            background: #009ef7;
+            background: #007bff;
             color: white;
         }
         
         .btn-primary:hover {
-            background: #0084d4;
+            background: #0056b3;
         }
         
-        .btn-light {
-            background: #f5f5f5;
-            color: #333;
-        }
-        
-        .btn-light:hover {
-            background: #e5e5e5;
-        }
-        
-        .btn-success {
-            background: #28a745;
+        .btn-secondary {
+            background: #6c757d;
             color: white;
         }
         
-        .btn-success:hover {
-            background: #218838;
+        .btn-secondary:hover {
+            background: #545b62;
         }
         
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 2000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-        }
-        
-        .modal-content {
-            background: white;
-            margin: 15% auto;
-            padding: 20px;
-            border-radius: 8px;
-            width: 500px;
-            max-width: 90%;
-        }
-        
-        .modal h3 {
-            margin-top: 0;
-            margin-bottom: 20px;
-        }
-        
-        .form-group {
-            margin-bottom: 15px;
-        }
-        
-        .form-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: 500;
-        }
-        
-        .form-control {
-            width: 100%;
-            padding: 8px 12px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 14px;
-        }
-        
-        .form-control:focus {
-            outline: none;
-            border-color: #009ef7;
-        }
-        
-        .modal-actions {
+        .toolbar {
+            padding: 15px 20px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
             display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-            margin-top: 20px;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        
+        .toolbar-group {
+            display: flex;
+            gap: 4px;
+        }
+        
+        .toolbar-group:not(:last-child) {
+            margin-right: 15px;
+            padding-right: 15px;
+            border-right: 1px solid #dee2e6;
+        }
+        
+        .toolbar-btn {
+            padding: 6px 10px;
+            border: 1px solid #dee2e6;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+            min-width: 32px;
+            text-align: center;
+        }
+        
+        .toolbar-btn:hover {
+            background: #e9ecef;
+        }
+        
+        .toolbar-btn.active {
+            background: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+        
+        .editor-area {
+            position: relative;
+            min-height: 600px;
+        }
+        
+        .editor {
+            padding: 30px;
+            min-height: 600px;
+            outline: none;
+            font-size: 16px;
+            line-height: 1.6;
+            cursor: text;
+            border: none;
+            resize: none;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        
+        .editor:focus {
+            outline: none;
+        }
+        
+        .editor::placeholder {
+            color: #aaa;
+        }
+        
+        .editor h1 {
+            font-size: 2em;
+            margin: 1em 0 0.5em 0;
+            font-weight: 600;
+        }
+        
+        .editor h2 {
+            font-size: 1.5em;
+            margin: 1em 0 0.5em 0;
+            font-weight: 600;
+        }
+        
+        .editor h3 {
+            font-size: 1.25em;
+            margin: 1em 0 0.5em 0;
+            font-weight: 600;
+        }
+        
+        .editor p {
+            margin: 1em 0;
+        }
+        
+        .editor ul, .editor ol {
+            margin: 1em 0;
+            padding-left: 2em;
+        }
+        
+        .editor li {
+            margin: 0.5em 0;
+        }
+        
+        .editor blockquote {
+            margin: 1em 0;
+            padding-left: 1em;
+            border-left: 4px solid #007bff;
+            color: #666;
+            font-style: italic;
+        }
+        
+        .editor hr {
+            margin: 2em 0;
+            border: none;
+            border-top: 2px solid #dee2e6;
+        }
+        
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            border-radius: 4px;
+            color: white;
+            font-size: 14px;
+            z-index: 1000;
+            opacity: 0;
+            transform: translateY(-20px);
+            transition: all 0.3s;
+        }
+        
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        .toast.success {
+            background: #28a745;
+        }
+        
+        .toast.error {
+            background: #dc3545;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            
+            .header {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+            
+            .toolbar {
+                gap: 5px;
+            }
+            
+            .toolbar-group {
+                margin-right: 10px;
+                padding-right: 10px;
+            }
+            
+            .editor {
+                padding: 20px;
+            }
         }
     </style>
 </head>
 
 <body>
-    <div class="editor-container">
-        <!-- Header -->
-        <div class="editor-header">
+    <div class="container">
+        <div class="header">
             <div>
-                <h1 class="editor-title">{{ $projeto->titulo }}</h1>
-                <div style="font-size: 14px; color: #666; margin-top: 5px;">
-                    {{ $projeto->numero_completo }} - Versão {{ $projeto->version_atual }}
+                <h1>{{ $projeto->titulo }}</h1>
+                <div class="meta">
+                    {{ $projeto->numero_completo }} • Versão {{ $projeto->version_atual }}
                 </div>
             </div>
             
-            <div class="editor-actions">
-                <div class="status-indicator" id="saveStatus">
-                    <div class="status-dot"></div>
-                    <span>Salvo</span>
+            <div class="actions">
+                <div class="status">
+                    <div class="status-dot" id="statusDot"></div>
+                    <span id="statusText">Pronto</span>
                 </div>
                 
-                <button type="button" class="btn btn-light" onclick="showVersionModal()">
-                    Salvar Versão
+                <button class="btn btn-secondary" onclick="saveContent()">
+                    💾 Salvar
                 </button>
                 
-                <button type="button" class="btn btn-success" onclick="saveContent()">
-                    Salvar
-                </button>
-                
-                <a href="{{ route('projetos.show', $projeto->id) }}" class="btn btn-light" target="_blank">
-                    Ver Projeto
+                <a href="{{ route('projetos.show', $projeto->id) }}" class="btn btn-primary" target="_blank">
+                    👁️ Ver Projeto
                 </a>
             </div>
         </div>
         
-        <!-- Toolbar -->
-        <div class="editor-toolbar" id="toolbar">
-            <button class="toolbar-btn" onclick="editor.chain().focus().toggleBold().run()" data-action="bold">
-                <strong>B</strong>
-            </button>
-            <button class="toolbar-btn" onclick="editor.chain().focus().toggleItalic().run()" data-action="italic">
-                <em>I</em>
-            </button>
-            <button class="toolbar-btn" onclick="editor.chain().focus().toggleUnderline().run()" data-action="underline">
-                <u>U</u>
-            </button>
+        <div class="toolbar">
+            <div class="toolbar-group">
+                <button class="toolbar-btn" onclick="formatText('bold')" title="Negrito (Ctrl+B)">
+                    <strong>B</strong>
+                </button>
+                <button class="toolbar-btn" onclick="formatText('italic')" title="Itálico (Ctrl+I)">
+                    <em>I</em>
+                </button>
+                <button class="toolbar-btn" onclick="formatText('underline')" title="Sublinhado (Ctrl+U)">
+                    <u>U</u>
+                </button>
+            </div>
             
-            <div class="toolbar-separator"></div>
+            <div class="toolbar-group">
+                <button class="toolbar-btn" onclick="formatHeading(1)" title="Título 1">
+                    H1
+                </button>
+                <button class="toolbar-btn" onclick="formatHeading(2)" title="Título 2">
+                    H2
+                </button>
+                <button class="toolbar-btn" onclick="formatHeading(3)" title="Título 3">
+                    H3
+                </button>
+            </div>
             
-            <button class="toolbar-btn" onclick="editor.chain().focus().toggleHeading({ level: 1 }).run()" data-action="h1">
-                H1
-            </button>
-            <button class="toolbar-btn" onclick="editor.chain().focus().toggleHeading({ level: 2 }).run()" data-action="h2">
-                H2
-            </button>
-            <button class="toolbar-btn" onclick="editor.chain().focus().toggleHeading({ level: 3 }).run()" data-action="h3">
-                H3
-            </button>
+            <div class="toolbar-group">
+                <button class="toolbar-btn" onclick="formatText('insertUnorderedList')" title="Lista com marcadores">
+                    • Lista
+                </button>
+                <button class="toolbar-btn" onclick="formatText('insertOrderedList')" title="Lista numerada">
+                    1. Lista
+                </button>
+            </div>
             
-            <div class="toolbar-separator"></div>
+            <div class="toolbar-group">
+                <button class="toolbar-btn" onclick="insertHR()" title="Linha horizontal">
+                    ➖ HR
+                </button>
+            </div>
             
-            <button class="toolbar-btn" onclick="editor.chain().focus().setTextAlign('left').run()" data-action="align-left">
-                ←
-            </button>
-            <button class="toolbar-btn" onclick="editor.chain().focus().setTextAlign('center').run()" data-action="align-center">
-                ↔
-            </button>
-            <button class="toolbar-btn" onclick="editor.chain().focus().setTextAlign('right').run()" data-action="align-right">
-                →
-            </button>
-            
-            <div class="toolbar-separator"></div>
-            
-            <button class="toolbar-btn" onclick="editor.chain().focus().toggleBulletList().run()" data-action="bullet-list">
-                •
-            </button>
-            <button class="toolbar-btn" onclick="editor.chain().focus().toggleOrderedList().run()" data-action="ordered-list">
-                1.
-            </button>
-            
-            <div class="toolbar-separator"></div>
-            
-            <button class="toolbar-btn" onclick="insertTable()">
-                Tabela
-            </button>
-            
-            <button class="toolbar-btn" onclick="editor.chain().focus().setHorizontalRule().run()">
-                HR
-            </button>
+            <div class="toolbar-group">
+                <button class="toolbar-btn" onclick="formatText('undo')" title="Desfazer (Ctrl+Z)">
+                    ↶
+                </button>
+                <button class="toolbar-btn" onclick="formatText('redo')" title="Refazer (Ctrl+Y)">
+                    ↷
+                </button>
+            </div>
         </div>
         
-        <!-- Editor Content -->
-        <div class="editor-content">
-            <div class="editor-wrapper">
-                <div id="editor"></div>
+        <div class="editor-area">
+            <div 
+                id="editor" 
+                class="editor" 
+                contenteditable="true" 
+                placeholder="Comece a escrever o conteúdo do projeto aqui..."
+                oninput="handleInput()"
+                onkeydown="handleKeydown(event)"
+            >
+                {!! $projeto->conteudo ?? '<p>Comece a escrever o conteúdo do projeto aqui...</p>' !!}
             </div>
         </div>
     </div>
     
-    <!-- Modal Salvar Versão -->
-    <div id="versionModal" class="modal">
-        <div class="modal-content">
-            <h3>Salvar Nova Versão</h3>
-            <form id="versionForm">
-                <div class="form-group">
-                    <label for="changelog">Descrição das alterações:</label>
-                    <textarea id="changelog" class="form-control" rows="3" placeholder="Descreva as principais alterações desta versão..."></textarea>
-                </div>
-                
-                <div class="form-group">
-                    <label for="tipoAlteracao">Tipo de alteração:</label>
-                    <select id="tipoAlteracao" class="form-control">
-                        <option value="revisao">Revisão</option>
-                        <option value="emenda">Emenda</option>
-                        <option value="correcao">Correção</option>
-                        <option value="formatacao">Formatação</option>
-                    </select>
-                </div>
-                
-                <div class="modal-actions">
-                    <button type="button" class="btn btn-light" onclick="closeVersionModal()">Cancelar</button>
-                    <button type="submit" class="btn btn-success">Salvar Versão</button>
-                </div>
-            </form>
-        </div>
-    </div>
+    <div id="toast" class="toast"></div>
 
     <script>
-        // Inicializar TipTap Editor
-        let editor;
         let saveTimeout;
+        let editor = document.getElementById('editor');
         
-        const { Editor } = tiptap.core;
-        const { StarterKit } = tiptap.starterKit;
-        const { TextAlign } = tiptap.textAlign;
-        const { Underline } = tiptap.underline;
-        const { Table } = tiptap.table;
-        const { TableRow } = tiptap.tableRow;
-        const { TableCell } = tiptap.tableCell;
-        const { TableHeader } = tiptap.tableHeader;
-
-        document.addEventListener('DOMContentLoaded', function() {
-            editor = new Editor({
-                element: document.querySelector('#editor'),
-                extensions: [
-                    StarterKit,
-                    Underline,
-                    TextAlign.configure({
-                        types: ['heading', 'paragraph'],
-                    }),
-                    Table.configure({
-                        resizable: true,
-                    }),
-                    TableRow,
-                    TableHeader,
-                    TableCell,
-                ],
-                content: {!! json_encode($projeto->conteudo ?? '') !!},
-                onUpdate: function({ editor }) {
-                    // Auto-save após 2 segundos de inatividade
-                    clearTimeout(saveTimeout);
-                    updateSaveStatus('saving');
-                    
-                    saveTimeout = setTimeout(() => {
-                        autoSave();
-                    }, 2000);
-                },
-                onSelectionUpdate: function({ editor }) {
-                    updateToolbarState();
-                }
-            });
-            
-            updateToolbarState();
-            
-            // Keyboard shortcuts
-            document.addEventListener('keydown', function(e) {
-                if (e.ctrlKey || e.metaKey) {
-                    if (e.key === 's') {
-                        e.preventDefault();
-                        saveContent();
-                    }
-                }
-            });
+        // Foco inicial no editor
+        window.addEventListener('load', function() {
+            editor.focus();
         });
         
-        function updateToolbarState() {
-            const toolbar = document.getElementById('toolbar');
-            const buttons = toolbar.querySelectorAll('.toolbar-btn');
-            
-            buttons.forEach(button => {
-                button.classList.remove('active');
-                const action = button.getAttribute('data-action');
-                
-                if (action === 'bold' && editor.isActive('bold')) {
-                    button.classList.add('active');
-                }
-                if (action === 'italic' && editor.isActive('italic')) {
-                    button.classList.add('active');
-                }
-                if (action === 'underline' && editor.isActive('underline')) {
-                    button.classList.add('active');
-                }
-                if (action === 'h1' && editor.isActive('heading', { level: 1 })) {
-                    button.classList.add('active');
-                }
-                if (action === 'h2' && editor.isActive('heading', { level: 2 })) {
-                    button.classList.add('active');
-                }
-                if (action === 'h3' && editor.isActive('heading', { level: 3 })) {
-                    button.classList.add('active');
-                }
-                if (action === 'bullet-list' && editor.isActive('bulletList')) {
-                    button.classList.add('active');
-                }
-                if (action === 'ordered-list' && editor.isActive('orderedList')) {
-                    button.classList.add('active');
-                }
-            });
+        // Formatação de texto
+        function formatText(command) {
+            document.execCommand(command, false, null);
+            editor.focus();
+            updateToolbar();
         }
         
-        function updateSaveStatus(status) {
-            const statusEl = document.getElementById('saveStatus');
-            const dot = statusEl.querySelector('.status-dot');
-            const text = statusEl.querySelector('span');
+        // Formatação de cabeçalhos
+        function formatHeading(level) {
+            document.execCommand('formatBlock', false, 'h' + level);
+            editor.focus();
+            updateToolbar();
+        }
+        
+        // Inserir linha horizontal
+        function insertHR() {
+            document.execCommand('insertHTML', false, '<hr>');
+            editor.focus();
+        }
+        
+        // Atualizar toolbar
+        function updateToolbar() {
+            const buttons = document.querySelectorAll('.toolbar-btn');
+            buttons.forEach(btn => btn.classList.remove('active'));
             
-            dot.className = 'status-dot';
+            if (document.queryCommandState('bold')) {
+                document.querySelector('[onclick="formatText(\'bold\')"]').classList.add('active');
+            }
+            if (document.queryCommandState('italic')) {
+                document.querySelector('[onclick="formatText(\'italic\')"]').classList.add('active');
+            }
+            if (document.queryCommandState('underline')) {
+                document.querySelector('[onclick="formatText(\'underline\')"]').classList.add('active');
+            }
+        }
+        
+        // Manipular entrada
+        function handleInput() {
+            clearTimeout(saveTimeout);
+            updateStatus('saving');
+            
+            saveTimeout = setTimeout(() => {
+                autoSave();
+            }, 2000);
+        }
+        
+        // Manipular teclas
+        function handleKeydown(event) {
+            if (event.ctrlKey || event.metaKey) {
+                switch(event.key) {
+                    case 's':
+                        event.preventDefault();
+                        saveContent();
+                        break;
+                    case 'b':
+                        event.preventDefault();
+                        formatText('bold');
+                        break;
+                    case 'i':
+                        event.preventDefault();
+                        formatText('italic');
+                        break;
+                    case 'u':
+                        event.preventDefault();
+                        formatText('underline');
+                        break;
+                    case 'z':
+                        event.preventDefault();
+                        formatText('undo');
+                        break;
+                    case 'y':
+                        event.preventDefault();
+                        formatText('redo');
+                        break;
+                }
+            }
+        }
+        
+        // Atualizar status
+        function updateStatus(status) {
+            const statusDot = document.getElementById('statusDot');
+            const statusText = document.getElementById('statusText');
+            
+            statusDot.className = 'status-dot';
             
             switch(status) {
+                case 'ready':
+                    statusText.textContent = 'Pronto';
+                    break;
                 case 'saving':
-                    dot.classList.add('save-indicator');
-                    text.textContent = 'Salvando...';
+                    statusDot.classList.add('saving');
+                    statusText.textContent = 'Salvando...';
                     break;
                 case 'saved':
-                    text.textContent = 'Salvo';
+                    statusText.textContent = 'Salvo';
                     break;
                 case 'error':
-                    dot.classList.add('error-indicator');
-                    text.textContent = 'Erro ao salvar';
+                    statusDot.classList.add('error');
+                    statusText.textContent = 'Erro';
                     break;
             }
         }
         
+        // Mostrar toast
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast ${type}`;
+            toast.classList.add('show');
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+        
+        // Auto-save
         function autoSave() {
-            const content = editor.getHTML();
+            const content = editor.innerHTML;
             
             fetch(`/projetos/{{ $projeto->id }}/salvar-conteudo`, {
                 method: 'POST',
@@ -526,28 +505,35 @@
                 },
                 body: JSON.stringify({
                     conteudo: content,
-                    changelog: 'Auto-save',
+                    changelog: 'Salvamento automático',
                     tipo_alteracao: 'revisao'
                 })
             })
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    updateSaveStatus('saved');
+                    updateStatus('saved');
+                    setTimeout(() => updateStatus('ready'), 2000);
                 } else {
-                    updateSaveStatus('error');
-                    console.error('Erro ao salvar:', data.message);
+                    updateStatus('error');
                 }
             })
             .catch(error => {
-                updateSaveStatus('error');
-                console.error('Erro na requisição:', error);
+                updateStatus('error');
+                console.error('Erro:', error);
             });
         }
         
+        // Salvar conteúdo
         function saveContent() {
-            const content = editor.getHTML();
-            updateSaveStatus('saving');
+            const content = editor.innerHTML;
+            
+            if (!content || content.trim() === '<p>Comece a escrever o conteúdo do projeto aqui...</p>') {
+                showToast('Adicione algum conteúdo antes de salvar', 'error');
+                return;
+            }
+            
+            updateStatus('saving');
             
             fetch(`/projetos/{{ $projeto->id }}/salvar-conteudo`, {
                 method: 'POST',
@@ -564,96 +550,32 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    updateSaveStatus('saved');
-                    alert('Conteúdo salvo com sucesso!');
+                    updateStatus('saved');
+                    showToast('Conteúdo salvo com sucesso!');
+                    setTimeout(() => updateStatus('ready'), 2000);
                 } else {
-                    updateSaveStatus('error');
-                    alert('Erro ao salvar: ' + data.message);
+                    updateStatus('error');
+                    showToast('Erro ao salvar: ' + (data.message || 'Erro desconhecido'), 'error');
                 }
             })
             .catch(error => {
-                updateSaveStatus('error');
-                alert('Erro na conexão. Tente novamente.');
+                updateStatus('error');
+                showToast('Erro de conexão. Tente novamente.', 'error');
                 console.error('Erro:', error);
             });
         }
         
-        function insertTable() {
-            editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
-        }
-        
-        function showVersionModal() {
-            document.getElementById('versionModal').style.display = 'block';
-            document.getElementById('changelog').focus();
-        }
-        
-        function closeVersionModal() {
-            document.getElementById('versionModal').style.display = 'none';
-            document.getElementById('changelog').value = '';
-            document.getElementById('tipoAlteracao').value = 'revisao';
-        }
-        
-        document.getElementById('versionForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const content = editor.getHTML();
-            const changelog = document.getElementById('changelog').value;
-            const tipoAlteracao = document.getElementById('tipoAlteracao').value;
-            
-            if (!changelog.trim()) {
-                alert('Por favor, descreva as alterações desta versão.');
-                return;
-            }
-            
-            updateSaveStatus('saving');
-            
-            fetch(`/projetos/{{ $projeto->id }}/salvar-conteudo`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                },
-                body: JSON.stringify({
-                    conteudo: content,
-                    changelog: changelog,
-                    tipo_alteracao: tipoAlteracao
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    updateSaveStatus('saved');
-                    closeVersionModal();
-                    alert(`Nova versão ${data.version} criada com sucesso!`);
-                } else {
-                    updateSaveStatus('error');
-                    alert('Erro ao criar versão: ' + data.message);
-                }
-            })
-            .catch(error => {
-                updateSaveStatus('error');
-                alert('Erro na conexão. Tente novamente.');
-                console.error('Erro:', error);
-            });
-        });
-        
-        // Fechar modal clicando fora
-        window.addEventListener('click', function(e) {
-            const modal = document.getElementById('versionModal');
-            if (e.target === modal) {
-                closeVersionModal();
-            }
-        });
-        
-        // Aviso antes de sair da página
+        // Aviso antes de sair
         window.addEventListener('beforeunload', function(e) {
-            // Se houver mudanças não salvas, mostrar aviso
-            const statusText = document.querySelector('#saveStatus span').textContent;
+            const statusText = document.getElementById('statusText').textContent;
             if (statusText === 'Salvando...') {
                 e.preventDefault();
                 e.returnValue = '';
             }
         });
+        
+        // Atualizar toolbar ao selecionar texto
+        document.addEventListener('selectionchange', updateToolbar);
     </script>
 </body>
 </html>

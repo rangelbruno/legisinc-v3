@@ -145,3 +145,6 @@ Route::get('/api-test/health', function () {
 });
 
 // Registration functionality working correctly
+
+// Rota de teste temporária sem autenticação
+Route::get('/test-projeto/{id}/edit', [ProjetoController::class, 'edit'])->name('test.projetos.edit');

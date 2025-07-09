@@ -16,7 +16,7 @@ return new class extends Migration
             
             // Identificação
             $table->string('titulo');
-            $table->string('numero')->unique();
+            $table->string('numero')->nullable();
             $table->year('ano');
             $table->enum('tipo', [
                 'projeto_lei_ordinaria',
@@ -74,6 +74,7 @@ return new class extends Migration
             $table->index(['status', 'tipo']);
             $table->index(['autor_id', 'ano']);
             $table->index(['comissao_id', 'status']);
+            $table->unique(['numero', 'ano', 'tipo'], 'projetos_numero_ano_tipo_unique');
         });
     }
 
