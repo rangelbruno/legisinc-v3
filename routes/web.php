@@ -6,6 +6,7 @@ use App\Http\Controllers\UserApiController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\Parlamentar\ParlamentarController;
 use App\Http\Controllers\User\UserController as UserManagementController;
+use App\Http\Controllers\Projeto\ProjetoController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -101,6 +102,35 @@ Route::prefix('usuarios')->name('usuarios.')->middleware('auth')->group(function
     Route::post('/{id}/resetar-senha', [UserManagementController::class, 'resetarSenha'])->name('resetar-senha');
     Route::post('/exportar', [UserManagementController::class, 'exportar'])->name('exportar');
     Route::post('/importar', [UserManagementController::class, 'importar'])->name('importar');
+});
+
+// Projetos routes (protected with auth only - TODO: add permissions later)
+Route::prefix('projetos')->name('projetos.')->middleware('auth')->group(function () {
+    // CRUD básico
+    Route::get('/', [ProjetoController::class, 'index'])->name('index');
+    Route::get('/create', [ProjetoController::class, 'create'])->name('create');
+    Route::post('/', [ProjetoController::class, 'store'])->name('store');
+    Route::get('/{id}', [ProjetoController::class, 'show'])->name('show');
+    Route::get('/{id}/edit', [ProjetoController::class, 'edit'])->name('edit');
+    Route::put('/{id}', [ProjetoController::class, 'update'])->name('update');
+    Route::delete('/{id}', [ProjetoController::class, 'destroy'])->name('destroy');
+    
+    // Ações de workflow
+    Route::post('/{id}/protocolar', [ProjetoController::class, 'protocolar'])->name('protocolar');
+    Route::post('/{id}/encaminhar-comissao', [ProjetoController::class, 'encaminharComissao'])->name('encaminhar-comissao');
+    
+    // AJAX endpoints
+    Route::get('/buscar', [ProjetoController::class, 'buscar'])->name('buscar');
+    Route::get('/estatisticas', [ProjetoController::class, 'estatisticas'])->name('estatisticas');
+    
+    // Editor de conteúdo
+    Route::get('/{id}/editor', [ProjetoController::class, 'editor'])->name('editor');
+    Route::post('/{id}/salvar-conteudo', [ProjetoController::class, 'salvarConteudo'])->name('salvar-conteudo');
+    
+    // Sub-recursos
+    Route::get('/{id}/versoes', [ProjetoController::class, 'versoes'])->name('versoes');
+    Route::get('/{id}/tramitacao', [ProjetoController::class, 'tramitacao'])->name('tramitacao');
+    Route::get('/{id}/anexos', [ProjetoController::class, 'anexos'])->name('anexos');
 });
 
 // Mock API routes moved to routes/api.php to avoid CSRF middleware

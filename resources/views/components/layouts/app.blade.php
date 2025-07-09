@@ -45,15 +45,19 @@
                 <!--end::Header-->
                 <!--begin::Content-->
                 <div class="content d-flex flex-column flex-column-fluid" id="kt_content">
-                    <!--begin::Container-->
-                    <div class="container-xxl" id="kt_content_container">
-                        <!--begin::Row-->
-                        <div class="row gy-5 g-xl-10">
-                            {{ $slot }}
+                    @hasSection('content')
+                        @yield('content')
+                    @else
+                        <!--begin::Container-->
+                        <div class="container-xxl" id="kt_content_container">
+                            <!--begin::Row-->
+                            <div class="row gy-5 g-xl-10">
+                                {{ $slot }}
+                            </div>
+                            <!--end::Row-->
                         </div>
-                        <!--end::Row-->
-                    </div>
-                    <!--end::Container-->
+                        <!--end::Container-->
+                    @endif
                 </div>
                 <!--end::Content-->
                 <!--begin::Footer-->

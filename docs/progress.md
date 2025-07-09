@@ -31,7 +31,7 @@ A estrutura base está completa e os primeiros módulos core do sistema foram im
 Os próximos módulos a serem implementados seguem a ordem de prioridade do sistema parlamentar:
 
 ### Módulos Core - Próxima Fase
-- [ ] **4. Projetos de Lei:** (Tramitação, Relatoria, CRUD de projetos)
+- [x] **4. Projetos de Lei:** (Tramitação, Relatoria, CRUD de projetos) - ✅ **IMPLEMENTADO**
 - [ ] **5. Sessões Plenárias:** (Controle de Sessões, Atas, Presenças)
 - [ ] **6. Sistema de Votação:** (Registro de votações, Resultados, Histórico)
 - [ ] **7. Relatórios Parlamentares:** (Analytics, Estatísticas, Dashboards)
@@ -67,16 +67,15 @@ Os próximos módulos a serem implementados seguem a ordem de prioridade do sist
 
 Com os módulos core básicos implementados, recomenda-se seguir a seguinte ordem:
 
-1. **🎯 Prioridade Alta:** **Projetos de Lei** - Core do sistema legislativo
-2. **📋 Prioridade Média:** **Sessões Plenárias** - Necessário para votações
-3. **🗳️ Prioridade Média:** **Sistema de Votação** - Depende de projetos e sessões
-4. **📊 Prioridade Baixa:** **Relatórios** - Analytics e dashboards
-5. **🔐 Prioridade Baixa:** **Permissões Avançadas** - Segurança aprimorada
+1. **🎯 Prioridade Alta:** **Sessões Plenárias** - Necessário para votações
+2. **🗳️ Prioridade Média:** **Sistema de Votação** - Depende de projetos e sessões
+3. **📊 Prioridade Baixa:** **Relatórios** - Analytics e dashboards
+4. **🔐 Prioridade Baixa:** **Permissões Avançadas** - Segurança aprimorada
 
 ### Status de Desenvolvimento
-- ✅ **Concluído:** Dashboard, Usuários, Parlamentares, Comissões
+- ✅ **Concluído:** Dashboard, Usuários, Parlamentares, Comissões, Projetos de Lei
 - 🚧 **Em Desenvolvimento:** -
-- 📋 **Próximo:** Projetos de Lei
+- 📋 **Próximo:** Sessões Plenárias
 
 ### Estrutura Técnica Atual
 - **Backend:** Laravel 12 + PHP 8.2
