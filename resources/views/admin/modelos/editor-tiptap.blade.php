@@ -885,6 +885,15 @@
             
             // Atalhos de teclado
             document.addEventListener('keydown', function(e) {
+                // Interceptar Delete/Backspace se todo documento está selecionado
+                if (!e.ctrlKey && !e.metaKey && (e.key === 'Delete' || e.key === 'Backspace')) {
+                    if (isEntireDocumentSelected()) {
+                        e.preventDefault();
+                        deleteAllContent();
+                        return;
+                    }
+                }
+                
                 if (e.ctrlKey || e.metaKey) {
                     switch(e.key) {
                         case 's':
@@ -926,8 +935,51 @@
                             e.preventDefault();
                             setZoom(100);
                             break;
+                        case 'a':
+                            e.preventDefault();
+                            selectAllDocument();
+                            break;
+                        case 'c':
+                            // Interceptar Ctrl+C se todo documento está selecionado
+                            if (isEntireDocumentSelected()) {
+                                e.preventDefault();
+                                copyAllContent();
+                            }
+                            // Senão, permitir comportamento nativo
+                            break;
+                        case 'v':
+                            // Permitir Ctrl+V nativo
+                            // Não prevenir o comportamento padrão
+                            break;
+                        case 'x':
+                            // Interceptar Ctrl+X se todo documento está selecionado
+                            if (isEntireDocumentSelected()) {
+                                e.preventDefault();
+                                cutAllContent();
+                            }
+                            // Senão, permitir comportamento nativo
+                            break;
                     }
                 }
+            });
+            
+            // Resetar flag de seleção quando seleção muda
+            document.addEventListener('selectionchange', function() {
+                // Verificar se ainda há seleção ou se mudou
+                const selection = window.getSelection();
+                if (selection.rangeCount === 0 || !selection.toString().trim()) {
+                    resetDocumentSelectionFlag();
+                }
+            });
+            
+            // Resetar flag quando usuário clica em qualquer lugar
+            document.addEventListener('click', function() {
+                resetDocumentSelectionFlag();
+            });
+            
+            // Resetar flag quando usuário começa a digitar
+            document.addEventListener('input', function() {
+                resetDocumentSelectionFlag();
             });
             
             // Aviso antes de sair da página
@@ -1024,10 +1076,19 @@
             hasUnsavedChanges = true;
             updateStatus('Editando...', 'editing');
             updateStats();
-            highlightVariables();
             
-            // Verificar se precisa criar nova página
-            checkPageOverflow();
+            // Usar debounce para highlightVariables para evitar execução excessiva
+            clearTimeout(window.highlightTimeout);
+            window.highlightTimeout = setTimeout(() => {
+                highlightVariables();
+            }, 500);
+            
+            // Verificar overflow e limpar páginas vazias com debounce
+            clearTimeout(window.paginationTimeout);
+            window.paginationTimeout = setTimeout(() => {
+                checkPageOverflow();
+                removeEmptyPages();
+            }, 1000);
         }
         
         function handlePaste(e) {
@@ -1046,13 +1107,31 @@
             
             document.execCommand('insertHTML', false, contentToInsert);
             
-            // Redistribuir conteúdo após inserção
+            // Redistribuir conteúdo após inserção de grandes quantidades de texto
             setTimeout(() => {
-                checkPageOverflow();
+                redistributeContentManually();
             }, 100);
         }
         
         function handleKeyDown(e) {
+            // Detectar Enter para verificar se precisa criar nova página
+            if (e.key === 'Enter') {
+                console.log('Enter pressionado');
+                const currentPage = getCurrentActivePage();
+                if (currentPage) {
+                    const pageContent = currentPage.querySelector('.page-content');
+                    
+                    console.log('Página atual:', currentPage);
+                    console.log('Altura antes do Enter:', pageContent.scrollHeight);
+                    
+                    // Verificar se a página atual está próxima do limite após Enter
+                    setTimeout(() => {
+                        console.log('Altura após Enter:', pageContent.scrollHeight);
+                        checkIfNeedNewPageOnEnter(currentPage);
+                    }, 50); // Delay maior para garantir que o Enter foi processado
+                }
+            }
+            
             // Navegação entre páginas
             if (e.key === 'PageUp' && currentPageIndex > 0) {
                 e.preventDefault();
@@ -1061,6 +1140,246 @@
                 e.preventDefault();
                 goToPage(currentPageIndex + 1);
             }
+            
+            // Detectar teclas de deleção para limpeza mais rápida de páginas vazias
+            if (e.key === 'Backspace' || e.key === 'Delete') {
+                // Usar timeout menor para deleção para resposta mais rápida
+                clearTimeout(window.deletionTimeout);
+                window.deletionTimeout = setTimeout(() => {
+                    removeEmptyPages();
+                }, 300);
+                
+                // Consolidação menos frequente para operações mais pesadas
+                clearTimeout(window.consolidationTimeout);
+                window.consolidationTimeout = setTimeout(() => {
+                    consolidatePages();
+                }, 2000);
+            }
+        }
+        
+        function checkIfNeedNewPageOnEnter(currentPage) {
+            const pageContent = currentPage.querySelector('.page-content');
+            const maxHeight = 931; // altura máxima da página em pixels
+            const safetyMargin = 300; // margem de segurança bem grande para teste: 300px
+            
+            console.log('Verificando página:', {
+                scrollHeight: pageContent.scrollHeight,
+                maxHeight: maxHeight,
+                safetyMargin: safetyMargin,
+                threshold: maxHeight - safetyMargin
+            });
+            
+            // TESTE: Criar nova página sempre que Enter for pressionado 
+            // (depois ajustaremos para a condição correta)
+            const shouldCreateNewPage = pageContent.scrollHeight > maxHeight - safetyMargin;
+            console.log('Deve criar nova página?', shouldCreateNewPage);
+            
+            if (shouldCreateNewPage) {
+                console.log('Página excedeu limite, criando nova página');
+                
+                const currentPageIndex = Array.from(pages).indexOf(currentPage);
+                
+                console.log('Debug páginas:', {
+                    totalPaginas: pages.length,
+                    currentPageIndex: currentPageIndex,
+                    eUltimaPagina: currentPageIndex === pages.length - 1,
+                    pagesArray: pages
+                });
+                
+                // Verificar se cursor está próximo do final do conteúdo
+                const selection = window.getSelection();
+                let isNearEnd = false;
+                if (selection.rangeCount > 0) {
+                    const range = selection.getRangeAt(0);
+                    const cursorPosition = range.startOffset;
+                    const container = range.startContainer;
+                    isNearEnd = isCursorNearEndOfPage(pageContent, container, cursorPosition);
+                }
+                
+                console.log('Cursor próximo do final?', isNearEnd);
+                
+                if (isNearEnd) {
+                    // Se cursor está no final e página cheia, vamos para próxima página
+                    if (currentPageIndex === pages.length - 1) {
+                        console.log('É última página, criando nova');
+                        // Criar nova página
+                        const newPage = createNewPageElement(pages.length + 1);
+                        pages.push(newPage);
+                        document.querySelector('.page-container').appendChild(newPage);
+                        setupPageEvents(newPage.querySelector('.page-content'));
+                        
+                        console.log('Movendo cursor para nova página');
+                        moveToNextPageAfterEnter(currentPage, newPage);
+                        updatePageInfo();
+                        
+                    } else {
+                        console.log('Não é última página, movendo para próxima existente');
+                        // Mover cursor para próxima página existente
+                        const nextPage = pages[currentPageIndex + 1];
+                        if (nextPage) {
+                            moveToNextPageAfterEnter(currentPage, nextPage);
+                            updatePageInfo();
+                        }
+                    }
+                } else {
+                    console.log('Cursor não está no final, redistribuindo conteúdo');
+                    // Se cursor não está no final, apenas redistribuir conteúdo
+                    if (currentPageIndex === pages.length - 1) {
+                        // Criar nova página para overflow
+                        const newPage = createNewPageElement(pages.length + 1);
+                        pages.push(newPage);
+                        document.querySelector('.page-container').appendChild(newPage);
+                        setupPageEvents(newPage.querySelector('.page-content'));
+                        updatePageInfo();
+                    }
+                    // Redistribuir conteúdo entre páginas existentes
+                    redistributeContentManually();
+                }
+            } else {
+                console.log('Página ainda tem espaço');
+            }
+        }
+        
+        function isCursorNearEndOfPage(pageContent, container, offset) {
+            // Verificar se cursor está próximo do final da página - versão corrigida
+            try {
+                console.log('Verificando posição do cursor:', {
+                    container: container,
+                    offset: offset,
+                    nodeType: container.nodeType,
+                    containerClassName: container.className || 'sem classe'
+                });
+                
+                // Primeiro verificar se o container está realmente dentro do pageContent
+                if (!pageContent.contains(container)) {
+                    console.log('Container não está dentro da página - ignorando');
+                    return false;
+                }
+                
+                // Verificar se estamos nos elementos filhos diretos da página
+                const directChildren = Array.from(pageContent.children).filter(child => {
+                    // Filtrar apenas elementos de texto (p, div, span, etc.)
+                    const tagName = child.tagName.toLowerCase();
+                    return ['p', 'div', 'span', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'br'].includes(tagName);
+                });
+                
+                if (directChildren.length === 0) {
+                    console.log('Página sem elementos de texto válidos');
+                    return true; // Página vazia, considerar final
+                }
+                
+                const lastElement = directChildren[directChildren.length - 1];
+                const secondToLastElement = directChildren[directChildren.length - 2];
+                
+                console.log('Último elemento válido:', lastElement);
+                console.log('Penúltimo elemento válido:', secondToLastElement);
+                
+                // Verificar se cursor está no último ou penúltimo elemento
+                let currentNode = container;
+                let isInFinalElements = false;
+                
+                // Subir na hierarquia para encontrar o elemento pai
+                while (currentNode && currentNode !== pageContent) {
+                    if (currentNode === lastElement || currentNode === secondToLastElement) {
+                        isInFinalElements = true;
+                        console.log('Cursor está nos elementos finais válidos');
+                        break;
+                    }
+                    currentNode = currentNode.parentNode;
+                }
+                
+                // Verificação adicional: se estamos no último elemento de texto
+                if (!isInFinalElements && directChildren.length > 0) {
+                    // Verificar se estamos nos últimos 20% do conteúdo de texto
+                    const allText = pageContent.textContent || '';
+                    const selection = window.getSelection();
+                    if (selection.rangeCount > 0) {
+                        const range = selection.getRangeAt(0);
+                        const preCaretRange = range.cloneRange();
+                        preCaretRange.selectNodeContents(pageContent);
+                        preCaretRange.setEnd(range.endContainer, range.endOffset);
+                        const textBeforeCaret = preCaretRange.toString();
+                        const percentageFromStart = (textBeforeCaret.length / allText.length) * 100;
+                        
+                        console.log('Posição no texto:', {
+                            textoAntesCursor: textBeforeCaret.length,
+                            textoTotal: allText.length,
+                            porcentagem: percentageFromStart
+                        });
+                        
+                        if (percentageFromStart > 80) {
+                            isInFinalElements = true;
+                            console.log('Cursor nos últimos 20% do texto');
+                        }
+                    }
+                }
+                
+                if (isInFinalElements) {
+                    console.log('Cursor próximo do final da página');
+                    return true;
+                }
+                
+                console.log('Cursor não está no final');
+                return false;
+                
+            } catch (error) {
+                console.warn('Erro ao verificar posição do cursor:', error);
+                return false; // Em caso de erro, assumir que NÃO está no final para evitar ações incorretas
+            }
+        }
+        
+        function moveToNextPageAfterEnter(currentPage, nextPage) {
+            // Move cursor para nova página quando Enter foi pressionado no final
+            console.log('Movendo cursor para próxima página:', {
+                currentPage: currentPage,
+                nextPage: nextPage
+            });
+            
+            const currentPageContent = currentPage.querySelector('.page-content');
+            const nextPageContent = nextPage.querySelector('.page-content');
+            
+            // Verificar se há conteúdo na página atual que precisa ser preservado
+            const currentContent = currentPageContent.innerHTML.trim();
+            console.log('Conteúdo da página atual:', currentContent.substring(0, 100) + '...');
+            
+            // Garantir que a nova página tenha um parágrafo inicial se estiver vazia
+            const nextContent = nextPageContent.innerHTML.trim();
+            if (!nextContent || nextContent === '<br>' || nextContent === '<p></p>') {
+                console.log('Próxima página vazia, criando parágrafo inicial');
+                nextPageContent.innerHTML = '<p><br></p>';
+            } else {
+                console.log('Próxima página já tem conteúdo:', nextContent.substring(0, 100) + '...');
+            }
+            
+            // Focar na nova página
+            nextPageContent.focus();
+            
+            // Posicionar cursor no início da nova página
+            const range = document.createRange();
+            const firstElement = nextPageContent.firstElementChild;
+            
+            if (firstElement) {
+                if (firstElement.tagName === 'P') {
+                    // Se é um parágrafo, posicionar dentro dele
+                    range.setStart(firstElement, 0);
+                } else {
+                    // Senão, posicionar antes do elemento
+                    range.setStartBefore(firstElement);
+                }
+                range.collapse(true);
+            } else {
+                range.setStart(nextPageContent, 0);
+                range.collapse(true);
+            }
+            
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            
+            // Scroll para a nova página
+            nextPage.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            
+            console.log('Cursor movido com sucesso para próxima página');
         }
         
         function createNewPageElement(pageNumber) {
@@ -1082,6 +1401,20 @@
         function redistributeContent() {
             const allContent = getAllContent();
             if (!allContent.trim()) return;
+            
+            // Salvar posição do cursor antes de redistribuir
+            const selection = window.getSelection();
+            const range = selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
+            let cursorInfo = null;
+            
+            if (range) {
+                cursorInfo = {
+                    startOffset: range.startOffset,
+                    endOffset: range.endOffset,
+                    startContainer: range.startContainer,
+                    endContainer: range.endContainer
+                };
+            }
             
             // Limpar todas as páginas
             pages.forEach(page => {
@@ -1141,6 +1474,26 @@
             // Limpar elemento temporário
             document.body.removeChild(tempDiv);
             
+            // Tentar restaurar posição do cursor se havia uma seleção anterior
+            if (cursorInfo && pages.length > 0) {
+                try {
+                    // Focar na primeira página se não conseguir restaurar a posição exata
+                    const firstPageContent = pages[0].querySelector('.page-content');
+                    firstPageContent.focus();
+                    
+                    // Colocar cursor no final do conteúdo
+                    const newRange = document.createRange();
+                    newRange.selectNodeContents(firstPageContent);
+                    newRange.collapse(false);
+                    selection.removeAllRanges();
+                    selection.addRange(newRange);
+                } catch (e) {
+                    // Se der erro, apenas focar na primeira página
+                    const firstPageContent = pages[0].querySelector('.page-content');
+                    firstPageContent.focus();
+                }
+            }
+            
             updatePageInfo();
         }
         
@@ -1156,11 +1509,503 @@
         }
         
         function checkPageOverflow() {
-            // Usar debounce para evitar muitas chamadas
-            clearTimeout(window.paginationTimeout);
-            window.paginationTimeout = setTimeout(() => {
-                redistributeContent();
-            }, 300);
+            // Verifica se a página atual precisa de uma nova página sem reorganizar conteúdo
+            const currentPage = getCurrentActivePage();
+            if (!currentPage) return;
+            
+            const pageContent = currentPage.querySelector('.page-content');
+            const maxHeight = 931; // altura máxima da página em pixels
+            
+            // Verificar se o conteúdo atual excede a altura máxima
+            if (pageContent.scrollHeight > maxHeight) {
+                // Criar nova página apenas se ainda não existe
+                const currentPageIndex = Array.from(pages).indexOf(currentPage);
+                if (currentPageIndex === pages.length - 1) {
+                    const newPage = createNewPageElement(pages.length + 1);
+                    pages.push(newPage);
+                    document.querySelector('.page-container').appendChild(newPage);
+                    setupPageEvents(newPage.querySelector('.page-content'));
+                    
+                    // Mover cursor para nova página se necessário
+                    moveOverflowToNextPage(currentPage, newPage);
+                }
+            }
+        }
+        
+        function getCurrentActivePage() {
+            // Encontrar a página que contém o cursor atual
+            const selection = window.getSelection();
+            if (selection.rangeCount === 0) return pages[0];
+            
+            const range = selection.getRangeAt(0);
+            let container = range.startContainer;
+            
+            // Subir na hierarquia até encontrar a página
+            while (container && !container.classList?.contains('page')) {
+                container = container.parentNode;
+            }
+            
+            return container || pages[0];
+        }
+        
+        function moveOverflowToNextPage(currentPage, nextPage) {
+            const currentPageContent = currentPage.querySelector('.page-content');
+            const nextPageContent = nextPage.querySelector('.page-content');
+            const maxHeight = 931;
+            
+            // Se a página atual não está com overflow, não fazer nada
+            if (currentPageContent.scrollHeight <= maxHeight) {
+                return;
+            }
+            
+            // Salvar posição do cursor
+            const selection = window.getSelection();
+            const hadSelection = selection.rangeCount > 0;
+            
+            // Encontrar onde "cortar" o conteúdo
+            const elements = Array.from(currentPageContent.children);
+            let totalHeight = 0;
+            let cutIndex = -1;
+            
+            // Criar elemento temporário para medir alturas
+            const tempDiv = document.createElement('div');
+            tempDiv.style.position = 'absolute';
+            tempDiv.style.top = '-9999px';
+            tempDiv.style.width = '650px';
+            tempDiv.style.fontFamily = 'Times New Roman, serif';
+            tempDiv.style.fontSize = '12pt';
+            tempDiv.style.lineHeight = '1.5';
+            document.body.appendChild(tempDiv);
+            
+            for (let i = 0; i < elements.length; i++) {
+                tempDiv.appendChild(elements[i].cloneNode(true));
+                const currentHeight = tempDiv.offsetHeight;
+                
+                if (currentHeight > maxHeight && cutIndex === -1) {
+                    cutIndex = Math.max(0, i - 1);
+                    break;
+                }
+            }
+            
+            document.body.removeChild(tempDiv);
+            
+            // Se encontrou onde cortar, mover elementos
+            if (cutIndex >= 0 && cutIndex < elements.length - 1) {
+                // Mover elementos que não cabem para a próxima página
+                for (let i = cutIndex + 1; i < elements.length; i++) {
+                    const element = elements[i];
+                    element.remove();
+                    nextPageContent.appendChild(element);
+                }
+                
+                // Se tinha seleção e está na área movida, mover cursor
+                if (hadSelection) {
+                    nextPageContent.focus();
+                    const range = document.createRange();
+                    range.setStart(nextPageContent, 0);
+                    range.collapse(true);
+                    selection.removeAllRanges();
+                    selection.addRange(range);
+                }
+            }
+        }
+        
+        function redistributeContentManually() {
+            // Função para redistribuir conteúdo manualmente quando necessário
+            redistributeContent();
+        }
+        
+        function removeEmptyPages() {
+            // Remove páginas vazias do final para o início (exceto a primeira)
+            let removedAny = false;
+            let cursorMovedTo = null;
+            
+            // Começar do final para evitar problemas de índice
+            for (let i = pages.length - 1; i > 0; i--) {
+                const page = pages[i];
+                const pageContent = page.querySelector('.page-content');
+                
+                if (isPageEmpty(pageContent)) {
+                    // Verificar se o cursor está nesta página
+                    const selection = window.getSelection();
+                    const isActivelyEditing = selection.rangeCount > 0 && 
+                        pageContent.contains(selection.getRangeAt(0).startContainer);
+                    
+                    if (isActivelyEditing) {
+                        // Se está editando nesta página vazia, mover cursor para página anterior
+                        const previousPage = pages[i - 1];
+                        if (previousPage) {
+                            const previousPageContent = previousPage.querySelector('.page-content');
+                            cursorMovedTo = previousPageContent;
+                        }
+                    }
+                    
+                    // Remover a página vazia
+                    page.remove();
+                    pages.splice(i, 1);
+                    removedAny = true;
+                }
+            }
+            
+            // Mover cursor se necessário
+            if (cursorMovedTo) {
+                cursorMovedTo.focus();
+                
+                // Colocar cursor no final do conteúdo da página anterior
+                const range = document.createRange();
+                range.selectNodeContents(cursorMovedTo);
+                range.collapse(false);
+                
+                const selection = window.getSelection();
+                selection.removeAllRanges();
+                selection.addRange(range);
+            }
+            
+            // Atualizar numeração das páginas e informações
+            if (removedAny) {
+                updatePageNumbers();
+                updatePageInfo();
+            }
+            
+            return removedAny;
+        }
+        
+        function isPageEmpty(pageContent) {
+            // Verifica se uma página está vazia ou contém apenas conteúdo irrelevante
+            const content = pageContent.innerHTML.trim();
+            
+            // Página completamente vazia
+            if (!content) return true;
+            
+            // Apenas parágrafos vazios
+            if (content === '<p></p>' || content === '<p><br></p>' || content === '<br>') return true;
+            
+            // Apenas espaços em branco
+            const textContent = pageContent.textContent || pageContent.innerText || '';
+            if (!textContent.trim()) return true;
+            
+            // Conteúdo com apenas elementos vazios
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = content;
+            const hasActualContent = tempDiv.textContent.trim().length > 0;
+            
+            return !hasActualContent;
+        }
+        
+        function updatePageNumbers() {
+            // Atualizar numeração de todas as páginas
+            pages.forEach((page, index) => {
+                const pageNumber = page.querySelector('.page-number');
+                if (pageNumber) {
+                    pageNumber.textContent = index + 1;
+                }
+            });
+        }
+        
+        let isDocumentFullySelected = false; // Flag para rastrear se todo documento está selecionado
+        
+        function selectAllDocument() {
+            // Seleciona todo o conteúdo do documento (todas as páginas)
+            if (pages.length === 0) return;
+            
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            
+            try {
+                // Para múltiplas páginas contenteditable, vamos usar uma abordagem diferente
+                // Vamos selecionar o container de páginas inteiro
+                const pageContainer = document.querySelector('.page-container');
+                
+                if (pageContainer) {
+                    const range = document.createRange();
+                    range.selectNodeContents(pageContainer);
+                    selection.addRange(range);
+                    
+                    // Focar no primeiro elemento editável
+                    const firstPageContent = pages[0].querySelector('.page-content');
+                    if (firstPageContent) {
+                        firstPageContent.focus();
+                    }
+                } else {
+                    // Fallback para página única
+                    const pageContent = pages[0].querySelector('.page-content');
+                    const range = document.createRange();
+                    range.selectNodeContents(pageContent);
+                    selection.addRange(range);
+                }
+                
+            } catch (error) {
+                console.warn('Erro ao selecionar documento completo:', error);
+                
+                // Fallback final: selecionar todo conteúdo usando uma abordagem mais simples
+                try {
+                    // Selecionar cada página individualmente e combinar
+                    let combinedHTML = '';
+                    pages.forEach(page => {
+                        const content = page.querySelector('.page-content');
+                        if (content) {
+                            combinedHTML += content.innerHTML;
+                        }
+                    });
+                    
+                    // Criar um elemento temporário para seleção
+                    const tempDiv = document.createElement('div');
+                    tempDiv.style.position = 'absolute';
+                    tempDiv.style.left = '-9999px';
+                    tempDiv.innerHTML = combinedHTML;
+                    document.body.appendChild(tempDiv);
+                    
+                    // Selecionar o conteúdo temporário
+                    const range = document.createRange();
+                    range.selectNodeContents(tempDiv);
+                    selection.addRange(range);
+                    
+                    // Remover elemento temporário após um momento
+                    setTimeout(() => {
+                        if (tempDiv.parentNode) {
+                            document.body.removeChild(tempDiv);
+                        }
+                    }, 100);
+                    
+                } catch (finalError) {
+                    console.warn('Fallback de seleção também falhou:', finalError);
+                    // Última tentativa: selecionar apenas primeira página
+                    const firstPageContent = pages[0].querySelector('.page-content');
+                    if (firstPageContent) {
+                        const range = document.createRange();
+                        range.selectNodeContents(firstPageContent);
+                        selection.addRange(range);
+                        firstPageContent.focus();
+                    }
+                }
+            }
+            
+            // Marcar que todo o documento está selecionado
+            isDocumentFullySelected = true;
+        }
+        
+        function getFirstSelectableNode(container) {
+            // Encontra o primeiro nó selecionável (texto ou elemento)
+            const walker = document.createTreeWalker(
+                container,
+                NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT,
+                {
+                    acceptNode: function(node) {
+                        if (node.nodeType === Node.TEXT_NODE && node.textContent.trim()) {
+                            return NodeFilter.FILTER_ACCEPT;
+                        }
+                        if (node.nodeType === Node.ELEMENT_NODE && 
+                            (node.tagName === 'P' || node.tagName === 'DIV' || node.tagName === 'SPAN')) {
+                            return NodeFilter.FILTER_ACCEPT;
+                        }
+                        return NodeFilter.FILTER_SKIP;
+                    }
+                }
+            );
+            
+            return walker.nextNode();
+        }
+        
+        function getLastSelectableNode(container) {
+            // Encontra o último nó selecionável (texto ou elemento)
+            const walker = document.createTreeWalker(
+                container,
+                NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT,
+                {
+                    acceptNode: function(node) {
+                        if (node.nodeType === Node.TEXT_NODE && node.textContent.trim()) {
+                            return NodeFilter.FILTER_ACCEPT;
+                        }
+                        if (node.nodeType === Node.ELEMENT_NODE && 
+                            (node.tagName === 'P' || node.tagName === 'DIV' || node.tagName === 'SPAN')) {
+                            return NodeFilter.FILTER_ACCEPT;
+                        }
+                        return NodeFilter.FILTER_SKIP;
+                    }
+                }
+            );
+            
+            let lastNode = null;
+            let currentNode = walker.nextNode();
+            while (currentNode) {
+                lastNode = currentNode;
+                currentNode = walker.nextNode();
+            }
+            
+            return lastNode;
+        }
+        
+        function resetDocumentSelectionFlag() {
+            // Reseta a flag quando seleção muda
+            isDocumentFullySelected = false;
+        }
+        
+        function isEntireDocumentSelected() {
+            // Verifica se todo o documento está selecionado
+            return isDocumentFullySelected;
+        }
+        
+        function deleteAllContent() {
+            // Deleta todo o conteúdo do documento
+            pages.forEach((page, index) => {
+                const pageContent = page.querySelector('.page-content');
+                if (index === 0) {
+                    // Manter primeira página com conteúdo vazio
+                    pageContent.innerHTML = '<p><br></p>';
+                } else {
+                    // Remover páginas extras
+                    page.remove();
+                }
+            });
+            
+            // Resetar array de páginas
+            pages = pages.slice(0, 1);
+            
+            // Focar na primeira página
+            const firstPageContent = pages[0].querySelector('.page-content');
+            firstPageContent.focus();
+            
+            // Posicionar cursor no início
+            const range = document.createRange();
+            range.setStart(firstPageContent, 0);
+            range.collapse(true);
+            
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            
+            // Resetar flag
+            isDocumentFullySelected = false;
+            
+            // Atualizar interface
+            updatePageNumbers();
+            updatePageInfo();
+            updateStats();
+        }
+        
+        function copyAllContent() {
+            // Copia todo o conteúdo do documento
+            const allContent = getAllContent();
+            
+            // Copiar para clipboard usando a API moderna
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                // Converter HTML para texto simples para clipboard
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = allContent;
+                const textContent = tempDiv.textContent || tempDiv.innerText || '';
+                
+                navigator.clipboard.writeText(textContent).then(() => {
+                    console.log('Conteúdo copiado para o clipboard');
+                }).catch(() => {
+                    // Fallback para método antigo
+                    copyToClipboardFallback(allContent);
+                });
+            } else {
+                // Fallback para navegadores antigos
+                copyToClipboardFallback(allContent);
+            }
+        }
+        
+        function cutAllContent() {
+            // Corta todo o conteúdo do documento (copia e depois deleta)
+            const allContent = getAllContent();
+            
+            // Copiar para clipboard usando a API moderna
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                // Converter HTML para texto simples para clipboard
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = allContent;
+                const textContent = tempDiv.textContent || tempDiv.innerText || '';
+                
+                navigator.clipboard.writeText(textContent).then(() => {
+                    deleteAllContent();
+                }).catch(() => {
+                    // Fallback para método antigo
+                    copyToClipboardFallback(allContent);
+                    deleteAllContent();
+                });
+            } else {
+                // Fallback para navegadores antigos
+                copyToClipboardFallback(allContent);
+                deleteAllContent();
+            }
+        }
+        
+        function copyToClipboardFallback(content) {
+            // Método fallback para cópia
+            const tempTextArea = document.createElement('textarea');
+            tempTextArea.style.position = 'absolute';
+            tempTextArea.style.left = '-9999px';
+            tempTextArea.style.top = '-9999px';
+            
+            // Converter HTML para texto
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = content;
+            tempTextArea.value = tempDiv.textContent || tempDiv.innerText || '';
+            
+            document.body.appendChild(tempTextArea);
+            tempTextArea.select();
+            
+            try {
+                document.execCommand('copy');
+            } catch (err) {
+                console.warn('Não foi possível copiar para o clipboard');
+            }
+            
+            document.body.removeChild(tempTextArea);
+        }
+        
+        function consolidatePages() {
+            // Consolida o conteúdo de páginas que podem ser reunidas
+            // (chamada menos frequente para operações mais complexas)
+            let hasChanges = false;
+            
+            for (let i = pages.length - 1; i > 0; i--) {
+                const currentPage = pages[i];
+                const previousPage = pages[i - 1];
+                const currentContent = currentPage.querySelector('.page-content');
+                const previousContent = previousPage.querySelector('.page-content');
+                
+                // Se a página atual tem pouco conteúdo, tentar mover para a anterior
+                if (currentContent.scrollHeight < 200 && !isPageEmpty(currentContent)) {
+                    // Testar se o conteúdo caberia na página anterior
+                    const tempDiv = document.createElement('div');
+                    tempDiv.style.position = 'absolute';
+                    tempDiv.style.top = '-9999px';
+                    tempDiv.style.width = '650px';
+                    tempDiv.style.fontFamily = 'Times New Roman, serif';
+                    tempDiv.style.fontSize = '12pt';
+                    tempDiv.style.lineHeight = '1.5';
+                    
+                    // Combinar conteúdo das duas páginas
+                    tempDiv.innerHTML = previousContent.innerHTML + currentContent.innerHTML;
+                    document.body.appendChild(tempDiv);
+                    
+                    const combinedHeight = tempDiv.offsetHeight;
+                    document.body.removeChild(tempDiv);
+                    
+                    // Se cabe na página anterior (931px), mover conteúdo
+                    if (combinedHeight <= 931) {
+                        // Mover conteúdo para página anterior
+                        const elementsToMove = Array.from(currentContent.children);
+                        elementsToMove.forEach(element => {
+                            previousContent.appendChild(element);
+                        });
+                        
+                        // Remover página vazia
+                        currentPage.remove();
+                        pages.splice(i, 1);
+                        hasChanges = true;
+                    }
+                }
+            }
+            
+            if (hasChanges) {
+                updatePageNumbers();
+                updatePageInfo();
+            }
+            
+            return hasChanges;
         }
         
         function insertPageBreak() {
@@ -1241,29 +2086,26 @@
         }
         
         function highlightVariables() {
-            // Destacar variáveis em todas as páginas
+            // Destacar variáveis em todas as páginas sem perder a posição do cursor
             pages.forEach(page => {
                 const pageContent = page.querySelector('.page-content');
                 const content = pageContent.innerHTML;
+                
+                // Verificar se já há variáveis destacadas para evitar loops desnecessários
+                if (content.includes('variable-placeholder')) {
+                    return;
+                }
+                
                 const highlightedContent = content.replace(
                     /\{\{([^}]+)\}\}/g,
                     function(match, p1) {
-                        return '<span class="variable-placeholder">{{' + p1 + '}}</span>';
+                        return '<span class="variable-placeholder">' + match + '</span>';
                     }
                 );
                 
-                // Só atualizar se houve mudança para evitar loops
-                if (content !== highlightedContent) {
-                    const selection = window.getSelection();
-                    const range = selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
-                    
+                // Só atualizar se houve mudança real e não há seleção ativa
+                if (content !== highlightedContent && !window.getSelection().rangeCount) {
                     pageContent.innerHTML = highlightedContent;
-                    
-                    // Restaurar seleção
-                    if (range) {
-                        selection.removeAllRanges();
-                        selection.addRange(range);
-                    }
                 }
             });
         }

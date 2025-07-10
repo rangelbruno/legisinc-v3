@@ -201,6 +201,26 @@ Configuração de serviços externos incluindo:
   - Controle de acesso granular
   - Sistema de times (opcional)
 
+### 6. Gestão de Modelos de Projeto
+- **Localização**: `app/Models/ModeloProjeto.php`, `resources/views/admin/modelos/`
+- **Funcionalidades**:
+  - CRUD completo de modelos de projeto
+  - Interface Grid View e List View
+  - Sistema de cards interativos com tipos específicos
+  - Filtros dinâmicos e busca em tempo real
+  - Ícones ki-duotone específicos para cada tipo de projeto
+  - Editor de texto integrado com variáveis dinâmicas
+  - Confirmações modais para exclusão
+  - Design responsivo seguindo padrão Metronic
+- **Tipos de Projeto Suportados**:
+  - Projeto de Lei Ordinária (ki-document)
+  - Projeto de Lei Complementar (ki-file-added)  
+  - Emenda Constitucional (ki-security-user)
+  - Decreto Legislativo (ki-notepad)
+  - Resolução (ki-verify)
+  - Indicação (ki-arrow-up-right)
+  - Requerimento (ki-questionnaire-tablet)
+
 ## Configuração do Desenvolvimento
 
 ### Build System
@@ -391,16 +411,57 @@ php artisan test --coverage
 - Sistema de tramitação
 - Gestão de usuários e parlamentares
 - Sistema de comissões
+- Gestão avançada de modelos de projeto
+
+### 6. Sistema de Templates e Interface
+- **Interface Metronic Completa**: Todas as páginas administrativas seguem o padrão Metronic
+- **Sistema Grid/List View**: Visualização dupla para melhor experiência do usuário
+- **Cards Interativos**: Sistema de cards com hover effects e animações
+- **Ícones Semânticos**: Ícones ki-duotone específicos para cada tipo de conteúdo
+- **Filtros Dinâmicos**: Sistema de filtros em tempo real
+- **Busca Instantânea**: Busca sem recarregamento de página
+- **Modal Confirmations**: Confirmações elegantes para ações críticas
+- **Design Responsivo**: Interface otimizada para todos os dispositivos
+
+### 7. Sistema de Assets Otimizado
+- **Comando FixAssetPaths**: Correção automática de caminhos de assets 404
+- **Estrutura Organizada**: Assets organizados seguindo padrões Laravel
+- **Integração Vite**: Build system otimizado para desenvolvimento e produção
+
+## Documentação Técnica
+
+O projeto possui documentação técnica detalhada localizada em `docs/`:
+
+### Documentação de Melhorias
+- **`docs/modelos-improvements.md`**: Documentação completa das melhorias na página de listagem de modelos
+- **`docs/create-page-improvements.md`**: Documentação das melhorias na página de criação de modelos
+- **`docs/PROJETO.md`**: Documentação geral do projeto (este arquivo)
+
+### Características da Documentação
+- **Diagramas Mermaid**: Fluxos visuais das funcionalidades
+- **Screenshots**: Demonstrações visuais das interfaces
+- **Código de Exemplo**: Snippets de código para referência
+- **Checklist de Funcionalidades**: Acompanhamento de implementações
+- **Estrutura Modular**: Organização por módulos e funcionalidades
 
 ## Próximos Passos
 
 Este documento será atualizado conforme o desenvolvimento do projeto progride. As próximas implementações incluirão:
 
+### Melhorias Completadas ✅
+1. **Sistema de Modelos de Projeto**: Interface completa com Grid/List View, cards interativos e design Metronic
+2. **Correção de Assets**: Comando automático para correção de caminhos 404
+3. **Documentação Técnica**: Documentação detalhada das melhorias implementadas
+4. **Interface Responsiva**: Design otimizado para todos os dispositivos
+
+### Próximas Implementações 🔄
 1. Aprimoramento do sistema de tramitação
 2. Integração com APIs externas
-3. Dashboard de analytics
-4. Sistema de notificações
+3. Dashboard de analytics avançado
+4. Sistema de notificações em tempo real
 5. Módulos de transparência
+6. Sistema de workflow automatizado
+7. Relatórios e estatísticas avançadas
 
 ## Comandos Úteis
 
@@ -422,6 +483,9 @@ php artisan key:generate
 php artisan api:mode mock
 php artisan api:mode external
 php artisan api:mode --status
+
+# Comando de correção de assets
+php artisan assets:fix-paths      # Corrige caminhos de assets para usar {{ asset() }}
 ```
 
 ### Desenvolvimento com Docker
@@ -439,6 +503,6 @@ make logs                  # Ver logs
 
 ---
 
-**Última atualização**: 2025-01-15
+**Última atualização**: 2025-01-16
 **Versão do Laravel**: 12.0
-**Status**: Sistema LegisInc com API inteligente e módulos funcionais completos
+**Status**: Sistema LegisInc com interface Metronic completa, gestão avançada de modelos e documentação técnica detalhada
