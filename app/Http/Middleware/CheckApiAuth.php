@@ -17,7 +17,7 @@ class CheckApiAuth
     public function handle(Request $request, Closure $next): Response
     {
         if (!Session::get('api_authenticated', false)) {
-            return redirect()->route('auth.login')
+            return redirect()->route('login')
                 ->with('error', 'Você precisa fazer login para acessar esta página.');
         }
 

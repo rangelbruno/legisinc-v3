@@ -1,94 +1,205 @@
-# Documentação do Projeto Laravel
+# Documentação do Projeto LegisInc
 
 ## Visão Geral
 
-Este é um projeto Laravel 12 com uma interface administrativa baseada no template Metronic. O projeto utiliza uma estrutura moderna com Vite para build dos assets, TailwindCSS para styling e Blade components para organização da interface.
+O **LegisInc** é um sistema de gestão legislativa desenvolvido com Laravel 12 que integra funcionalidades modernas de administração parlamentar, tramitação de projetos, gestão de usuários e API inteligente. O projeto utiliza uma arquitetura modular com suporte a múltiplos provedores de API e interface administrativa baseada no template Metronic.
 
 ## Estrutura do Projeto
 
 ### Framework e Versões
 - **Laravel**: 12.0
 - **PHP**: ^8.2
+- **Spatie Laravel Permission**: ^6.20
 - **Vite**: ^6.2.4
 - **TailwindCSS**: ^4.0.0
 - **Node.js**: Módulo ES6
+- **Testing**: PestPHP ^3.8
+
+### Dependências Principais
+
+#### PHP (Composer)
+```json
+{
+    "laravel/framework": "^12.0",
+    "laravel/tinker": "^2.10.1",
+    "spatie/laravel-permission": "^6.20"
+}
+```
+
+#### Node.js (NPM)
+```json
+{
+    "@tailwindcss/vite": "^4.0.0",
+    "axios": "^1.8.2",
+    "concurrently": "^9.0.1",
+    "laravel-vite-plugin": "^1.2.0",
+    "tailwindcss": "^4.0.0",
+    "vite": "^6.2.4"
+}
+```
 
 ### Estrutura de Diretórios Principais
 
 ```
-laravel/
+legisinc/
 ├── app/                          # Código da aplicação
 │   ├── Http/Controllers/         # Controladores HTTP
+│   │   ├── Projeto/             # Controladores de Projetos
+│   │   ├── User/                # Controladores de Usuários
+│   │   ├── Comissao/            # Controladores de Comissões
+│   │   ├── Parlamentar/         # Controladores de Parlamentares
+│   │   ├── MockApiController.php # Mock API para desenvolvimento
+│   │   └── ApiTestController.php # Testes de API
 │   ├── Models/                   # Modelos Eloquent
+│   │   ├── Projeto.php          # Modelo de Projeto
+│   │   ├── ProjetoTramitacao.php # Tramitação de Projetos
+│   │   ├── ProjetoAnexo.php     # Anexos de Projetos
+│   │   ├── ProjetoVersion.php   # Versões de Projetos
+│   │   ├── ModeloProjeto.php    # Modelos de Projeto
+│   │   └── User.php             # Modelo de Usuário
+│   ├── Services/                 # Serviços de negócio
+│   │   ├── Projeto/             # Serviços de Projetos
+│   │   ├── User/                # Serviços de Usuários
+│   │   ├── Comissao/            # Serviços de Comissões
+│   │   ├── Parlamentar/         # Serviços de Parlamentares
+│   │   └── ApiClient/           # Cliente de API
+│   ├── DTOs/                     # Data Transfer Objects
+│   │   ├── Projeto/             # DTOs de Projetos
+│   │   ├── User/                # DTOs de Usuários
+│   │   └── Parlamentar/         # DTOs de Parlamentares
+│   ├── Policies/                 # Políticas de autorização
 │   └── Providers/                # Provedores de serviços
 ├── resources/                    # Recursos frontend
 │   ├── css/                      # Arquivos CSS
 │   ├── js/                       # Arquivos JavaScript
 │   └── views/                    # Views Blade
+│       ├── components/           # Componentes Blade
+│       │   ├── layouts/         # Layouts da aplicação
+│       │   └── editor/          # Editor de texto
+│       ├── modules/             # Views por módulo
+│       │   ├── projetos/        # Views de Projetos
+│       │   ├── usuarios/        # Views de Usuários
+│       │   ├── comissoes/       # Views de Comissões
+│       │   └── parlamentares/   # Views de Parlamentares
+│       ├── admin/               # Views administrativas
+│       ├── auth/                # Views de autenticação
+│       ├── user/                # Views de usuários
+│       └── api-test/            # Views de testes de API
 ├── routes/                       # Definição de rotas
+│   ├── web.php                  # Rotas web
+│   ├── api.php                  # Rotas de API
+│   └── console.php              # Rotas de console
 ├── config/                       # Arquivos de configuração
+│   ├── api.php                  # Configuração de API
+│   ├── permission.php           # Configuração de permissões
+│   └── services.php             # Configuração de serviços
 ├── database/                     # Migrations, seeders e factories
+│   ├── migrations/              # Migrations do banco
+│   ├── seeders/                 # Seeders para dados iniciais
+│   └── factories/               # Factories para testes
+├── docker/                       # Configurações Docker
+│   ├── nginx/                   # Configuração Nginx
+│   ├── php/                     # Configuração PHP
+│   ├── supervisor/              # Configuração Supervisor
+│   └── start.sh                 # Script de inicialização
 ├── public/                       # Assets públicos e template
-└── storage/                      # Arquivos de armazenamento
+│   └── assets/                  # Template Metronic completo
+├── storage/                      # Arquivos de armazenamento
+├── tests/                        # Testes automatizados
+└── docs/                         # Documentação
 ```
 
-## Organização dos Componentes
+## Sistema de Gestão de APIs
 
-### Sistema de Views
+### Visão Geral do Sistema de APIs
 
-O projeto utiliza o sistema de componentes Blade do Laravel com uma estrutura bem organizada:
+O LegisInc possui um sistema centralizado para gerenciar APIs que permite alternar facilmente entre:
+- **Mock API** (desenvolvimento) - API interna do Laravel
+- **API Externa** (produção) - API Node.js externa
 
-#### Layout Principal
-- **Localização**: `resources/views/components/layouts/app.blade.php`
-- **Funcionalidade**: Layout base da aplicação com integração do template Metronic
-- **Características**:
-  - Suporte a modo escuro/claro
-  - Estrutura responsiva
-  - Integração com assets do Metronic
-  - Componentes modulares (header, aside, footer)
+### Configuração da API
 
-#### Componentes de Layout
-```
-resources/views/components/layouts/
-├── app.blade.php      # Layout principal
-├── aside.blade.php    # Barra lateral
-├── footer.blade.php   # Rodapé
-└── header.blade.php   # Cabeçalho
+#### Modos Disponíveis
+```bash
+# Usar Mock API (recomendado para desenvolvimento)
+php artisan api:mode mock
+
+# Usar API Externa (para produção)
+php artisan api:mode external
+
+# Ver status atual
+php artisan api:mode --status
 ```
 
-#### Página Inicial
-- **Localização**: `resources/views/welcome.blade.php`
-- **Estrutura**: Utiliza o component `<x-layouts.app>` com slot para título
+#### Configurações no .env
+```env
+# Modo da API (mock ou external)
+API_MODE=mock
 
-### Assets e Template
+# Configurações para API Externa
+EXTERNAL_API_URL=http://localhost:3000
+EXTERNAL_API_TIMEOUT=30
+EXTERNAL_API_RETRIES=3
 
-#### Template Metronic
-O projeto utiliza o template Metronic com uma estrutura completa de assets:
-
-```
-public/assets/
-├── css/                    # Estilos CSS
-│   ├── plugins.bundle.css  # Plugins CSS
-│   └── style.bundle.css    # Estilos principais
-├── js/                     # JavaScript
-│   ├── custom/             # Scripts customizados
-│   ├── scripts.bundle.js   # Scripts principais
-│   └── widgets.bundle.js   # Widgets
-├── media/                  # Recursos visuais
-│   ├── avatars/            # Imagens de avatares
-│   ├── auth/               # Imagens de autenticação
-│   ├── icons/              # Ícones
-│   ├── illustrations/      # Ilustrações
-│   └── logos/              # Logos
-└── plugins/                # Plugins externos
+# Credenciais padrão para testes
+API_DEFAULT_EMAIL=bruno@test.com
+API_DEFAULT_PASSWORD=senha123
 ```
 
-#### Recursos Incluídos
-- **Ícones**: Duotune icons
-- **Flags**: Conjunto completo de bandeiras de países
-- **Ilustrações**: Múltiplas coleções (dozzy-1, sigma-1, sketchy-1, unitedpalms-1)
-- **Logos**: Logos de frameworks e tecnologias
-- **Avatars**: Conjunto de avatares para demonstração
+### Arquivos de Configuração
+
+#### config/api.php
+Configuração centralizada do sistema de APIs com:
+- Modo de operação (mock/external)
+- URLs e timeouts
+- Credenciais padrão
+- Configurações de cache e logging
+
+#### config/services.php
+Configuração de serviços externos incluindo:
+- API clients para diferentes provedores
+- Configurações de autenticação
+- Configurações de timeout e retry
+
+## Módulos Principais
+
+### 1. Gestão de Projetos
+- **Localização**: `app/Models/Projeto.php`, `resources/views/modules/projetos/`
+- **Funcionalidades**:
+  - CRUD completo de projetos
+  - Sistema de tramitação
+  - Anexos de projetos
+  - Controle de versões
+  - Editor de texto integrado
+
+### 2. Gestão de Usuários
+- **Localização**: `app/Models/User.php`, `resources/views/modules/usuarios/`
+- **Funcionalidades**:
+  - CRUD de usuários
+  - Sistema de permissões (Spatie Laravel Permission)
+  - Campos parlamentares específicos
+  - Autenticação e autorização
+
+### 3. Gestão de Comissões
+- **Localização**: `resources/views/modules/comissoes/`
+- **Funcionalidades**:
+  - CRUD de comissões
+  - Classificação por tipo
+  - Gestão de membros
+
+### 4. Gestão de Parlamentares
+- **Localização**: `resources/views/modules/parlamentares/`
+- **Funcionalidades**:
+  - CRUD de parlamentares
+  - Mesa diretora
+  - Perfis detalhados
+
+### 5. Sistema de Permissões
+- **Localização**: `config/permission.php`
+- **Funcionalidades**:
+  - Roles e permissões
+  - Controle de acesso granular
+  - Sistema de times (opcional)
 
 ## Configuração do Desenvolvimento
 
@@ -97,6 +208,10 @@ O projeto utiliza **Vite** como bundler principal:
 
 ```javascript
 // vite.config.js
+import { defineConfig } from 'vite';
+import laravel from 'laravel-vite-plugin';
+import tailwindcss from '@tailwindcss/vite';
+
 export default defineConfig({
     plugins: [
         laravel({
@@ -125,49 +240,7 @@ npm run build         # Build para produção
 ### Banco de Dados
 - **Tipo**: SQLite (development)
 - **Localização**: `database/database.sqlite`
-- **Migrations**: Incluídas para users, cache e jobs
-
-## Dependências Principais
-
-### PHP (Composer)
-```json
-{
-    "laravel/framework": "^12.0",
-    "laravel/tinker": "^2.10.1"
-}
-```
-
-### Node.js (NPM)
-```json
-{
-    "@tailwindcss/vite": "^4.0.0",
-    "laravel-vite-plugin": "^1.2.0",
-    "tailwindcss": "^4.0.0",
-    "vite": "^6.2.4"
-}
-```
-
-### Dependências de Desenvolvimento
-- **Testing**: PestPHP
-- **Code Quality**: Laravel Pint
-- **Development**: Laravel Sail, Pail
-
-## Funcionalidades Implementadas
-
-### 1. Sistema de Layout Responsivo
-- Layout administrativo completo
-- Suporte a tema escuro/claro
-- Componentes modulares reutilizáveis
-
-### 2. Sistema de Assets
-- Integração com Vite
-- TailwindCSS configurado
-- Template Metronic completo
-
-### 3. Estrutura de Desenvolvimento
-- Hot reload configurado
-- Scripts de desenvolvimento otimizados
-- Testes automatizados com PestPHP
+- **Migrations**: Incluídas para users, projetos, tramitação, anexos, versões, permissões
 
 ## Configuração Docker
 
@@ -183,7 +256,7 @@ O projeto foi configurado para rodar completamente em containers Docker, proporc
 ### Arquitetura dos Containers
 
 ```
-app (Laravel + PHP-FPM + Nginx)
+app (Laravel + PHP-FPM + Nginx + Supervisor)
 ```
 
 ### Serviços Disponíveis
@@ -191,9 +264,8 @@ app (Laravel + PHP-FPM + Nginx)
 #### Container Principal (app)
 - **Base**: PHP 8.2 FPM Alpine
 - **Serviços**: Nginx, PHP-FPM, Supervisor
-- **Portas**: 80 (HTTP), 443 (HTTPS)
-- **Recursos**: Composer
-- **Storage**: Sistema de arquivos local
+- **Portas**: 8000 (HTTP), 8444 (HTTPS)
+- **Recursos**: Composer, extensões PHP
 
 ### Arquivos de Configuração
 
@@ -233,12 +305,12 @@ make shell                  # Shell do container da aplicação
 make artisan cmd="route:list"  # Executa comandos artisan
 
 # Comandos Composer
-make composer-install      # Instala dependências PHP
+make composer-install       # Instala dependências PHP
 
 # Testes e cache
-make test                  # Executa testes
-make cache-clear           # Limpa cache
-make cache-build           # Reconstrói cache
+make test                   # Executa testes
+make cache-clear            # Limpa cache
+make cache-build            # Reconstrói cache
 ```
 
 #### Docker Compose
@@ -256,34 +328,6 @@ docker-compose logs -f
 docker-compose down
 ```
 
-### Estrutura de Volumes
-
-```yaml
-volumes:
-  - ./:/var/www/html          # Código da aplicação
-  - ./storage:/var/www/html/storage # Storage da aplicação
-  - ./bootstrap/cache:/var/www/html/bootstrap/cache # Cache do Laravel
-```
-
-### Variáveis de Ambiente
-
-O arquivo `.env.docker` contém configurações otimizadas para Docker:
-
-```env
-# Banco de dados
-DB_CONNECTION=null
-
-# Cache e sessões
-CACHE_STORE=file
-SESSION_DRIVER=file
-QUEUE_CONNECTION=sync
-
-# Email
-MAIL_MAILER=log
-MAIL_HOST=127.0.0.1
-MAIL_PORT=2525
-```
-
 ### Inicialização Automática
 
 O script `docker/start.sh` automatiza:
@@ -295,47 +339,68 @@ O script `docker/start.sh` automatiza:
 
 ### URLs de Acesso
 
-- **Aplicação**: http://localhost
+- **Aplicação**: http://localhost:8000
+- **Desenvolvimento**: http://localhost:3001
 
-### Ambiente de Desenvolvimento
+## Sistema de Testes
 
-Para desenvolvimento, utilize:
+### Estrutura de Testes
+- **Framework**: PestPHP
+- **Localização**: `tests/`
+- **Tipos**: Feature e Unit tests
 
+### Executar Testes
 ```bash
-make dev-setup
+# Via Docker
+make test
+
+# Localmente
+php artisan test
+
+# Com coverage
+php artisan test --coverage
 ```
 
-Este comando:
-- Cria o arquivo `.env`
-- Constrói as imagens
-- Inicia os containers
-- Instala dependências PHP
-- Gera chave da aplicação
+## Funcionalidades Implementadas
 
-### Ambiente de Produção
+### 1. Sistema de Layout Responsivo
+- Layout administrativo completo baseado no Metronic
+- Suporte a tema escuro/claro
+- Componentes modulares reutilizáveis
+- Dashboard principal
 
-Para produção, utilize:
+### 2. Sistema de Assets
+- Integração com Vite
+- TailwindCSS 4.0 configurado
+- Template Metronic completo
+- Hot reload configurado
 
-```bash
-make prod-setup
-```
+### 3. Sistema de Gestão de APIs
+- Mock API para desenvolvimento
+- Cliente inteligente para APIs externas
+- Autenticação automática
+- Sistema de cache
 
-Configurações de produção incluem:
-- Otimizações de performance
-- Cache de configuração habilitado
-- Logs estruturados
-- Configurações de segurança
-- Sem banco de dados (stateless)
+### 4. Sistema de Autorização
+- Spatie Laravel Permission integrado
+- Roles e permissões granulares
+- Middleware de autorização
+
+### 5. Módulos Funcionais
+- Gestão completa de projetos
+- Sistema de tramitação
+- Gestão de usuários e parlamentares
+- Sistema de comissões
 
 ## Próximos Passos
 
 Este documento será atualizado conforme o desenvolvimento do projeto progride. As próximas implementações incluirão:
 
-1. Desenvolvimento de APIs REST
-2. Integração com serviços externos
-3. Sistema de autenticação JWT
-4. Dashboard administrativo
-5. Implementação de microserviços
+1. Aprimoramento do sistema de tramitação
+2. Integração com APIs externas
+3. Dashboard de analytics
+4. Sistema de notificações
+5. Módulos de transparência
 
 ## Comandos Úteis
 
@@ -352,6 +417,11 @@ php artisan cache:clear
 
 # Gerar chave da aplicação
 php artisan key:generate
+
+# Comandos específicos de API
+php artisan api:mode mock
+php artisan api:mode external
+php artisan api:mode --status
 ```
 
 ### Desenvolvimento com Docker
@@ -369,6 +439,6 @@ make logs                  # Ver logs
 
 ---
 
-**Última atualização**: 2025-07-06
+**Última atualização**: 2025-01-15
 **Versão do Laravel**: 12.0
-**Status**: Configuração Docker minimalista completa
+**Status**: Sistema LegisInc com API inteligente e módulos funcionais completos

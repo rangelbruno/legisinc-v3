@@ -15,7 +15,9 @@ RUN apk add --no-cache \
     zip \
     unzip \
     supervisor \
-    nginx
+    nginx \
+    nodejs \
+    npm
 
 # Instalar extensões PHP
 RUN docker-php-ext-install mbstring exif pcntl bcmath gd
@@ -56,11 +58,14 @@ RUN chmod +x /usr/local/bin/start.sh
 WORKDIR /var/www/html
 
 # Copiar arquivos de dependências
-COPY --chown=laravel:laravel composer.json composer.lock ./
+COPY --chown=laravel:laravel composer.json composer.lock package.json package-lock.json ./
 
 # Instalar dependências PHP
 USER laravel
 RUN composer install --no-dev --optimize-autoloader --no-scripts
+
+# Instalar dependências NPM e compilar assets (skip se não tiver arquivos JS/CSS)
+RUN npm ci && (npm run build || echo "Build skipped - no assets to compile")
 
 # Voltar para root para configurações finais
 USER root

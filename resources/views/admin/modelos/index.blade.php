@@ -26,9 +26,14 @@
                         <h4 class="card-title">Lista de Modelos</h4>
                     </div>
                     <div class="col-md-4 text-md-end">
-                        <a href="{{ route('modelos.create') }}" class="btn btn-primary btn-sm">
-                            <i class="ri-add-line"></i> Novo Modelo
-                        </a>
+                        <div class="btn-group" role="group">
+                            <a href="{{ route('modelos.editor-tiptap') }}" class="btn btn-success btn-sm">
+                                <i class="ri-edit-2-line"></i> Editor Tiptap
+                            </a>
+                            <a href="{{ route('modelos.create') }}" class="btn btn-primary btn-sm">
+                                <i class="ri-add-line"></i> Novo Modelo
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>

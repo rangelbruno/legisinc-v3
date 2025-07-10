@@ -176,7 +176,13 @@
                                             </div>
                                         </td>
                                         <td>
-                                            <div class="badge badge-light-primary fw-bold">Administrador</div>
+                                            @if($usuario->roles->count() > 0)
+                                                @foreach($usuario->roles as $role)
+                                                    <div class="badge badge-light-primary fw-bold">{{ $perfis[$role->name] ?? $role->name }}</div>
+                                                @endforeach
+                                            @else
+                                                <div class="badge badge-light-secondary fw-bold">Sem perfil</div>
+                                            @endif
                                         </td>
                                         <td>
                                             <div class="fw-bold">{{ $usuario->documento ?? '-' }}</div>

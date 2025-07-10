@@ -14,7 +14,7 @@ Route::get('/', function () {
 });
 
 // Authentication routes
-Route::get('/login', [AuthController::class, 'showLoginForm'])->name('auth.login');
+Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [AuthController::class, 'login']);
 Route::get('/register', [AuthController::class, 'showRegisterForm'])->name('auth.register');
 Route::post('/register', [AuthController::class, 'register']);
@@ -126,6 +126,7 @@ Route::prefix('projetos')->name('projetos.')->middleware('auth')->group(function
     
     // Editor de conteúdo
     Route::get('/{id}/editor', [ProjetoController::class, 'editor'])->name('editor');
+    Route::get('/{id}/editor-tiptap', [ProjetoController::class, 'editorTiptap'])->name('editor-tiptap');
     Route::post('/{id}/salvar-conteudo', [ProjetoController::class, 'salvarConteudo'])->name('salvar-conteudo');
     
     // Sub-recursos
@@ -136,20 +137,22 @@ Route::prefix('projetos')->name('projetos.')->middleware('auth')->group(function
 
 // Modelos de Projeto routes (protected with auth only - Admin only)
 Route::prefix('admin/modelos')->name('modelos.')->middleware('auth')->group(function () {
+    // Rotas específicas (devem vir antes das rotas com parâmetros)
     Route::get('/', [ModeloProjetoController::class, 'index'])->name('index');
     Route::get('/create', [ModeloProjetoController::class, 'create'])->name('create');
     Route::get('/editor', [ModeloProjetoController::class, 'editor'])->name('editor');
+    Route::get('/editor-tiptap', [ModeloProjetoController::class, 'editorTiptap'])->name('editor-tiptap'); // Rota alternativa para compatibilidade
+    Route::get('/por-tipo', [ModeloProjetoController::class, 'porTipo'])->name('por-tipo');
+    Route::post('/upload-image', [ModeloProjetoController::class, 'uploadImage'])->name('upload-image');
     Route::post('/', [ModeloProjetoController::class, 'store'])->name('store');
+    
+    // Rotas com parâmetros (devem vir após as rotas específicas)
     Route::get('/{modelo}', [ModeloProjetoController::class, 'show'])->name('show');
     Route::get('/{modelo}/edit', [ModeloProjetoController::class, 'edit'])->name('edit');
+    Route::get('/{modelo}/conteudo', [ModeloProjetoController::class, 'conteudo'])->name('conteudo');
     Route::put('/{modelo}', [ModeloProjetoController::class, 'update'])->name('update');
     Route::delete('/{modelo}', [ModeloProjetoController::class, 'destroy'])->name('destroy');
     Route::post('/{modelo}/toggle-status', [ModeloProjetoController::class, 'toggleStatus'])->name('toggle-status');
-    
-    // AJAX endpoints
-    Route::get('/por-tipo', [ModeloProjetoController::class, 'porTipo'])->name('por-tipo');
-    Route::get('/{modelo}/conteudo', [ModeloProjetoController::class, 'conteudo'])->name('conteudo');
-    Route::post('/upload-image', [ModeloProjetoController::class, 'uploadImage'])->name('upload-image');
 });
 
 // Mock API routes moved to routes/api.php to avoid CSRF middleware
@@ -167,3 +170,21 @@ Route::get('/api-test/health', function () {
 
 // Rota de teste temporária sem autenticação
 Route::get('/test-projeto/{id}/edit', [ProjetoController::class, 'edit'])->name('test.projetos.edit');
+
+// Demo do Editor Jurídico
+Route::get('/editor-demo', function () {
+    return view('editor.demo');
+})->name('editor.demo');
+
+// Teste do editor de modelos Tiptap (sem auth para teste)
+Route::get('/test-modelos-editor-tiptap', function () {
+    $tipos = \App\Models\ModeloProjeto::TIPOS_PROJETO;
+    $tipoSelecionado = 'contrato';
+    $modelo = null;
+    return view('admin.modelos.editor-tiptap-minimal', compact('tipos', 'tipoSelecionado', 'modelo'));
+});
+
+// Rota de teste para verificar se o editor TipTap está funcionando
+Route::get('/test-editor-funcionando', function () {
+    return view('test-editor-funcionando');
+});

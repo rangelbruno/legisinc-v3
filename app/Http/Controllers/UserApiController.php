@@ -22,7 +22,7 @@ class UserApiController extends Controller
         try {
             // Verificar se o usuário está autenticado na sessão
             if (!Session::get('api_authenticated', false)) {
-                return redirect()->route('auth.login')
+                return redirect()->route('login')
                     ->with('error', 'Você precisa fazer login para acessar esta página.');
             }
 

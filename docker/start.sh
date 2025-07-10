@@ -42,7 +42,7 @@ if [ ! -L /var/www/html/public/storage ]; then
 fi
 
 echo "🎉 Aplicação Laravel iniciada com sucesso!"
-echo "📍 Acesse: http://localhost"
+echo "📍 Acesse: http://localhost:8001"
 
 # Iniciar nginx e php-fpm via supervisor
 supervisorctl -c /etc/supervisor/conf.d/supervisord.conf start nginx

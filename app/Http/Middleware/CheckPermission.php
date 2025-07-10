@@ -23,13 +23,12 @@ class CheckPermission
             return redirect()->route('login');
         }
 
-        // Check if user has the permission
-        if ($this->userHasPermission($user, $permission)) {
-            return $next($request);
+        // Verificar se o usuário tem permissão
+        if (!$this->userHasPermission($user, $permission)) {
+            return redirect()->route('dashboard')->with('error', 'Você não tem permissão para acessar esta página.');
         }
 
-        // If not, redirect to dashboard with error
-        return redirect()->route('dashboard')->with('error', 'Você não tem permissão para acessar esta página.');
+        return $next($request);
     }
 
     /**

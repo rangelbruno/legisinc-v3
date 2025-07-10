@@ -115,7 +115,7 @@
                 @else
                 <!--begin::Menu item-->
                 <div class="menu-item px-5">
-                    <a href="{{ route('auth.login') }}" class="menu-link px-5">
+                    <a href="{{ route('login') }}" class="menu-link px-5">
                         <i class="ki-duotone ki-entrance-right me-2 fs-4">
                             <span class="path1"></span>
                             <span class="path2"></span>

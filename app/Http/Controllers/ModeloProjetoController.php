@@ -59,65 +59,134 @@ class ModeloProjetoController extends Controller
     }
 
     /**
-     * Show the editor for creating a new model.
+     * Show the editor for creating a new model (now using TipTap).
      */
     public function editor(Request $request): View
     {
         $this->authorize('create', ModeloProjeto::class);
 
         $tipos = ModeloProjeto::TIPOS_PROJETO;
-        $tipoSelecionado = $request->get('tipo');
+        $tipoSelecionado = $request->get('tipo', 'contrato');
+        $modelo = null;
+        
+        // Se for edição de modelo existente
+        if ($request->has('id')) {
+            $modelo = ModeloProjeto::findOrFail($request->get('id'));
+            $this->authorize('update', $modelo);
+            $tipoSelecionado = $modelo->tipo_projeto;
+        }
         
         if ($tipoSelecionado && !array_key_exists($tipoSelecionado, $tipos)) {
             abort(404);
         }
         
-        return view('admin.modelos.editor', compact('tipos', 'tipoSelecionado'));
+        return view('admin.modelos.editor-tiptap', compact('tipos', 'tipoSelecionado', 'modelo'));
+    }
+
+    /**
+     * Editor de modelos com Tiptap (nova versão)
+     */
+    public function editorTiptap(Request $request): View
+    {
+        $this->authorize('create', ModeloProjeto::class);
+
+        $tipos = ModeloProjeto::TIPOS_PROJETO;
+        $tipoSelecionado = $request->get('tipo', 'contrato');
+        $modelo = null;
+        
+        // Se for edição de modelo existente
+        if ($request->has('id')) {
+            $modelo = ModeloProjeto::findOrFail($request->get('id'));
+            $this->authorize('update', $modelo);
+            $tipoSelecionado = $modelo->tipo_projeto;
+        }
+        
+        if ($tipoSelecionado && !array_key_exists($tipoSelecionado, $tipos)) {
+            abort(404);
+        }
+        
+        return view('admin.modelos.editor-tiptap', compact('tipos', 'tipoSelecionado', 'modelo'));
     }
 
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request): RedirectResponse|JsonResponse
     {
         $this->authorize('create', ModeloProjeto::class);
 
-        $validator = Validator::make($request->all(), [
+        // Determinar se é requisição JSON (do editor Tiptap) ou form tradicional
+        $isJsonRequest = $request->expectsJson() || $request->isJson();
+        
+        $rules = [
             'nome' => 'required|string|max:255',
             'descricao' => 'nullable|string|max:1000',
-            'tipo_projeto' => 'required|string|in:' . implode(',', array_keys(ModeloProjeto::TIPOS_PROJETO)),
-            'conteudo_modelo' => 'required|string',
-            'campos_variaveis' => 'nullable|array',
-            'campos_variaveis.*.nome' => 'required|string|max:100',
-            'campos_variaveis.*.descricao' => 'required|string|max:255',
+            'tipo' => 'required|string|in:' . implode(',', array_keys(ModeloProjeto::TIPOS_PROJETO)),
+            'conteudo' => 'required|string',
+            'variaveis' => 'nullable|array',
             'ativo' => 'boolean',
-        ]);
+        ];
+        
+        // Para compatibilidade com editor antigo
+        if (!$isJsonRequest) {
+            $rules['tipo_projeto'] = $rules['tipo'];
+            $rules['conteudo_modelo'] = $rules['conteudo'];
+            $rules['campos_variaveis'] = 'nullable|array';
+            $rules['campos_variaveis.*.nome'] = 'required|string|max:100';
+            $rules['campos_variaveis.*.descricao'] = 'required|string|max:255';
+            unset($rules['tipo'], $rules['conteudo'], $rules['variaveis']);
+        }
+
+        $validator = Validator::make($request->all(), $rules);
 
         if ($validator->fails()) {
+            if ($isJsonRequest) {
+                return response()->json([
+                    'success' => false,
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+            
             return redirect()->back()
                 ->withErrors($validator)
                 ->withInput();
         }
 
         try {
-            // Decodificar campos_variaveis se for string JSON
-            $camposVariaveis = $request->campos_variaveis;
-            if (is_string($camposVariaveis)) {
-                $camposVariaveis = json_decode($camposVariaveis, true) ?: [];
+            // Preparar dados baseado no tipo de requisição
+            if ($isJsonRequest) {
+                // Editor Tiptap
+                $data = [
+                    'nome' => $request->nome,
+                    'descricao' => $request->descricao,
+                    'tipo_projeto' => $request->tipo,
+                    'conteudo_modelo' => $request->conteudo,
+                    'campos_variaveis' => $this->processVariaveis($request->variaveis ?? []),
+                    'ativo' => $request->boolean('ativo', true),
+                    'criado_por' => auth()->id(),
+                ];
+            } else {
+                // Editor antigo
+                $camposVariaveis = $request->campos_variaveis;
+                if (is_string($camposVariaveis)) {
+                    $camposVariaveis = json_decode($camposVariaveis, true) ?: [];
+                }
+                
+                $data = [
+                    'nome' => $request->nome,
+                    'descricao' => $request->descricao,
+                    'tipo_projeto' => $request->tipo_projeto,
+                    'conteudo_modelo' => $request->conteudo_modelo,
+                    'campos_variaveis' => $camposVariaveis,
+                    'ativo' => $request->boolean('ativo', true),
+                    'criado_por' => auth()->id(),
+                ];
             }
             
-            $modelo = ModeloProjeto::create([
-                'nome' => $request->nome,
-                'descricao' => $request->descricao,
-                'tipo_projeto' => $request->tipo_projeto,
-                'conteudo_modelo' => $request->conteudo_modelo,
-                'campos_variaveis' => $camposVariaveis,
-                'ativo' => $request->boolean('ativo', true),
-                'criado_por' => auth()->id(),
-            ]);
+            $modelo = ModeloProjeto::create($data);
 
-            // Se for uma requisição AJAX, retornar JSON
-            if ($request->expectsJson()) {
+            // Resposta baseada no tipo de requisição
+            if ($isJsonRequest) {
                 return response()->json([
                     'success' => true,
                     'message' => 'Modelo criado com sucesso!',
@@ -168,41 +237,93 @@ class ModeloProjetoController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, ModeloProjeto $modelo): RedirectResponse
+    public function update(Request $request, ModeloProjeto $modelo): RedirectResponse|JsonResponse
     {
         $this->authorize('update', $modelo);
 
-        $validator = Validator::make($request->all(), [
+        // Determinar se é requisição JSON (do editor Tiptap) ou form tradicional
+        $isJsonRequest = $request->expectsJson() || $request->isJson();
+        
+        $rules = [
             'nome' => 'required|string|max:255',
             'descricao' => 'nullable|string|max:1000',
-            'tipo_projeto' => 'required|string|in:' . implode(',', array_keys(ModeloProjeto::TIPOS_PROJETO)),
-            'conteudo_modelo' => 'required|string',
-            'campos_variaveis' => 'nullable|array',
-            'campos_variaveis.*.nome' => 'required|string|max:100',
-            'campos_variaveis.*.descricao' => 'required|string|max:255',
+            'tipo' => 'required|string|in:' . implode(',', array_keys(ModeloProjeto::TIPOS_PROJETO)),
+            'conteudo' => 'required|string',
+            'variaveis' => 'nullable|array',
             'ativo' => 'boolean',
-        ]);
+        ];
+        
+        // Para compatibilidade com editor antigo
+        if (!$isJsonRequest) {
+            $rules['tipo_projeto'] = $rules['tipo'];
+            $rules['conteudo_modelo'] = $rules['conteudo'];
+            $rules['campos_variaveis'] = 'nullable|array';
+            $rules['campos_variaveis.*.nome'] = 'required|string|max:100';
+            $rules['campos_variaveis.*.descricao'] = 'required|string|max:255';
+            unset($rules['tipo'], $rules['conteudo'], $rules['variaveis']);
+        }
+
+        $validator = Validator::make($request->all(), $rules);
 
         if ($validator->fails()) {
+            if ($isJsonRequest) {
+                return response()->json([
+                    'success' => false,
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+            
             return redirect()->back()
                 ->withErrors($validator)
                 ->withInput();
         }
 
         try {
-            $modelo->update([
-                'nome' => $request->nome,
-                'descricao' => $request->descricao,
-                'tipo_projeto' => $request->tipo_projeto,
-                'conteudo_modelo' => $request->conteudo_modelo,
-                'campos_variaveis' => $request->campos_variaveis ?: [],
-                'ativo' => $request->boolean('ativo', true),
-            ]);
+            // Preparar dados baseado no tipo de requisição
+            if ($isJsonRequest) {
+                // Editor Tiptap
+                $data = [
+                    'nome' => $request->nome,
+                    'descricao' => $request->descricao,
+                    'tipo_projeto' => $request->tipo,
+                    'conteudo_modelo' => $request->conteudo,
+                    'campos_variaveis' => $this->processVariaveis($request->variaveis ?? []),
+                    'ativo' => $request->boolean('ativo', true),
+                ];
+            } else {
+                // Editor antigo
+                $data = [
+                    'nome' => $request->nome,
+                    'descricao' => $request->descricao,
+                    'tipo_projeto' => $request->tipo_projeto,
+                    'conteudo_modelo' => $request->conteudo_modelo,
+                    'campos_variaveis' => $request->campos_variaveis ?: [],
+                    'ativo' => $request->boolean('ativo', true),
+                ];
+            }
+
+            $modelo->update($data);
+
+            // Resposta baseada no tipo de requisição
+            if ($isJsonRequest) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Modelo atualizado com sucesso!',
+                    'modelo' => $modelo->fresh()
+                ]);
+            }
 
             return redirect()->route('modelos.index')
                 ->with('success', 'Modelo atualizado com sucesso!');
 
         } catch (Exception $e) {
+            if ($isJsonRequest) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Erro ao atualizar modelo: ' . $e->getMessage()
+                ], 500);
+            }
+            
             return redirect()->back()
                 ->with('error', 'Erro ao atualizar modelo: ' . $e->getMessage())
                 ->withInput();
@@ -362,5 +483,72 @@ class ModeloProjetoController extends Controller
                 'message' => 'Erro ao fazer upload: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Processar variáveis do editor Tiptap para formato do banco
+     */
+    private function processVariaveis(array $variaveis): array
+    {
+        $processedVariaveis = [];
+        
+        foreach ($variaveis as $variavel) {
+            $processedVariaveis[] = [
+                'nome' => $variavel,
+                'descricao' => $this->gerarDescricaoVariavel($variavel),
+                'tipo' => 'texto',
+                'obrigatorio' => true
+            ];
+        }
+        
+        return $processedVariaveis;
+    }
+
+    /**
+     * Gerar descrição automática para variável baseada no nome
+     */
+    private function gerarDescricaoVariavel(string $nomeVariavel): string
+    {
+        $descricoes = [
+            'nome' => 'Nome da pessoa',
+            'cpf' => 'CPF da pessoa',
+            'cnpj' => 'CNPJ da empresa',
+            'endereco' => 'Endereço completo',
+            'data' => 'Data do documento',
+            'valor' => 'Valor em reais',
+            'cidade' => 'Cidade',
+            'tipo_contrato' => 'Tipo do contrato',
+            'contratante_nome' => 'Nome do contratante',
+            'contratante_cnpj' => 'CNPJ do contratante',
+            'contratante_endereco' => 'Endereço do contratante',
+            'contratado_nome' => 'Nome do contratado',
+            'contratado_cpf' => 'CPF do contratado',
+            'contratado_endereco' => 'Endereço do contratado',
+            'objeto_contrato' => 'Objeto do contrato',
+            'prazo_contrato' => 'Prazo do contrato',
+            'valor_contrato' => 'Valor do contrato',
+            'forma_pagamento' => 'Forma de pagamento',
+            'requerente_nome' => 'Nome do requerente',
+            'requerente_qualificacao' => 'Qualificação do requerente',
+            'requerente_cpf' => 'CPF do requerente',
+            'requerente_endereco' => 'Endereço do requerente',
+            'autoridade' => 'Autoridade competente',
+            'orgao' => 'Órgão responsável',
+            'comarca' => 'Comarca',
+            'fatos' => 'Descrição dos fatos',
+            'fundamento_juridico' => 'Fundamentação jurídica',
+            'pedido' => 'Pedido',
+            'advogado_nome' => 'Nome do advogado',
+            'advogado_oab' => 'Número da OAB',
+            'advogado_estado' => 'Estado da OAB',
+            'numero_projeto' => 'Número do projeto',
+            'ano_projeto' => 'Ano do projeto',
+            'ementa' => 'Ementa do projeto',
+            'objeto_lei' => 'Objeto da lei',
+            'definicao_a' => 'Primeira definição',
+            'definicao_b' => 'Segunda definição'
+        ];
+        
+        return $descricoes[$nomeVariavel] ?? ucfirst(str_replace('_', ' ', $nomeVariavel));
     }
 }

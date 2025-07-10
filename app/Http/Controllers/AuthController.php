@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 
 class AuthController extends Controller
 {
@@ -41,9 +42,6 @@ class AuthController extends Controller
         if (Auth::attempt($credentials)) {
             $request->session()->regenerate();
 
-            // Atualizar último acesso
-            Auth::user()->atualizarUltimoAcesso();
-
             return redirect()->intended(route('dashboard'))
                 ->with('success', 'Login realizado com sucesso!');
         }
@@ -63,7 +61,8 @@ class AuthController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255|unique:users',
             'password' => 'required|string|min:8|confirmed',
-            'password_confirmation' => 'required|string'
+            'password_confirmation' => 'required|string',
+            'tipo_usuario' => 'required|string|in:PUBLICO,CIDADAO_VERIFICADO,ASSESSOR,LEGISLATIVO,PARLAMENTAR,ADMIN'
         ], [
             'name.required' => 'O nome é obrigatório.',
             'name.max' => 'O nome não pode ter mais de 255 caracteres.',
@@ -73,11 +72,13 @@ class AuthController extends Controller
             'password.required' => 'A senha é obrigatória.',
             'password.min' => 'A senha deve ter pelo menos 8 caracteres.',
             'password.confirmed' => 'A confirmação de senha não confere.',
-            'password_confirmation.required' => 'A confirmação de senha é obrigatória.'
+            'password_confirmation.required' => 'A confirmação de senha é obrigatória.',
+            'tipo_usuario.required' => 'O tipo de usuário é obrigatório.',
+            'tipo_usuario.in' => 'Tipo de usuário inválido.'
         ]);
 
         try {
-            // Criar usuário com perfil PUBLICO por padrão
+            // Criar usuário
             $user = User::create([
                 'name' => $request->input('name'),
                 'email' => $request->input('email'),
@@ -85,15 +86,16 @@ class AuthController extends Controller
                 'ativo' => true,
             ]);
 
-            // Atribuir role PUBLICO por padrão
-            $publicRole = \DB::table('roles')->where('name', User::PERFIL_PUBLICO)->first();
-            if ($publicRole) {
-                \DB::table('model_has_roles')->insert([
-                    'role_id' => $publicRole->id,
-                    'model_type' => 'App\\Models\\User',
-                    'model_id' => $user->id,
-                ]);
-            }
+            // Atribuir role selecionada
+            $tipoUsuario = $request->input('tipo_usuario');
+            $user->assignRole($tipoUsuario);
+            
+            Log::info('Usuário registrado com sucesso', [
+                'usuario_id' => $user->id,
+                'nome' => $user->name,
+                'email' => $user->email,
+                'tipo_usuario' => $tipoUsuario
+            ]);
 
             return redirect()->route('auth.register')
                 ->with('success', 'Usuário registrado com sucesso! Você pode fazer login agora.');
@@ -101,7 +103,8 @@ class AuthController extends Controller
         } catch (\Exception $e) {
             Log::error('Erro inesperado durante registro', [
                 'error' => $e->getMessage(),
-                'email' => $request->input('email')
+                'email' => $request->input('email'),
+                'tipo_usuario' => $request->input('tipo_usuario')
             ]);
 
             return back()
@@ -120,7 +123,7 @@ class AuthController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
         
-        return redirect()->route('auth.login')
+        return redirect()->route('login')
             ->with('success', 'Logout realizado com sucesso!');
     }
 }

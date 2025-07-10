@@ -360,6 +360,29 @@ class ProjetoController extends Controller
     }
 
     /**
+     * Editor de conteúdo com Tiptap (nova versão)
+     */
+    public function editorTiptap(int $id): View
+    {
+        try {
+            $projeto = $this->projetoService->obterPorId($id);
+
+            if (!$projeto) {
+                abort(404, 'Projeto não encontrado');
+            }
+
+            if (!$projeto->podeEditarConteudo()) {
+                abort(403, 'Não é possível editar o conteúdo neste status');
+            }
+
+            return view('modules.projetos.editor-tiptap', compact('projeto'));
+
+        } catch (Exception $e) {
+            abort(500, 'Erro ao carregar editor: ' . $e->getMessage());
+        }
+    }
+
+    /**
      * Salvar conteúdo do editor (AJAX)
      */
     public function salvarConteudo(Request $request, int $id): JsonResponse

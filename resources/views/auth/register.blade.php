@@ -370,6 +370,40 @@
                                 @enderror
                                 <!--end::Email-->
                             </div>
+                            <!--end::Input group=-->
+                            <!--begin::Input group=-->
+                            <div class="fv-row mb-8">
+                                <!--begin::Tipo de Usuário-->
+                                <select name="tipo_usuario" 
+                                    class="form-select form-select-solid @error('tipo_usuario') form-error @enderror" 
+                                    data-placeholder="Selecione o tipo de usuário" 
+                                    data-allow-clear="false"
+                                    required id="tipoUsuarioInput">
+                                    <option value="">Selecione o tipo de usuário</option>
+                                    <option value="PUBLICO" {{ old('tipo_usuario') == 'PUBLICO' ? 'selected' : '' }}>
+                                        👥 Cidadão - Acesso público aos dados
+                                    </option>
+                                    <option value="CIDADAO_VERIFICADO" {{ old('tipo_usuario') == 'CIDADAO_VERIFICADO' ? 'selected' : '' }}>
+                                        ✅ Cidadão Verificado - Acesso ampliado
+                                    </option>
+                                    <option value="ASSESSOR" {{ old('tipo_usuario') == 'ASSESSOR' ? 'selected' : '' }}>
+                                        💼 Assessor - Suporte aos parlamentares
+                                    </option>
+                                    <option value="LEGISLATIVO" {{ old('tipo_usuario') == 'LEGISLATIVO' ? 'selected' : '' }}>
+                                        🏛️ Servidor Legislativo - Funcionário da casa
+                                    </option>
+                                    <option value="PARLAMENTAR" {{ old('tipo_usuario') == 'PARLAMENTAR' ? 'selected' : '' }}>
+                                        👨‍💼 Parlamentar - Representante eleito
+                                    </option>
+                                    <option value="ADMIN" {{ old('tipo_usuario') == 'ADMIN' ? 'selected' : '' }}>
+                                        ⚡ Administrador - Acesso total ao sistema
+                                    </option>
+                                </select>
+                                @error('tipo_usuario')
+                                    <div class="field-error">{{ $message }}</div>
+                                @enderror
+                                <!--end::Tipo de Usuário-->
+                            </div>
                             <!--begin::Input group-->
                             <div class="fv-row mb-8" data-kt-password-meter="true">
                                 <!--begin::Wrapper-->
@@ -434,7 +468,7 @@
                             <!--end::Submit button-->
                             <!--begin::Sign up-->
                             <div class="text-gray-500 text-center fw-semibold fs-6">Já tem uma conta?
-                                <a href="{{ route('auth.login') }}"
+                                <a href="{{ route('login') }}"
                                     class="link-primary fw-semibold">Entre aqui</a>
                             </div>
                             <!--end::Sign up-->
@@ -818,7 +852,8 @@
             const confirmPasswordInput = document.getElementById('confirmPasswordInput');
             
             // Verificar se todos os elementos existem
-            if (!nameInput || !emailInput || !passwordInput || !confirmPasswordInput) {
+            const tipoUsuarioInput = document.getElementById('tipoUsuarioInput');
+            if (!nameInput || !emailInput || !tipoUsuarioInput || !passwordInput || !confirmPasswordInput) {
                 console.error('Alguns elementos do formulário não foram encontrados para validação em tempo real');
                 return;
             }
@@ -838,6 +873,17 @@
             emailInput.addEventListener('input', function() {
                 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
                 if (emailRegex.test(this.value)) {
+                    this.classList.remove('form-error');
+                    this.classList.add('form-success');
+                } else {
+                    this.classList.remove('form-success');
+                    this.classList.add('form-error');
+                }
+            });
+            
+            // Validar tipo de usuário
+            tipoUsuarioInput.addEventListener('change', function() {
+                if (this.value) {
                     this.classList.remove('form-error');
                     this.classList.add('form-success');
                 } else {
@@ -880,11 +926,12 @@
         function validateForm() {
             const nameInput = document.getElementById('nameInput');
             const emailInput = document.getElementById('emailInput');
+            const tipoUsuarioInput = document.getElementById('tipoUsuarioInput');
             const passwordInput = document.getElementById('passwordInput');
             const confirmPasswordInput = document.getElementById('confirmPasswordInput');
             
             // Verificar se todos os elementos existem
-            if (!nameInput || !emailInput || !passwordInput || !confirmPasswordInput) {
+            if (!nameInput || !emailInput || !tipoUsuarioInput || !passwordInput || !confirmPasswordInput) {
                 console.error('Alguns elementos do formulário não foram encontrados');
                 showNotification('Erro na validação do formulário. Recarregue a página.', 'error');
                 return false;
@@ -902,6 +949,12 @@
             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
             if (!emailRegex.test(emailInput.value)) {
                 emailInput.classList.add('form-error');
+                isValid = false;
+            }
+            
+            // Validar tipo de usuário
+            if (!tipoUsuarioInput.value) {
+                tipoUsuarioInput.classList.add('form-error');
                 isValid = false;
             }
             

@@ -25,45 +25,24 @@ class UserController extends Controller
      */
     public function index(Request $request)
     {
-        // Dados simples para teste
-        $usuarios = collect([
-            (object) [
-                'id' => 1,
-                'name' => 'Admin Teste',
-                'email' => 'admin@teste.com',
-                'documento' => '123.456.789-00',
-                'telefone' => '(11) 99999-9999',
-                'ativo' => true,
-                'ultimo_acesso' => now(),
-            ]
-        ]);
-
-        $usuarios = new \Illuminate\Pagination\LengthAwarePaginator(
-            $usuarios,
-            1,
-            15,
-            1,
-            ['path' => request()->url()]
-        );
-
-        $perfis = [
-            'admin' => 'Administrador',
-            'legislativo' => 'Servidor Legislativo',
-            'parlamentar' => 'Parlamentar'
+        // Preparar filtros
+        $filtros = [
+            'nome' => $request->get('nome'),
+            'email' => $request->get('email'),
+            'perfil' => $request->get('perfil'),
+            'ativo' => $request->get('ativo'),
+            'documento' => $request->get('documento'),
+            'partido' => $request->get('partido'),
         ];
 
-        $estatisticas = [
-            'total' => 1,
-            'ativos' => 1,
-            'inativos' => 0,
-            'por_perfil' => collect([
-                (object) ['perfil' => 'Administrador', 'total' => 1]
-            ]),
-            'ultimo_acesso' => 1,
-            'parlamentares' => 0
-        ];
+        // Buscar usuários com filtros
+        $usuarios = $this->userService->listar($filtros, 15);
 
-        $filtros = [];
+        // Obter perfis disponíveis
+        $perfis = $this->userService->obterPerfisDisponiveis();
+
+        // Obter estatísticas
+        $estatisticas = $this->userService->obterEstatisticas();
 
         return view('modules.usuarios.index', compact('usuarios', 'perfis', 'estatisticas', 'filtros'));
     }
