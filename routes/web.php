@@ -7,6 +7,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\Parlamentar\ParlamentarController;
 use App\Http\Controllers\User\UserController as UserManagementController;
 use App\Http\Controllers\Projeto\ProjetoController;
+use App\Http\Controllers\ModeloProjetoController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -131,6 +132,24 @@ Route::prefix('projetos')->name('projetos.')->middleware('auth')->group(function
     Route::get('/{id}/versoes', [ProjetoController::class, 'versoes'])->name('versoes');
     Route::get('/{id}/tramitacao', [ProjetoController::class, 'tramitacao'])->name('tramitacao');
     Route::get('/{id}/anexos', [ProjetoController::class, 'anexos'])->name('anexos');
+});
+
+// Modelos de Projeto routes (protected with auth only - Admin only)
+Route::prefix('admin/modelos')->name('modelos.')->middleware('auth')->group(function () {
+    Route::get('/', [ModeloProjetoController::class, 'index'])->name('index');
+    Route::get('/create', [ModeloProjetoController::class, 'create'])->name('create');
+    Route::get('/editor', [ModeloProjetoController::class, 'editor'])->name('editor');
+    Route::post('/', [ModeloProjetoController::class, 'store'])->name('store');
+    Route::get('/{modelo}', [ModeloProjetoController::class, 'show'])->name('show');
+    Route::get('/{modelo}/edit', [ModeloProjetoController::class, 'edit'])->name('edit');
+    Route::put('/{modelo}', [ModeloProjetoController::class, 'update'])->name('update');
+    Route::delete('/{modelo}', [ModeloProjetoController::class, 'destroy'])->name('destroy');
+    Route::post('/{modelo}/toggle-status', [ModeloProjetoController::class, 'toggleStatus'])->name('toggle-status');
+    
+    // AJAX endpoints
+    Route::get('/por-tipo', [ModeloProjetoController::class, 'porTipo'])->name('por-tipo');
+    Route::get('/{modelo}/conteudo', [ModeloProjetoController::class, 'conteudo'])->name('conteudo');
+    Route::post('/upload-image', [ModeloProjetoController::class, 'uploadImage'])->name('upload-image');
 });
 
 // Mock API routes moved to routes/api.php to avoid CSRF middleware

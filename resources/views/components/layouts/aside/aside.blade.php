@@ -86,8 +86,8 @@
                 <!--end:Menu item-->
                 
                 <!--begin:Menu item - Projetos (futuro)-->
-                <div class="menu-item">
-                    <a class="menu-link" href="#" onclick="showComingSoon('Projetos')">
+                <div data-kt-menu-trigger="click" class="menu-item menu-accordion {{ request()->routeIs('modelos.*') ? 'here show' : '' }}">
+                    <span class="menu-link">
                         <span class="menu-icon">
                             <i class="ki-duotone ki-document fs-2">
                                 <span class="path1"></span>
@@ -95,8 +95,44 @@
                             </i>
                         </span>
                         <span class="menu-title">Projetos</span>
-                        <span class="badge badge-light-warning ms-auto">Em breve</span>
-                    </a>
+                        <span class="menu-arrow"></span>
+                    </span>
+                    <div class="menu-sub menu-sub-accordion">
+                        @if(auth()->check() && auth()->user()->isAdmin())
+                        <div class="menu-item">
+                            <a class="menu-link {{ request()->routeIs('modelos.*') ? 'active' : '' }}" href="{{ route('modelos.index') }}">
+                                <span class="menu-bullet">
+                                    <span class="bullet bullet-dot"></span>
+                                </span>
+                                <span class="menu-title">Modelos de Projeto</span>
+                            </a>
+                        </div>
+                        @endif
+                        <div class="menu-item">
+                            <a class="menu-link" href="#" onclick="showComingSoon('Configurações Gerais')">
+                                <span class="menu-bullet">
+                                    <span class="bullet bullet-dot"></span>
+                                </span>
+                                <span class="menu-title">Configurações Gerais</span>
+                            </a>
+                        </div>
+                        <div class="menu-item">
+                            <a class="menu-link" href="#" onclick="showComingSoon('Tipos de Projeto')">
+                                <span class="menu-bullet">
+                                    <span class="bullet bullet-dot"></span>
+                                </span>
+                                <span class="menu-title">Tipos de Projeto</span>
+                            </a>
+                        </div>
+                        <div class="menu-item">
+                            <a class="menu-link" href="#" onclick="showComingSoon('Workflows')">
+                                <span class="menu-bullet">
+                                    <span class="bullet bullet-dot"></span>
+                                </span>
+                                <span class="menu-title">Workflows</span>
+                            </a>
+                        </div>
+                    </div>
                 </div>
                 <!--end:Menu item-->
                 

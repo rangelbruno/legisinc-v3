@@ -100,13 +100,26 @@
                                 <div class="col-xl-4">
                                     <div class="fv-row mb-8">
                                         <label class="required fs-6 fw-semibold mb-2">Tipo</label>
-                                        <select class="form-select form-select-solid" name="tipo" required>
+                                        <select class="form-select form-select-solid" name="tipo" id="tipoSelect" required>
                                             <option value="">Selecione o tipo</option>
                                             @foreach($opcoes['tipos'] ?? [] as $key => $nome)
                                                 <option value="{{ $key }}" {{ old('tipo') == $key ? 'selected' : '' }}>{{ $nome }}</option>
                                             @endforeach
                                         </select>
                                         @error('tipo')
+                                            <div class="fv-plugins-message-container">
+                                                <div class="fv-help-block">{{ $message }}</div>
+                                            </div>
+                                        @enderror
+                                    </div>
+
+                                    <div class="fv-row mb-8" id="modeloContainer" style="display: none;">
+                                        <label class="fs-6 fw-semibold mb-2">Modelo</label>
+                                        <select class="form-select form-select-solid" name="modelo_id" id="modeloSelect">
+                                            <option value="">Selecione um modelo</option>
+                                        </select>
+                                        <div class="form-text">Selecione um modelo para pré-popular o conteúdo</div>
+                                        @error('modelo_id')
                                             <div class="fv-plugins-message-container">
                                                 <div class="fv-help-block">{{ $message }}</div>
                                             </div>
@@ -260,14 +273,74 @@
                 submitButton.disabled = true;
             });
 
-            // Auto-completar ano baseado no tipo
-            const tipoSelect = document.querySelector('select[name="tipo"]');
+            // Auto-completar ano baseado no tipo e carregar modelos
+            const tipoSelect = document.querySelector('#tipoSelect');
             const anoInput = document.querySelector('input[name="ano"]');
+            const modeloContainer = document.getElementById('modeloContainer');
+            const modeloSelect = document.getElementById('modeloSelect');
+            const conteudoTextarea = document.querySelector('textarea[name="conteudo"]');
             
             if (tipoSelect && anoInput) {
                 tipoSelect.addEventListener('change', function() {
                     if (!anoInput.value) {
                         anoInput.value = new Date().getFullYear();
+                    }
+                    
+                    // Carregar modelos para o tipo selecionado
+                    const tipoSelecionado = this.value;
+                    
+                    if (tipoSelecionado) {
+                        fetch(`/admin/modelos/por-tipo?tipo=${tipoSelecionado}`)
+                            .then(response => response.json())
+                            .then(data => {
+                                modeloSelect.innerHTML = '<option value="">Selecione um modelo</option>';
+                                
+                                if (data.success && data.modelos.length > 0) {
+                                    data.modelos.forEach(modelo => {
+                                        const option = document.createElement('option');
+                                        option.value = modelo.id;
+                                        option.textContent = modelo.nome;
+                                        if (modelo.descricao) {
+                                            option.title = modelo.descricao;
+                                        }
+                                        modeloSelect.appendChild(option);
+                                    });
+                                    modeloContainer.style.display = 'block';
+                                } else {
+                                    modeloContainer.style.display = 'none';
+                                }
+                            })
+                            .catch(error => {
+                                console.error('Erro ao carregar modelos:', error);
+                                modeloContainer.style.display = 'none';
+                            });
+                    } else {
+                        modeloContainer.style.display = 'none';
+                    }
+                });
+            }
+            
+            // Carregar conteúdo do modelo selecionado
+            if (modeloSelect && conteudoTextarea) {
+                modeloSelect.addEventListener('change', function() {
+                    const modeloId = this.value;
+                    
+                    if (modeloId) {
+                        fetch(`/admin/modelos/${modeloId}/conteudo`)
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.success) {
+                                    conteudoTextarea.value = data.conteudo;
+                                } else {
+                                    alert('Erro ao carregar modelo: ' + data.message);
+                                }
+                            })
+                            .catch(error => {
+                                console.error('Erro ao carregar conteúdo do modelo:', error);
+                                alert('Erro ao carregar conteúdo do modelo');
+                            });
+                    } else {
+                        conteudoTextarea.value = '';
                     }
                 });
             }
