@@ -11,7 +11,7 @@
     <meta property="og:locale" content="en_US" />
     <meta property="og:type" content="article" />
     <meta property="og:title" content="Metronic - The World's #1 Selling Bootstrap Admin Template by KeenThemes" />
-    <link rel="shortcut icon" href="assets/media/logos/favicon.ico" />
+    <link rel="shortcut icon" href="{{ asset('assets/media/logos/favicon.ico') }}" />
     <!--begin::Fonts(mandatory for all pages)-->
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,400,500,600,700" />
     <!--end::Fonts-->
@@ -121,7 +121,7 @@
                             data-kt-menu-trigger="click" data-kt-menu-placement="bottom-start"
                             data-kt-menu-offset="0px, 0px">
                             <img data-kt-element="current-lang-flag" class="w-20px h-20px rounded me-3"
-                                src="assets/media/flags/united-states.svg" alt="" />
+                                src="{{ asset('assets/media/flags/united-states.svg') }}" alt="" />
                             <span data-kt-element="current-lang-name" class="me-1">English</span>
                             <span class="d-flex flex-center rotate-180">
                                 <i class="ki-duotone ki-down fs-5 text-muted m-0"></i>
@@ -136,7 +136,7 @@
                                 <a href="#" class="menu-link d-flex px-5" data-kt-lang="English">
                                     <span class="symbol symbol-20px me-4">
                                         <img data-kt-element="lang-flag" class="rounded-1"
-                                            src="assets/media/flags/united-states.svg" alt="" />
+                                            src="{{ asset('assets/media/flags/united-states.svg') }}" alt="" />
                                     </span>
                                     <span data-kt-element="lang-name">English</span>
                                 </a>
@@ -147,7 +147,7 @@
                                 <a href="#" class="menu-link d-flex px-5" data-kt-lang="Spanish">
                                     <span class="symbol symbol-20px me-4">
                                         <img data-kt-element="lang-flag" class="rounded-1"
-                                            src="assets/media/flags/spain.svg" alt="" />
+                                            src="{{ asset('assets/media/flags/spain.svg') }}" alt="" />
                                     </span>
                                     <span data-kt-element="lang-name">Spanish</span>
                                 </a>
@@ -158,7 +158,7 @@
                                 <a href="#" class="menu-link d-flex px-5" data-kt-lang="German">
                                     <span class="symbol symbol-20px me-4">
                                         <img data-kt-element="lang-flag" class="rounded-1"
-                                            src="assets/media/flags/germany.svg" alt="" />
+                                            src="{{ asset('assets/media/flags/germany.svg') }}" alt="" />
                                     </span>
                                     <span data-kt-element="lang-name">German</span>
                                 </a>
@@ -169,7 +169,7 @@
                                 <a href="#" class="menu-link d-flex px-5" data-kt-lang="Japanese">
                                     <span class="symbol symbol-20px me-4">
                                         <img data-kt-element="lang-flag" class="rounded-1"
-                                            src="assets/media/flags/japan.svg" alt="" />
+                                            src="{{ asset('assets/media/flags/japan.svg') }}" alt="" />
                                     </span>
                                     <span data-kt-element="lang-name">Japanese</span>
                                 </a>
@@ -180,7 +180,7 @@
                                 <a href="#" class="menu-link d-flex px-5" data-kt-lang="French">
                                     <span class="symbol symbol-20px me-4">
                                         <img data-kt-element="lang-flag" class="rounded-1"
-                                            src="assets/media/flags/france.svg" alt="" />
+                                            src="{{ asset('assets/media/flags/france.svg') }}" alt="" />
                                     </span>
                                     <span data-kt-element="lang-name">French</span>
                                 </a>
@@ -203,17 +203,17 @@
             <!--end::Body-->
             <!--begin::Aside-->
             <div class="d-flex flex-lg-row-fluid w-lg-50 bgi-size-cover bgi-position-center order-1 order-lg-2"
-                style="background-image: url(assets/media/misc/auth-bg.png)">
+                style="background-image: url({{ asset('assets/media/misc/auth-bg.png') }})">
                 <!--begin::Content-->
                 <div class="d-flex flex-column flex-center py-7 py-lg-15 px-5 px-md-15 w-100">
                     <!--begin::Logo-->
                     <a href="{{ route('dashboard') }}" class="mb-0 mb-lg-12">
-                        <img alt="Logo" src="assets/media/logos/custom-1.png" class="h-60px h-lg-75px" />
+                        <img alt="Logo" src="{{ asset('assets/media/logos/custom-1.png') }}" class="h-60px h-lg-75px" />
                     </a>
                     <!--end::Logo-->
                     <!--begin::Image-->
                     <img class="d-none d-lg-block mx-auto w-275px w-md-50 w-xl-500px mb-10 mb-lg-20"
-                        src="assets/media/misc/auth-screens.png" alt="" />
+                        src="{{ asset('assets/media/misc/auth-screens.png') }}" alt="" />
                     <!--end::Image-->
                     <!--begin::Title-->
                     <h1 class="d-none d-lg-block text-white fs-2qx fw-bolder text-center mb-7">Fast, Efficient and

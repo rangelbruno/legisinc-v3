@@ -10,7 +10,7 @@
                         {{ auth()->user()->avatar }}
                     </div>
                 @else
-                    <img src="assets/media/avatars/300-1.jpg" alt="photo" />
+                    <img src="{{ asset('assets/media/avatars/300-1.jpg') }}" alt="photo" />
                 @endauth
             </div>
             <!--end::Avatar-->
@@ -57,7 +57,7 @@
                                     {{ auth()->user()->avatar }}
                                 </div>
                             @else
-                                <img alt="Logo" src="assets/media/avatars/300-1.jpg" />
+                                <img alt="Logo" src="{{ asset('assets/media/avatars/300-1.jpg') }}" />
                             @endauth
                         </div>
                         <!--end::Avatar-->

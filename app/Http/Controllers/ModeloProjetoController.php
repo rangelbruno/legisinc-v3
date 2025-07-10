@@ -43,7 +43,19 @@ class ModeloProjetoController extends Controller
         $modelos = $query->paginate(15);
         $tipos = ModeloProjeto::TIPOS_PROJETO;
 
-        return view('admin.modelos.index', compact('modelos', 'tipos'));
+        // Organizar modelos por tipo para a visualização em grid
+        $modelosPorTipo = collect();
+        foreach ($tipos as $tipoKey => $tipoNome) {
+            $modelosDoTipo = ModeloProjeto::where('tipo_projeto', $tipoKey)
+                ->orderBy('created_at', 'desc')
+                ->get();
+            
+            if ($modelosDoTipo->count() > 0) {
+                $modelosPorTipo->put($tipoKey, $modelosDoTipo);
+            }
+        }
+
+        return view('admin.modelos.index', compact('modelos', 'tipos', 'modelosPorTipo'));
     }
 
     /**
