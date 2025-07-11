@@ -49,4 +49,22 @@ Route::prefix('mock-api')->group(function () {
     Route::delete('/comissoes/{id}', [MockApiController::class, 'deleteComissao']);
     Route::get('/comissoes/{id}/membros', [MockApiController::class, 'membrosComissao']);
     Route::get('/comissoes/{id}/reunioes', [MockApiController::class, 'reunioesComissao']);
+    
+    // Rotas de sessões
+    Route::get('/sessions', [MockApiController::class, 'sessions']);
+    Route::post('/sessions', [MockApiController::class, 'createSession']);
+    Route::get('/sessions/{id}', [MockApiController::class, 'getSession']);
+    Route::put('/sessions/{id}', [MockApiController::class, 'updateSession']);
+    Route::delete('/sessions/{id}', [MockApiController::class, 'deleteSession']);
+    
+    // Rotas de matérias das sessões
+    Route::get('/sessions/{sessionId}/matters', [MockApiController::class, 'sessionMatters']);
+    Route::post('/sessions/{sessionId}/matters', [MockApiController::class, 'addSessionMatter']);
+    Route::put('/sessions/{sessionId}/matters/{matterId}', [MockApiController::class, 'updateSessionMatter']);
+    Route::delete('/sessions/{sessionId}/matters/{matterId}', [MockApiController::class, 'removeSessionMatter']);
+    
+    // Rotas de XML e exportação
+    Route::post('/sessions/{sessionId}/xml', [MockApiController::class, 'generateSessionXml']);
+    Route::post('/sessions/{sessionId}/export', [MockApiController::class, 'exportSessionXml']);
+    Route::get('/sessions/{sessionId}/exports', [MockApiController::class, 'sessionExports']);
 }); 

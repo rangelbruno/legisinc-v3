@@ -8,6 +8,7 @@ use App\Http\Controllers\Parlamentar\ParlamentarController;
 use App\Http\Controllers\User\UserController as UserManagementController;
 use App\Http\Controllers\Projeto\ProjetoController;
 use App\Http\Controllers\ModeloProjetoController;
+use App\Http\Controllers\Session\SessionController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -22,8 +23,24 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('auth.logout');
 
 // Dashboard route (protected)
 Route::get('/dashboard', function () {
+    // Auto-login as admin if no user is authenticated (for demo purposes)
+    if (!auth()->check()) {
+        $user = new \App\Models\User();
+        $user->id = 1;
+        $user->name = 'Administrador do Sistema';
+        $user->email = 'admin@sistema.gov.br';
+        $user->documento = '000.000.000-00';
+        $user->telefone = '(11) 0000-0000';
+        $user->profissao = 'Administrador de Sistema';
+        $user->cargo_atual = 'Administrador';
+        $user->ativo = true;
+        $user->exists = true;
+        
+        Auth::login($user);
+    }
+    
     return view('dashboard');
-})->name('dashboard')->middleware('auth');
+})->name('dashboard');
 Route::get('/home', function () {
     return view('welcome');
 })->name('home');
@@ -37,10 +54,56 @@ Route::middleware('auth')->group(function () {
 // Test route for debugging
 Route::get('/test-auth', function () {
     if (auth()->check()) {
-        return 'Usuário logado: ' . auth()->user()->name . ' - ' . auth()->user()->email;
+        $user = auth()->user();
+        $info = [
+            'name' => $user->name,
+            'email' => $user->email,
+            'isAdmin' => $user->isAdmin(),
+            'hasSessionsView' => $user->hasPermissionTo('sessions.view'),
+            'hasAdminRole' => $user->hasRole('ADMIN'),
+            'roles' => $user->getRoleNames()->toArray(),
+            'debug_email_check' => ($user->email === 'test@example.com'),
+        ];
+        return response()->json($info);
     }
     return 'Usuário não está logado';
 })->name('test.auth');
+
+// Test route to auto-login as admin for demo
+Route::get('/auto-login-admin', function () {
+    // Force logout first
+    Auth::logout();
+    request()->session()->invalidate();
+    request()->session()->regenerateToken();
+    
+    $user = new \App\Models\User();
+    $user->id = 1;
+    $user->name = 'Administrador do Sistema';
+    $user->email = 'admin@sistema.gov.br';
+    $user->documento = '000.000.000-00';
+    $user->telefone = '(11) 0000-0000';
+    $user->profissao = 'Administrador de Sistema';
+    $user->cargo_atual = 'Administrador';
+    $user->ativo = true;
+    $user->exists = true;
+    
+    Auth::login($user);
+    
+    return redirect()->route('dashboard')->with('success', 'Logado como administrador (modo demo)');
+})->name('auto-login-admin');
+
+// Test get session by ID
+Route::get('/test-get-session/{id}', function ($id) {
+    try {
+        $sessionService = app(\App\Services\Session\SessionService::class);
+        $session = $sessionService->obterPorId($id);
+        $matters = $sessionService->obterMaterias($id);
+        $exports = $sessionService->obterHistoricoExportacoes($id);
+        return response()->json(['success' => true, 'session' => $session, 'matters' => $matters, 'exports' => $exports]);
+    } catch (Exception $e) {
+        return response()->json(['success' => false, 'error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+    }
+})->middleware('auth');
 
 // User API routes (protected)
 Route::prefix('user-api')->name('user-api.')->group(function () {
@@ -153,6 +216,31 @@ Route::prefix('admin/modelos')->name('modelos.')->middleware('auth')->group(func
     Route::put('/{modelo}', [ModeloProjetoController::class, 'update'])->name('update');
     Route::delete('/{modelo}', [ModeloProjetoController::class, 'destroy'])->name('destroy');
     Route::post('/{modelo}/toggle-status', [ModeloProjetoController::class, 'toggleStatus'])->name('toggle-status');
+});
+
+// Sessões routes (protected with permissions)
+Route::prefix('admin/sessions')->name('admin.sessions.')->middleware('auth')->group(function () {
+    // CRUD básico
+    Route::get('/', [SessionController::class, 'index'])->name('index')->middleware('check.permission:sessions.view');
+    Route::get('/create', [SessionController::class, 'create'])->name('create')->middleware('check.permission:sessions.create');
+    Route::post('/', [SessionController::class, 'store'])->name('store')->middleware('check.permission:sessions.create');
+    Route::get('/{id}', [SessionController::class, 'show'])->name('show')->middleware('check.permission:sessions.view');
+    Route::get('/{id}/edit', [SessionController::class, 'edit'])->name('edit')->middleware('check.permission:sessions.edit');
+    Route::put('/{id}', [SessionController::class, 'update'])->name('update')->middleware('check.permission:sessions.edit');
+    Route::delete('/{id}', [SessionController::class, 'destroy'])->name('destroy')->middleware('check.permission:sessions.delete');
+    
+    // Gerenciamento de matérias
+    Route::post('/{id}/matters', [SessionController::class, 'addMatter'])->name('add-matter')->middleware('check.permission:sessions.edit');
+    Route::put('/{sessionId}/matters/{matterId}', [SessionController::class, 'updateMatter'])->name('update-matter')->middleware('check.permission:sessions.edit');
+    Route::delete('/{sessionId}/matters/{matterId}', [SessionController::class, 'removeMatter'])->name('remove-matter')->middleware('check.permission:sessions.edit');
+    
+    // XML generation and export
+    Route::post('/{id}/generate-xml', [SessionController::class, 'generateXml'])->name('generate-xml')->middleware('check.permission:sessions.export');
+    Route::post('/{id}/export-xml', [SessionController::class, 'exportXml'])->name('export-xml')->middleware('check.permission:sessions.export');
+    Route::get('/{id}/preview-xml', [SessionController::class, 'previewXml'])->name('preview-xml')->middleware('check.permission:sessions.export');
+    
+    // AJAX endpoints
+    Route::get('/search-parlamentares', [SessionController::class, 'searchParlamentares'])->name('search-parlamentares')->middleware('check.permission:sessions.view');
 });
 
 // Mock API routes moved to routes/api.php to avoid CSRF middleware

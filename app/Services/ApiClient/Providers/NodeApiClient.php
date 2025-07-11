@@ -133,6 +133,7 @@ class NodeApiClient extends AbstractApiClient
                 '/parlamentares/partido' => '/parlamentares/partido',
                 '/parlamentares/status' => '/parlamentares/status',
                 '/mesa-diretora' => '/mesa-diretora',
+                '/sessions' => '/sessions',
             ];
             
             return $endpointMap[$endpoint] ?? $endpoint;
@@ -147,6 +148,7 @@ class NodeApiClient extends AbstractApiClient
                 '/parlamentares/partido' => $urls[$apiMode]['parlamentares/partido'] ?? '/parlamentares/partido',
                 '/parlamentares/status' => $urls[$apiMode]['parlamentares/status'] ?? '/parlamentares/status',
                 '/mesa-diretora' => $urls[$apiMode]['mesa-diretora'] ?? '/mesa-diretora',
+                '/sessions' => $urls[$apiMode]['sessions'] ?? '/sessions',
             ];
             
             return $endpointMap[$endpoint] ?? $endpoint;
@@ -489,6 +491,120 @@ class NodeApiClient extends AbstractApiClient
             'api_mode' => config('api.mode'),
             'auth_status' => $this->getAuthStatus(),
         ]);
+    }
+
+    // ============================================================================
+    // MÉTODOS DE SESSÕES
+    // ============================================================================
+
+    /**
+     * Obter todas as sessões
+     */
+    public function getSessions(array $filters = []): ApiResponse
+    {
+        $endpoint = $this->buildEndpointUrl('/sessions');
+        return $this->get($endpoint, $filters);
+    }
+
+    /**
+     * Obter sessão específica por ID
+     */
+    public function getSession(int $id): ApiResponse
+    {
+        $endpoint = $this->buildEndpointUrl('/sessions');
+        return $this->get("{$endpoint}/{$id}");
+    }
+
+    /**
+     * Criar nova sessão
+     */
+    public function createSession(array $data): ApiResponse
+    {
+        $endpoint = $this->buildEndpointUrl('/sessions');
+        return $this->post($endpoint, $data);
+    }
+
+    /**
+     * Atualizar sessão
+     */
+    public function updateSession(int $id, array $data): ApiResponse
+    {
+        $endpoint = $this->buildEndpointUrl('/sessions');
+        return $this->put("{$endpoint}/{$id}", $data);
+    }
+
+    /**
+     * Deletar sessão
+     */
+    public function deleteSession(int $id): ApiResponse
+    {
+        $endpoint = $this->buildEndpointUrl('/sessions');
+        return $this->delete("{$endpoint}/{$id}");
+    }
+
+    /**
+     * Obter matérias de uma sessão
+     */
+    public function getSessionMatters(int $sessionId): ApiResponse
+    {
+        $endpoint = $this->buildEndpointUrl('/sessions');
+        return $this->get("{$endpoint}/{$sessionId}/matters");
+    }
+
+    /**
+     * Adicionar matéria à sessão
+     */
+    public function addMatterToSession(int $sessionId, array $data): ApiResponse
+    {
+        $endpoint = $this->buildEndpointUrl('/sessions');
+        return $this->post("{$endpoint}/{$sessionId}/matters", $data);
+    }
+
+    /**
+     * Atualizar matéria na sessão
+     */
+    public function updateSessionMatter(int $sessionId, int $matterId, array $data): ApiResponse
+    {
+        $endpoint = $this->buildEndpointUrl('/sessions');
+        return $this->put("{$endpoint}/{$sessionId}/matters/{$matterId}", $data);
+    }
+
+    /**
+     * Remover matéria da sessão
+     */
+    public function removeSessionMatter(int $sessionId, int $matterId): ApiResponse
+    {
+        $endpoint = $this->buildEndpointUrl('/sessions');
+        return $this->delete("{$endpoint}/{$sessionId}/matters/{$matterId}");
+    }
+
+    /**
+     * Gerar XML da sessão
+     */
+    public function generateSessionXml(int $sessionId, string $documentType): ApiResponse
+    {
+        $endpoint = $this->buildEndpointUrl('/sessions');
+        return $this->post("{$endpoint}/{$sessionId}/xml", [
+            'document_type' => $documentType
+        ]);
+    }
+
+    /**
+     * Exportar XML da sessão
+     */
+    public function exportSessionXml(int $sessionId, array $xmlData): ApiResponse
+    {
+        $endpoint = $this->buildEndpointUrl('/sessions');
+        return $this->post("{$endpoint}/{$sessionId}/export", $xmlData);
+    }
+
+    /**
+     * Obter histórico de exportações da sessão
+     */
+    public function getSessionExports(int $sessionId): ApiResponse
+    {
+        $endpoint = $this->buildEndpointUrl('/sessions');
+        return $this->get("{$endpoint}/{$sessionId}/exports");
     }
 
     /**

@@ -24,35 +24,12 @@ class CheckPermission
         }
 
         // Verificar se o usuário tem permissão
-        if (!$this->userHasPermission($user, $permission)) {
+        if (!$user->hasPermissionTo($permission)) {
             return redirect()->route('dashboard')->with('error', 'Você não tem permissão para acessar esta página.');
         }
 
         return $next($request);
     }
 
-    /**
-     * Check if user has a specific permission
-     */
-    private function userHasPermission($user, string $permission): bool
-    {
-        // Get user's roles
-        $userRoles = DB::table('model_has_roles')
-            ->where('model_type', 'App\\Models\\User')
-            ->where('model_id', $user->id)
-            ->pluck('role_id');
-
-        if ($userRoles->isEmpty()) {
-            return false;
-        }
-
-        // Check if any of the user's roles has the permission
-        $hasPermission = DB::table('role_has_permissions')
-            ->join('permissions', 'role_has_permissions.permission_id', '=', 'permissions.id')
-            ->whereIn('role_has_permissions.role_id', $userRoles)
-            ->where('permissions.name', $permission)
-            ->exists();
-
-        return $hasPermission;
-    }
+    // Removed userHasPermission method - now using User model's hasPermissionTo method directly
 }

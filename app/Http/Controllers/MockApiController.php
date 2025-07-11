@@ -722,6 +722,234 @@ class MockApiController extends Controller
         ]);
     }
 
+    // ============================================================================
+    // ENDPOINTS DE PROJETOS/DOCUMENTOS
+    // ============================================================================
+
+    /**
+     * Listar documentos/projetos disponíveis para adicionar às sessões
+     */
+    public function documents(Request $request): JsonResponse
+    {
+        $tipo = $request->input('tipo');
+        $status = $request->input('status');
+        $ano = $request->input('ano', date('Y'));
+        $search = $request->input('search');
+
+        $documents = $this->getAvailableDocuments();
+
+        // Filtrar por tipo se especificado
+        if ($tipo) {
+            $documents = array_filter($documents, function($doc) use ($tipo) {
+                return $doc['tipo_id'] == $tipo;
+            });
+        }
+
+        // Filtrar por status se especificado
+        if ($status) {
+            $documents = array_filter($documents, function($doc) use ($status) {
+                return $doc['status'] === $status;
+            });
+        }
+
+        // Filtrar por ano se especificado
+        if ($ano) {
+            $documents = array_filter($documents, function($doc) use ($ano) {
+                return $doc['ano'] == $ano;
+            });
+        }
+
+        // Busca por texto se especificado
+        if ($search) {
+            $documents = array_filter($documents, function($doc) use ($search) {
+                return stripos($doc['titulo'], $search) !== false ||
+                       stripos($doc['ementa'], $search) !== false ||
+                       stripos($doc['numero'], $search) !== false;
+            });
+        }
+
+        return response()->json([
+            'data' => array_values($documents),
+            'meta' => [
+                'total' => count($documents),
+                'filtros' => [
+                    'tipo' => $tipo,
+                    'status' => $status,
+                    'ano' => $ano,
+                    'search' => $search
+                ]
+            ]
+        ]);
+    }
+
+    /**
+     * Obter documento específico por ID
+     */
+    public function getDocument(Request $request, int $id): JsonResponse
+    {
+        $documents = $this->getAvailableDocuments();
+        
+        foreach ($documents as $doc) {
+            if ($doc['id'] === $id) {
+                return response()->json([
+                    'data' => $doc
+                ]);
+            }
+        }
+
+        return response()->json([
+            'error' => 'Documento não encontrado',
+            'message' => 'Documento com ID ' . $id . ' não foi encontrado'
+        ], 404);
+    }
+
+    /**
+     * Gerar dados mock de documentos/projetos disponíveis
+     */
+    private function getAvailableDocuments(): array
+    {
+        return Cache::remember('mock_available_documents', 3600, function() {
+            return [
+                [
+                    'id' => 1,
+                    'numero' => '001',
+                    'ano' => 2024,
+                    'tipo_id' => 135,
+                    'tipo_descricao' => 'Projeto de Lei',
+                    'titulo' => 'Criação do Programa Municipal de Educação Ambiental',
+                    'ementa' => 'Dispõe sobre a criação de programa de educação ambiental nas escolas municipais',
+                    'autor_id' => 1,
+                    'autor_nome' => 'João Silva Santos',
+                    'status' => 'em_tramitacao',
+                    'status_descricao' => 'Em Tramitação',
+                    'urgencia' => 'normal',
+                    'data_protocolo' => '2024-01-15',
+                    'created_at' => '2024-01-15T10:00:00Z',
+                    'updated_at' => '2024-01-15T10:00:00Z'
+                ],
+                [
+                    'id' => 2,
+                    'numero' => '002',
+                    'ano' => 2024,
+                    'tipo_id' => 135,
+                    'tipo_descricao' => 'Projeto de Lei',
+                    'titulo' => 'Incentivo ao Transporte Sustentável',
+                    'ementa' => 'Cria incentivos para o uso de bicicletas e transporte público na cidade',
+                    'autor_id' => 2,
+                    'autor_nome' => 'Maria Santos Oliveira',
+                    'status' => 'em_tramitacao',
+                    'status_descricao' => 'Em Tramitação',
+                    'urgencia' => 'normal',
+                    'data_protocolo' => '2024-02-20',
+                    'created_at' => '2024-02-20T14:30:00Z',
+                    'updated_at' => '2024-02-20T14:30:00Z'
+                ],
+                [
+                    'id' => 3,
+                    'numero' => '003',
+                    'ano' => 2024,
+                    'tipo_id' => 138,
+                    'tipo_descricao' => 'Projeto de Resolução',
+                    'titulo' => 'Alteração do Regimento Interno da Câmara',
+                    'ementa' => 'Altera dispositivos do Regimento Interno para modernização dos processos',
+                    'autor_id' => 3,
+                    'autor_nome' => 'Carlos Eduardo Pereira',
+                    'status' => 'protocolado',
+                    'status_descricao' => 'Protocolado',
+                    'urgencia' => 'urgente',
+                    'data_protocolo' => '2024-03-05',
+                    'created_at' => '2024-03-05T09:15:00Z',
+                    'updated_at' => '2024-03-05T09:15:00Z'
+                ],
+                [
+                    'id' => 4,
+                    'numero' => '001',
+                    'ano' => 2024,
+                    'tipo_id' => 140,
+                    'tipo_descricao' => 'Requerimento',
+                    'titulo' => 'Informações sobre Obras da Praça Central',
+                    'ementa' => 'Solicita informações detalhadas sobre o andamento das obras de revitalização da Praça Central',
+                    'autor_id' => 2,
+                    'autor_nome' => 'Maria Santos Oliveira',
+                    'status' => 'protocolado',
+                    'status_descricao' => 'Protocolado',
+                    'urgencia' => 'normal',
+                    'data_protocolo' => '2024-03-10',
+                    'created_at' => '2024-03-10T16:45:00Z',
+                    'updated_at' => '2024-03-10T16:45:00Z'
+                ],
+                [
+                    'id' => 5,
+                    'numero' => '002',
+                    'ano' => 2024,
+                    'tipo_id' => 140,
+                    'tipo_descricao' => 'Requerimento',
+                    'titulo' => 'Criação de Comissão de Estudos Ambientais',
+                    'ementa' => 'Requer a criação de comissão especial para estudar impactos ambientais na região',
+                    'autor_id' => 4,
+                    'autor_nome' => 'Ana Paula Costa',
+                    'status' => 'em_tramitacao',
+                    'status_descricao' => 'Em Tramitação',
+                    'urgencia' => 'normal',
+                    'data_protocolo' => '2024-03-15',
+                    'created_at' => '2024-03-15T11:20:00Z',
+                    'updated_at' => '2024-03-15T11:20:00Z'
+                ],
+                [
+                    'id' => 6,
+                    'numero' => '001',
+                    'ano' => 2024,
+                    'tipo_id' => 141,
+                    'tipo_descricao' => 'Indicação',
+                    'titulo' => 'Melhorias na Iluminação Pública do Bairro Centro',
+                    'ementa' => 'Indica ao Executivo a necessidade de melhorias na iluminação pública',
+                    'autor_id' => 5,
+                    'autor_nome' => 'Roberto Mendes Lima',
+                    'status' => 'protocolado',
+                    'status_descricao' => 'Protocolado',
+                    'urgencia' => 'normal',
+                    'data_protocolo' => '2024-04-01',
+                    'created_at' => '2024-04-01T08:30:00Z',
+                    'updated_at' => '2024-04-01T08:30:00Z'
+                ],
+                [
+                    'id' => 7,
+                    'numero' => '004',
+                    'ano' => 2024,
+                    'tipo_id' => 135,
+                    'tipo_descricao' => 'Projeto de Lei',
+                    'titulo' => 'Marco Regulatório do Saneamento Municipal',
+                    'ementa' => 'Estabelece diretrizes para o saneamento básico no município',
+                    'autor_id' => 1,
+                    'autor_nome' => 'João Silva Santos',
+                    'status' => 'em_tramitacao',
+                    'status_descricao' => 'Em Tramitação',
+                    'urgencia' => 'urgentissima',
+                    'data_protocolo' => '2024-04-10',
+                    'created_at' => '2024-04-10T13:15:00Z',
+                    'updated_at' => '2024-04-10T13:15:00Z'
+                ],
+                [
+                    'id' => 8,
+                    'numero' => '003',
+                    'ano' => 2024,
+                    'tipo_id' => 140,
+                    'tipo_descricao' => 'Requerimento',
+                    'titulo' => 'Informações sobre Licitação de Transporte Escolar',
+                    'ementa' => 'Solicita cópia do processo licitatório para contratação de transporte escolar',
+                    'autor_id' => 3,
+                    'autor_nome' => 'Carlos Eduardo Pereira',
+                    'status' => 'protocolado',
+                    'status_descricao' => 'Protocolado',
+                    'urgencia' => 'urgente',
+                    'data_protocolo' => '2024-04-15',
+                    'created_at' => '2024-04-15T10:45:00Z',
+                    'updated_at' => '2024-04-15T10:45:00Z'
+                ]
+            ];
+        });
+    }
+
     /**
      * Reset mock data (para testes)
      */
@@ -1228,5 +1456,793 @@ class MockApiController extends Controller
         }
         
         return null;
+    }
+
+    // ============================================================================
+    // ENDPOINTS DE SESSÕES
+    // ============================================================================
+
+    /**
+     * Listar todas as sessões
+     */
+    public function sessions(Request $request): JsonResponse
+    {
+        $sessions = $this->getDefaultSessions();
+        
+        // Aplicar filtros se fornecidos
+        if ($request->has('tipo_id')) {
+            $sessions = array_filter($sessions, function($s) use ($request) {
+                return $s['tipo_id'] == $request->get('tipo_id');
+            });
+        }
+        
+        if ($request->has('ano')) {
+            $sessions = array_filter($sessions, function($s) use ($request) {
+                return $s['ano'] == $request->get('ano');
+            });
+        }
+        
+        if ($request->has('status')) {
+            $sessions = array_filter($sessions, function($s) use ($request) {
+                return $s['status'] === $request->get('status');
+            });
+        }
+        
+        if ($request->has('com_votacao') && $request->get('com_votacao') == '1') {
+            $sessions = array_filter($sessions, function($s) {
+                // Filter sessions that have matters with voting
+                $matters = $this->getSessionMatters($s['id']);
+                foreach ($matters as $matter) {
+                    if (isset($matter['votacao']) && !empty($matter['votacao'])) {
+                        return true;
+                    }
+                }
+                return false;
+            });
+        }
+        
+        return response()->json([
+            'data' => array_values($sessions),
+            'meta' => [
+                'total' => count($sessions),
+                'page' => 1,
+                'per_page' => 50
+            ]
+        ]);
+    }
+
+    /**
+     * Obter sessão específica
+     */
+    public function getSession(Request $request, int $id): JsonResponse
+    {
+        $sessions = Cache::get('mock_api_sessions', $this->getDefaultSessions());
+        
+        foreach ($sessions as $session) {
+            if ($session['id'] === $id) {
+                return response()->json([
+                    'data' => $session
+                ]);
+            }
+        }
+        
+        return response()->json([
+            'error' => 'Sessão não encontrada',
+            'message' => 'Sessão com ID ' . $id . ' não foi encontrada'
+        ], 404);
+    }
+
+    /**
+     * Criar nova sessão
+     */
+    public function createSession(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'numero' => 'required|integer',
+            'ano' => 'required|integer',
+            'data' => 'required|date',
+            'hora' => 'required|string',
+            'tipo_id' => 'required|integer|in:8,9,10',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'error' => 'Validation failed',
+                'details' => $validator->errors()
+            ], 400);
+        }
+
+        $sessions = Cache::get('mock_api_sessions', $this->getDefaultSessions());
+        
+        $novaSessao = [
+            'id' => count($sessions) + 1,
+            'numero' => $request->input('numero'),
+            'ano' => $request->input('ano'),
+            'data' => $request->input('data'),
+            'hora' => $request->input('hora'),
+            'tipo_id' => $request->input('tipo_id'),
+            'tipo_descricao' => $this->getTipoSessaoDescricao($request->input('tipo_id')),
+            'status' => 'preparacao',
+            'observacoes' => $request->input('observacoes', ''),
+            'hora_inicial' => null,
+            'hora_final' => null,
+            'total_materias' => 0,
+            'created_at' => now()->toISOString(),
+            'updated_at' => now()->toISOString()
+        ];
+        
+        $sessions[] = $novaSessao;
+        Cache::put('mock_api_sessions', $sessions, now()->addHours(24));
+        
+        return response()->json([
+            'message' => 'Sessão criada com sucesso',
+            'data' => $novaSessao
+        ], 201);
+    }
+
+    /**
+     * Atualizar sessão
+     */
+    public function updateSession(Request $request, int $id): JsonResponse
+    {
+        $sessions = Cache::get('mock_api_sessions', $this->getDefaultSessions());
+        $sessionIndex = null;
+        
+        foreach ($sessions as $index => $session) {
+            if ($session['id'] === $id) {
+                $sessionIndex = $index;
+                break;
+            }
+        }
+        
+        if ($sessionIndex === null) {
+            return response()->json([
+                'error' => 'Sessão não encontrada',
+                'message' => 'Sessão com ID ' . $id . ' não foi encontrada'
+            ], 404);
+        }
+        
+        $validator = Validator::make($request->all(), [
+            'numero' => 'sometimes|integer',
+            'ano' => 'sometimes|integer',
+            'data' => 'sometimes|date',
+            'hora' => 'sometimes|string',
+            'tipo_id' => 'sometimes|integer|in:8,9,10',
+            'status' => 'sometimes|string|in:preparacao,agendada,exportada,concluida',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'error' => 'Validation failed',
+                'details' => $validator->errors()
+            ], 400);
+        }
+        
+        // Atualizar campos fornecidos
+        $updateFields = ['numero', 'ano', 'data', 'hora', 'tipo_id', 'status', 'observacoes', 'hora_inicial', 'hora_final'];
+        
+        foreach ($updateFields as $field) {
+            if ($request->has($field)) {
+                $sessions[$sessionIndex][$field] = $request->input($field);
+            }
+        }
+        
+        if ($request->has('tipo_id')) {
+            $sessions[$sessionIndex]['tipo_descricao'] = $this->getTipoSessaoDescricao($request->input('tipo_id'));
+        }
+        
+        $sessions[$sessionIndex]['updated_at'] = now()->toISOString();
+        
+        Cache::put('mock_api_sessions', $sessions, now()->addHours(24));
+        
+        return response()->json([
+            'message' => 'Sessão atualizada com sucesso',
+            'data' => $sessions[$sessionIndex]
+        ]);
+    }
+
+    /**
+     * Deletar sessão
+     */
+    public function deleteSession(Request $request, int $id): JsonResponse
+    {
+        $sessions = Cache::get('mock_api_sessions', $this->getDefaultSessions());
+        $sessionIndex = null;
+        
+        foreach ($sessions as $index => $session) {
+            if ($session['id'] === $id) {
+                $sessionIndex = $index;
+                break;
+            }
+        }
+        
+        if ($sessionIndex === null) {
+            return response()->json([
+                'error' => 'Sessão não encontrada',
+                'message' => 'Sessão com ID ' . $id . ' não foi encontrada'
+            ], 404);
+        }
+        
+        $sessionDeletada = $sessions[$sessionIndex];
+        unset($sessions[$sessionIndex]);
+        $sessions = array_values($sessions);
+        
+        Cache::put('mock_api_sessions', $sessions, now()->addHours(24));
+        
+        return response()->json([
+            'message' => 'Sessão deletada com sucesso',
+            'data' => $sessionDeletada
+        ]);
+    }
+
+    /**
+     * Obter matérias de uma sessão
+     */
+    public function sessionMatters(Request $request, int $sessionId): JsonResponse
+    {
+        $matters = $this->getSessionMatters($sessionId);
+        
+        return response()->json([
+            'data' => $matters,
+            'meta' => [
+                'session_id' => $sessionId,
+                'total_matters' => count($matters)
+            ]
+        ]);
+    }
+
+    /**
+     * Adicionar matéria à sessão
+     */
+    public function addSessionMatter(Request $request, int $sessionId): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'tipo_id' => 'required|integer|in:109,135,138,140,141',
+            'numero' => 'required|string',
+            'ano' => 'required|integer',
+            'descricao' => 'required|string',
+            'assunto' => 'required|string',
+            'autor_id' => 'required|integer',
+            'fase_id' => 'required|integer|in:13,14,15,16,17',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'error' => 'Validation failed',
+                'details' => $validator->errors()
+            ], 400);
+        }
+
+        $matters = Cache::get("mock_api_session_matters_{$sessionId}", []);
+        
+        $novaMateria = [
+            'id' => count($matters) + 1,
+            'session_id' => $sessionId,
+            'tipo_id' => $request->input('tipo_id'),
+            'tipo_descricao' => $this->getTipoMateriaDescricao($request->input('tipo_id')),
+            'numero' => $request->input('numero'),
+            'ano' => $request->input('ano'),
+            'data' => $request->input('data', now()->format('Y-m-d')),
+            'descricao' => $request->input('descricao'),
+            'assunto' => $request->input('assunto'),
+            'autor_id' => $request->input('autor_id'),
+            'autor_nome' => $this->getAutorNome($request->input('autor_id')),
+            'fase_id' => $request->input('fase_id'),
+            'fase_descricao' => $this->getFaseDescricao($request->input('fase_id')),
+            'regime_id' => $request->input('regime_id'),
+            'regime_descricao' => $request->input('regime_id') ? $this->getRegimeDescricao($request->input('regime_id')) : null,
+            'quorum_id' => $request->input('quorum_id'),
+            'quorum_descricao' => $request->input('quorum_id') ? $this->getQuorumDescricao($request->input('quorum_id')) : null,
+            'created_at' => now()->toISOString(),
+            'updated_at' => now()->toISOString()
+        ];
+        
+        $matters[] = $novaMateria;
+        Cache::put("mock_api_session_matters_{$sessionId}", $matters, now()->addHours(24));
+        
+        // Atualizar contador na sessão
+        $this->updateSessionMatterCount($sessionId);
+        
+        return response()->json([
+            'message' => 'Matéria adicionada à sessão com sucesso',
+            'data' => $novaMateria
+        ], 201);
+    }
+
+    /**
+     * Atualizar matéria na sessão
+     */
+    public function updateSessionMatter(Request $request, int $sessionId, int $matterId): JsonResponse
+    {
+        $matters = Cache::get("mock_api_session_matters_{$sessionId}", []);
+        $matterIndex = null;
+        
+        foreach ($matters as $index => $matter) {
+            if ($matter['id'] === $matterId) {
+                $matterIndex = $index;
+                break;
+            }
+        }
+        
+        if ($matterIndex === null) {
+            return response()->json([
+                'error' => 'Matéria não encontrada',
+                'message' => 'Matéria com ID ' . $matterId . ' não foi encontrada nesta sessão'
+            ], 404);
+        }
+        
+        $validator = Validator::make($request->all(), [
+            'tipo_id' => 'sometimes|integer|in:109,135,138,140,141',
+            'numero' => 'sometimes|string',
+            'ano' => 'sometimes|integer',
+            'descricao' => 'sometimes|string',
+            'assunto' => 'sometimes|string',
+            'autor_id' => 'sometimes|integer',
+            'fase_id' => 'sometimes|integer|in:13,14,15,16,17',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'error' => 'Validation failed',
+                'details' => $validator->errors()
+            ], 400);
+        }
+        
+        // Atualizar campos
+        $updateFields = ['tipo_id', 'numero', 'ano', 'data', 'descricao', 'assunto', 'autor_id', 'fase_id', 'regime_id', 'quorum_id'];
+        
+        foreach ($updateFields as $field) {
+            if ($request->has($field)) {
+                $matters[$matterIndex][$field] = $request->input($field);
+            }
+        }
+        
+        // Atualizar descrições relacionadas
+        if ($request->has('tipo_id')) {
+            $matters[$matterIndex]['tipo_descricao'] = $this->getTipoMateriaDescricao($request->input('tipo_id'));
+        }
+        if ($request->has('autor_id')) {
+            $matters[$matterIndex]['autor_nome'] = $this->getAutorNome($request->input('autor_id'));
+        }
+        if ($request->has('fase_id')) {
+            $matters[$matterIndex]['fase_descricao'] = $this->getFaseDescricao($request->input('fase_id'));
+        }
+        if ($request->has('regime_id')) {
+            $matters[$matterIndex]['regime_descricao'] = $this->getRegimeDescricao($request->input('regime_id'));
+        }
+        if ($request->has('quorum_id')) {
+            $matters[$matterIndex]['quorum_descricao'] = $this->getQuorumDescricao($request->input('quorum_id'));
+        }
+        
+        $matters[$matterIndex]['updated_at'] = now()->toISOString();
+        
+        Cache::put("mock_api_session_matters_{$sessionId}", $matters, now()->addHours(24));
+        
+        return response()->json([
+            'message' => 'Matéria atualizada com sucesso',
+            'data' => $matters[$matterIndex]
+        ]);
+    }
+
+    /**
+     * Remover matéria da sessão
+     */
+    public function removeSessionMatter(Request $request, int $sessionId, int $matterId): JsonResponse
+    {
+        $matters = Cache::get("mock_api_session_matters_{$sessionId}", []);
+        $matterIndex = null;
+        
+        foreach ($matters as $index => $matter) {
+            if ($matter['id'] === $matterId) {
+                $matterIndex = $index;
+                break;
+            }
+        }
+        
+        if ($matterIndex === null) {
+            return response()->json([
+                'error' => 'Matéria não encontrada',
+                'message' => 'Matéria com ID ' . $matterId . ' não foi encontrada nesta sessão'
+            ], 404);
+        }
+        
+        $removedMatter = $matters[$matterIndex];
+        unset($matters[$matterIndex]);
+        $matters = array_values($matters);
+        
+        Cache::put("mock_api_session_matters_{$sessionId}", $matters, now()->addHours(24));
+        
+        // Atualizar contador na sessão
+        $this->updateSessionMatterCount($sessionId);
+        
+        return response()->json([
+            'message' => 'Matéria removida da sessão com sucesso',
+            'data' => $removedMatter
+        ]);
+    }
+
+    /**
+     * Gerar XML da sessão
+     */
+    public function generateSessionXml(Request $request, int $sessionId): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'document_type' => 'required|string|in:expediente,ordem_do_dia',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'error' => 'Validation failed',
+                'details' => $validator->errors()
+            ], 400);
+        }
+
+        $session = $this->getSessionById($sessionId);
+        if (!$session) {
+            return response()->json([
+                'error' => 'Sessão não encontrada'
+            ], 404);
+        }
+
+        $matters = $this->getSessionMatters($sessionId);
+        $documentType = $request->input('document_type');
+        
+        // Filtrar matérias por tipo de documento
+        $filteredMatters = $this->filterMattersByDocumentType($matters, $documentType);
+        
+        if (empty($filteredMatters)) {
+            return response()->json([
+                'error' => 'Nenhuma matéria encontrada para este tipo de documento'
+            ], 400);
+        }
+
+        $xml = $this->buildSessionXml($session, $filteredMatters, $documentType);
+        
+        return response()->json([
+            'data' => [
+                'session_id' => $sessionId,
+                'document_type' => $documentType,
+                'xml' => $xml,
+                'matter_count' => count($filteredMatters),
+                'generated_at' => now()->toISOString()
+            ]
+        ]);
+    }
+
+    /**
+     * Exportar XML da sessão
+     */
+    public function exportSessionXml(Request $request, int $sessionId): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'xml' => 'required|string',
+            'document_type' => 'required|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'error' => 'Validation failed',
+                'details' => $validator->errors()
+            ], 400);
+        }
+
+        // Simular exportação
+        $exportId = time() . '_' . $sessionId;
+        $exports = Cache::get("mock_api_session_exports_{$sessionId}", []);
+        
+        $newExport = [
+            'id' => $exportId,
+            'session_id' => $sessionId,
+            'document_type' => $request->input('document_type'),
+            'exported_at' => now()->toISOString(),
+            'status' => 'success',
+            'file_path' => "/exports/session_{$sessionId}_{$exportId}.xml"
+        ];
+        
+        $exports[] = $newExport;
+        Cache::put("mock_api_session_exports_{$sessionId}", $exports, now()->addHours(24));
+        
+        return response()->json([
+            'message' => 'XML exportado com sucesso',
+            'data' => $newExport
+        ]);
+    }
+
+    /**
+     * Obter histórico de exportações da sessão
+     */
+    public function sessionExports(Request $request, int $sessionId): JsonResponse
+    {
+        $exports = Cache::get("mock_api_session_exports_{$sessionId}", []);
+        
+        return response()->json([
+            'data' => $exports,
+            'meta' => [
+                'session_id' => $sessionId,
+                'total_exports' => count($exports)
+            ]
+        ]);
+    }
+
+    /**
+     * Obter dados padrão das sessões
+     */
+    private function getDefaultSessions(): array
+    {
+        return [
+            [
+                'id' => 1,
+                'numero' => 37,
+                'ano' => 2024,
+                'data' => '2024-12-02',
+                'hora' => '17:00',
+                'tipo_id' => 8,
+                'tipo_descricao' => 'Ordinária',
+                'status' => 'preparacao',
+                'observacoes' => 'Sessão para análise de projetos pendentes',
+                'hora_inicial' => null,
+                'hora_final' => null,
+                'total_materias' => 5,
+                'created_at' => now()->toISOString(),
+                'updated_at' => now()->toISOString()
+            ],
+            [
+                'id' => 2,
+                'numero' => 38,
+                'ano' => 2024,
+                'data' => '2024-12-09',
+                'hora' => '14:00',
+                'tipo_id' => 9,
+                'tipo_descricao' => 'Extraordinária',
+                'status' => 'agendada',
+                'observacoes' => 'Sessão extraordinária para votação urgente',
+                'hora_inicial' => null,
+                'hora_final' => null,
+                'total_materias' => 2,
+                'created_at' => now()->toISOString(),
+                'updated_at' => now()->toISOString()
+            ]
+        ];
+    }
+
+    /**
+     * Obter matérias de uma sessão
+     */
+    private function getSessionMatters(int $sessionId): array
+    {
+        if ($sessionId === 1) {
+            return [
+                [
+                    'id' => 1,
+                    'session_id' => 1,
+                    'tipo_id' => 135,
+                    'tipo_descricao' => 'Projeto de Lei',
+                    'numero' => '001',
+                    'ano' => 2024,
+                    'data' => '2024-11-15',
+                    'descricao' => 'Dispõe sobre a criação de programa de educação ambiental',
+                    'assunto' => 'Educação Ambiental',
+                    'autor_id' => 1,
+                    'autor_nome' => 'João Silva Santos',
+                    'fase_id' => 14,
+                    'fase_descricao' => '1ª Discussão',
+                    'regime_id' => 6,
+                    'regime_descricao' => 'Ordinário',
+                    'quorum_id' => 28,
+                    'quorum_descricao' => 'Maioria simples'
+                ],
+                [
+                    'id' => 2,
+                    'session_id' => 1,
+                    'tipo_id' => 140,
+                    'tipo_descricao' => 'Requerimento',
+                    'numero' => '005',
+                    'ano' => 2024,
+                    'data' => '2024-11-20',
+                    'descricao' => 'Solicita informações sobre obras da Praça Central',
+                    'assunto' => 'Obras Públicas',
+                    'autor_id' => 2,
+                    'autor_nome' => 'Maria Santos Oliveira',
+                    'fase_id' => 13,
+                    'fase_descricao' => 'Leitura',
+                    'regime_id' => null,
+                    'regime_descricao' => null,
+                    'quorum_id' => null,
+                    'quorum_descricao' => null
+                ]
+            ];
+        }
+        
+        return Cache::get("mock_api_session_matters_{$sessionId}", []);
+    }
+
+    /**
+     * Auxiliares para descrições
+     */
+    private function getTipoSessaoDescricao(int $tipoId): string
+    {
+        $tipos = [8 => 'Ordinária', 9 => 'Extraordinária', 10 => 'Solene'];
+        return $tipos[$tipoId] ?? 'Desconhecido';
+    }
+
+    private function getTipoMateriaDescricao(int $tipoId): string
+    {
+        $tipos = [
+            109 => 'Correspondência Recebida',
+            135 => 'Projeto de Lei',
+            138 => 'Projeto de Resolução',
+            140 => 'Requerimento',
+            141 => 'Indicação'
+        ];
+        return $tipos[$tipoId] ?? 'Desconhecido';
+    }
+
+    private function getFaseDescricao(int $faseId): string
+    {
+        $fases = [
+            13 => 'Leitura',
+            14 => '1ª Discussão',
+            15 => '2ª Discussão',
+            16 => '3ª Discussão',
+            17 => 'Votação Final'
+        ];
+        return $fases[$faseId] ?? 'Desconhecido';
+    }
+
+    private function getRegimeDescricao(int $regimeId): string
+    {
+        $regimes = [6 => 'Ordinário', 7 => 'Urgência', 8 => 'Urgência Urgentíssima'];
+        return $regimes[$regimeId] ?? 'Desconhecido';
+    }
+
+    private function getQuorumDescricao(int $quorumId): string
+    {
+        $quorums = [28 => 'Maioria simples', 29 => 'Maioria absoluta', 30 => 'Dois terços'];
+        return $quorums[$quorumId] ?? 'Desconhecido';
+    }
+
+    private function getAutorNome(int $autorId): string
+    {
+        $parlamentar = $this->getParlamentarById($autorId);
+        return $parlamentar['nome'] ?? 'Autor Desconhecido';
+    }
+
+    private function getSessionById(int $sessionId): ?array
+    {
+        $sessions = Cache::get('mock_api_sessions', $this->getDefaultSessions());
+        
+        foreach ($sessions as $session) {
+            if ($session['id'] === $sessionId) {
+                return $session;
+            }
+        }
+        
+        return null;
+    }
+
+    private function updateSessionMatterCount(int $sessionId): void
+    {
+        $sessions = Cache::get('mock_api_sessions', $this->getDefaultSessions());
+        $matters = $this->getSessionMatters($sessionId);
+        
+        foreach ($sessions as $index => $session) {
+            if ($session['id'] === $sessionId) {
+                $sessions[$index]['total_materias'] = count($matters);
+                $sessions[$index]['updated_at'] = now()->toISOString();
+                break;
+            }
+        }
+        
+        Cache::put('mock_api_sessions', $sessions, now()->addHours(24));
+    }
+
+    private function filterMattersByDocumentType(array $matters, string $documentType): array
+    {
+        if ($documentType === 'expediente') {
+            // Expediente: Leitura (13) e 1ª Discussão (14)
+            return array_filter($matters, function($matter) {
+                return in_array($matter['fase_id'], [13, 14]);
+            });
+        } elseif ($documentType === 'ordem_do_dia') {
+            // Ordem do Dia: 1ª, 2ª, 3ª Discussão e Votação Final (14, 15, 16, 17)
+            return array_filter($matters, function($matter) {
+                return in_array($matter['fase_id'], [14, 15, 16, 17]);
+            });
+        }
+        
+        return [];
+    }
+
+    private function buildSessionXml(array $session, array $matters, string $documentType): string
+    {
+        $documentTypeId = $documentType === 'expediente' ? 144 : 145;
+        $documentTypeName = $documentType === 'expediente' ? 'Expediente' : 'Ordem do dia';
+        
+        // Agrupar matérias por fase
+        $mattersByPhase = [];
+        foreach ($matters as $matter) {
+            $phaseId = $matter['fase_id'];
+            if (!isset($mattersByPhase[$phaseId])) {
+                $mattersByPhase[$phaseId] = [];
+            }
+            $mattersByPhase[$phaseId][] = $matter;
+        }
+        
+        $xml = '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
+        $xml .= '<sessao id="' . $session['id'] . '">' . "\n";
+        $xml .= '  <tipo id="' . $session['tipo_id'] . '">' . "\n";
+        $xml .= '    <descricao>' . htmlspecialchars($session['tipo_descricao']) . '</descricao>' . "\n";
+        $xml .= '  </tipo>' . "\n";
+        $xml .= '  <numero>' . $session['numero'] . '</numero>' . "\n";
+        $xml .= '  <ano>' . $session['ano'] . '</ano>' . "\n";
+        $xml .= '  <data>' . $session['data'] . '</data>' . "\n";
+        $xml .= '  <hora>' . $session['hora'] . ':00.0000000-03:00</hora>' . "\n";
+        
+        if ($session['hora_inicial']) {
+            $xml .= '  <horaInicial>' . $session['hora_inicial'] . '</horaInicial>' . "\n";
+        }
+        if ($session['hora_final']) {
+            $xml .= '  <horaFinal>' . $session['hora_final'] . '</horaFinal>' . "\n";
+        }
+        
+        $xml .= '  <sessao-documento id="' . $documentTypeId . '">' . "\n";
+        $xml .= '    <tipo id="' . $documentTypeId . '">' . "\n";
+        $xml .= '      <descricao>' . $documentTypeName . '</descricao>' . "\n";
+        $xml .= '    </tipo>' . "\n";
+        $xml .= '    <numero>' . $session['numero'] . '</numero>' . "\n";
+        $xml .= '    <ano>' . $session['ano'] . '</ano>' . "\n";
+        $xml .= '    <data>' . $session['data'] . '</data>' . "\n";
+        $xml .= '    <observacoes>' . htmlspecialchars($session['observacoes']) . '</observacoes>' . "\n";
+        $xml .= '  </sessao-documento>' . "\n";
+        
+        $xml .= '  <fases>' . "\n";
+        
+        foreach ($mattersByPhase as $phaseId => $phaseMatters) {
+            $phaseName = $this->getFaseDescricao($phaseId);
+            $xml .= '    <fase id="' . $phaseId . '" valor="' . htmlspecialchars($phaseName) . '">' . "\n";
+            $xml .= '      <materias>' . "\n";
+            
+            foreach ($phaseMatters as $matter) {
+                $xml .= '        <materia id="' . $matter['id'] . '">' . "\n";
+                $xml .= '          <tipo id="' . $matter['tipo_id'] . '">' . "\n";
+                $xml .= '            <descricao>' . htmlspecialchars($matter['tipo_descricao']) . '</descricao>' . "\n";
+                $xml .= '          </tipo>' . "\n";
+                $xml .= '          <numero>' . htmlspecialchars($matter['numero']) . '</numero>' . "\n";
+                $xml .= '          <ano>' . $matter['ano'] . '</ano>' . "\n";
+                $xml .= '          <data>' . $matter['data'] . '</data>' . "\n";
+                $xml .= '          <descricao>' . htmlspecialchars($matter['descricao']) . '</descricao>' . "\n";
+                $xml .= '          <assunto>' . htmlspecialchars($matter['assunto']) . '</assunto>' . "\n";
+                
+                if ($matter['regime_id']) {
+                    $xml .= '          <regime id="' . $matter['regime_id'] . '">' . "\n";
+                    $xml .= '            <descricao>' . htmlspecialchars($matter['regime_descricao']) . '</descricao>' . "\n";
+                    $xml .= '          </regime>' . "\n";
+                }
+                
+                if ($matter['quorum_id']) {
+                    $xml .= '          <quorum id="' . $matter['quorum_id'] . '">' . "\n";
+                    $xml .= '            <descricao>' . htmlspecialchars($matter['quorum_descricao']) . '</descricao>' . "\n";
+                    $xml .= '          </quorum>' . "\n";
+                }
+                
+                $xml .= '          <autoria>' . "\n";
+                $xml .= '            <autor id="' . $matter['autor_id'] . '">' . "\n";
+                $xml .= '              <nome>' . htmlspecialchars($matter['autor_nome']) . '</nome>' . "\n";
+                $xml .= '              <apelido>' . htmlspecialchars($matter['autor_nome']) . '</apelido>' . "\n";
+                $xml .= '              <usar-apelido>false</usar-apelido>' . "\n";
+                $xml .= '              <iniciativa>Parlamentar</iniciativa>' . "\n";
+                $xml .= '            </autor>' . "\n";
+                $xml .= '          </autoria>' . "\n";
+                $xml .= '        </materia>' . "\n";
+            }
+            
+            $xml .= '      </materias>' . "\n";
+            $xml .= '    </fase>' . "\n";
+        }
+        
+        $xml .= '  </fases>' . "\n";
+        $xml .= '</sessao>';
+        
+        return $xml;
     }
 } 

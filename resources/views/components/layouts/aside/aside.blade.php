@@ -193,24 +193,85 @@
                 </div>
                 <!--end:Menu item-->
                 
-                <!--begin:Menu item - Sessões (futuro)-->
-                <div class="menu-item">
-                    <a class="menu-link" href="#" onclick="showComingSoon('Sessões')">
+                <!--begin:Menu item - Sessões-->
+                @can('sessions.view')
+                <div data-kt-menu-trigger="click" class="menu-item menu-accordion {{ request()->routeIs('admin.sessions.*') ? 'here show' : '' }}">
+                    <span class="menu-link">
                         <span class="menu-icon">
-                            <i class="ki-duotone ki-calendar fs-2">
+                            <i class="ki-duotone ki-calendar-8 fs-2">
                                 <span class="path1"></span>
                                 <span class="path2"></span>
+                                <span class="path3"></span>
+                                <span class="path4"></span>
+                                <span class="path5"></span>
+                                <span class="path6"></span>
                             </i>
                         </span>
                         <span class="menu-title">Sessões</span>
-                        <span class="badge badge-light-warning ms-auto">Em breve</span>
-                    </a>
+                        <span class="menu-arrow"></span>
+                    </span>
+                    <div class="menu-sub menu-sub-accordion">
+                        <div class="menu-item">
+                            <a class="menu-link {{ request()->routeIs('admin.sessions.index') ? 'active' : '' }}" href="{{ route('admin.sessions.index') }}">
+                                <span class="menu-bullet">
+                                    <span class="bullet bullet-dot"></span>
+                                </span>
+                                <span class="menu-title">Todas as Sessões</span>
+                            </a>
+                        </div>
+                        @can('sessions.create')
+                        <div class="menu-item">
+                            <a class="menu-link {{ request()->routeIs('admin.sessions.create') ? 'active' : '' }}" href="{{ route('admin.sessions.create') }}">
+                                <span class="menu-bullet">
+                                    <span class="bullet bullet-dot"></span>
+                                </span>
+                                <span class="menu-title">Nova Sessão</span>
+                            </a>
+                        </div>
+                        @endcan
+                        <div class="menu-item">
+                            <a class="menu-link" href="{{ route('admin.sessions.index', ['status' => 'preparacao']) }}">
+                                <span class="menu-bullet">
+                                    <span class="bullet bullet-dot"></span>
+                                </span>
+                                <span class="menu-title">Em Preparação</span>
+                            </a>
+                        </div>
+                        <div class="menu-item">
+                            <a class="menu-link" href="{{ route('admin.sessions.index', ['status' => 'agendada']) }}">
+                                <span class="menu-bullet">
+                                    <span class="bullet bullet-dot"></span>
+                                </span>
+                                <span class="menu-title">Agendadas</span>
+                            </a>
+                        </div>
+                        <div class="menu-item">
+                            <a class="menu-link" href="{{ route('admin.sessions.index', ['ano' => date('Y')]) }}">
+                                <span class="menu-bullet">
+                                    <span class="bullet bullet-dot"></span>
+                                </span>
+                                <span class="menu-title">Sessões {{ date('Y') }}</span>
+                            </a>
+                        </div>
+                        @can('sessions.export')
+                        <div class="menu-item">
+                            <a class="menu-link" href="{{ route('admin.sessions.index', ['status' => 'exportada']) }}">
+                                <span class="menu-bullet">
+                                    <span class="bullet bullet-dot"></span>
+                                </span>
+                                <span class="menu-title">Exportadas</span>
+                            </a>
+                        </div>
+                        @endcan
+                    </div>
                 </div>
+                @endcan
                 <!--end:Menu item-->
                 
-                <!--begin:Menu item - Votações (futuro)-->
-                <div class="menu-item">
-                    <a class="menu-link" href="#" onclick="showComingSoon('Votações')">
+                <!--begin:Menu item - Votações-->
+                @can('sessions.view')
+                <div data-kt-menu-trigger="click" class="menu-item menu-accordion {{ request()->routeIs('admin.sessions.*') && request()->has('votacao') ? 'here show' : '' }}">
+                    <span class="menu-link">
                         <span class="menu-icon">
                             <i class="ki-duotone ki-poll fs-2">
                                 <span class="path1"></span>
@@ -219,9 +280,44 @@
                             </i>
                         </span>
                         <span class="menu-title">Votações</span>
-                        <span class="badge badge-light-warning ms-auto">Em breve</span>
-                    </a>
+                        <span class="menu-arrow"></span>
+                    </span>
+                    <div class="menu-sub menu-sub-accordion">
+                        <div class="menu-item">
+                            <a class="menu-link" href="{{ route('admin.sessions.index', ['com_votacao' => '1']) }}">
+                                <span class="menu-bullet">
+                                    <span class="bullet bullet-dot"></span>
+                                </span>
+                                <span class="menu-title">Sessões com Votação</span>
+                            </a>
+                        </div>
+                        <div class="menu-item">
+                            <a class="menu-link" href="{{ route('admin.sessions.index', ['status' => 'em_andamento', 'com_votacao' => '1']) }}">
+                                <span class="menu-bullet">
+                                    <span class="bullet bullet-dot"></span>
+                                </span>
+                                <span class="menu-title">Votações em Andamento</span>
+                            </a>
+                        </div>
+                        <div class="menu-item">
+                            <a class="menu-link" href="{{ route('admin.sessions.index', ['ano' => date('Y'), 'com_votacao' => '1']) }}">
+                                <span class="menu-bullet">
+                                    <span class="bullet bullet-dot"></span>
+                                </span>
+                                <span class="menu-title">Votações {{ date('Y') }}</span>
+                            </a>
+                        </div>
+                        <div class="menu-item">
+                            <a class="menu-link" href="{{ route('admin.sessions.index', ['status' => 'finalizada', 'com_votacao' => '1']) }}">
+                                <span class="menu-bullet">
+                                    <span class="bullet bullet-dot"></span>
+                                </span>
+                                <span class="menu-title">Resultados de Votação</span>
+                            </a>
+                        </div>
+                    </div>
                 </div>
+                @endcan
                 <!--end:Menu item-->
                 
                 <!--begin:Menu item - Comissões-->

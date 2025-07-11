@@ -33,7 +33,7 @@ return [
     */
     'mock' => [
         'enabled' => true,
-        'base_url' => env('MOCK_API_BASE_URL', env('APP_URL', 'http://localhost:8000') . '/api/mock-api'),
+        'base_url' => env('MOCK_API_BASE_URL', env('APP_URL', 'http://localhost:8001') . '/api/mock-api'),
         'description' => 'Mock API interno - Laravel',
     ],
 
