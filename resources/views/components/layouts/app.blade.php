@@ -2921,6 +2921,14 @@
     <!--end::Global Javascript Bundle-->
 
     <script src="{{ asset('assets/plugins/custom/datatables/datatables.bundle.js') }}"></script>
+    
+    <!--begin::Enhanced Alerts System-->
+    <script src="{{ asset('assets/js/alerts-enhanced.js') }}"></script>
+    <!--end::Enhanced Alerts System-->
+    
+    <!--begin::Page Specific Scripts-->
+    @stack('scripts')
+    <!--end::Page Specific Scripts-->
 
 </body>
 <!--end::Body-->

@@ -275,15 +275,15 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    toastr.success(data.message);
+                    window.showAlert.success(data.message);
                 } else {
-                    toastr.error(data.message);
+                    window.showAlert.error(data.message);
                     this.checked = !isActive; // Revert toggle
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                toastr.error('Erro ao alterar status do usuário');
+                window.showAlert.error('Erro ao alterar status do usuário');
                 this.checked = !isActive; // Revert toggle
             });
         });
