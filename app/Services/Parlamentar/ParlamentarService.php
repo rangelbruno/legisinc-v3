@@ -51,9 +51,6 @@ class ParlamentarService
      */
     public function create(array $data): array
     {
-        // Validar dados únicos
-        $this->validateUniqueData($data);
-        
         $parlamentar = Parlamentar::create($data);
         
         return $this->formatForDisplay($parlamentar->toArray());
@@ -69,9 +66,6 @@ class ParlamentarService
         if (!$parlamentar) {
             throw new ModelNotFoundException("Parlamentar com ID {$id} não encontrado");
         }
-        
-        // Validar dados únicos (excluindo o próprio registro)
-        $this->validateUniqueData($data, $id);
         
         $parlamentar->update($data);
         
@@ -179,6 +173,38 @@ class ParlamentarService
     }
     
     /**
+     * Formatar data para exibição
+     */
+    private function formatDate($date): string
+    {
+        if (!$date) {
+            return '';
+        }
+
+        try {
+            // Se já é uma instância Carbon
+            if ($date instanceof \Carbon\Carbon) {
+                return $date->format('d/m/Y');
+            }
+            
+            // Se é uma string, tentar fazer parse
+            if (is_string($date)) {
+                // Se já está no formato brasileiro, retornar como está
+                if (preg_match('/^\d{2}\/\d{2}\/\d{4}$/', $date)) {
+                    return $date;
+                }
+                
+                // Tentar fazer parse da data
+                return \Carbon\Carbon::parse($date)->format('d/m/Y');
+            }
+            
+            return '';
+        } catch (\Exception $e) {
+            return '';
+        }
+    }
+
+    /**
      * Validar dados únicos
      */
     private function validateUniqueData(array $data, ?int $excludeId = null): void
@@ -197,6 +223,18 @@ class ParlamentarService
             }
         }
         
+        // Verificar CPF único
+        if (!empty($data['cpf'])) {
+            $query = Parlamentar::where('cpf', $data['cpf']);
+            if ($excludeId) {
+                $query->where('id', '!=', $excludeId);
+            }
+            
+            if ($query->exists()) {
+                $errors['cpf'] = 'Este CPF já está sendo usado por outro parlamentar';
+            }
+        }
+        
         if (!empty($errors)) {
             throw ValidationException::withMessages($errors);
         }
@@ -210,15 +248,17 @@ class ParlamentarService
         return [
             'id' => $parlamentar['id'],
             'nome' => $parlamentar['nome'],
+            'nome_politico' => $parlamentar['nome_politico'] ?? '',
             'partido' => strtoupper($parlamentar['partido']),
             'cargo' => $parlamentar['cargo'],
             'status' => ucfirst($parlamentar['status']),
             'email' => $parlamentar['email'],
+            'cpf' => $parlamentar['cpf'] ?? '',
             'telefone' => $parlamentar['telefone'],
-            'data_nascimento' => $parlamentar['data_nascimento'] ? 
-                \Carbon\Carbon::parse($parlamentar['data_nascimento'])->format('d/m/Y') : '',
+            'data_nascimento' => $this->formatDate($parlamentar['data_nascimento']),
             'profissao' => $parlamentar['profissao'] ?? '',
             'escolaridade' => $parlamentar['escolaridade'] ?? '',
+            'foto' => $parlamentar['foto'] ?? '',
             'comissoes' => $parlamentar['comissoes'] ?? [],
             'total_comissoes' => count($parlamentar['comissoes'] ?? []),
             'mandatos' => $parlamentar['mandatos'] ?? [],

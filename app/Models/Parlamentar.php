@@ -12,14 +12,17 @@ class Parlamentar extends Model
 
     protected $fillable = [
         'nome',
+        'nome_politico',
         'partido',
         'cargo',
         'status',
         'email',
+        'cpf',
         'telefone',
         'data_nascimento',
         'profissao',
         'escolaridade',
+        'foto',
         'comissoes',
         'mandatos',
     ];
@@ -134,5 +137,24 @@ class Parlamentar extends Model
     {
         $cargosMesa = ['Presidente da Câmara', 'Vice-Presidente', '1º Secretário', '2º Secretário'];
         return in_array($this->cargo, $cargosMesa);
+    }
+
+    /**
+     * Accessor para URL da foto
+     */
+    public function getFotoUrlAttribute()
+    {
+        if ($this->foto) {
+            return asset('storage/parlamentares/fotos/' . $this->foto);
+        }
+        return asset('assets/media/avatars/300-1.jpg');
+    }
+
+    /**
+     * Accessor para nome de exibição (prioriza nome político)
+     */
+    public function getNomeExibicaoAttribute()
+    {
+        return $this->nome_politico ?: $this->nome;
     }
 }

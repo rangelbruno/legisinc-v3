@@ -4,11 +4,13 @@ namespace App\Http\Controllers\Parlamentar;
 
 use App\Http\Controllers\Controller;
 use App\Services\Parlamentar\ParlamentarService;
+use App\Models\Parlamentar;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
+use Illuminate\Support\Facades\Storage;
 
 class ParlamentarController extends Controller
 {
@@ -110,21 +112,48 @@ class ParlamentarController extends Controller
     {
         $validatedData = $request->validate([
             'nome' => 'required|string|max:255',
+            'nome_politico' => 'nullable|string|max:255',
             'partido' => 'required|string|max:50',
             'cargo' => 'required|string|max:100',
-            'telefone' => 'required|string|max:20',
-            'email' => 'required|email|max:255',
-            'data_nascimento' => 'required|date|before:today',
+            'telefone' => 'nullable|string|max:20',
+            'email' => 'nullable|email|max:255|unique:parlamentars,email',
+            'cpf' => 'nullable|string|max:14|unique:parlamentars,cpf',
+            'data_nascimento' => 'nullable|date|before:today',
             'profissao' => 'nullable|string|max:100',
             'escolaridade' => 'nullable|string|max:100',
+            'foto' => 'nullable|image|mimes:jpeg,jpg,png,gif|max:2048',
             'comissoes' => 'nullable|string',
         ]);
 
+        // Definir status padrão para novos parlamentares
+        $validatedData['status'] = 'ativo';
+
+        // Debug: log dados validados
+        \Log::info('Dados validados para criação:', $validatedData);
+
         try {
+            // Processar upload da foto
+            if ($request->hasFile('foto')) {
+                $foto = $request->file('foto');
+                $nomeArquivo = time() . '_' . preg_replace('/[^a-zA-Z0-9._-]/', '', $foto->getClientOriginalName());
+                $caminhoFoto = $foto->storeAs('public/parlamentares/fotos', $nomeArquivo);
+                $validatedData['foto'] = $nomeArquivo;
+            }
+            
             // Processar comissões (se vier como string)
             if (isset($validatedData['comissoes']) && is_string($validatedData['comissoes'])) {
                 $validatedData['comissoes'] = array_filter(explode(',', $validatedData['comissoes']));
             }
+            
+            // Remover campos vazios para evitar problemas
+            $validatedData = array_filter($validatedData, function($value) {
+                return $value !== null && $value !== '';
+            });
+            
+            // Re-adicionar status pois pode ter sido removido
+            $validatedData['status'] = 'ativo';
+            
+            \Log::info('Dados finais para criação:', $validatedData);
             
             $parlamentar = $this->parlamentarService->create($validatedData);
             
@@ -175,22 +204,47 @@ class ParlamentarController extends Controller
     {
         $validatedData = $request->validate([
             'nome' => 'required|string|max:255',
+            'nome_politico' => 'nullable|string|max:255',
             'partido' => 'required|string|max:50',
             'cargo' => 'required|string|max:100',
-            'telefone' => 'required|string|max:20',
-            'email' => 'required|email|max:255',
-            'data_nascimento' => 'required|date|before:today',
+            'telefone' => 'nullable|string|max:20',
+            'email' => 'nullable|email|max:255|unique:parlamentars,email,' . $id,
+            'cpf' => 'nullable|string|max:14|unique:parlamentars,cpf,' . $id,
+            'data_nascimento' => 'nullable|date|before:today',
             'profissao' => 'nullable|string|max:100',
             'escolaridade' => 'nullable|string|max:100',
             'status' => 'required|in:ativo,licenciado,inativo',
+            'foto' => 'nullable|image|mimes:jpeg,jpg,png,gif|max:2048',
             'comissoes' => 'nullable|string',
         ]);
 
+
+        // Debug: log dados validados
+        \Log::info('Dados validados para atualização:', $validatedData);
+
         try {
+            // Processar upload da foto
+            if ($request->hasFile('foto')) {
+                // Buscar parlamentar atual para deletar foto antiga
+                $parlamentarAtual = $this->parlamentarService->getById($id);
+                if (!empty($parlamentarAtual['foto']) && Storage::exists('public/parlamentares/fotos/' . $parlamentarAtual['foto'])) {
+                    Storage::delete('public/parlamentares/fotos/' . $parlamentarAtual['foto']);
+                }
+                
+                // Upload da nova foto
+                $foto = $request->file('foto');
+                $nomeArquivo = time() . '_' . preg_replace('/[^a-zA-Z0-9._-]/', '', $foto->getClientOriginalName());
+                $caminhoFoto = $foto->storeAs('public/parlamentares/fotos', $nomeArquivo);
+                $validatedData['foto'] = $nomeArquivo;
+            }
+            
             // Processar comissões (se vier como string)
             if (isset($validatedData['comissoes']) && is_string($validatedData['comissoes'])) {
                 $validatedData['comissoes'] = array_filter(explode(',', $validatedData['comissoes']));
             }
+            
+            // Para atualização, manter campos vazios pois podem ser para limpar dados
+            \Log::info('Dados finais para atualização:', $validatedData);
             
             $parlamentar = $this->parlamentarService->update($id, $validatedData);
             
@@ -462,4 +516,5 @@ class ParlamentarController extends Controller
                 ->with('error', 'Erro ao carregar estatísticas: ' . $e->getMessage());
         }
     }
+
 }

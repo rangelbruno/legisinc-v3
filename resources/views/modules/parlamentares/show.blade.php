@@ -78,11 +78,16 @@
                             <div class="d-flex flex-center flex-column py-5">
                                 <!--begin::Avatar-->
                                 <div class="symbol symbol-100px symbol-circle mb-7">
-                                    <img src="{{ asset('assets/media/avatars/300-1.jpg') }}" alt="image" />
+                                    <img src="{{ isset($parlamentar['foto']) && $parlamentar['foto'] ? asset('storage/parlamentares/fotos/' . $parlamentar['foto']) : asset('assets/media/avatars/300-1.jpg') }}" alt="Foto de {{ $parlamentar['nome'] }}" />
                                 </div>
                                 <!--end::Avatar-->
                                 <!--begin::Name-->
-                                <a href="#" class="fs-3 text-gray-800 text-hover-primary fw-bold mb-3">{{ $parlamentar['nome'] }}</a>
+                                <a href="#" class="fs-3 text-gray-800 text-hover-primary fw-bold mb-3">
+                                    {{ isset($parlamentar['nome_politico']) && $parlamentar['nome_politico'] ? $parlamentar['nome_politico'] : $parlamentar['nome'] }}
+                                </a>
+                                @if(isset($parlamentar['nome_politico']) && $parlamentar['nome_politico'] && $parlamentar['nome_politico'] !== $parlamentar['nome'])
+                                    <div class="text-muted fs-6 mb-3">{{ $parlamentar['nome'] }}</div>
+                                @endif
                                 <!--end::Name-->
                                 <!--begin::Position-->
                                 <div class="mb-9">
@@ -124,6 +129,12 @@
                                         <a href="mailto:{{ $parlamentar['email'] }}" class="text-gray-600 text-hover-primary">{{ $parlamentar['email'] }}</a>
                                     </div>
                                     <!--begin::Details item-->
+                                    @if(isset($parlamentar['cpf']) && $parlamentar['cpf'])
+                                    <!--begin::Details item-->
+                                    <div class="fw-bold mt-5">CPF</div>
+                                    <div class="text-gray-600">{{ $parlamentar['cpf'] }}</div>
+                                    <!--begin::Details item-->
+                                    @endif
                                     <!--begin::Details item-->
                                     <div class="fw-bold mt-5">Telefone</div>
                                     <div class="text-gray-600">{{ $parlamentar['telefone'] }}</div>
@@ -208,6 +219,14 @@
                                                     <td class="text-muted">Nome Completo</td>
                                                     <td class="fw-bold text-end">{{ $parlamentar['nome'] }}</td>
                                                 </tr>
+                                                @if(isset($parlamentar['nome_politico']) && $parlamentar['nome_politico'])
+                                                <tr>
+                                                    <td class="text-muted">Nome Político</td>
+                                                    <td class="fw-bold text-end">
+                                                        <span class="badge badge-light-info">{{ $parlamentar['nome_politico'] }}</span>
+                                                    </td>
+                                                </tr>
+                                                @endif
                                                 <tr>
                                                     <td class="text-muted">Partido</td>
                                                     <td class="fw-bold text-end">
