@@ -3,6 +3,36 @@
 @section('title', $title ?? 'Parlamentares')
 
 @section('content')
+<style>
+.dashboard-card-primary {
+    background: linear-gradient(135deg, #F1416C 0%, #e02454 100%) !important;
+    background-image: url("{{ asset('assets/media/patterns/vector-1.png') }}"), linear-gradient(135deg, #F1416C 0%, #e02454 100%) !important;
+    background-repeat: no-repeat !important;
+    background-size: contain, cover !important;
+    background-position: right center, center !important;
+}
+.dashboard-card-info {
+    background: linear-gradient(135deg, #7239EA 0%, #5a2bc4 100%) !important;
+    background-image: url("{{ asset('assets/media/patterns/vector-1.png') }}"), linear-gradient(135deg, #7239EA 0%, #5a2bc4 100%) !important;
+    background-repeat: no-repeat !important;
+    background-size: contain, cover !important;
+    background-position: right center, center !important;
+}
+.dashboard-card-success {
+    background: linear-gradient(135deg, #17C653 0%, #13a342 100%) !important;
+    background-image: url("{{ asset('assets/media/patterns/vector-1.png') }}"), linear-gradient(135deg, #17C653 0%, #13a342 100%) !important;
+    background-repeat: no-repeat !important;
+    background-size: contain, cover !important;
+    background-position: right center, center !important;
+}
+.dashboard-card-warning {
+    background: linear-gradient(135deg, #FFC700 0%, #e6b300 100%) !important;
+    background-image: url("{{ asset('assets/media/patterns/vector-1.png') }}"), linear-gradient(135deg, #FFC700 0%, #e6b300 100%) !important;
+    background-repeat: no-repeat !important;
+    background-size: contain, cover !important;
+    background-position: right center, center !important;
+}
+</style>
 <!--begin::Content wrapper-->
 <div class="d-flex flex-column flex-column-fluid">
     <!--begin::Toolbar-->
@@ -109,90 +139,47 @@
             @endif
             
             <!--begin::Row-->
-            <div class="row g-5 g-xl-8">
-                <!--begin::Col-->
-                <div class="col-xl-3">
-                    <!--begin::Statistics Widget 5-->
-                    <div class="card bg-body hoverable card-xl-stretch mb-xl-8">
-                        <div class="card-body">
-                            <i class="ki-duotone ki-people fs-2x text-primary">
-                                <span class="path1"></span>
-                                <span class="path2"></span>
-                                <span class="path3"></span>
-                                <span class="path4"></span>
-                                <span class="path5"></span>
-                            </i>
-                            <div class="text-gray-900 fw-bold fs-2 mb-2 mt-5">
-                                {{ $estatisticas['total'] ?? 0 }}
-                            </div>
-                            <div class="fw-semibold text-gray-400">Total de Parlamentares</div>
-                        </div>
-                    </div>
-                    <!--end::Statistics Widget 5-->
-                </div>
-                <!--end::Col-->
+            <div class="row gy-5 gx-xl-8">
+                <x-dashboard.card
+                    icon="ki-people"
+                    title="Parlamentares"
+                    value="{{ $estatisticas['total'] ?? 0 }}"
+                    progress="100"
+                    cardType="primary"
+                    colSize="col-xl-3"
+                />
                 
-                <!--begin::Col-->
-                <div class="col-xl-3">
-                    <!--begin::Statistics Widget 5-->
-                    <div class="card bg-body hoverable card-xl-stretch mb-xl-8">
-                        <div class="card-body">
-                            <i class="ki-duotone ki-check-circle fs-2x text-success">
-                                <span class="path1"></span>
-                                <span class="path2"></span>
-                            </i>
-                            <div class="text-gray-900 fw-bold fs-2 mb-2 mt-5">
-                                {{ $estatisticas['ativos'] ?? 0 }}
-                            </div>
-                            <div class="fw-semibold text-gray-400">Parlamentares Ativos</div>
-                        </div>
-                    </div>
-                    <!--end::Statistics Widget 5-->
-                </div>
-                <!--end::Col-->
+                <x-dashboard.card
+                    icon="ki-check-circle"
+                    title="Ativos"
+                    value="{{ $estatisticas['ativos'] ?? 0 }}"
+                    progress="95"
+                    cardType="success"
+                    colSize="col-xl-3"
+                />
                 
-                <!--begin::Col-->
-                <div class="col-xl-3">
-                    <!--begin::Statistics Widget 5-->
-                    <div class="card bg-body hoverable card-xl-stretch mb-xl-8">
-                        <div class="card-body">
-                            <i class="ki-duotone ki-abstract-39 fs-2x text-warning">
-                                <span class="path1"></span>
-                                <span class="path2"></span>
-                            </i>
-                            <div class="text-gray-900 fw-bold fs-2 mb-2 mt-5">
-                                {{ count($estatisticas['por_partido'] ?? []) }}
-                            </div>
-                            <div class="fw-semibold text-gray-400">Partidos Representados</div>
-                        </div>
-                    </div>
-                    <!--end::Statistics Widget 5-->
-                </div>
-                <!--end::Col-->
+                <x-dashboard.card
+                    icon="ki-abstract-39"
+                    title="Partidos"
+                    value="{{ count($estatisticas['por_partido'] ?? []) }}"
+                    progress="80"
+                    cardType="warning"
+                    colSize="col-xl-3"
+                />
                 
-                <!--begin::Col-->
-                <div class="col-xl-3">
-                    <!--begin::Statistics Widget 5-->
-                    <div class="card bg-body hoverable card-xl-stretch mb-xl-8">
-                        <div class="card-body">
-                            <i class="ki-duotone ki-questionnaire-tablet fs-2x text-info">
-                                <span class="path1"></span>
-                                <span class="path2"></span>
-                            </i>
-                            <div class="text-gray-900 fw-bold fs-2 mb-2 mt-5">
-                                {{ $estatisticas['inativos'] ?? 0 }}
-                            </div>
-                            <div class="fw-semibold text-gray-400">Inativos/Licenciados</div>
-                        </div>
-                    </div>
-                    <!--end::Statistics Widget 5-->
-                </div>
-                <!--end::Col-->
+                <x-dashboard.card
+                    icon="ki-questionnaire-tablet"
+                    title="Inativos"
+                    value="{{ $estatisticas['inativos'] ?? 0 }}"
+                    progress="10"
+                    cardType="info"
+                    colSize="col-xl-3"
+                />
             </div>
             <!--end::Row-->
             
             <!--begin::Card-->
-            <div class="card">
+            <div class="card mt-5 mt-xl-8">
                 <!--begin::Card header-->
                 <div class="card-header border-0 pt-6">
                     <!--begin::Card title-->

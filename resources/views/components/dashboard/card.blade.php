@@ -33,6 +33,12 @@
                     @elseif(str_contains($icon, 'ki-questionnaire-tablet'))
                         <span class="path1"></span>
                         <span class="path2"></span>
+                    @elseif(str_contains($icon, 'ki-check-circle'))
+                        <span class="path1"></span>
+                        <span class="path2"></span>
+                    @elseif(str_contains($icon, 'ki-abstract-39'))
+                        <span class="path1"></span>
+                        <span class="path2"></span>
                     @endif
                 </i>
             </div>
