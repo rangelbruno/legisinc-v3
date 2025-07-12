@@ -3,6 +3,36 @@
 @section('title', 'Sessões')
 
 @section('content')
+<style>
+.dashboard-card-primary {
+    background: linear-gradient(135deg, #F1416C 0%, #e02454 100%) !important;
+    background-image: url("{{ asset('assets/media/patterns/vector-1.png') }}"), linear-gradient(135deg, #F1416C 0%, #e02454 100%) !important;
+    background-repeat: no-repeat !important;
+    background-size: contain, cover !important;
+    background-position: right center, center !important;
+}
+.dashboard-card-success {
+    background: linear-gradient(135deg, #17C653 0%, #13a342 100%) !important;
+    background-image: url("{{ asset('assets/media/patterns/vector-1.png') }}"), linear-gradient(135deg, #17C653 0%, #13a342 100%) !important;
+    background-repeat: no-repeat !important;
+    background-size: contain, cover !important;
+    background-position: right center, center !important;
+}
+.dashboard-card-warning {
+    background: linear-gradient(135deg, #FFC700 0%, #e6b300 100%) !important;
+    background-image: url("{{ asset('assets/media/patterns/vector-1.png') }}"), linear-gradient(135deg, #FFC700 0%, #e6b300 100%) !important;
+    background-repeat: no-repeat !important;
+    background-size: contain, cover !important;
+    background-position: right center, center !important;
+}
+.dashboard-card-danger {
+    background: linear-gradient(135deg, #F1416C 0%, #e02454 100%) !important;
+    background-image: url("{{ asset('assets/media/patterns/vector-1.png') }}"), linear-gradient(135deg, #F1416C 0%, #e02454 100%) !important;
+    background-repeat: no-repeat !important;
+    background-size: contain, cover !important;
+    background-position: right center, center !important;
+}
+</style>
 <!--begin::Content wrapper-->
 <div class="d-flex flex-column flex-column-fluid">
     <!--begin::Toolbar-->
@@ -72,82 +102,37 @@
             
             <!--begin::Row-->
             <div class="row g-5 g-xl-8 mb-xl-8">
-                <!--begin::Col-->
-                <div class="col-xl-3">
-                    <!--begin::Statistics Widget 5-->
-                    <div class="card bg-body hoverable card-xl-stretch mb-5 mb-xl-8">
-                        <div class="card-body">
-                            <i class="ki-duotone ki-calendar fs-2x text-primary">
-                                <span class="path1"></span>
-                                <span class="path2"></span>
-                            </i>
-                            <div class="text-gray-900 fw-bold fs-2 mb-2 mt-5">
-                                {{ count($sessions) }}
-                            </div>
-                            <div class="fw-semibold text-gray-400">Total de Sessões</div>
-                        </div>
-                    </div>
-                    <!--end::Statistics Widget 5-->
-                </div>
-                <!--end::Col-->
+                <x-dashboard.card
+                    icon="ki-calendar"
+                    title="Total de Sessões"
+                    value="{{ count($sessions) }}"
+                    cardType="primary"
+                    progress="100"
+                />
                 
-                <!--begin::Col-->
-                <div class="col-xl-3">
-                    <!--begin::Statistics Widget 5-->
-                    <div class="card bg-body hoverable card-xl-stretch mb-5 mb-xl-8">
-                        <div class="card-body">
-                            <i class="ki-duotone ki-timer fs-2x text-warning">
-                                <span class="path1"></span>
-                                <span class="path2"></span>
-                                <span class="path3"></span>
-                            </i>
-                            <div class="text-gray-900 fw-bold fs-2 mb-2 mt-5">
-                                {{ count(array_filter($sessions, function($s) { return $s['status'] === 'preparacao'; })) }}
-                            </div>
-                            <div class="fw-semibold text-gray-400">Em Preparação</div>
-                        </div>
-                    </div>
-                    <!--end::Statistics Widget 5-->
-                </div>
-                <!--end::Col-->
+                <x-dashboard.card
+                    icon="ki-timer"
+                    title="Agendadas"
+                    value="{{ count(array_filter($sessions, function($s) { return $s['status'] === 'agendada'; })) }}"
+                    cardType="warning"
+                    progress="{{ count($sessions) > 0 ? round((count(array_filter($sessions, function($s) { return $s['status'] === 'agendada'; })) / count($sessions)) * 100) : 0 }}"
+                />
                 
-                <!--begin::Col-->
-                <div class="col-xl-3">
-                    <!--begin::Statistics Widget 5-->
-                    <div class="card bg-body hoverable card-xl-stretch mb-5 mb-xl-8">
-                        <div class="card-body">
-                            <i class="ki-duotone ki-check-circle fs-2x text-success">
-                                <span class="path1"></span>
-                                <span class="path2"></span>
-                            </i>
-                            <div class="text-gray-900 fw-bold fs-2 mb-2 mt-5">
-                                {{ count(array_filter($sessions, function($s) { return $s['status'] === 'agendada'; })) }}
-                            </div>
-                            <div class="fw-semibold text-gray-400">Agendadas</div>
-                        </div>
-                    </div>
-                    <!--end::Statistics Widget 5-->
-                </div>
-                <!--end::Col-->
+                <x-dashboard.card
+                    icon="ki-check-circle"
+                    title="Realizadas"
+                    value="{{ count(array_filter($sessions, function($s) { return $s['status'] === 'realizada'; })) }}"
+                    cardType="success"
+                    progress="{{ count($sessions) > 0 ? round((count(array_filter($sessions, function($s) { return $s['status'] === 'realizada'; })) / count($sessions)) * 100) : 0 }}"
+                />
                 
-                <!--begin::Col-->
-                <div class="col-xl-3">
-                    <!--begin::Statistics Widget 5-->
-                    <div class="card bg-body hoverable card-xl-stretch mb-5 mb-xl-8">
-                        <div class="card-body">
-                            <i class="ki-duotone ki-document fs-2x text-info">
-                                <span class="path1"></span>
-                                <span class="path2"></span>
-                            </i>
-                            <div class="text-gray-900 fw-bold fs-2 mb-2 mt-5">
-                                {{ count(array_filter($sessions, function($s) { return $s['status'] === 'exportada'; })) }}
-                            </div>
-                            <div class="fw-semibold text-gray-400">Exportadas</div>
-                        </div>
-                    </div>
-                    <!--end::Statistics Widget 5-->
-                </div>
-                <!--end::Col-->
+                <x-dashboard.card
+                    icon="ki-document"
+                    title="Canceladas"
+                    value="{{ count(array_filter($sessions, function($s) { return $s['status'] === 'cancelada'; })) }}"
+                    cardType="danger"
+                    progress="{{ count($sessions) > 0 ? round((count(array_filter($sessions, function($s) { return $s['status'] === 'cancelada'; })) / count($sessions)) * 100) : 0 }}"
+                />
             </div>
             <!--end::Row-->
             
@@ -241,10 +226,9 @@
                                             <div>
                                                 <select class="form-select" name="status">
                                                     <option value="">Todos os status</option>
-                                                    <option value="preparacao" {{ ($filtros['status'] ?? '') == 'preparacao' ? 'selected' : '' }}>Preparação</option>
                                                     <option value="agendada" {{ ($filtros['status'] ?? '') == 'agendada' ? 'selected' : '' }}>Agendada</option>
-                                                    <option value="exportada" {{ ($filtros['status'] ?? '') == 'exportada' ? 'selected' : '' }}>Exportada</option>
-                                                    <option value="concluida" {{ ($filtros['status'] ?? '') == 'concluida' ? 'selected' : '' }}>Concluída</option>
+                                                    <option value="realizada" {{ ($filtros['status'] ?? '') == 'realizada' ? 'selected' : '' }}>Realizada</option>
+                                                    <option value="cancelada" {{ ($filtros['status'] ?? '') == 'cancelada' ? 'selected' : '' }}>Cancelada</option>
                                                 </select>
                                             </div>
                                         </div>
@@ -296,7 +280,7 @@
                                             <div class="d-flex flex-column">
                                                 <a href="{{ route('admin.sessions.show', $session['id']) }}" 
                                                    class="text-gray-800 text-hover-primary mb-1">
-                                                    {{ $session['numero'] }}ª Sessão de {{ $session['ano'] }}
+                                                    {{ $session['numero'] }}ª Sessão {{ ucfirst($session['tipo']) }}
                                                 </a>
                                                 <span class="text-muted">{{ $session['observacoes'] ?? 'Sem observações' }}</span>
                                             </div>
@@ -307,34 +291,32 @@
                                                 <span class="text-gray-800 fw-bold mb-1">
                                                     {{ \Carbon\Carbon::parse($session['data'])->format('d/m/Y') }}
                                                 </span>
-                                                <span class="text-muted">{{ $session['hora'] }}</span>
+                                                <span class="text-muted">{{ $session['hora_inicio'] }}</span>
                                             </div>
                                         </td>
                                         <td>
                                             <span class="badge badge-light-info fs-7 fw-bold">
-                                                {{ $session['tipo_descricao'] }}
+                                                {{ ucfirst($session['tipo']) }}
                                             </span>
                                         </td>
                                         <td>
-                                            @if($session['status'] == 'preparacao')
-                                                <span class="badge badge-light-warning">Preparação</span>
-                                            @elseif($session['status'] == 'agendada')
+                                            @if($session['status'] == 'agendada')
                                                 <span class="badge badge-light-primary">Agendada</span>
-                                            @elseif($session['status'] == 'exportada')
-                                                <span class="badge badge-light-success">Exportada</span>
-                                            @elseif($session['status'] == 'concluida')
-                                                <span class="badge badge-light-dark">Concluída</span>
+                                            @elseif($session['status'] == 'realizada')
+                                                <span class="badge badge-light-success">Realizada</span>
+                                            @elseif($session['status'] == 'cancelada')
+                                                <span class="badge badge-light-danger">Cancelada</span>
                                             @endif
                                         </td>
                                         <td>
                                             <span class="badge badge-light fs-7">
-                                                {{ $session['total_materias'] ?? 0 }} matérias
+                                                {{ count($session['materias'] ?? []) }} matérias
                                             </span>
                                         </td>
                                         <td class="text-end">
                                             <div class="d-flex justify-content-end flex-shrink-0">
                                                 <!--begin::Export buttons-->
-                                                @if(($session['total_materias'] ?? 0) > 0)
+                                                @if(count($session['materias'] ?? []) > 0)
                                                     <a href="{{ route('admin.sessions.preview-xml', ['id' => $session['id'], 'document_type' => 'expediente']) }}" 
                                                        class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1" 
                                                        title="Exportar Expediente">

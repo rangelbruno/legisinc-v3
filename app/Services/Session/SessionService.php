@@ -271,6 +271,19 @@ class SessionService
     }
     
     /**
+     * Obter tipos de sessão disponíveis
+     */
+    public function obterTiposSessao(): array
+    {
+        return [
+            'ordinaria' => 'Ordinária',
+            'extraordinaria' => 'Extraordinária',
+            'solene' => 'Solene',
+            'especial' => 'Especial'
+        ];
+    }
+    
+    /**
      * Obter estatísticas das sessões
      */
     public function obterEstatisticas(): array

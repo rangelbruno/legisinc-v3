@@ -39,6 +39,10 @@
                     @elseif(str_contains($icon, 'ki-abstract-39'))
                         <span class="path1"></span>
                         <span class="path2"></span>
+                    @elseif(str_contains($icon, 'ki-timer'))
+                        <span class="path1"></span>
+                        <span class="path2"></span>
+                        <span class="path3"></span>
                     @endif
                 </i>
             </div>
