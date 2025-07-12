@@ -187,10 +187,10 @@
                             </div>
                             <!--end:Menu item-->
 
-                            <!--begin:Menu item - Projetos (Futuro)-->
-                            <div class="menu-item">
+                            <!--begin:Menu item - Projetos-->
+                            <div data-kt-menu-trigger="click" class="menu-item menu-accordion {{ request()->routeIs('projetos.*') ? 'here show' : '' }}">
                                 <!--begin:Menu link-->
-                                <a class="menu-link" href="#">
+                                <span class="menu-link">
                                     <span class="menu-icon">
                                         <i class="ki-duotone ki-document fs-2">
                                             <span class="path1"></span>
@@ -198,18 +198,80 @@
                                         </i>
                                     </span>
                                     <span class="menu-title">Projetos</span>
-                                    <span class="menu-badge">
-                                        <span class="badge badge-light-info">Em breve</span>
-                                    </span>
-                                </a>
+                                    <span class="menu-arrow"></span>
+                                </span>
                                 <!--end:Menu link-->
+                                <!--begin:Menu sub-->
+                                <div class="menu-sub menu-sub-accordion {{ request()->routeIs('projetos.*') ? 'show' : '' }}">
+                                    <!--begin:Menu item-->
+                                    <div class="menu-item">
+                                        <!--begin:Menu link-->
+                                        <a class="menu-link {{ request()->routeIs('projetos.index') ? 'active' : '' }}" href="{{ route('projetos.index') }}">
+                                            <span class="menu-bullet">
+                                                <span class="bullet bullet-dot"></span>
+                                            </span>
+                                            <span class="menu-title">Lista de Projetos</span>
+                                        </a>
+                                        <!--end:Menu link-->
+                                    </div>
+                                    <!--end:Menu item-->
+                                    <!--begin:Menu item-->
+                                    <div class="menu-item">
+                                        <!--begin:Menu link-->
+                                        <a class="menu-link {{ request()->routeIs('projetos.create') ? 'active' : '' }}" href="{{ route('projetos.create') }}">
+                                            <span class="menu-bullet">
+                                                <span class="bullet bullet-dot"></span>
+                                            </span>
+                                            <span class="menu-title">Novo Projeto</span>
+                                        </a>
+                                        <!--end:Menu link-->
+                                    </div>
+                                    <!--end:Menu item-->
+                                    <!--begin:Menu item-->
+                                    <div class="menu-item">
+                                        <!--begin:Menu link-->
+                                        <a class="menu-link {{ request()->routeIs('projetos.em-tramitacao') ? 'active' : '' }}" href="{{ route('projetos.em-tramitacao') }}">
+                                            <span class="menu-bullet">
+                                                <span class="bullet bullet-dot"></span>
+                                            </span>
+                                            <span class="menu-title">Em Tramitação</span>
+                                        </a>
+                                        <!--end:Menu link-->
+                                    </div>
+                                    <!--end:Menu item-->
+                                    <!--begin:Menu item-->
+                                    <div class="menu-item">
+                                        <!--begin:Menu link-->
+                                        <a class="menu-link {{ request()->routeIs('projetos.aprovados') ? 'active' : '' }}" href="{{ route('projetos.aprovados') }}">
+                                            <span class="menu-bullet">
+                                                <span class="bullet bullet-dot"></span>
+                                            </span>
+                                            <span class="menu-title">Aprovados</span>
+                                        </a>
+                                        <!--end:Menu link-->
+                                    </div>
+                                    <!--end:Menu item-->
+                                    <!--begin:Menu item-->
+                                    <div class="menu-item">
+                                        <!--begin:Menu link-->
+                                        <a class="menu-link {{ request()->routeIs('projetos.por-tipo') ? 'active' : '' }}" href="{{ route('projetos.por-tipo', 'lei') }}">
+                                            <span class="menu-bullet">
+                                                <span class="bullet bullet-dot"></span>
+                                            </span>
+                                            <span class="menu-title">Por Tipo</span>
+                                        </a>
+                                        <!--end:Menu link-->
+                                    </div>
+                                    <!--end:Menu item-->
+                                </div>
+                                <!--end:Menu sub-->
                             </div>
                             <!--end:Menu item-->
 
-                            <!--begin:Menu item - Sessões (Futuro)-->
-                            <div class="menu-item">
+                            <!--begin:Menu item - Sessões-->
+                            <div data-kt-menu-trigger="click" class="menu-item menu-accordion {{ request()->routeIs('sessoes.*') ? 'here show' : '' }}">
                                 <!--begin:Menu link-->
-                                <a class="menu-link" href="#">
+                                <span class="menu-link">
                                     <span class="menu-icon">
                                         <i class="ki-duotone ki-calendar fs-2">
                                             <span class="path1"></span>
@@ -217,30 +279,156 @@
                                         </i>
                                     </span>
                                     <span class="menu-title">Sessões</span>
-                                    <span class="menu-badge">
-                                        <span class="badge badge-light-info">Em breve</span>
-                                    </span>
-                                </a>
+                                    <span class="menu-arrow"></span>
+                                </span>
                                 <!--end:Menu link-->
+                                <!--begin:Menu sub-->
+                                <div class="menu-sub menu-sub-accordion {{ request()->routeIs('sessoes.*') ? 'show' : '' }}">
+                                    <!--begin:Menu item-->
+                                    <div class="menu-item">
+                                        <!--begin:Menu link-->
+                                        <a class="menu-link {{ request()->routeIs('sessoes.index') ? 'active' : '' }}" href="{{ route('sessoes.index') }}">
+                                            <span class="menu-bullet">
+                                                <span class="bullet bullet-dot"></span>
+                                            </span>
+                                            <span class="menu-title">Lista de Sessões</span>
+                                        </a>
+                                        <!--end:Menu link-->
+                                    </div>
+                                    <!--end:Menu item-->
+                                    <!--begin:Menu item-->
+                                    <div class="menu-item">
+                                        <!--begin:Menu link-->
+                                        <a class="menu-link {{ request()->routeIs('sessoes.create') ? 'active' : '' }}" href="{{ route('sessoes.create') }}">
+                                            <span class="menu-bullet">
+                                                <span class="bullet bullet-dot"></span>
+                                            </span>
+                                            <span class="menu-title">Nova Sessão</span>
+                                        </a>
+                                        <!--end:Menu link-->
+                                    </div>
+                                    <!--end:Menu item-->
+                                    <!--begin:Menu item-->
+                                    <div class="menu-item">
+                                        <!--begin:Menu link-->
+                                        <a class="menu-link {{ request()->routeIs('sessoes.agenda') ? 'active' : '' }}" href="{{ route('sessoes.agenda') }}">
+                                            <span class="menu-bullet">
+                                                <span class="bullet bullet-dot"></span>
+                                            </span>
+                                            <span class="menu-title">Agenda</span>
+                                        </a>
+                                        <!--end:Menu link-->
+                                    </div>
+                                    <!--end:Menu item-->
+                                    <!--begin:Menu item-->
+                                    <div class="menu-item">
+                                        <!--begin:Menu link-->
+                                        <a class="menu-link {{ request()->routeIs('sessoes.atas') ? 'active' : '' }}" href="{{ route('sessoes.atas') }}">
+                                            <span class="menu-bullet">
+                                                <span class="bullet bullet-dot"></span>
+                                            </span>
+                                            <span class="menu-title">Atas</span>
+                                        </a>
+                                        <!--end:Menu link-->
+                                    </div>
+                                    <!--end:Menu item-->
+                                    <!--begin:Menu item-->
+                                    <div class="menu-item">
+                                        <!--begin:Menu link-->
+                                        <a class="menu-link {{ request()->routeIs('sessoes.por-tipo') ? 'active' : '' }}" href="{{ route('sessoes.por-tipo', 'ordinaria') }}">
+                                            <span class="menu-bullet">
+                                                <span class="bullet bullet-dot"></span>
+                                            </span>
+                                            <span class="menu-title">Por Tipo</span>
+                                        </a>
+                                        <!--end:Menu link-->
+                                    </div>
+                                    <!--end:Menu item-->
+                                </div>
+                                <!--end:Menu sub-->
                             </div>
                             <!--end:Menu item-->
 
-                            <!--begin:Menu item - Votações (Futuro)-->
-                            <div class="menu-item">
+                            <!--begin:Menu item - Votações-->
+                            <div data-kt-menu-trigger="click" class="menu-item menu-accordion {{ request()->routeIs('votacoes.*') ? 'here show' : '' }}">
                                 <!--begin:Menu link-->
-                                <a class="menu-link" href="#">
+                                <span class="menu-link">
                                     <span class="menu-icon">
-                                        <i class="ki-duotone ki-questionnaire-tablet fs-2">
+                                        <i class="ki-duotone ki-election-2 fs-2">
                                             <span class="path1"></span>
                                             <span class="path2"></span>
+                                            <span class="path3"></span>
+                                            <span class="path4"></span>
                                         </i>
                                     </span>
                                     <span class="menu-title">Votações</span>
-                                    <span class="menu-badge">
-                                        <span class="badge badge-light-info">Em breve</span>
-                                    </span>
-                                </a>
+                                    <span class="menu-arrow"></span>
+                                </span>
                                 <!--end:Menu link-->
+                                <!--begin:Menu sub-->
+                                <div class="menu-sub menu-sub-accordion {{ request()->routeIs('votacoes.*') ? 'show' : '' }}">
+                                    <!--begin:Menu item-->
+                                    <div class="menu-item">
+                                        <!--begin:Menu link-->
+                                        <a class="menu-link {{ request()->routeIs('votacoes.index') ? 'active' : '' }}" href="{{ route('votacoes.index') }}">
+                                            <span class="menu-bullet">
+                                                <span class="bullet bullet-dot"></span>
+                                            </span>
+                                            <span class="menu-title">Lista de Votações</span>
+                                        </a>
+                                        <!--end:Menu link-->
+                                    </div>
+                                    <!--end:Menu item-->
+                                    <!--begin:Menu item-->
+                                    <div class="menu-item">
+                                        <!--begin:Menu link-->
+                                        <a class="menu-link {{ request()->routeIs('votacoes.create') ? 'active' : '' }}" href="{{ route('votacoes.create') }}">
+                                            <span class="menu-bullet">
+                                                <span class="bullet bullet-dot"></span>
+                                            </span>
+                                            <span class="menu-title">Nova Votação</span>
+                                        </a>
+                                        <!--end:Menu link-->
+                                    </div>
+                                    <!--end:Menu item-->
+                                    <!--begin:Menu item-->
+                                    <div class="menu-item">
+                                        <!--begin:Menu link-->
+                                        <a class="menu-link {{ request()->routeIs('votacoes.em-andamento') ? 'active' : '' }}" href="{{ route('votacoes.em-andamento') }}">
+                                            <span class="menu-bullet">
+                                                <span class="bullet bullet-dot"></span>
+                                            </span>
+                                            <span class="menu-title">Em Andamento</span>
+                                        </a>
+                                        <!--end:Menu link-->
+                                    </div>
+                                    <!--end:Menu item-->
+                                    <!--begin:Menu item-->
+                                    <div class="menu-item">
+                                        <!--begin:Menu link-->
+                                        <a class="menu-link {{ request()->routeIs('votacoes.finalizadas') ? 'active' : '' }}" href="{{ route('votacoes.finalizadas') }}">
+                                            <span class="menu-bullet">
+                                                <span class="bullet bullet-dot"></span>
+                                            </span>
+                                            <span class="menu-title">Finalizadas</span>
+                                        </a>
+                                        <!--end:Menu link-->
+                                    </div>
+                                    <!--end:Menu item-->
+                                    <!--begin:Menu item-->
+                                    <div class="menu-item">
+                                        <!--begin:Menu link-->
+                                        <a class="menu-link {{ request()->routeIs('votacoes.relatorios') ? 'active' : '' }}" href="{{ route('votacoes.relatorios') }}">
+                                            <span class="menu-bullet">
+                                                <span class="bullet bullet-dot"></span>
+                                            </span>
+                                            <span class="menu-title">Relatórios</span>
+                                        </a>
+                                        <!--end:Menu link-->
+                                    </div>
+                                    <!--end:Menu item-->
+                                </div>
+                                <!--end:Menu sub-->
                             </div>
                             <!--end:Menu item-->
 

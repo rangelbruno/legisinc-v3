@@ -384,7 +384,7 @@
                 
                 <!--begin:Menu item - Administração-->
                 @if(auth()->check() && auth()->user()->isAdmin())
-                <div data-kt-menu-trigger="click" class="menu-item menu-accordion {{ request()->routeIs('admin.*') ? 'here show' : '' }}">
+                <div data-kt-menu-trigger="click" class="menu-item menu-accordion {{ request()->routeIs('admin.*') || request()->routeIs('modelos.*') ? 'here show' : '' }}">
                     <span class="menu-link">
                         <span class="menu-icon">
                             <i class="ki-duotone ki-shield-tick fs-2">
@@ -396,7 +396,7 @@
                         <span class="menu-title">Administração</span>
                         <span class="menu-arrow"></span>
                     </span>
-                    <div class="menu-sub menu-sub-accordion">
+                    <div class="menu-sub menu-sub-accordion {{ request()->routeIs('admin.*') || request()->routeIs('modelos.*') ? 'show' : '' }}">
                         <div class="menu-item">
                             <a class="menu-link {{ request()->routeIs('admin.usuarios.*') ? 'active' : '' }}" href="{{ route('admin.usuarios.index') }}">
                                 <span class="menu-bullet">
