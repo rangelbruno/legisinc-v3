@@ -2,7 +2,39 @@
 
 @section('title', 'Dashboard - Sistema Parlamentar')
 
+
+
 @section('content')
+<style>
+.dashboard-card-primary {
+    background: linear-gradient(135deg, #F1416C 0%, #e02454 100%) !important;
+    background-image: url("{{ asset('assets/media/patterns/vector-1.png') }}"), linear-gradient(135deg, #F1416C 0%, #e02454 100%) !important;
+    background-repeat: no-repeat !important;
+    background-size: contain, cover !important;
+    background-position: right center, center !important;
+}
+.dashboard-card-info {
+    background: linear-gradient(135deg, #7239EA 0%, #5a2bc4 100%) !important;
+    background-image: url("{{ asset('assets/media/patterns/vector-1.png') }}"), linear-gradient(135deg, #7239EA 0%, #5a2bc4 100%) !important;
+    background-repeat: no-repeat !important;
+    background-size: contain, cover !important;
+    background-position: right center, center !important;
+}
+.dashboard-card-success {
+    background: linear-gradient(135deg, #17C653 0%, #13a342 100%) !important;
+    background-image: url("{{ asset('assets/media/patterns/vector-1.png') }}"), linear-gradient(135deg, #17C653 0%, #13a342 100%) !important;
+    background-repeat: no-repeat !important;
+    background-size: contain, cover !important;
+    background-position: right center, center !important;
+}
+.dashboard-card-warning {
+    background: linear-gradient(135deg, #FFC700 0%, #e6b300 100%) !important;
+    background-image: url("{{ asset('assets/media/patterns/vector-1.png') }}"), linear-gradient(135deg, #FFC700 0%, #e6b300 100%) !important;
+    background-repeat: no-repeat !important;
+    background-size: contain, cover !important;
+    background-position: right center, center !important;
+}
+</style>
 <!--begin::Content wrapper-->
 <div class="d-flex flex-column flex-column-fluid">
     <!--begin::Toolbar-->
@@ -47,7 +79,7 @@
                 <!--begin::Col-->
                 <div class="col-xl-3 col-lg-6 col-md-6 col-sm-12">
                     <!--begin::Card widget 20-->
-                    <div class="card card-flush h-100 mb-5 mb-xl-10 bg-primary" style="background-image: url('{{ asset('assets/media/patterns/vector-1.png') }}'); background-repeat: no-repeat; background-size: contain; background-position: right;">
+                    <div class="card card-flush h-100 mb-5 mb-xl-10 dashboard-card-primary">
                         <!--begin::Header-->
                         <div class="card-header pt-5 pb-3">
                             <!--begin::Icon-->
@@ -92,7 +124,7 @@
                 <!--begin::Col-->
                 <div class="col-xl-3 col-lg-6 col-md-6 col-sm-12">
                     <!--begin::Card widget 20-->
-                    <div class="card card-flush h-100 mb-5 mb-xl-10 bg-info" style="background-image: url('{{ asset('assets/media/patterns/vector-1.png') }}'); background-repeat: no-repeat; background-size: contain; background-position: right;">
+                    <div class="card card-flush h-100 mb-5 mb-xl-10 dashboard-card-info">
                         <!--begin::Header-->
                         <div class="card-header pt-5 pb-3">
                             <!--begin::Icon-->
@@ -134,7 +166,7 @@
                 <!--begin::Col-->
                 <div class="col-xl-3 col-lg-6 col-md-6 col-sm-12">
                     <!--begin::Card widget 20-->
-                    <div class="card card-flush h-100 mb-5 mb-xl-10 bg-success" style="background-image: url('{{ asset('assets/media/patterns/vector-1.png') }}'); background-repeat: no-repeat; background-size: contain; background-position: right;">
+                    <div class="card card-flush h-100 mb-5 mb-xl-10 dashboard-card-success">
                         <!--begin::Header-->
                         <div class="card-header pt-5 pb-3">
                             <!--begin::Icon-->
@@ -176,7 +208,7 @@
                 <!--begin::Col-->
                 <div class="col-xl-3 col-lg-6 col-md-6 col-sm-12">
                     <!--begin::Card widget 20-->
-                    <div class="card card-flush h-100 mb-5 mb-xl-10 bg-warning" style="background-image: url('{{ asset('assets/media/patterns/vector-1.png') }}'); background-repeat: no-repeat; background-size: contain; background-position: right;">
+                    <div class="card card-flush h-100 mb-5 mb-xl-10 dashboard-card-warning">
                         <!--begin::Header-->
                         <div class="card-header pt-5 pb-3">
                             <!--begin::Icon-->
@@ -232,7 +264,7 @@
                                     <!--begin::Icon-->
                                     <div class="symbol symbol-50px me-3">
                                         <div class="symbol-label bg-primary text-white">
-                                            <i class="ki-duotone ki-element-7 fs-2">
+                                            <i class="ki-duotone ki-element-7 fs-2 text-white">
                                                 <span class="path1"></span>
                                                 <span class="path2"></span>
                                             </i>
@@ -394,7 +426,7 @@
                                     <!--begin::Icon-->
                                     <div class="symbol symbol-50px me-3">
                                         <div class="symbol-label bg-success text-white">
-                                            <i class="ki-duotone ki-user-tick fs-2">
+                                            <i class="ki-duotone ki-user-tick fs-2 text-white">
                                                 <span class="path1"></span>
                                                 <span class="path2"></span>
                                                 <span class="path3"></span>
