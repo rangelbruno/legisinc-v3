@@ -65,7 +65,7 @@ class ParlamentarController extends Controller
     /**
      * Exibir detalhes de um parlamentar
      */
-    public function show(int $id): View
+    public function show(int $id): View|RedirectResponse
     {
         try {
             $parlamentar = $this->parlamentarService->getById($id);
@@ -145,7 +145,7 @@ class ParlamentarController extends Controller
     /**
      * Exibir formulário de edição
      */
-    public function edit(int $id): View
+    public function edit(int $id): View|RedirectResponse
     {
         try {
             $parlamentar = $this->parlamentarService->getById($id);
@@ -419,7 +419,7 @@ class ParlamentarController extends Controller
     /**
      * Obter estatísticas avançadas
      */
-    public function estatisticas(): View
+    public function estatisticas(): View|RedirectResponse
     {
         try {
             $estatisticas = $this->parlamentarService->getEstatisticas();
