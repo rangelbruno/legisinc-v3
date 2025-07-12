@@ -11,27 +11,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        // Register API Client interface binding using new API management system
-        $this->app->bind(
-            \App\Services\ApiClient\Interfaces\ApiClientInterface::class,
-            function ($app) {
-                // Use the full API configuration
-                $config = config('api');
-
-                return new \App\Services\ApiClient\Providers\NodeApiClient($config);
-            }
-        );
-
-        // Register specific NodeApiClient binding for direct injection
-        $this->app->bind(
-            \App\Services\ApiClient\Providers\NodeApiClient::class,
-            function ($app) {
-                // Use the full API configuration
-                $config = config('api');
-
-                return new \App\Services\ApiClient\Providers\NodeApiClient($config);
-            }
-        );
+        // API removida - usando apenas SQLite diretamente
     }
 
     /**

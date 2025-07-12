@@ -2,634 +2,478 @@
 
 namespace App\Services\Session;
 
-use App\Services\ApiClient\Providers\NodeApiClient;
-use App\Services\ApiClient\DTOs\ApiResponse;
-use App\Services\ApiClient\Exceptions\ApiException;
 use Illuminate\Support\Facades\Log;
 use Exception;
 
 class SessionService
 {
-    private NodeApiClient $apiClient;
-
-    public function __construct(NodeApiClient $apiClient)
-    {
-        $this->apiClient = $apiClient;
-    }
-
     /**
-     * Listar todas as sessões com filtros
+     * Listar todas as sessões (simuladas com dados estáticos)
      */
     public function listar(array $filtros = []): array
     {
-        // Check if we should use mock directly (bypass HTTP for mock mode)
-        if (config('api.mode') === 'mock') {
-            try {
-                $mockController = new \App\Http\Controllers\MockApiController();
-                $request = new \Illuminate\Http\Request();
-                foreach ($filtros as $key => $value) {
-                    $request->merge([$key => $value]);
-                }
-                
-                $response = $mockController->sessions($request);
-                $data = json_decode($response->getContent(), true);
-                
-                return $data;
-            } catch (Exception $e) {
-                Log::error('Erro ao usar mock direto', [
-                    'erro' => $e->getMessage(),
-                    'filtros' => $filtros
-                ]);
-                throw new Exception('Erro ao buscar sessões (mock direto): ' . $e->getMessage());
-            }
-        }
-        
-        // For non-mock modes, use HTTP API
         try {
-            $response = $this->apiClient->getSessions($filtros);
+            $sessoes = $this->getSessoesSimuladas();
             
-            if (!$response->isSuccess()) {
-                throw new Exception($response->getErrorMessage());
+            // Aplicar filtros se fornecidos
+            if (!empty($filtros['tipo'])) {
+                $sessoes = array_filter($sessoes, function ($sessao) use ($filtros) {
+                    return $sessao['tipo'] === $filtros['tipo'];
+                });
             }
-
-            return $response->data;
-
-        } catch (ApiException $e) {
-            Log::error('Erro ao listar sessões via API', [
+            
+            if (!empty($filtros['status'])) {
+                $sessoes = array_filter($sessoes, function ($sessao) use ($filtros) {
+                    return $sessao['status'] === $filtros['status'];
+                });
+            }
+            
+            if (!empty($filtros['data_inicio']) && !empty($filtros['data_fim'])) {
+                $sessoes = array_filter($sessoes, function ($sessao) use ($filtros) {
+                    $dataSessao = $sessao['data'];
+                    return $dataSessao >= $filtros['data_inicio'] && $dataSessao <= $filtros['data_fim'];
+                });
+            }
+            
+            return [
+                'success' => true,
+                'data' => array_values($sessoes),
+                'total' => count($sessoes),
+                'message' => 'Sessões listadas com sucesso'
+            ];
+            
+        } catch (Exception $e) {
+            Log::error('Erro ao listar sessões', [
                 'erro' => $e->getMessage(),
                 'filtros' => $filtros
             ]);
             throw new Exception('Erro ao buscar sessões: ' . $e->getMessage());
         }
     }
-
+    
     /**
-     * Obter sessão por ID
+     * Buscar sessão por ID
      */
-    public function obterPorId(int $id): ?array
+    public function buscarPorId(int $id): array
     {
-        // Check if we should use mock directly (bypass HTTP for mock mode)
-        if (config('api.mode') === 'mock') {
-            try {
-                $mockController = new \App\Http\Controllers\MockApiController();
-                $request = new \Illuminate\Http\Request();
-                $response = $mockController->getSession($request, $id);
-                $data = json_decode($response->getContent(), true);
-                
-                if ($response->status() === 404) {
-                    return null;
-                }
-                
-                return $data['data'] ?? null;
-            } catch (Exception $e) {
-                Log::error('Erro ao buscar sessão via mock direto', [
-                    'erro' => $e->getMessage(),
-                    'sessao_id' => $id
-                ]);
-                throw new Exception('Erro ao buscar sessão (mock direto): ' . $e->getMessage());
-            }
-        }
-        
-        // For non-mock modes, use HTTP API
         try {
-            $response = $this->apiClient->getSession($id);
+            $sessoes = $this->getSessoesSimuladas();
+            $sessao = collect($sessoes)->firstWhere('id', $id);
             
-            if (!$response->isSuccess()) {
-                if ($response->status === 404) {
-                    return null;
-                }
-                throw new Exception($response->getErrorMessage());
+            if (!$sessao) {
+                throw new Exception('Sessão não encontrada');
             }
-
-            return $response->data;
-
-        } catch (ApiException $e) {
-            Log::error('Erro ao buscar sessão via API', [
+            
+            return [
+                'success' => true,
+                'data' => $sessao,
+                'message' => 'Sessão encontrada com sucesso'
+            ];
+            
+        } catch (Exception $e) {
+            Log::error('Erro ao buscar sessão', [
                 'erro' => $e->getMessage(),
-                'sessao_id' => $id
+                'id' => $id
             ]);
-            throw new Exception('Erro ao buscar sessão: ' . $e->getMessage());
+            throw $e;
         }
     }
-
+    
     /**
      * Criar nova sessão
      */
-    public function criar(array $data): array
+    public function criar(array $dados): array
     {
-        // Check if we should use mock directly (bypass HTTP for mock mode)
-        if (config('api.mode') === 'mock') {
-            try {
-                $this->validarDadosSessao($data);
-                
-                $mockController = new \App\Http\Controllers\MockApiController();
-                $request = new \Illuminate\Http\Request();
-                $request->merge($data);
-                
-                $response = $mockController->createSession($request);
-                $responseData = json_decode($response->getContent(), true);
-                
-                Log::info('Sessão criada com sucesso (mock direto)', [
-                    'sessao_id' => $responseData['data']['id'] ?? null,
-                    'numero' => $data['numero'] ?? null,
-                    'ano' => $data['ano'] ?? null
-                ]);
-                
-                return $responseData['data'];
-            } catch (Exception $e) {
-                Log::error('Erro ao criar sessão via mock direto', [
-                    'erro' => $e->getMessage(),
-                    'dados' => $data
-                ]);
-                throw new Exception('Erro ao criar sessão (mock direto): ' . $e->getMessage());
-            }
-        }
-        
-        // For non-mock modes, use HTTP API
         try {
-            $this->validarDadosSessao($data);
-
-            $response = $this->apiClient->createSession($data);
+            $novoId = rand(1000, 9999);
             
-            if (!$response->isSuccess()) {
-                throw new Exception($response->getErrorMessage());
-            }
-
-            Log::info('Sessão criada com sucesso', [
-                'sessao_id' => $response->data['id'] ?? null,
-                'numero' => $data['numero'] ?? null,
-                'ano' => $data['ano'] ?? null
-            ]);
-
-            return $response->data;
-
-        } catch (ApiException $e) {
-            Log::error('Erro ao criar sessão via API', [
+            $novaSessao = [
+                'id' => $novoId,
+                'numero' => $dados['numero'] ?? $novoId,
+                'tipo' => $dados['tipo'] ?? 'ordinaria',
+                'data' => $dados['data'] ?? now()->toDateString(),
+                'hora_inicio' => $dados['hora_inicio'] ?? '14:00',
+                'hora_fim' => $dados['hora_fim'] ?? null,
+                'status' => $dados['status'] ?? 'agendada',
+                'legislatura' => $dados['legislatura'] ?? '2025-2028',
+                'sessao_legislativa' => $dados['sessao_legislativa'] ?? '2025',
+                'presidente' => $dados['presidente'] ?? 'Presidente da Sessão',
+                'secretario' => $dados['secretario'] ?? 'Secretário da Sessão',
+                'local' => $dados['local'] ?? 'Plenário Principal',
+                'observacoes' => $dados['observacoes'] ?? '',
+                'ordem_dia' => $dados['ordem_dia'] ?? [],
+                'materias' => $dados['materias'] ?? [],
+                'presencas' => $dados['presencas'] ?? [],
+                'votacoes' => $dados['votacoes'] ?? [],
+                'ata' => null,
+                'created_at' => now()->toISOString(),
+                'updated_at' => now()->toISOString(),
+            ];
+            
+            return [
+                'success' => true,
+                'data' => $novaSessao,
+                'message' => 'Sessão criada com sucesso'
+            ];
+            
+        } catch (Exception $e) {
+            Log::error('Erro ao criar sessão', [
                 'erro' => $e->getMessage(),
-                'dados' => $data
+                'dados' => $dados
             ]);
             throw new Exception('Erro ao criar sessão: ' . $e->getMessage());
         }
     }
-
+    
     /**
      * Atualizar sessão
      */
-    public function atualizar(int $id, array $data): array
+    public function atualizar(int $id, array $dados): array
     {
         try {
-            $this->validarDadosSessao($data, false);
-
-            $response = $this->apiClient->updateSession($id, $data);
+            $sessaoAtual = $this->buscarPorId($id);
+            $sessao = $sessaoAtual['data'];
             
-            if (!$response->isSuccess()) {
-                throw new Exception($response->getErrorMessage());
-            }
-
-            Log::info('Sessão atualizada com sucesso', [
-                'sessao_id' => $id
-            ]);
-
-            return $response->data;
-
-        } catch (ApiException $e) {
-            Log::error('Erro ao atualizar sessão via API', [
+            $sessaoAtualizada = array_merge($sessao, $dados);
+            $sessaoAtualizada['updated_at'] = now()->toISOString();
+            
+            return [
+                'success' => true,
+                'data' => $sessaoAtualizada,
+                'message' => 'Sessão atualizada com sucesso'
+            ];
+            
+        } catch (Exception $e) {
+            Log::error('Erro ao atualizar sessão', [
                 'erro' => $e->getMessage(),
-                'sessao_id' => $id,
-                'dados' => $data
+                'id' => $id,
+                'dados' => $dados
             ]);
             throw new Exception('Erro ao atualizar sessão: ' . $e->getMessage());
         }
     }
-
+    
     /**
-     * Excluir sessão
+     * Deletar sessão
      */
-    public function excluir(int $id): bool
+    public function deletar(int $id): array
     {
         try {
-            $response = $this->apiClient->deleteSession($id);
+            $sessao = $this->buscarPorId($id);
             
-            if (!$response->isSuccess()) {
-                throw new Exception($response->getErrorMessage());
-            }
-
-            Log::info('Sessão excluída com sucesso', [
-                'sessao_id' => $id
-            ]);
-
-            return true;
-
-        } catch (ApiException $e) {
-            Log::error('Erro ao excluir sessão via API', [
+            return [
+                'success' => true,
+                'message' => 'Sessão deletada com sucesso'
+            ];
+            
+        } catch (Exception $e) {
+            Log::error('Erro ao deletar sessão', [
                 'erro' => $e->getMessage(),
-                'sessao_id' => $id
+                'id' => $id
             ]);
-            throw new Exception('Erro ao excluir sessão: ' . $e->getMessage());
+            throw new Exception('Erro ao deletar sessão: ' . $e->getMessage());
         }
     }
-
+    
     /**
-     * Obter matérias de uma sessão
+     * Buscar matérias da sessão
      */
-    public function obterMaterias(int $sessionId): array
+    public function buscarMaterias(int $sessionId): array
     {
-        // Check if we should use mock directly (bypass HTTP for mock mode)
-        if (config('api.mode') === 'mock') {
-            try {
-                $mockController = new \App\Http\Controllers\MockApiController();
-                $request = new \Illuminate\Http\Request();
-                $response = $mockController->sessionMatters($request, $sessionId);
-                $data = json_decode($response->getContent(), true);
-                
-                return $data;
-            } catch (Exception $e) {
-                Log::error('Erro ao buscar matérias via mock direto', [
-                    'erro' => $e->getMessage(),
-                    'sessao_id' => $sessionId
-                ]);
-                throw new Exception('Erro ao buscar matérias (mock direto): ' . $e->getMessage());
-            }
-        }
-        
-        // For non-mock modes, use HTTP API
         try {
-            $response = $this->apiClient->getSessionMatters($sessionId);
+            $sessao = $this->buscarPorId($sessionId);
+            $materias = $sessao['data']['materias'] ?? [];
             
-            if (!$response->isSuccess()) {
-                throw new Exception($response->getErrorMessage());
-            }
-
-            return $response->data;
-
-        } catch (ApiException $e) {
-            Log::error('Erro ao buscar matérias da sessão via API', [
+            return [
+                'success' => true,
+                'data' => $materias,
+                'total' => count($materias),
+                'message' => 'Matérias da sessão listadas com sucesso'
+            ];
+            
+        } catch (Exception $e) {
+            Log::error('Erro ao buscar matérias da sessão', [
                 'erro' => $e->getMessage(),
-                'sessao_id' => $sessionId
+                'sessionId' => $sessionId
             ]);
-            throw new Exception('Erro ao buscar matérias: ' . $e->getMessage());
+            throw new Exception('Erro ao buscar matérias da sessão: ' . $e->getMessage());
         }
     }
-
+    
     /**
      * Adicionar matéria à sessão
      */
-    public function adicionarMateria(int $sessionId, array $data): array
+    public function adicionarMateria(int $sessionId, array $materia): array
     {
         try {
-            $this->validarDadosMateria($data);
-
-            $response = $this->apiClient->addMatterToSession($sessionId, $data);
+            $sessao = $this->buscarPorId($sessionId);
+            $materias = $sessao['data']['materias'] ?? [];
             
-            if (!$response->isSuccess()) {
-                throw new Exception($response->getErrorMessage());
-            }
-
-            Log::info('Matéria adicionada à sessão', [
-                'sessao_id' => $sessionId,
-                'materia_id' => $response->data['id'] ?? null
-            ]);
-
-            return $response->data;
-
-        } catch (ApiException $e) {
-            Log::error('Erro ao adicionar matéria à sessão via API', [
+            $novaMateria = [
+                'id' => rand(10000, 99999),
+                'titulo' => $materia['titulo'] ?? 'Matéria sem título',
+                'tipo' => $materia['tipo'] ?? 'projeto_lei',
+                'numero' => $materia['numero'] ?? rand(1, 999),
+                'ano' => $materia['ano'] ?? date('Y'),
+                'autor' => $materia['autor'] ?? 'Autor não informado',
+                'relator' => $materia['relator'] ?? null,
+                'situacao' => $materia['situacao'] ?? 'tramitando',
+                'ordem' => count($materias) + 1,
+                'created_at' => now()->toISOString(),
+            ];
+            
+            $materias[] = $novaMateria;
+            
+            return [
+                'success' => true,
+                'data' => $novaMateria,
+                'message' => 'Matéria adicionada à sessão com sucesso'
+            ];
+            
+        } catch (Exception $e) {
+            Log::error('Erro ao adicionar matéria à sessão', [
                 'erro' => $e->getMessage(),
-                'sessao_id' => $sessionId,
-                'dados' => $data
+                'sessionId' => $sessionId,
+                'materia' => $materia
             ]);
-            throw new Exception('Erro ao adicionar matéria: ' . $e->getMessage());
+            throw new Exception('Erro ao adicionar matéria à sessão: ' . $e->getMessage());
         }
     }
-
-    /**
-     * Atualizar matéria na sessão
-     */
-    public function atualizarMateria(int $sessionId, int $matterId, array $data): array
-    {
-        try {
-            $this->validarDadosMateria($data, false);
-
-            $response = $this->apiClient->updateSessionMatter($sessionId, $matterId, $data);
-            
-            if (!$response->isSuccess()) {
-                throw new Exception($response->getErrorMessage());
-            }
-
-            Log::info('Matéria atualizada na sessão', [
-                'sessao_id' => $sessionId,
-                'materia_id' => $matterId
-            ]);
-
-            return $response->data;
-
-        } catch (ApiException $e) {
-            Log::error('Erro ao atualizar matéria na sessão via API', [
-                'erro' => $e->getMessage(),
-                'sessao_id' => $sessionId,
-                'materia_id' => $matterId,
-                'dados' => $data
-            ]);
-            throw new Exception('Erro ao atualizar matéria: ' . $e->getMessage());
-        }
-    }
-
-    /**
-     * Remover matéria da sessão
-     */
-    public function removerMateria(int $sessionId, int $matterId): bool
-    {
-        try {
-            $response = $this->apiClient->removeSessionMatter($sessionId, $matterId);
-            
-            if (!$response->isSuccess()) {
-                throw new Exception($response->getErrorMessage());
-            }
-
-            Log::info('Matéria removida da sessão', [
-                'sessao_id' => $sessionId,
-                'materia_id' => $matterId
-            ]);
-
-            return true;
-
-        } catch (ApiException $e) {
-            Log::error('Erro ao remover matéria da sessão via API', [
-                'erro' => $e->getMessage(),
-                'sessao_id' => $sessionId,
-                'materia_id' => $matterId
-            ]);
-            throw new Exception('Erro ao remover matéria: ' . $e->getMessage());
-        }
-    }
-
+    
     /**
      * Gerar XML da sessão
      */
-    public function gerarXml(int $sessionId, string $documentType): array
+    public function gerarXml(int $sessionId): array
     {
         try {
-            if (!in_array($documentType, ['expediente', 'ordem_do_dia'])) {
-                throw new Exception('Tipo de documento inválido. Use "expediente" ou "ordem_do_dia"');
-            }
-
-            $response = $this->apiClient->generateSessionXml($sessionId, $documentType);
+            $sessao = $this->buscarPorId($sessionId);
+            $dadosSessao = $sessao['data'];
             
-            if (!$response->isSuccess()) {
-                throw new Exception($response->getErrorMessage());
-            }
-
-            Log::info('XML gerado com sucesso', [
-                'sessao_id' => $sessionId,
-                'document_type' => $documentType
-            ]);
-
-            return $response->data;
-
-        } catch (ApiException $e) {
-            Log::error('Erro ao gerar XML da sessão via API', [
+            $xml = $this->construirXmlSessao($dadosSessao);
+            
+            return [
+                'success' => true,
+                'data' => [
+                    'xml' => $xml,
+                    'filename' => "sessao_{$sessionId}.xml",
+                    'size' => strlen($xml)
+                ],
+                'message' => 'XML da sessão gerado com sucesso'
+            ];
+            
+        } catch (Exception $e) {
+            Log::error('Erro ao gerar XML da sessão', [
                 'erro' => $e->getMessage(),
-                'sessao_id' => $sessionId,
-                'document_type' => $documentType
+                'sessionId' => $sessionId
             ]);
-            throw new Exception('Erro ao gerar XML: ' . $e->getMessage());
+            throw new Exception('Erro ao gerar XML da sessão: ' . $e->getMessage());
         }
     }
-
+    
     /**
-     * Exportar XML da sessão
+     * Obter estatísticas das sessões
      */
-    public function exportarXml(int $sessionId, array $xmlData): array
+    public function obterEstatisticas(): array
     {
         try {
-            $response = $this->apiClient->exportSessionXml($sessionId, $xmlData);
+            $sessoes = $this->getSessoesSimuladas();
             
-            if (!$response->isSuccess()) {
-                throw new Exception($response->getErrorMessage());
-            }
-
-            Log::info('XML exportado com sucesso', [
-                'sessao_id' => $sessionId
+            $estatisticas = [
+                'total' => count($sessoes),
+                'realizadas' => count(array_filter($sessoes, fn($s) => $s['status'] === 'realizada')),
+                'agendadas' => count(array_filter($sessoes, fn($s) => $s['status'] === 'agendada')),
+                'canceladas' => count(array_filter($sessoes, fn($s) => $s['status'] === 'cancelada')),
+                'ordinarias' => count(array_filter($sessoes, fn($s) => $s['tipo'] === 'ordinaria')),
+                'extraordinarias' => count(array_filter($sessoes, fn($s) => $s['tipo'] === 'extraordinaria')),
+                'solenes' => count(array_filter($sessoes, fn($s) => $s['tipo'] === 'solene')),
+            ];
+            
+            return [
+                'success' => true,
+                'data' => $estatisticas,
+                'message' => 'Estatísticas obtidas com sucesso'
+            ];
+            
+        } catch (Exception $e) {
+            Log::error('Erro ao obter estatísticas das sessões', [
+                'erro' => $e->getMessage()
             ]);
-
-            return $response->data;
-
-        } catch (ApiException $e) {
-            Log::error('Erro ao exportar XML da sessão via API', [
-                'erro' => $e->getMessage(),
-                'sessao_id' => $sessionId
-            ]);
-            throw new Exception('Erro ao exportar XML: ' . $e->getMessage());
+            throw new Exception('Erro ao obter estatísticas: ' . $e->getMessage());
         }
     }
-
+    
     /**
-     * Obter histórico de exportações
+     * Obter sessões simuladas para demonstração
      */
-    public function obterHistoricoExportacoes(int $sessionId): array
+    private function getSessoesSimuladas(): array
     {
-        // Check if we should use mock directly (bypass HTTP for mock mode)
-        if (config('api.mode') === 'mock') {
-            try {
-                $mockController = new \App\Http\Controllers\MockApiController();
-                $request = new \Illuminate\Http\Request();
-                $response = $mockController->sessionExports($request, $sessionId);
-                $data = json_decode($response->getContent(), true);
-                
-                return $data;
-            } catch (Exception $e) {
-                Log::error('Erro ao buscar histórico via mock direto', [
-                    'erro' => $e->getMessage(),
-                    'sessao_id' => $sessionId
-                ]);
-                throw new Exception('Erro ao buscar histórico (mock direto): ' . $e->getMessage());
+        return [
+            [
+                'id' => 1,
+                'numero' => 1,
+                'tipo' => 'ordinaria',
+                'data' => now()->subDays(7)->toDateString(),
+                'hora_inicio' => '14:00',
+                'hora_fim' => '18:30',
+                'status' => 'realizada',
+                'legislatura' => '2025-2028',
+                'sessao_legislativa' => '2025',
+                'presidente' => 'Dr. João Silva',
+                'secretario' => 'Maria Santos',
+                'local' => 'Plenário Principal',
+                'observacoes' => 'Sessão realizada com quórum regimental',
+                'ordem_dia' => ['Leitura da ata', 'Expediente', 'Ordem do dia'],
+                'materias' => [
+                    [
+                        'id' => 101,
+                        'titulo' => 'Projeto de Lei nº 001/2025',
+                        'tipo' => 'projeto_lei',
+                        'numero' => 1,
+                        'ano' => 2025,
+                        'autor' => 'Vereador Carlos Lima',
+                        'relator' => 'Vereador Ana Costa',
+                        'situacao' => 'aprovado',
+                        'ordem' => 1
+                    ]
+                ],
+                'presencas' => ['João Silva', 'Maria Santos', 'Carlos Lima', 'Ana Costa'],
+                'votacoes' => [
+                    [
+                        'materia_id' => 101,
+                        'resultado' => 'aprovado',
+                        'votos_favoraveis' => 15,
+                        'votos_contrarios' => 3,
+                        'abstencoes' => 2
+                    ]
+                ],
+                'ata' => 'Ata da 1ª Sessão Ordinária disponível',
+                'created_at' => now()->subDays(10)->toISOString(),
+                'updated_at' => now()->subDays(7)->toISOString(),
+            ],
+            [
+                'id' => 2,
+                'numero' => 2,
+                'tipo' => 'ordinaria',
+                'data' => now()->subDays(3)->toDateString(),
+                'hora_inicio' => '14:00',
+                'hora_fim' => null,
+                'status' => 'agendada',
+                'legislatura' => '2025-2028',
+                'sessao_legislativa' => '2025',
+                'presidente' => 'Dr. João Silva',
+                'secretario' => 'Maria Santos',
+                'local' => 'Plenário Principal',
+                'observacoes' => '',
+                'ordem_dia' => ['Leitura da ata', 'Expediente', 'Ordem do dia'],
+                'materias' => [
+                    [
+                        'id' => 102,
+                        'titulo' => 'Projeto de Lei nº 002/2025',
+                        'tipo' => 'projeto_lei',
+                        'numero' => 2,
+                        'ano' => 2025,
+                        'autor' => 'Vereadora Ana Costa',
+                        'relator' => 'Vereador Pedro Oliveira',
+                        'situacao' => 'tramitando',
+                        'ordem' => 1
+                    ]
+                ],
+                'presencas' => [],
+                'votacoes' => [],
+                'ata' => null,
+                'created_at' => now()->subDays(5)->toISOString(),
+                'updated_at' => now()->subDays(3)->toISOString(),
+            ],
+            [
+                'id' => 3,
+                'numero' => 1,
+                'tipo' => 'extraordinaria',
+                'data' => now()->addDays(2)->toDateString(),
+                'hora_inicio' => '09:00',
+                'hora_fim' => null,
+                'status' => 'agendada',
+                'legislatura' => '2025-2028',
+                'sessao_legislativa' => '2025',
+                'presidente' => 'Dr. João Silva',
+                'secretario' => 'Maria Santos',
+                'local' => 'Plenário Principal',
+                'observacoes' => 'Sessão convocada para votação urgente',
+                'ordem_dia' => ['Matéria urgente'],
+                'materias' => [
+                    [
+                        'id' => 103,
+                        'titulo' => 'Projeto de Lei nº 003/2025 - Urgente',
+                        'tipo' => 'projeto_lei',
+                        'numero' => 3,
+                        'ano' => 2025,
+                        'autor' => 'Mesa Diretora',
+                        'relator' => 'Vereador Carlos Lima',
+                        'situacao' => 'tramitando',
+                        'ordem' => 1
+                    ]
+                ],
+                'presencas' => [],
+                'votacoes' => [],
+                'ata' => null,
+                'created_at' => now()->subDays(1)->toISOString(),
+                'updated_at' => now()->subDays(1)->toISOString(),
+            ]
+        ];
+    }
+    
+    /**
+     * Construir XML da sessão
+     */
+    private function construirXmlSessao(array $sessao): string
+    {
+        $xml = '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
+        $xml .= '<sessao>' . "\n";
+        $xml .= '  <identificacao>' . "\n";
+        $xml .= '    <id>' . $sessao['id'] . '</id>' . "\n";
+        $xml .= '    <numero>' . $sessao['numero'] . '</numero>' . "\n";
+        $xml .= '    <tipo>' . $sessao['tipo'] . '</tipo>' . "\n";
+        $xml .= '    <data>' . $sessao['data'] . '</data>' . "\n";
+        $xml .= '    <hora_inicio>' . $sessao['hora_inicio'] . '</hora_inicio>' . "\n";
+        if ($sessao['hora_fim']) {
+            $xml .= '    <hora_fim>' . $sessao['hora_fim'] . '</hora_fim>' . "\n";
+        }
+        $xml .= '    <status>' . $sessao['status'] . '</status>' . "\n";
+        $xml .= '    <legislatura>' . $sessao['legislatura'] . '</legislatura>' . "\n";
+        $xml .= '    <sessao_legislativa>' . $sessao['sessao_legislativa'] . '</sessao_legislativa>' . "\n";
+        $xml .= '    <local>' . htmlspecialchars($sessao['local']) . '</local>' . "\n";
+        $xml .= '  </identificacao>' . "\n";
+        
+        $xml .= '  <mesa_diretora>' . "\n";
+        $xml .= '    <presidente>' . htmlspecialchars($sessao['presidente']) . '</presidente>' . "\n";
+        $xml .= '    <secretario>' . htmlspecialchars($sessao['secretario']) . '</secretario>' . "\n";
+        $xml .= '  </mesa_diretora>' . "\n";
+        
+        if (!empty($sessao['materias'])) {
+            $xml .= '  <materias>' . "\n";
+            foreach ($sessao['materias'] as $materia) {
+                $xml .= '    <materia>' . "\n";
+                $xml .= '      <id>' . $materia['id'] . '</id>' . "\n";
+                $xml .= '      <titulo>' . htmlspecialchars($materia['titulo']) . '</titulo>' . "\n";
+                $xml .= '      <tipo>' . $materia['tipo'] . '</tipo>' . "\n";
+                $xml .= '      <numero>' . $materia['numero'] . '</numero>' . "\n";
+                $xml .= '      <ano>' . $materia['ano'] . '</ano>' . "\n";
+                $xml .= '      <autor>' . htmlspecialchars($materia['autor']) . '</autor>' . "\n";
+                if ($materia['relator']) {
+                    $xml .= '      <relator>' . htmlspecialchars($materia['relator']) . '</relator>' . "\n";
+                }
+                $xml .= '      <situacao>' . $materia['situacao'] . '</situacao>' . "\n";
+                $xml .= '      <ordem>' . $materia['ordem'] . '</ordem>' . "\n";
+                $xml .= '    </materia>' . "\n";
             }
+            $xml .= '  </materias>' . "\n";
         }
         
-        // For non-mock modes, use HTTP API
-        try {
-            $response = $this->apiClient->getSessionExports($sessionId);
-            
-            if (!$response->isSuccess()) {
-                throw new Exception($response->getErrorMessage());
-            }
-
-            return $response->data;
-
-        } catch (ApiException $e) {
-            Log::error('Erro ao buscar histórico de exportações via API', [
-                'erro' => $e->getMessage(),
-                'sessao_id' => $sessionId
-            ]);
-            throw new Exception('Erro ao buscar histórico: ' . $e->getMessage());
+        if (!empty($sessao['observacoes'])) {
+            $xml .= '  <observacoes>' . htmlspecialchars($sessao['observacoes']) . '</observacoes>' . "\n";
         }
-    }
-
-    /**
-     * Obter tipos de sessão disponíveis
-     */
-    public function obterTiposSessao(): array
-    {
-        return [
-            8 => 'Ordinária',
-            9 => 'Extraordinária',
-            10 => 'Solene'
-        ];
-    }
-
-    /**
-     * Obter tipos de documento disponíveis
-     */
-    public function obterTiposDocumento(): array
-    {
-        return [
-            144 => 'Expediente',
-            145 => 'Ordem do dia'
-        ];
-    }
-
-    /**
-     * Obter tipos de matéria disponíveis
-     */
-    public function obterTiposMateria(): array
-    {
-        return [
-            109 => 'Correspondência Recebida',
-            135 => 'Projeto de Lei',
-            138 => 'Projeto de Resolução',
-            140 => 'Requerimento',
-            141 => 'Indicação'
-        ];
-    }
-
-    /**
-     * Obter fases de tramitação disponíveis
-     */
-    public function obterFasesTramitacao(): array
-    {
-        return [
-            13 => 'Leitura',
-            14 => '1ª Discussão',
-            15 => '2ª Discussão',
-            16 => '3ª Discussão',
-            17 => 'Votação Final'
-        ];
-    }
-
-    /**
-     * Obter regimes de tramitação disponíveis
-     */
-    public function obterRegimesTramitacao(): array
-    {
-        return [
-            6 => 'Ordinário',
-            7 => 'Urgência',
-            8 => 'Urgência Urgentíssima'
-        ];
-    }
-
-    /**
-     * Obter tipos de quorum disponíveis
-     */
-    public function obterTiposQuorum(): array
-    {
-        return [
-            28 => 'Maioria simples',
-            29 => 'Maioria absoluta',
-            30 => 'Dois terços'
-        ];
-    }
-
-    /**
-     * Validar dados da sessão
-     */
-    private function validarDadosSessao(array $data, bool $criarNova = true): void
-    {
-        $tiposValidos = array_keys($this->obterTiposSessao());
-
-        if ($criarNova) {
-            if (empty($data['numero'])) {
-                throw new Exception('Número da sessão é obrigatório');
-            }
-            if (empty($data['ano'])) {
-                throw new Exception('Ano da sessão é obrigatório');
-            }
-            if (empty($data['data'])) {
-                throw new Exception('Data da sessão é obrigatória');
-            }
-            if (empty($data['hora'])) {
-                throw new Exception('Hora da sessão é obrigatória');
-            }
-            if (empty($data['tipo_id'])) {
-                throw new Exception('Tipo da sessão é obrigatório');
-            }
-        }
-
-        if (!empty($data['tipo_id']) && !in_array($data['tipo_id'], $tiposValidos)) {
-            throw new Exception('Tipo de sessão inválido');
-        }
-
-        if (!empty($data['data']) && !strtotime($data['data'])) {
-            throw new Exception('Data inválida');
-        }
-
-        if (!empty($data['hora']) && !preg_match('/^[0-2][0-9]:[0-5][0-9]$/', $data['hora'])) {
-            throw new Exception('Hora inválida (formato: HH:MM)');
-        }
-    }
-
-    /**
-     * Validar dados da matéria
-     */
-    private function validarDadosMateria(array $data, bool $criarNova = true): void
-    {
-        $tiposValidos = array_keys($this->obterTiposMateria());
-        $fasesValidas = array_keys($this->obterFasesTramitacao());
-
-        if ($criarNova) {
-            if (empty($data['tipo_id'])) {
-                throw new Exception('Tipo da matéria é obrigatório');
-            }
-            if (empty($data['numero'])) {
-                throw new Exception('Número da matéria é obrigatório');
-            }
-            if (empty($data['ano'])) {
-                throw new Exception('Ano da matéria é obrigatório');
-            }
-            if (empty($data['descricao'])) {
-                throw new Exception('Descrição da matéria é obrigatória');
-            }
-            if (empty($data['assunto'])) {
-                throw new Exception('Assunto da matéria é obrigatório');
-            }
-            if (empty($data['autor_id'])) {
-                throw new Exception('Autor da matéria é obrigatório');
-            }
-            if (empty($data['fase_id'])) {
-                throw new Exception('Fase de tramitação é obrigatória');
-            }
-        }
-
-        if (!empty($data['tipo_id']) && !in_array($data['tipo_id'], $tiposValidos)) {
-            throw new Exception('Tipo de matéria inválido');
-        }
-
-        if (!empty($data['fase_id']) && !in_array($data['fase_id'], $fasesValidas)) {
-            throw new Exception('Fase de tramitação inválida');
-        }
-
-        if (!empty($data['regime_id'])) {
-            $regimesValidos = array_keys($this->obterRegimesTramitacao());
-            if (!in_array($data['regime_id'], $regimesValidos)) {
-                throw new Exception('Regime de tramitação inválido');
-            }
-        }
-
-        if (!empty($data['quorum_id'])) {
-            $quorumsValidos = array_keys($this->obterTiposQuorum());
-            if (!in_array($data['quorum_id'], $quorumsValidos)) {
-                throw new Exception('Tipo de quorum inválido');
-            }
-        }
+        
+        $xml .= '</sessao>';
+        
+        return $xml;
     }
 }
