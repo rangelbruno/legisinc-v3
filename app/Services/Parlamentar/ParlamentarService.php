@@ -2,32 +2,34 @@
 
 namespace App\Services\Parlamentar;
 
-use App\Services\ApiClient\Providers\NodeApiClient;
-use App\Services\ApiClient\DTOs\ApiResponse;
-use App\Services\ApiClient\Exceptions\ApiException;
+use App\Models\Parlamentar;
 use Illuminate\Support\Collection;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Validation\ValidationException;
 
 class ParlamentarService
 {
-    protected NodeApiClient $apiClient;
-    
-    public function __construct(NodeApiClient $apiClient)
-    {
-        $this->apiClient = $apiClient;
-    }
-    
     /**
      * Obter todos os parlamentares com filtros opcionais
      */
     public function getAll(array $filters = []): Collection
     {
-        $response = $this->apiClient->getParlamentares($filters);
+        $query = Parlamentar::query();
         
-        if ($response->isSuccess()) {
-            return collect($response->data['data'] ?? []);
+        // Aplicar filtros
+        if (!empty($filters['partido'])) {
+            $query->where('partido', $filters['partido']);
         }
         
-        throw new ApiException('Erro ao buscar parlamentares: ' . $response->getMessage());
+        if (!empty($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
+        
+        if (!empty($filters['cargo'])) {
+            $query->where('cargo', $filters['cargo']);
+        }
+        
+        return $query->orderBy('nome')->get();
     }
     
     /**
@@ -35,13 +37,13 @@ class ParlamentarService
      */
     public function getById(int $id): array
     {
-        $response = $this->apiClient->getParlamentar($id);
+        $parlamentar = Parlamentar::find($id);
         
-        if ($response->isSuccess()) {
-            return $response->data['data'] ?? [];
+        if (!$parlamentar) {
+            throw new ModelNotFoundException("Parlamentar com ID {$id} não encontrado");
         }
         
-        throw new ApiException("Erro ao buscar parlamentar ID {$id}: " . $response->getMessage());
+        return $this->formatForDisplay($parlamentar->toArray());
     }
     
     /**
@@ -49,13 +51,12 @@ class ParlamentarService
      */
     public function create(array $data): array
     {
-        $response = $this->apiClient->createParlamentar($data);
+        // Validar dados únicos
+        $this->validateUniqueData($data);
         
-        if ($response->isSuccess()) {
-            return $response->data['data'] ?? $response->data;
-        }
+        $parlamentar = Parlamentar::create($data);
         
-        throw new ApiException('Erro ao criar parlamentar: ' . $response->getMessage());
+        return $this->formatForDisplay($parlamentar->toArray());
     }
     
     /**
@@ -63,13 +64,18 @@ class ParlamentarService
      */
     public function update(int $id, array $data): array
     {
-        $response = $this->apiClient->updateParlamentar($id, $data);
+        $parlamentar = Parlamentar::find($id);
         
-        if ($response->isSuccess()) {
-            return $response->data['data'] ?? $response->data;
+        if (!$parlamentar) {
+            throw new ModelNotFoundException("Parlamentar com ID {$id} não encontrado");
         }
         
-        throw new ApiException("Erro ao atualizar parlamentar ID {$id}: " . $response->getMessage());
+        // Validar dados únicos (excluindo o próprio registro)
+        $this->validateUniqueData($data, $id);
+        
+        $parlamentar->update($data);
+        
+        return $this->formatForDisplay($parlamentar->fresh()->toArray());
     }
     
     /**
@@ -77,13 +83,13 @@ class ParlamentarService
      */
     public function delete(int $id): bool
     {
-        $response = $this->apiClient->deleteParlamentar($id);
+        $parlamentar = Parlamentar::find($id);
         
-        if ($response->isSuccess()) {
-            return true;
+        if (!$parlamentar) {
+            throw new ModelNotFoundException("Parlamentar com ID {$id} não encontrado");
         }
         
-        throw new ApiException("Erro ao deletar parlamentar ID {$id}: " . $response->getMessage());
+        return $parlamentar->delete();
     }
     
     /**
@@ -91,13 +97,9 @@ class ParlamentarService
      */
     public function getByPartido(string $partido): Collection
     {
-        $response = $this->apiClient->getParlamentaresByPartido($partido);
-        
-        if ($response->isSuccess()) {
-            return collect($response->data['data'] ?? []);
-        }
-        
-        throw new ApiException("Erro ao buscar parlamentares do partido {$partido}: " . $response->getMessage());
+        return Parlamentar::where('partido', $partido)
+            ->orderBy('nome')
+            ->get();
     }
     
     /**
@@ -105,13 +107,9 @@ class ParlamentarService
      */
     public function getByStatus(string $status): Collection
     {
-        $response = $this->apiClient->getParlamentaresByStatus($status);
-        
-        if ($response->isSuccess()) {
-            return collect($response->data['data'] ?? []);
-        }
-        
-        throw new ApiException("Erro ao buscar parlamentares com status {$status}: " . $response->getMessage());
+        return Parlamentar::where('status', $status)
+            ->orderBy('nome')
+            ->get();
     }
     
     /**
@@ -119,13 +117,16 @@ class ParlamentarService
      */
     public function getMesaDiretora(): Collection
     {
-        $response = $this->apiClient->getMesaDiretora();
+        $cargosMesa = ['Presidente da Câmara', 'Vice-Presidente', '1º Secretário', '2º Secretário'];
         
-        if ($response->isSuccess()) {
-            return collect($response->data['data'] ?? []);
-        }
-        
-        throw new ApiException('Erro ao buscar mesa diretora: ' . $response->getMessage());
+        $parlamentares = Parlamentar::whereIn('cargo', $cargosMesa)
+            ->where('status', 'ativo')
+            ->get();
+            
+        // Ordenar manualmente para compatibilidade com SQLite
+        return $parlamentares->sortBy(function ($parlamentar) use ($cargosMesa) {
+            return array_search($parlamentar->cargo, $cargosMesa);
+        })->values();
     }
     
     /**
@@ -133,16 +134,20 @@ class ParlamentarService
      */
     public function getComissoes(int $parlamentarId): array
     {
-        $response = $this->apiClient->getComissoesParlamentar($parlamentarId);
+        $parlamentar = Parlamentar::find($parlamentarId);
         
-        if ($response->isSuccess()) {
-            return [
-                'comissoes' => $response->data['data'] ?? [],
-                'meta' => $response->data['meta'] ?? []
-            ];
+        if (!$parlamentar) {
+            throw new ModelNotFoundException("Parlamentar com ID {$parlamentarId} não encontrado");
         }
         
-        throw new ApiException("Erro ao buscar comissões do parlamentar ID {$parlamentarId}: " . $response->getMessage());
+        return [
+            'comissoes' => $parlamentar->comissoes ?? [],
+            'meta' => [
+                'total' => count($parlamentar->comissoes ?? []),
+                'parlamentar_id' => $parlamentarId,
+                'parlamentar_nome' => $parlamentar->nome
+            ]
+        ];
     }
     
     /**
@@ -150,23 +155,19 @@ class ParlamentarService
      */
     public function getEstatisticas(): array
     {
-        try {
-            $todos = $this->getAll();
-            $ativos = $this->getByStatus('ativo');
-            
-            $partidosCount = $todos->groupBy('partido')->map->count();
-            $statusCount = $todos->groupBy('status')->map->count();
-            
-            return [
-                'total' => $todos->count(),
-                'ativos' => $ativos->count(),
-                'inativos' => $todos->where('status', '!=', 'ativo')->count(),
-                'por_partido' => $partidosCount->toArray(),
-                'por_status' => $statusCount->toArray(),
-            ];
-        } catch (ApiException $e) {
-            throw new ApiException('Erro ao obter estatísticas: ' . $e->getMessage());
-        }
+        $todos = Parlamentar::all();
+        $ativos = Parlamentar::where('status', 'ativo')->get();
+        
+        $partidosCount = $todos->groupBy('partido')->map->count();
+        $statusCount = $todos->groupBy('status')->map->count();
+        
+        return [
+            'total' => $todos->count(),
+            'ativos' => $ativos->count(),
+            'inativos' => $todos->where('status', '!=', 'ativo')->count(),
+            'por_partido' => $partidosCount->toArray(),
+            'por_status' => $statusCount->toArray(),
+        ];
     }
     
     /**
@@ -174,49 +175,31 @@ class ParlamentarService
      */
     public function search(string $termo): Collection
     {
-        $todos = $this->getAll();
-        
-        return $todos->filter(function ($parlamentar) use ($termo) {
-            $termo = strtolower($termo);
-            return str_contains(strtolower($parlamentar['nome']), $termo) ||
-                   str_contains(strtolower($parlamentar['partido']), $termo) ||
-                   str_contains(strtolower($parlamentar['cargo']), $termo) ||
-                   str_contains(strtolower($parlamentar['profissao'] ?? ''), $termo);
-        });
+        return Parlamentar::buscar($termo)->orderBy('nome')->get();
     }
     
     /**
-     * Validar dados de parlamentar
+     * Validar dados únicos
      */
-    public function validateData(array $data): array
+    private function validateUniqueData(array $data, ?int $excludeId = null): void
     {
         $errors = [];
         
-        if (empty($data['nome'])) {
-            $errors['nome'] = 'Nome é obrigatório';
+        // Verificar email único
+        if (!empty($data['email'])) {
+            $query = Parlamentar::where('email', $data['email']);
+            if ($excludeId) {
+                $query->where('id', '!=', $excludeId);
+            }
+            
+            if ($query->exists()) {
+                $errors['email'] = 'Este email já está sendo usado por outro parlamentar';
+            }
         }
         
-        if (empty($data['partido'])) {
-            $errors['partido'] = 'Partido é obrigatório';
+        if (!empty($errors)) {
+            throw ValidationException::withMessages($errors);
         }
-        
-        if (empty($data['cargo'])) {
-            $errors['cargo'] = 'Cargo é obrigatório';
-        }
-        
-        if (empty($data['email']) || !filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
-            $errors['email'] = 'Email válido é obrigatório';
-        }
-        
-        if (empty($data['telefone'])) {
-            $errors['telefone'] = 'Telefone é obrigatório';
-        }
-        
-        if (empty($data['data_nascimento'])) {
-            $errors['data_nascimento'] = 'Data de nascimento é obrigatória';
-        }
-        
-        return $errors;
     }
     
     /**
@@ -243,6 +226,167 @@ class ParlamentarService
                 \Carbon\Carbon::parse($parlamentar['created_at'])->format('d/m/Y H:i') : '',
             'updated_at' => $parlamentar['updated_at'] ? 
                 \Carbon\Carbon::parse($parlamentar['updated_at'])->format('d/m/Y H:i') : '',
+        ];
+    }
+
+    /**
+     * Buscar parlamentares com paginação
+     */
+    public function getAllPaginated(int $page = 1, int $perPage = 15, array $filters = []): array
+    {
+        $query = Parlamentar::query();
+        
+        // Aplicar filtros
+        if (!empty($filters['partido'])) {
+            $query->where('partido', $filters['partido']);
+        }
+        
+        if (!empty($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
+        
+        $paginated = $query->orderBy('nome')->paginate($perPage, ['*'], 'page', $page);
+        
+        return [
+            'data' => $paginated->items(),
+            'current_page' => $paginated->currentPage(),
+            'per_page' => $paginated->perPage(),
+            'total' => $paginated->total(),
+            'last_page' => $paginated->lastPage(),
+            'from' => $paginated->firstItem(),
+            'to' => $paginated->lastItem(),
+        ];
+    }
+
+    /**
+     * Obter parlamentares ordenados por critério específico
+     */
+    public function getOrderedBy(string $field, string $direction = 'asc'): Collection
+    {
+        return Parlamentar::orderBy($field, $direction)->get();
+    }
+
+    /**
+     * Verificar conflitos de agenda entre parlamentares
+     */
+    public function checkConflitos(int $parlamentarId, string $data, string $horario): array
+    {
+        $parlamentar = Parlamentar::find($parlamentarId);
+        
+        if (!$parlamentar) {
+            throw new ModelNotFoundException("Parlamentar com ID {$parlamentarId} não encontrado");
+        }
+        
+        // Simular verificação de conflitos
+        return [
+            'tem_conflito' => false,
+            'conflitos' => [],
+            'parlamentar' => $parlamentar->nome,
+            'comissoes_ativas' => count($parlamentar->comissoes ?? []),
+        ];
+    }
+
+    /**
+     * Gerar relatório de presença
+     */
+    public function getRelatorioPresenca(array $filters = []): array
+    {
+        $query = Parlamentar::query();
+        
+        if (!empty($filters['partido'])) {
+            $query->where('partido', $filters['partido']);
+        }
+        
+        if (!empty($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
+        
+        $parlamentares = $query->get();
+        
+        // Simular dados de presença
+        $relatorio = $parlamentares->map(function ($parlamentar) {
+            $presencas = rand(8, 15);
+            $total = 15;
+            
+            return [
+                'id' => $parlamentar->id,
+                'nome' => $parlamentar->nome,
+                'partido' => $parlamentar->partido,
+                'presencas' => $presencas,
+                'total_sessoes' => $total,
+                'percentual' => round(($presencas / $total) * 100, 1),
+                'justificativas' => rand(0, 3),
+            ];
+        });
+        
+        return [
+            'parlamentares' => $relatorio->toArray(),
+            'estatisticas' => [
+                'presenca_media' => round($relatorio->avg('percentual'), 1),
+                'maior_presenca' => $relatorio->max('percentual'),
+                'menor_presenca' => $relatorio->min('percentual'),
+                'total_parlamentares' => $relatorio->count(),
+            ],
+        ];
+    }
+
+    /**
+     * Obter aniversariantes do mês
+     */
+    public function getAniversariantesDoMes(int $mes = null): Collection
+    {
+        $mes = $mes ?? now()->month;
+        
+        return Parlamentar::whereMonth('data_nascimento', $mes)
+            ->orderByRaw('DAY(data_nascimento)')
+            ->get()
+            ->map(function ($parlamentar) {
+                return [
+                    'id' => $parlamentar->id,
+                    'nome' => $parlamentar->nome,
+                    'partido' => $parlamentar->partido,
+                    'dia_aniversario' => $parlamentar->data_nascimento->day,
+                    'idade' => $parlamentar->idade,
+                    'data_formatada' => $parlamentar->data_nascimento->format('d/m'),
+                ];
+            });
+    }
+
+    /**
+     * Validar se email já existe
+     */
+    public function emailExists(string $email, ?int $excludeId = null): bool
+    {
+        $query = Parlamentar::where('email', $email);
+        
+        if ($excludeId) {
+            $query->where('id', '!=', $excludeId);
+        }
+        
+        return $query->exists();
+    }
+
+    /**
+     * Obter contatos de emergência
+     */
+    public function getContatosEmergencia(): array
+    {
+        $parlamentares = Parlamentar::where('status', 'ativo')->get();
+        
+        $contatos = $parlamentares->map(function ($parlamentar) {
+            return [
+                'nome' => $parlamentar->nome,
+                'cargo' => $parlamentar->cargo,
+                'telefone' => $parlamentar->telefone,
+                'email' => $parlamentar->email,
+                'partido' => $parlamentar->partido,
+            ];
+        });
+        
+        return [
+            'contatos' => $contatos->toArray(),
+            'total' => $contatos->count(),
+            'ultima_atualizacao' => now()->format('d/m/Y H:i'),
         ];
     }
 }

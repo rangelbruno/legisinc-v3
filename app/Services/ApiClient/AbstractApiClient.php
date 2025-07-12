@@ -16,7 +16,7 @@ abstract class AbstractApiClient implements ApiClientInterface
     use HasCaching, HasLogging;
 
     protected string $baseUrl;
-    protected string $token;
+    protected ?string $token;
     protected int $timeout;
     protected int $retries;
     protected int $cacheTtl;
@@ -25,7 +25,7 @@ abstract class AbstractApiClient implements ApiClientInterface
     public function __construct(array $config)
     {
         $this->baseUrl = $config['base_url'];
-        $this->token = $config['token'];
+        $this->token = $config['token'] ?? null;
         $this->timeout = $config['timeout'] ?? 30;
         $this->retries = $config['retries'] ?? 3;
         $this->cacheTtl = $config['cache_ttl'] ?? 300;
@@ -59,10 +59,14 @@ abstract class AbstractApiClient implements ApiClientInterface
         try {
             $startTime = microtime(true);
             
-            $response = Http::baseUrl($this->baseUrl)
-                ->withToken($this->token)
-                ->timeout(5)
-                ->get($this->getHealthCheckEndpoint());
+            $httpClient = Http::baseUrl($this->baseUrl)
+                ->timeout(5);
+                
+            if ($this->token) {
+                $httpClient = $httpClient->withToken($this->token);
+            }
+            
+            $response = $httpClient->get($this->getHealthCheckEndpoint());
             
             $responseTime = microtime(true) - $startTime;
             $isHealthy = $response->successful();
@@ -106,9 +110,12 @@ abstract class AbstractApiClient implements ApiClientInterface
 
         try {
             $httpClient = Http::baseUrl($this->baseUrl)
-                ->withToken($this->token)
                 ->timeout($this->timeout)
                 ->retry($this->retries, 100);
+                
+            if ($this->token) {
+                $httpClient = $httpClient->withToken($this->token);
+            }
 
             // Add custom headers if needed
             $headers = $this->getCustomHeaders();

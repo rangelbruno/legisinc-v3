@@ -4,7 +4,8 @@ namespace App\Http\Controllers\Parlamentar;
 
 use App\Http\Controllers\Controller;
 use App\Services\Parlamentar\ParlamentarService;
-use App\Services\ApiClient\Exceptions\ApiException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
@@ -40,7 +41,7 @@ class ParlamentarController extends Controller
             
             // Formatir parlamentares para exibição
             $parlamentaresFormatados = $parlamentares->map(function ($parlamentar) {
-                return $this->parlamentarService->formatForDisplay($parlamentar);
+                return $this->parlamentarService->formatForDisplay($parlamentar->toArray());
             });
             
             return view('modules.parlamentares.index', [
@@ -50,12 +51,12 @@ class ParlamentarController extends Controller
                 'title' => 'Parlamentares'
             ]);
             
-        } catch (ApiException $e) {
+        } catch (\Exception $e) {
             return view('modules.parlamentares.index', [
                 'parlamentares' => collect([]),
                 'estatisticas' => [],
                 'filtros' => [],
-                'error' => $e->getMessage(),
+                'error' => 'Erro ao carregar parlamentares: ' . $e->getMessage(),
                 'title' => 'Parlamentares'
             ]);
         }
@@ -79,9 +80,12 @@ class ParlamentarController extends Controller
                 'title' => 'Parlamentar - ' . $parlamentar['nome']
             ]);
             
-        } catch (ApiException $e) {
+        } catch (ModelNotFoundException $e) {
             return redirect()->route('parlamentares.index')
-                ->with('error', 'Parlamentar não encontrado: ' . $e->getMessage());
+                ->with('error', 'Parlamentar não encontrado.');
+        } catch (\Exception $e) {
+            return redirect()->route('parlamentares.index')
+                ->with('error', 'Erro ao carregar parlamentar: ' . $e->getMessage());
         }
     }
     
@@ -104,31 +108,34 @@ class ParlamentarController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
+        $validatedData = $request->validate([
+            'nome' => 'required|string|max:255',
+            'partido' => 'required|string|max:50',
+            'cargo' => 'required|string|max:100',
+            'telefone' => 'required|string|max:20',
+            'email' => 'required|email|max:255',
+            'data_nascimento' => 'required|date|before:today',
+            'profissao' => 'nullable|string|max:100',
+            'escolaridade' => 'nullable|string|max:100',
+            'comissoes' => 'nullable|string',
+        ]);
+
         try {
-            $data = $request->only([
-                'nome', 'partido', 'cargo', 'telefone', 'email',
-                'data_nascimento', 'profissao', 'escolaridade', 'comissoes'
-            ]);
-            
-            // Validar dados
-            $errors = $this->parlamentarService->validateData($data);
-            if (!empty($errors)) {
-                return redirect()->back()
-                    ->withErrors($errors)
-                    ->withInput();
-            }
-            
             // Processar comissões (se vier como string)
-            if (isset($data['comissoes']) && is_string($data['comissoes'])) {
-                $data['comissoes'] = array_filter(explode(',', $data['comissoes']));
+            if (isset($validatedData['comissoes']) && is_string($validatedData['comissoes'])) {
+                $validatedData['comissoes'] = array_filter(explode(',', $validatedData['comissoes']));
             }
             
-            $parlamentar = $this->parlamentarService->create($data);
+            $parlamentar = $this->parlamentarService->create($validatedData);
             
             return redirect()->route('parlamentares.show', $parlamentar['id'])
                 ->with('success', 'Parlamentar criado com sucesso!');
                 
-        } catch (ApiException $e) {
+        } catch (ValidationException $e) {
+            return redirect()->back()
+                ->withErrors($e->errors())
+                ->withInput();
+        } catch (\Exception $e) {
             return redirect()->back()
                 ->with('error', 'Erro ao criar parlamentar: ' . $e->getMessage())
                 ->withInput();
@@ -152,9 +159,12 @@ class ParlamentarController extends Controller
                 'escolaridadeOptions' => $this->getEscolaridadeOptions()
             ]);
             
-        } catch (ApiException $e) {
+        } catch (ModelNotFoundException $e) {
             return redirect()->route('parlamentares.index')
-                ->with('error', 'Parlamentar não encontrado: ' . $e->getMessage());
+                ->with('error', 'Parlamentar não encontrado.');
+        } catch (\Exception $e) {
+            return redirect()->route('parlamentares.index')
+                ->with('error', 'Erro ao carregar parlamentar: ' . $e->getMessage());
         }
     }
     
@@ -163,23 +173,35 @@ class ParlamentarController extends Controller
      */
     public function update(Request $request, int $id): RedirectResponse
     {
+        $validatedData = $request->validate([
+            'nome' => 'required|string|max:255',
+            'partido' => 'required|string|max:50',
+            'cargo' => 'required|string|max:100',
+            'telefone' => 'required|string|max:20',
+            'email' => 'required|email|max:255',
+            'data_nascimento' => 'required|date|before:today',
+            'profissao' => 'nullable|string|max:100',
+            'escolaridade' => 'nullable|string|max:100',
+            'status' => 'required|in:ativo,licenciado,inativo',
+            'comissoes' => 'nullable|string',
+        ]);
+
         try {
-            $data = $request->only([
-                'nome', 'partido', 'cargo', 'telefone', 'email',
-                'data_nascimento', 'profissao', 'escolaridade', 'status', 'comissoes'
-            ]);
-            
             // Processar comissões (se vier como string)
-            if (isset($data['comissoes']) && is_string($data['comissoes'])) {
-                $data['comissoes'] = array_filter(explode(',', $data['comissoes']));
+            if (isset($validatedData['comissoes']) && is_string($validatedData['comissoes'])) {
+                $validatedData['comissoes'] = array_filter(explode(',', $validatedData['comissoes']));
             }
             
-            $parlamentar = $this->parlamentarService->update($id, $data);
+            $parlamentar = $this->parlamentarService->update($id, $validatedData);
             
             return redirect()->route('parlamentares.show', $id)
                 ->with('success', 'Parlamentar atualizado com sucesso!');
                 
-        } catch (ApiException $e) {
+        } catch (ValidationException $e) {
+            return redirect()->back()
+                ->withErrors($e->errors())
+                ->withInput();
+        } catch (\Exception $e) {
             return redirect()->back()
                 ->with('error', 'Erro ao atualizar parlamentar: ' . $e->getMessage())
                 ->withInput();
@@ -192,12 +214,18 @@ class ParlamentarController extends Controller
     public function destroy(int $id): RedirectResponse
     {
         try {
+            // Verificar se o parlamentar existe antes de deletar
+            $parlamentar = $this->parlamentarService->getById($id);
+            
             $this->parlamentarService->delete($id);
             
             return redirect()->route('parlamentares.index')
-                ->with('success', 'Parlamentar deletado com sucesso!');
+                ->with('success', "Parlamentar {$parlamentar['nome']} deletado com sucesso!");
                 
-        } catch (ApiException $e) {
+        } catch (ModelNotFoundException $e) {
+            return redirect()->back()
+                ->with('error', 'Parlamentar não encontrado.');
+        } catch (\Exception $e) {
             return redirect()->back()
                 ->with('error', 'Erro ao deletar parlamentar: ' . $e->getMessage());
         }
@@ -212,7 +240,7 @@ class ParlamentarController extends Controller
             $parlamentares = $this->parlamentarService->getByPartido($partido);
             
             $parlamentaresFormatados = $parlamentares->map(function ($parlamentar) {
-                return $this->parlamentarService->formatForDisplay($parlamentar);
+                return $this->parlamentarService->formatForDisplay($parlamentar->toArray());
             });
             
             return view('modules.parlamentares.por-partido', [
@@ -221,7 +249,7 @@ class ParlamentarController extends Controller
                 'title' => 'Parlamentares do ' . strtoupper($partido)
             ]);
             
-        } catch (ApiException $e) {
+        } catch (\Exception $e) {
             return redirect()->route('parlamentares.index')
                 ->with('error', 'Erro ao buscar parlamentares: ' . $e->getMessage());
         }
@@ -240,10 +268,10 @@ class ParlamentarController extends Controller
                 'title' => 'Mesa Diretora'
             ]);
             
-        } catch (ApiException $e) {
+        } catch (\Exception $e) {
             return view('modules.parlamentares.mesa-diretora', [
                 'mesaDiretora' => collect([]),
-                'error' => $e->getMessage(),
+                'error' => 'Erro ao carregar mesa diretora: ' . $e->getMessage(),
                 'title' => 'Mesa Diretora'
             ]);
         }
@@ -264,7 +292,7 @@ class ParlamentarController extends Controller
             $parlamentares = $this->parlamentarService->search($termo);
             
             $parlamentaresFormatados = $parlamentares->map(function ($parlamentar) {
-                return $this->parlamentarService->formatForDisplay($parlamentar);
+                return $this->parlamentarService->formatForDisplay($parlamentar->toArray());
             });
             
             return view('modules.parlamentares.search', [
@@ -274,7 +302,7 @@ class ParlamentarController extends Controller
                 'title' => 'Busca por: ' . $termo
             ]);
             
-        } catch (ApiException $e) {
+        } catch (\Exception $e) {
             return redirect()->route('parlamentares.index')
                 ->with('error', 'Erro na busca: ' . $e->getMessage());
         }
@@ -340,5 +368,98 @@ class ParlamentarController extends Controller
             'Mestrado' => 'Mestrado',
             'Doutorado' => 'Doutorado'
         ];
+    }
+
+    /**
+     * Exportar parlamentares para CSV
+     */
+    public function exportCsv(): \Symfony\Component\HttpFoundation\Response
+    {
+        try {
+            $parlamentares = $this->parlamentarService->getAll();
+            
+            $csvData = [];
+            $csvData[] = ['Nome', 'Partido', 'Cargo', 'Status', 'Email', 'Telefone', 'Data Nascimento', 'Profissão', 'Escolaridade'];
+            
+            foreach ($parlamentares as $parlamentar) {
+                $csvData[] = [
+                    $parlamentar['nome'],
+                    $parlamentar['partido'],
+                    $parlamentar['cargo'],
+                    $parlamentar['status'],
+                    $parlamentar['email'],
+                    $parlamentar['telefone'],
+                    $parlamentar['data_nascimento'],
+                    $parlamentar['profissao'] ?? '',
+                    $parlamentar['escolaridade'] ?? ''
+                ];
+            }
+            
+            $filename = 'parlamentares_' . date('Y-m-d_H-i-s') . '.csv';
+            
+            $response = new \Symfony\Component\HttpFoundation\StreamedResponse(function() use ($csvData) {
+                $handle = fopen('php://output', 'w');
+                foreach ($csvData as $row) {
+                    fputcsv($handle, $row);
+                }
+                fclose($handle);
+            });
+            
+            $response->headers->set('Content-Type', 'text/csv');
+            $response->headers->set('Content-Disposition', 'attachment; filename="' . $filename . '"');
+            
+            return $response;
+            
+        } catch (\Exception $e) {
+            return redirect()->route('parlamentares.index')
+                ->with('error', 'Erro ao exportar dados: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Obter estatísticas avançadas
+     */
+    public function estatisticas(): View
+    {
+        try {
+            $estatisticas = $this->parlamentarService->getEstatisticas();
+            $parlamentares = $this->parlamentarService->getAll();
+            
+            // Estatísticas por idade
+            $idades = $parlamentares->map(function ($parlamentar) {
+                return \Carbon\Carbon::parse($parlamentar['data_nascimento'])->age;
+            });
+            
+            $estatisticasAvancadas = [
+                'idade_media' => round($idades->avg(), 1),
+                'idade_min' => $idades->min(),
+                'idade_max' => $idades->max(),
+                'por_faixa_etaria' => [
+                    '20-30' => $idades->filter(fn($idade) => $idade >= 20 && $idade < 30)->count(),
+                    '30-40' => $idades->filter(fn($idade) => $idade >= 30 && $idade < 40)->count(),
+                    '40-50' => $idades->filter(fn($idade) => $idade >= 40 && $idade < 50)->count(),
+                    '50-60' => $idades->filter(fn($idade) => $idade >= 50 && $idade < 60)->count(),
+                    '60+' => $idades->filter(fn($idade) => $idade >= 60)->count(),
+                ],
+                'por_genero' => [
+                    'masculino' => $parlamentares->filter(fn($p) => !str_ends_with($p['cargo'], 'a'))->count(),
+                    'feminino' => $parlamentares->filter(fn($p) => str_ends_with($p['cargo'], 'a'))->count(),
+                ],
+                'por_escolaridade' => $parlamentares->groupBy('escolaridade')->map->count()->toArray(),
+                'tempo_mandato' => $parlamentares->map(function ($parlamentar) {
+                    $mandatos = $parlamentar['mandatos'] ?? [];
+                    return count($mandatos);
+                })->sum(),
+            ];
+            
+            return view('modules.parlamentares.estatisticas', [
+                'estatisticas' => array_merge($estatisticas, $estatisticasAvancadas),
+                'title' => 'Estatísticas dos Parlamentares'
+            ]);
+            
+        } catch (\Exception $e) {
+            return redirect()->route('parlamentares.index')
+                ->with('error', 'Erro ao carregar estatísticas: ' . $e->getMessage());
+        }
     }
 }

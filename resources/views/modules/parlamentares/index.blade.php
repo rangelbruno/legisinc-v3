@@ -26,6 +26,44 @@
             <!--end::Page title-->
             <!--begin::Actions-->
             <div class="d-flex align-items-center gap-2 gap-lg-3">
+                <!--begin::Export menu-->
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-sm btn-light-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="ki-duotone ki-file-down fs-2">
+                            <span class="path1"></span>
+                            <span class="path2"></span>
+                        </i>
+                        Exportar
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="{{ route('parlamentares.export.csv') }}">
+                            <i class="ki-duotone ki-document fs-2 me-2">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                            </i>
+                            Exportar CSV
+                        </a></li>
+                        <li><a class="dropdown-item" href="{{ route('parlamentares.estatisticas') }}">
+                            <i class="ki-duotone ki-chart-simple fs-2 me-2">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                                <span class="path3"></span>
+                                <span class="path4"></span>
+                            </i>
+                            Estatísticas Avançadas
+                        </a></li>
+                    </ul>
+                </div>
+                <!--end::Export menu-->
+                
+                <a href="{{ route('parlamentares.mesa-diretora') }}" class="btn btn-sm fw-bold btn-light-info">
+                    <i class="ki-duotone ki-crown fs-2">
+                        <span class="path1"></span>
+                        <span class="path2"></span>
+                    </i>
+                    Mesa Diretora
+                </a>
+                
                 <a href="{{ route('parlamentares.create') }}" class="btn btn-sm fw-bold btn-primary">
                     <i class="ki-duotone ki-plus fs-2"></i>
                     Novo Parlamentar

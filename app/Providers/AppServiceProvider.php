@@ -15,30 +15,8 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(
             \App\Services\ApiClient\Interfaces\ApiClientInterface::class,
             function ($app) {
-                // Use new API management system
-                $apiMode = config('api.mode', 'mock');
-                
-                if ($apiMode === 'mock') {
-                    // Use mock configuration
-                    $config = [
-                        'base_url' => config('api.mock.base_url'),
-                        'token' => '', // Mock API doesn't need token
-                        'timeout' => 10,
-                        'retries' => 1,
-                        'cache_ttl' => 300,
-                        'provider_name' => 'Mock API',
-                    ];
-                } else {
-                    // Use external API configuration
-                    $config = [
-                        'base_url' => config('api.external.base_url'),
-                        'token' => '', // JWT will be managed automatically
-                        'timeout' => config('api.external.timeout', 30),
-                        'retries' => config('api.external.retries', 3),
-                        'cache_ttl' => config('api.cache_ttl', 300),
-                        'provider_name' => 'External API',
-                    ];
-                }
+                // Use the full API configuration
+                $config = config('api');
 
                 return new \App\Services\ApiClient\Providers\NodeApiClient($config);
             }
@@ -48,30 +26,8 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(
             \App\Services\ApiClient\Providers\NodeApiClient::class,
             function ($app) {
-                // Use new API management system
-                $apiMode = config('api.mode', 'mock');
-                
-                if ($apiMode === 'mock') {
-                    // Use mock configuration
-                    $config = [
-                        'base_url' => config('api.mock.base_url'),
-                        'token' => '', // Mock API doesn't need token
-                        'timeout' => 10,
-                        'retries' => 1,
-                        'cache_ttl' => 300,
-                        'provider_name' => 'Mock API',
-                    ];
-                } else {
-                    // Use external API configuration
-                    $config = [
-                        'base_url' => config('api.external.base_url'),
-                        'token' => '', // JWT will be managed automatically
-                        'timeout' => config('api.external.timeout', 30),
-                        'retries' => config('api.external.retries', 3),
-                        'cache_ttl' => config('api.cache_ttl', 300),
-                        'provider_name' => 'External API',
-                    ];
-                }
+                // Use the full API configuration
+                $config = config('api');
 
                 return new \App\Services\ApiClient\Providers\NodeApiClient($config);
             }
