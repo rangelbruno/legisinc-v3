@@ -41,196 +41,18 @@
                     {{ session('success') }}
                 </div>
             @endif
-            
+
             <!--begin::Row-->
-            <div class="row g-5 g-xl-8">
+            <div class="row gy-5 gx-xl-8">
                 <!--begin::Col-->
-                <div class="col-xl-12">
-                    <!--begin::Mixed Widget 2-->
-                    <div class="card card-xl-stretch mb-5 mb-xl-8">
-                        <!--begin::Header-->
-                        <div class="card-header border-0 bg-primary py-5">
-                            <h3 class="card-title fw-bold text-white">Sistema de Tramitação Parlamentar</h3>
-                            <div class="card-toolbar">
-                                <span class="badge badge-light-primary">Versão 2.0</span>
-                            </div>
-                        </div>
-                        <!--end::Header-->
-                        <!--begin::Body-->
-                        <div class="card-body p-0">
-                            <!--begin::Chart-->
-                            <div class="mixed-widget-2-chart card-rounded-bottom bg-primary" data-kt-color="primary" style="height: 200px">
-                                <div class="d-flex flex-center h-100">
-                                    <div class="text-center">
-                                        <h1 class="text-white fw-bold">Bem-vindo!</h1>
-                                        <p class="text-white opacity-75">Sistema integrado de gestão parlamentar com IA, blockchain e gamificação</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <!--end::Chart-->
-                        </div>
-                    </div>
-                    <!--end::Mixed Widget 2-->
-                </div>
-                <!--end::Col-->
-            </div>
-            <!--end::Row-->
-            
-            <!--begin::Row-->
-            <div class="row g-5 g-xl-8">
-                <!--begin::Col-->
-                <div class="col-xl-6">
-                    <!--begin::Card widget 7-->
-                    <div class="card card-flush h-md-50 mb-5 mb-xl-10">
-                        <!--begin::Header-->
-                        <div class="card-header pt-5">
-                            <!--begin::Title-->
-                            <div class="card-title d-flex flex-column">
-                                <!--begin::Info-->
-                                <div class="d-flex align-items-center">
-                                    <!--begin::Currency-->
-                                    <span class="fs-4 fw-semibold text-gray-400 me-1 align-self-start">Módulos</span>
-                                    <!--end::Currency-->
-                                    <!--begin::Amount-->
-                                    <span class="fs-2hx fw-bold text-dark me-2 lh-1 ls-n2">20</span>
-                                    <!--end::Amount-->
-                                    <!--begin::Badge-->
-                                    <span class="badge badge-light-success fs-base">
-                                        <i class="ki-duotone ki-arrow-up fs-5 text-success ms-n1">
-                                            <span class="path1"></span>
-                                            <span class="path2"></span>
-                                        </i>
-                                        1 Ativo
-                                    </span>
-                                    <!--end::Badge-->
-                                </div>
-                                <!--end::Info-->
-                                <!--begin::Subtitle-->
-                                <span class="text-gray-400 pt-1 fw-semibold fs-6">360+ funcionalidades planejadas</span>
-                                <!--end::Subtitle-->
-                            </div>
-                            <!--end::Title-->
-                        </div>
-                        <!--end::Header-->
-                        <!--begin::Card body-->
-                        <div class="card-body pt-2 pb-4 d-flex flex-wrap align-items-center">
-                            <!--begin::Chart-->
-                            <div class="d-flex flex-center me-5 pt-2">
-                                <div id="kt_card_widget_7_chart" style="min-width: 70px; min-height: 70px" data-kt-size="70" data-kt-line="11"></div>
-                            </div>
-                            <!--end::Chart-->
-                            <!--begin::Labels-->
-                            <div class="d-flex flex-column content-justify-center flex-row-fluid">
-                                <!--begin::Label-->
-                                <div class="d-flex fw-semibold align-items-center">
-                                    <!--begin::Bullet-->
-                                    <div class="bullet w-8px h-3px rounded-2 bg-success me-3"></div>
-                                    <!--end::Bullet-->
-                                    <!--begin::Label-->
-                                    <div class="text-gray-500 flex-grow-1 me-4">Parlamentares</div>
-                                    <!--end::Label-->
-                                    <!--begin::Stats-->
-                                    <div class="fw-bolder text-gray-700 text-xxl-end">Implementado</div>
-                                    <!--end::Stats-->
-                                </div>
-                                <!--end::Label-->
-                                <!--begin::Label-->
-                                <div class="d-flex fw-semibold align-items-center my-3">
-                                    <!--begin::Bullet-->
-                                    <div class="bullet w-8px h-3px rounded-2 bg-primary me-3"></div>
-                                    <!--end::Bullet-->
-                                    <!--begin::Label-->
-                                    <div class="text-gray-500 flex-grow-1 me-4">Projetos</div>
-                                    <!--end::Label-->
-                                    <!--begin::Stats-->
-                                    <div class="fw-bolder text-gray-700 text-xxl-end">Em breve</div>
-                                    <!--end::Stats-->
-                                </div>
-                                <!--end::Label-->
-                                <!--begin::Label-->
-                                <div class="d-flex fw-semibold align-items-center">
-                                    <!--begin::Bullet-->
-                                    <div class="bullet w-8px h-3px rounded-2 bg-gray-300 me-3"></div>
-                                    <!--end::Bullet-->
-                                    <!--begin::Label-->
-                                    <div class="text-gray-500 flex-grow-1 me-4">Sessões</div>
-                                    <!--end::Label-->
-                                    <!--begin::Stats-->
-                                    <div class="fw-bolder text-gray-700 text-xxl-end">Em breve</div>
-                                    <!--end::Stats-->
-                                </div>
-                                <!--end::Label-->
-                            </div>
-                            <!--end::Labels-->
-                        </div>
-                        <!--end::Card body-->
-                    </div>
-                    <!--end::Card widget 7-->
-                </div>
-                <!--end::Col-->
-                
-                <!--begin::Col-->
-                <div class="col-xl-6">
-                    <!--begin::Card widget 8-->
-                    <div class="card card-flush h-md-50 mb-xl-10">
-                        <!--begin::Header-->
-                        <div class="card-header pt-5">
-                            <!--begin::Title-->
-                            <div class="card-title d-flex flex-column">
-                                <!--begin::Amount-->
-                                <span class="fs-2hx fw-bold text-dark me-2 lh-1 ls-n2">5</span>
-                                <!--end::Amount-->
-                                <!--begin::Subtitle-->
-                                <span class="text-gray-400 pt-1 fw-semibold fs-6">Parlamentares Ativos</span>
-                                <!--end::Subtitle-->
-                            </div>
-                            <!--end::Title-->
-                        </div>
-                        <!--end::Header-->
-                        <!--begin::Card body-->
-                        <div class="card-body d-flex flex-column justify-content-end pe-0">
-                            <!--begin::Title-->
-                            <span class="fs-6 fw-bolder text-gray-800 d-block mb-2">Últimas atualizações no sistema</span>
-                            <!--end::Title-->
-                            <!--begin::Users group-->
-                            <div class="symbol-group symbol-hover flex-nowrap">
-                                <div class="symbol symbol-35px symbol-circle" data-bs-toggle="tooltip" title="João Silva Santos">
-                                    <span class="symbol-label bg-warning text-inverse-warning fw-bold">J</span>
-                                </div>
-                                <div class="symbol symbol-35px symbol-circle" data-bs-toggle="tooltip" title="Maria Santos Oliveira">
-                                    <span class="symbol-label bg-success text-inverse-success fw-bold">M</span>
-                                </div>
-                                <div class="symbol symbol-35px symbol-circle" data-bs-toggle="tooltip" title="Carlos Eduardo Pereira">
-                                    <span class="symbol-label bg-primary text-inverse-primary fw-bold">C</span>
-                                </div>
-                                <div class="symbol symbol-35px symbol-circle" data-bs-toggle="tooltip" title="Ana Paula Costa">
-                                    <span class="symbol-label bg-danger text-inverse-danger fw-bold">A</span>
-                                </div>
-                                <div class="symbol symbol-35px symbol-circle" data-bs-toggle="tooltip" title="Roberto Mendes Lima">
-                                    <span class="symbol-label bg-dark text-inverse-dark fw-bold">R</span>
-                                </div>
-                            </div>
-                            <!--end::Users group-->
-                        </div>
-                        <!--end::Card body-->
-                    </div>
-                    <!--end::Card widget 8-->
-                </div>
-                <!--end::Col-->
-            </div>
-            <!--end::Row-->
-            
-            <!--begin::Row-->
-            <div class="row g-5 g-xl-8">
-                <!--begin::Col-->
-                <div class="col-xl-3">
+                <div class="col-xl-3 col-lg-6 col-md-6 col-sm-12">
                     <!--begin::Card widget 20-->
-                    <div class="card card-flush bgi-no-repeat bgi-size-contain bgi-position-x-end h-md-50 mb-5 mb-xl-10" style="background-color: #F1416C;background-image:url('{{ asset('assets/media/patterns/vector-1.png') }}')">
+                    <div class="card card-flush h-100 mb-5 mb-xl-10 bg-primary" style="background-image: url('{{ asset('assets/media/patterns/vector-1.png') }}'); background-repeat: no-repeat; background-size: contain; background-position: right;">
                         <!--begin::Header-->
-                        <div class="card-header pt-5">
+                        <div class="card-header pt-5 pb-3">
                             <!--begin::Icon-->
-                            <div class="d-flex flex-center rounded-circle h-80px w-80px" style="border: 1px dashed rgba(255, 255, 255, 0.4);background-color: #F1416C">
-                                <i class="ki-duotone ki-people text-white fs-2qx lh-0">
+                            <div class="d-flex flex-center rounded-circle h-70px w-70px bg-white bg-opacity-20">
+                                <i class="ki-duotone ki-people text-white fs-2x">
                                     <span class="path1"></span>
                                     <span class="path2"></span>
                                     <span class="path3"></span>
@@ -242,16 +64,22 @@
                         </div>
                         <!--end::Header-->
                         <!--begin::Card body-->
-                        <div class="card-body d-flex align-items-end pt-0">
+                        <div class="card-body d-flex flex-column justify-content-end pt-0">
+                            <!--begin::Stats-->
+                            <div class="d-flex align-items-center mb-3">
+                                <span class="fs-2hx fw-bold text-white me-2">5</span>
+                                <span class="fs-6 fw-semibold text-white opacity-75">/ 21</span>
+                            </div>
+                            <!--end::Stats-->
+                            <!--begin::Title-->
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <span class="fs-6 fw-bold text-white">Parlamentares</span>
+                                <span class="badge badge-light-primary fs-8">24%</span>
+                            </div>
+                            <!--end::Title-->
                             <!--begin::Progress-->
-                            <div class="d-flex align-items-center flex-column mt-3 w-100">
-                                <div class="d-flex justify-content-between fw-bold fs-6 text-white opacity-75 w-100 mt-auto mb-2">
-                                    <span>Parlamentares</span>
-                                    <span>5/21</span>
-                                </div>
-                                <div class="h-8px mx-3 w-100 bg-white bg-opacity-50 rounded">
-                                    <div class="bg-white rounded h-8px" role="progressbar" style="width: 24%;" aria-valuenow="24" aria-valuemin="0" aria-valuemax="100"></div>
-                                </div>
+                            <div class="progress h-6px bg-white bg-opacity-50">
+                                <div class="progress-bar bg-white" style="width: 24%"></div>
                             </div>
                             <!--end::Progress-->
                         </div>
@@ -262,14 +90,14 @@
                 <!--end::Col-->
                 
                 <!--begin::Col-->
-                <div class="col-xl-3">
+                <div class="col-xl-3 col-lg-6 col-md-6 col-sm-12">
                     <!--begin::Card widget 20-->
-                    <div class="card card-flush bgi-no-repeat bgi-size-contain bgi-position-x-end h-md-50 mb-5 mb-xl-10" style="background-color: #7239EA;background-image:url('{{ asset('assets/media/patterns/vector-1.png') }}')">
+                    <div class="card card-flush h-100 mb-5 mb-xl-10 bg-info" style="background-image: url('{{ asset('assets/media/patterns/vector-1.png') }}'); background-repeat: no-repeat; background-size: contain; background-position: right;">
                         <!--begin::Header-->
-                        <div class="card-header pt-5">
+                        <div class="card-header pt-5 pb-3">
                             <!--begin::Icon-->
-                            <div class="d-flex flex-center rounded-circle h-80px w-80px" style="border: 1px dashed rgba(255, 255, 255, 0.4);background-color: #7239EA">
-                                <i class="ki-duotone ki-document text-white fs-2qx lh-0">
+                            <div class="d-flex flex-center rounded-circle h-70px w-70px bg-white bg-opacity-20">
+                                <i class="ki-duotone ki-document text-white fs-2x">
                                     <span class="path1"></span>
                                     <span class="path2"></span>
                                 </i>
@@ -278,16 +106,22 @@
                         </div>
                         <!--end::Header-->
                         <!--begin::Card body-->
-                        <div class="card-body d-flex align-items-end pt-0">
+                        <div class="card-body d-flex flex-column justify-content-end pt-0">
+                            <!--begin::Stats-->
+                            <div class="d-flex align-items-center mb-3">
+                                <span class="fs-2hx fw-bold text-white me-2">0</span>
+                                <span class="fs-6 fw-semibold text-white opacity-75">projetos</span>
+                            </div>
+                            <!--end::Stats-->
+                            <!--begin::Title-->
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <span class="fs-6 fw-bold text-white">Projetos</span>
+                                <span class="badge badge-light-info fs-8">0%</span>
+                            </div>
+                            <!--end::Title-->
                             <!--begin::Progress-->
-                            <div class="d-flex align-items-center flex-column mt-3 w-100">
-                                <div class="d-flex justify-content-between fw-bold fs-6 text-white opacity-75 w-100 mt-auto mb-2">
-                                    <span>Projetos</span>
-                                    <span>0</span>
-                                </div>
-                                <div class="h-8px mx-3 w-100 bg-white bg-opacity-50 rounded">
-                                    <div class="bg-white rounded h-8px" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
-                                </div>
+                            <div class="progress h-6px bg-white bg-opacity-50">
+                                <div class="progress-bar bg-white" style="width: 0%"></div>
                             </div>
                             <!--end::Progress-->
                         </div>
@@ -298,14 +132,14 @@
                 <!--end::Col-->
                 
                 <!--begin::Col-->
-                <div class="col-xl-3">
+                <div class="col-xl-3 col-lg-6 col-md-6 col-sm-12">
                     <!--begin::Card widget 20-->
-                    <div class="card card-flush bgi-no-repeat bgi-size-contain bgi-position-x-end h-md-50 mb-5 mb-xl-10" style="background-color: #17C653;background-image:url('{{ asset('assets/media/patterns/vector-1.png') }}')">
+                    <div class="card card-flush h-100 mb-5 mb-xl-10 bg-success" style="background-image: url('{{ asset('assets/media/patterns/vector-1.png') }}'); background-repeat: no-repeat; background-size: contain; background-position: right;">
                         <!--begin::Header-->
-                        <div class="card-header pt-5">
+                        <div class="card-header pt-5 pb-3">
                             <!--begin::Icon-->
-                            <div class="d-flex flex-center rounded-circle h-80px w-80px" style="border: 1px dashed rgba(255, 255, 255, 0.4);background-color: #17C653">
-                                <i class="ki-duotone ki-calendar text-white fs-2qx lh-0">
+                            <div class="d-flex flex-center rounded-circle h-70px w-70px bg-white bg-opacity-20">
+                                <i class="ki-duotone ki-calendar text-white fs-2x">
                                     <span class="path1"></span>
                                     <span class="path2"></span>
                                 </i>
@@ -314,16 +148,22 @@
                         </div>
                         <!--end::Header-->
                         <!--begin::Card body-->
-                        <div class="card-body d-flex align-items-end pt-0">
+                        <div class="card-body d-flex flex-column justify-content-end pt-0">
+                            <!--begin::Stats-->
+                            <div class="d-flex align-items-center mb-3">
+                                <span class="fs-2hx fw-bold text-white me-2">0</span>
+                                <span class="fs-6 fw-semibold text-white opacity-75">sessões</span>
+                            </div>
+                            <!--end::Stats-->
+                            <!--begin::Title-->
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <span class="fs-6 fw-bold text-white">Sessões</span>
+                                <span class="badge badge-light-success fs-8">0%</span>
+                            </div>
+                            <!--end::Title-->
                             <!--begin::Progress-->
-                            <div class="d-flex align-items-center flex-column mt-3 w-100">
-                                <div class="d-flex justify-content-between fw-bold fs-6 text-white opacity-75 w-100 mt-auto mb-2">
-                                    <span>Sessões</span>
-                                    <span>0</span>
-                                </div>
-                                <div class="h-8px mx-3 w-100 bg-white bg-opacity-50 rounded">
-                                    <div class="bg-white rounded h-8px" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
-                                </div>
+                            <div class="progress h-6px bg-white bg-opacity-50">
+                                <div class="progress-bar bg-white" style="width: 0%"></div>
                             </div>
                             <!--end::Progress-->
                         </div>
@@ -334,14 +174,14 @@
                 <!--end::Col-->
                 
                 <!--begin::Col-->
-                <div class="col-xl-3">
+                <div class="col-xl-3 col-lg-6 col-md-6 col-sm-12">
                     <!--begin::Card widget 20-->
-                    <div class="card card-flush bgi-no-repeat bgi-size-contain bgi-position-x-end h-md-50 mb-5 mb-xl-10" style="background-color: #FFC700;background-image:url('{{ asset('assets/media/patterns/vector-1.png') }}')">
+                    <div class="card card-flush h-100 mb-5 mb-xl-10 bg-warning" style="background-image: url('{{ asset('assets/media/patterns/vector-1.png') }}'); background-repeat: no-repeat; background-size: contain; background-position: right;">
                         <!--begin::Header-->
-                        <div class="card-header pt-5">
+                        <div class="card-header pt-5 pb-3">
                             <!--begin::Icon-->
-                            <div class="d-flex flex-center rounded-circle h-80px w-80px" style="border: 1px dashed rgba(255, 255, 255, 0.4);background-color: #FFC700">
-                                <i class="ki-duotone ki-questionnaire-tablet text-white fs-2qx lh-0">
+                            <div class="d-flex flex-center rounded-circle h-70px w-70px bg-white bg-opacity-20">
+                                <i class="ki-duotone ki-questionnaire-tablet text-white fs-2x">
                                     <span class="path1"></span>
                                     <span class="path2"></span>
                                 </i>
@@ -350,16 +190,22 @@
                         </div>
                         <!--end::Header-->
                         <!--begin::Card body-->
-                        <div class="card-body d-flex align-items-end pt-0">
+                        <div class="card-body d-flex flex-column justify-content-end pt-0">
+                            <!--begin::Stats-->
+                            <div class="d-flex align-items-center mb-3">
+                                <span class="fs-2hx fw-bold text-white me-2">0</span>
+                                <span class="fs-6 fw-semibold text-white opacity-75">votações</span>
+                            </div>
+                            <!--end::Stats-->
+                            <!--begin::Title-->
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <span class="fs-6 fw-bold text-white">Votações</span>
+                                <span class="badge badge-light-warning fs-8">0%</span>
+                            </div>
+                            <!--end::Title-->
                             <!--begin::Progress-->
-                            <div class="d-flex align-items-center flex-column mt-3 w-100">
-                                <div class="d-flex justify-content-between fw-bold fs-6 text-white opacity-75 w-100 mt-auto mb-2">
-                                    <span>Votações</span>
-                                    <span>0</span>
-                                </div>
-                                <div class="h-8px mx-3 w-100 bg-white bg-opacity-50 rounded">
-                                    <div class="bg-white rounded h-8px" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
-                                </div>
+                            <div class="progress h-6px bg-white bg-opacity-50">
+                                <div class="progress-bar bg-white" style="width: 0%"></div>
                             </div>
                             <!--end::Progress-->
                         </div>
@@ -372,10 +218,321 @@
             <!--end::Row-->
             
             <!--begin::Row-->
-            <div class="row gy-5 g-xl-8">
+            <div class="row g-5 g-xl-8 mt-5 mt-xl-8">
                 <!--begin::Col-->
-                <div class="col-xl-8">
-                    <!--begin::Tables Widget 3-->
+                <div class="col-xl-6 col-lg-12">
+                    <!--begin::Modules Progress Card-->
+                    <div class="card card-flush h-xl-100 mb-5 mb-xl-10">
+                        <!--begin::Header-->
+                        <div class="card-header pt-5 pb-3 border-0 bg-light-primary">
+                            <!--begin::Title-->
+                            <div class="card-title align-items-start flex-column w-100">
+                                <!--begin::Info-->
+                                <div class="d-flex align-items-center mb-3">
+                                    <!--begin::Icon-->
+                                    <div class="symbol symbol-50px me-3">
+                                        <div class="symbol-label bg-primary text-white">
+                                            <i class="ki-duotone ki-element-7 fs-2">
+                                                <span class="path1"></span>
+                                                <span class="path2"></span>
+                                            </i>
+                                        </div>
+                                    </div>
+                                    <!--end::Icon-->
+                                    <!--begin::Title Text-->
+                                    <div class="flex-grow-1">
+                                        <h3 class="card-label fw-bold text-gray-900 mb-1">Módulos do Sistema</h3>
+                                        <div class="text-muted fw-semibold fs-7">Sistema de Tramitação Parlamentar</div>
+                                    </div>
+                                    <!--end::Title Text-->
+                                </div>
+                                <!--end::Info-->
+                                
+                                <!--begin::Stats-->
+                                <div class="d-flex align-items-center justify-content-between w-100">
+                                    <div class="d-flex align-items-baseline">
+                                        <span class="fs-2qx fw-bold text-gray-900 me-3 lh-1 ls-n1" data-kt-countup="true" data-kt-countup-value="20">0</span>
+                                        <div class="d-flex flex-column">
+                                            <span class="badge badge-light-success fs-8 fw-bold mb-1">
+                                                <i class="ki-duotone ki-arrow-up fs-8 text-success me-1">
+                                                    <span class="path1"></span>
+                                                    <span class="path2"></span>
+                                                </i>
+                                                1 Ativo
+                                            </span>
+                                            <span class="text-muted fs-8">Total de módulos</span>
+                                        </div>
+                                    </div>
+                                    <div class="text-end">
+                                        <div class="text-gray-900 fw-bold fs-6">
+                                            <span data-kt-countup="true" data-kt-countup-value="360">0</span>+
+                                        </div>
+                                        <div class="text-muted fs-8">funcionalidades</div>
+                                    </div>
+                                </div>
+                                <!--end::Stats-->
+                            </div>
+                            <!--end::Title-->
+                        </div>
+                        <!--end::Header-->
+                        
+                        <!--begin::Card body-->
+                        <div class="card-body pt-3 pb-5">
+                            <!--begin::Progress Items-->
+                            <div class="d-flex flex-column gap-4">
+                                <!--begin::Item-->
+                                <div class="d-flex align-items-center">
+                                    <!--begin::Symbol-->
+                                    <div class="symbol symbol-40px me-4">
+                                        <div class="symbol-label bg-light-success">
+                                            <i class="ki-duotone ki-people text-success fs-2">
+                                                <span class="path1"></span>
+                                                <span class="path2"></span>
+                                                <span class="path3"></span>
+                                                <span class="path4"></span>
+                                                <span class="path5"></span>
+                                            </i>
+                                        </div>
+                                    </div>
+                                    <!--end::Symbol-->
+                                    <!--begin::Content-->
+                                    <div class="flex-grow-1">
+                                        <a href="{{ route('parlamentares.index') }}" class="text-gray-900 fw-bold text-hover-primary fs-6 mb-1">Parlamentares</a>
+                                        <div class="text-gray-600 fs-7 mb-2">Sistema de gestão completo</div>
+                                        <div class="progress h-5px bg-light-success">
+                                            <div class="progress-bar bg-success" style="width: 90%"></div>
+                                        </div>
+                                    </div>
+                                    <!--end::Content-->
+                                    <!--begin::Status-->
+                                    <div class="text-end ms-3">
+                                        <span class="badge badge-success fs-8 fw-bold mb-1">✓ Ativo</span>
+                                        <div class="text-gray-500 fs-8">18/20</div>
+                                    </div>
+                                    <!--end::Status-->
+                                </div>
+                                <!--end::Item-->
+                                
+                                <!--begin::Item-->
+                                <div class="d-flex align-items-center">
+                                    <!--begin::Symbol-->
+                                    <div class="symbol symbol-40px me-4">
+                                        <div class="symbol-label bg-light-warning">
+                                            <i class="ki-duotone ki-document text-warning fs-2">
+                                                <span class="path1"></span>
+                                                <span class="path2"></span>
+                                            </i>
+                                        </div>
+                                    </div>
+                                    <!--end::Symbol-->
+                                    <!--begin::Content-->
+                                    <div class="flex-grow-1">
+                                        <div class="text-gray-900 fw-bold fs-6 mb-1">Projetos & Tramitação</div>
+                                        <div class="text-gray-600 fs-7 mb-2">Gestão de projetos de lei</div>
+                                        <div class="progress h-5px bg-light-warning">
+                                            <div class="progress-bar bg-warning" style="width: 17%"></div>
+                                        </div>
+                                    </div>
+                                    <!--end::Content-->
+                                    <!--begin::Status-->
+                                    <div class="text-end ms-3">
+                                        <span class="badge badge-warning fs-8 fw-bold mb-1">⏳ Dev</span>
+                                        <div class="text-gray-500 fs-8">5/30</div>
+                                    </div>
+                                    <!--end::Status-->
+                                </div>
+                                <!--end::Item-->
+                                
+                                <!--begin::Item-->
+                                <div class="d-flex align-items-center">
+                                    <!--begin::Symbol-->
+                                    <div class="symbol symbol-40px me-4">
+                                        <div class="symbol-label bg-light-primary">
+                                            <i class="ki-duotone ki-calendar text-primary fs-2">
+                                                <span class="path1"></span>
+                                                <span class="path2"></span>
+                                            </i>
+                                        </div>
+                                    </div>
+                                    <!--end::Symbol-->
+                                    <!--begin::Content-->
+                                    <div class="flex-grow-1">
+                                        <div class="text-gray-900 fw-bold fs-6 mb-1">Sessões Plenárias</div>
+                                        <div class="text-gray-600 fs-7 mb-2">Controle de sessões</div>
+                                        <div class="progress h-5px bg-light-primary">
+                                            <div class="progress-bar bg-primary" style="width: 0%"></div>
+                                        </div>
+                                    </div>
+                                    <!--end::Content-->
+                                    <!--begin::Status-->
+                                    <div class="text-end ms-3">
+                                        <span class="badge badge-primary fs-8 fw-bold mb-1">📋 Plan</span>
+                                        <div class="text-gray-500 fs-8">0/25</div>
+                                    </div>
+                                    <!--end::Status-->
+                                </div>
+                                <!--end::Item-->
+                            </div>
+                            <!--end::Progress Items-->
+                        </div>
+                        <!--end::Card body-->
+                    </div>
+                    <!--end::Modules Progress Card-->
+                </div>
+                <!--end::Col-->
+                
+                <!--begin::Col-->
+                <div class="col-xl-6 col-lg-12">
+                    <!--begin::Active Users Card-->
+                    <div class="card card-flush h-xl-100 mb-5 mb-xl-10">
+                        <!--begin::Header-->
+                        <div class="card-header pt-5 pb-3 border-0 bg-light-success">
+                            <!--begin::Title-->
+                            <div class="card-title align-items-start flex-column w-100">
+                                <!--begin::Info-->
+                                <div class="d-flex align-items-center mb-3">
+                                    <!--begin::Icon-->
+                                    <div class="symbol symbol-50px me-3">
+                                        <div class="symbol-label bg-success text-white">
+                                            <i class="ki-duotone ki-user-tick fs-2">
+                                                <span class="path1"></span>
+                                                <span class="path2"></span>
+                                                <span class="path3"></span>
+                                            </i>
+                                        </div>
+                                    </div>
+                                    <!--end::Icon-->
+                                    <!--begin::Title Text-->
+                                    <div class="flex-grow-1">
+                                        <h3 class="card-label fw-bold text-gray-900 mb-1">Usuários Ativos</h3>
+                                        <div class="text-muted fw-semibold fs-7">Online nos últimos 30 dias</div>
+                                    </div>
+                                    <!--end::Title Text-->
+                                </div>
+                                <!--end::Info-->
+                                
+                                <!--begin::Stats-->
+                                <div class="d-flex align-items-center justify-content-between w-100">
+                                    <div class="d-flex align-items-baseline">
+                                        <span class="fs-2qx fw-bold text-gray-900 me-3 lh-1 ls-n1" data-kt-countup="true" data-kt-countup-value="12">0</span>
+                                        <div class="d-flex flex-column">
+                                            <span class="badge badge-light-success fs-8 fw-bold mb-1">
+                                                <i class="ki-duotone ki-arrow-up fs-8 text-success me-1">
+                                                    <span class="path1"></span>
+                                                    <span class="path2"></span>
+                                                </i>
+                                                +25%
+                                            </span>
+                                            <span class="text-muted fs-8">vs mês anterior</span>
+                                        </div>
+                                    </div>
+                                    <div class="text-end">
+                                        <div class="text-gray-900 fw-bold fs-6">48%</div>
+                                        <div class="text-muted fs-8">taxa de atividade</div>
+                                    </div>
+                                </div>
+                                <!--end::Stats-->
+                            </div>
+                            <!--end::Title-->
+                        </div>
+                        <!--end::Header-->
+                        
+                        <!--begin::Card body-->
+                        <div class="card-body pt-3 pb-5">
+                            <!--begin::Activity Stats-->
+                            <div class="d-flex flex-column gap-4">
+                                <!--begin::Activity Item-->
+                                <div class="d-flex align-items-center">
+                                    <div class="symbol symbol-40px me-4">
+                                        <div class="symbol-label bg-light-success">
+                                            <i class="ki-duotone ki-people text-success fs-2">
+                                                <span class="path1"></span>
+                                                <span class="path2"></span>
+                                                <span class="path3"></span>
+                                                <span class="path4"></span>
+                                                <span class="path5"></span>
+                                            </i>
+                                        </div>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <div class="text-gray-900 fw-bold fs-6 mb-1">Parlamentares</div>
+                                        <div class="text-gray-600 fs-7 mb-2">5 membros cadastrados</div>
+                                        <div class="progress h-5px bg-light-success">
+                                            <div class="progress-bar bg-success" style="width: 100%"></div>
+                                        </div>
+                                    </div>
+                                    <div class="text-end ms-3">
+                                        <span class="badge badge-success fs-8 fw-bold mb-1">100%</span>
+                                        <div class="text-gray-500 fs-8">5/5</div>
+                                    </div>
+                                </div>
+                                <!--end::Activity Item-->
+                                
+                                <!--begin::Activity Item-->
+                                <div class="d-flex align-items-center">
+                                    <div class="symbol symbol-40px me-4">
+                                        <div class="symbol-label bg-light-primary">
+                                            <i class="ki-duotone ki-user text-primary fs-2">
+                                                <span class="path1"></span>
+                                                <span class="path2"></span>
+                                            </i>
+                                        </div>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <div class="text-gray-900 fw-bold fs-6 mb-1">Administradores</div>
+                                        <div class="text-gray-600 fs-7 mb-2">3 admins ativos</div>
+                                        <div class="progress h-5px bg-light-primary">
+                                            <div class="progress-bar bg-primary" style="width: 75%"></div>
+                                        </div>
+                                    </div>
+                                    <div class="text-end ms-3">
+                                        <span class="badge badge-primary fs-8 fw-bold mb-1">75%</span>
+                                        <div class="text-gray-500 fs-8">3/4</div>
+                                    </div>
+                                </div>
+                                <!--end::Activity Item-->
+                                
+                                <!--begin::Activity Item-->
+                                <div class="d-flex align-items-center">
+                                    <div class="symbol symbol-40px me-4">
+                                        <div class="symbol-label bg-light-warning">
+                                            <i class="ki-duotone ki-profile-user text-warning fs-2">
+                                                <span class="path1"></span>
+                                                <span class="path2"></span>
+                                                <span class="path3"></span>
+                                                <span class="path4"></span>
+                                            </i>
+                                        </div>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <div class="text-gray-900 fw-bold fs-6 mb-1">Outros Usuários</div>
+                                        <div class="text-gray-600 fs-7 mb-2">4 usuários diversos</div>
+                                        <div class="progress h-5px bg-light-warning">
+                                            <div class="progress-bar bg-warning" style="width: 50%"></div>
+                                        </div>
+                                    </div>
+                                    <div class="text-end ms-3">
+                                        <span class="badge badge-warning fs-8 fw-bold mb-1">50%</span>
+                                        <div class="text-gray-500 fs-8">4/8</div>
+                                    </div>
+                                </div>
+                                <!--end::Activity Item-->
+                            </div>
+                            <!--end::Activity Stats-->
+                        </div>
+                        <!--end::Card body-->
+                    </div>
+                    <!--end::Active Users Card-->
+                </div>
+                <!--end::Col-->
+            </div>
+            <!--end::Row-->
+            
+            <!--begin::Row-->
+            <div class="row gy-5 g-xl-8 mt-5 mt-xl-8">
+                <!--begin::Col-->
+                <div class="col-xl-8 col-lg-12">
+                    <!--begin::Enhanced Modules Table-->
                     <div class="card card-xl-stretch mb-5 mb-xl-8">
                         <!--begin::Header-->
                         <div class="card-header border-0 pt-5">
@@ -514,7 +671,7 @@
                             </div>
                             <!--end::Table container-->
                         </div>
-                        <!--begin::Body-->
+                        <!--end::Body-->
                     </div>
                     <!--end::Tables Widget 3-->
                 </div>
@@ -662,6 +819,7 @@
             </div>
             <!--end::Row-->
         </div>
+        <!--end::Container-->
     </div>
     <!--end::Content-->
 </div>
