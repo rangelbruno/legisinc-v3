@@ -14,20 +14,23 @@ class Projeto extends Model
 
     protected $fillable = [
         'titulo',
+        'descricao',
+        'tipo_projeto_id',
+        'autor_id',
+        'conteudo',
+        'status',
+        'numero_protocolo',
+        'data_assinatura',
+        'observacoes',
         'numero',
         'ano',
-        'tipo',
-        'autor_id',
         'relator_id',
         'comissao_id',
-        'status',
         'urgencia',
         'resumo',
         'ementa',
-        'conteudo',
         'version_atual',
         'palavras_chave',
-        'observacoes',
         'data_protocolo',
         'data_limite_tramitacao',
         'ativo',
@@ -35,7 +38,8 @@ class Projeto extends Model
     ];
 
     protected $casts = [
-        'data_protocolo' => 'date',
+        'data_protocolo' => 'datetime',
+        'data_assinatura' => 'datetime',
         'data_limite_tramitacao' => 'date',
         'metadados' => 'array',
         'ativo' => 'boolean',
@@ -53,17 +57,17 @@ class Projeto extends Model
         'requerimento' => 'Requerimento',
     ];
 
-    // Constantes para status
+    // Constantes para status conforme fluxo de tramitação
     public const STATUS = [
         'rascunho' => 'Rascunho',
-        'protocolado' => 'Protocolado',
-        'em_tramitacao' => 'Em Tramitação',
-        'na_comissao' => 'Na Comissão',
-        'em_votacao' => 'Em Votação',
+        'enviado' => 'Enviado para Análise',
+        'em_analise' => 'Em Análise',
         'aprovado' => 'Aprovado',
         'rejeitado' => 'Rejeitado',
-        'retirado' => 'Retirado',
-        'arquivado' => 'Arquivado',
+        'assinado' => 'Assinado',
+        'protocolado' => 'Protocolado',
+        'em_sessao' => 'Em Sessão',
+        'votado' => 'Votado',
     ];
 
     // Constantes para urgência
@@ -74,6 +78,11 @@ class Projeto extends Model
     ];
 
     // Relacionamentos
+    public function tipoProjeto(): BelongsTo
+    {
+        return $this->belongsTo(TipoProjeto::class, 'tipo_projeto_id');
+    }
+
     public function autor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'autor_id');
@@ -106,14 +115,13 @@ class Projeto extends Model
 
     public function tramitacao(): HasMany
     {
-        return $this->hasMany(ProjetoTramitacao::class)->orderBy('ordem');
+        return $this->hasMany(ProjetoTramitacao::class)->orderBy('created_at');
     }
 
     public function tramitacaoAtual(): HasOne
     {
         return $this->hasOne(ProjetoTramitacao::class)
-            ->where('status', '!=', 'concluido')
-            ->orderBy('ordem', 'desc');
+            ->latest();
     }
 
     // Accessors
@@ -141,14 +149,14 @@ class Projeto extends Model
     {
         $cores = [
             'rascunho' => 'secondary',
-            'protocolado' => 'info',
-            'em_tramitacao' => 'primary',
-            'na_comissao' => 'warning',
-            'em_votacao' => 'warning',
+            'enviado' => 'info',
+            'em_analise' => 'primary',
             'aprovado' => 'success',
             'rejeitado' => 'danger',
-            'retirado' => 'dark',
-            'arquivado' => 'light',
+            'assinado' => 'warning',
+            'protocolado' => 'info',
+            'em_sessao' => 'warning',
+            'votado' => 'success',
         ];
 
         return $cores[$this->status] ?? 'secondary';
@@ -216,15 +224,20 @@ class Projeto extends Model
         return $query->whereIn('status', ['aprovado', 'rejeitado', 'arquivado']);
     }
 
-    // Métodos de negócio
+    // Métodos de negócio conforme novo fluxo
     public function isRascunho(): bool
     {
         return $this->status === 'rascunho';
     }
 
-    public function isProtocolado(): bool
+    public function isEnviado(): bool
     {
-        return $this->status === 'protocolado';
+        return $this->status === 'enviado';
+    }
+
+    public function isEmAnalise(): bool
+    {
+        return $this->status === 'em_analise';
     }
 
     public function isAprovado(): bool
@@ -237,14 +250,24 @@ class Projeto extends Model
         return $this->status === 'rejeitado';
     }
 
-    public function isArquivado(): bool
+    public function isAssinado(): bool
     {
-        return $this->status === 'arquivado';
+        return $this->status === 'assinado';
+    }
+
+    public function isProtocolado(): bool
+    {
+        return $this->status === 'protocolado';
+    }
+
+    public function isEmSessao(): bool
+    {
+        return $this->status === 'em_sessao';
     }
 
     public function isVotado(): bool
     {
-        return in_array($this->status, ['aprovado', 'rejeitado', 'arquivado']);
+        return $this->status === 'votado';
     }
 
     public function hasContent(): bool
@@ -254,27 +277,39 @@ class Projeto extends Model
 
     public function podeEditarConteudo(): bool
     {
-        return in_array($this->status, ['rascunho', 'em_tramitacao']);
+        return in_array($this->status, ['rascunho']);
     }
 
     public function podeAnexarArquivos(): bool
     {
-        return in_array($this->status, ['rascunho', 'em_tramitacao', 'na_comissao']);
+        return in_array($this->status, ['rascunho', 'enviado', 'em_analise']);
     }
 
-    public function estaNaComissao(): bool
+    public function podeSerEnviado(): bool
     {
-        return $this->status === 'na_comissao' && $this->comissao_id;
+        return $this->status === 'rascunho' && $this->hasContent();
+    }
+
+    public function podeSerAssinado(): bool
+    {
+        return $this->status === 'aprovado';
+    }
+
+    public function podeSerProtocolado(): bool
+    {
+        return $this->status === 'assinado';
     }
 
     public function proximaEtapaTramitacao(): ?string
     {
         $fluxo = [
-            'rascunho' => 'protocolo',
-            'protocolado' => 'distribuicao',
-            'em_tramitacao' => 'analise_comissao',
-            'na_comissao' => 'relatoria',
-            'em_votacao' => 'votacao_plenario',
+            'rascunho' => 'envio_para_analise',
+            'enviado' => 'analise_legislativo',
+            'em_analise' => 'aprovacao_ou_rejeicao',
+            'aprovado' => 'assinatura',
+            'assinado' => 'protocolo',
+            'protocolado' => 'inclusao_sessao',
+            'em_sessao' => 'votacao',
         ];
 
         return $fluxo[$this->status] ?? null;
@@ -305,13 +340,14 @@ class Projeto extends Model
         return $novaVersao;
     }
 
-    public function adicionarTramitacao(array $dados): ProjetoTramitacao
+    public function adicionarTramitacao(string $acao, string $statusAnterior = null, string $statusAtual = null, string $observacoes = null): ProjetoTramitacao
     {
-        $ordem = $this->tramitacao()->max('ordem') + 1;
-
-        return $this->tramitacao()->create(array_merge($dados, [
-            'ordem' => $ordem,
-            'data_inicio' => now(),
-        ]));
+        return $this->tramitacao()->create([
+            'usuario_id' => auth()->id(),
+            'status_anterior' => $statusAnterior ?? $this->status,
+            'status_atual' => $statusAtual ?? $this->status,
+            'acao' => $acao,
+            'observacoes' => $observacoes,
+        ]);
     }
 }

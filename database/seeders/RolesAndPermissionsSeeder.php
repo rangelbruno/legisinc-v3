@@ -26,13 +26,19 @@ class RolesAndPermissionsSeeder extends Seeder
             'parlamentares.delete',
             'parlamentares.manage_all',
             
-            // Módulo Projetos (futuro)
-            'projetos.view',
-            'projetos.create',
-            'projetos.edit',
-            'projetos.delete',
-            'projetos.tramitar',
-            'projetos.relatar',
+            // Módulo Projetos - Sistema de Tramitação
+            'projeto.create',
+            'projeto.edit_own',
+            'projeto.sign',
+            'projeto.view_own',
+            'projeto.view_all',
+            'projeto.analyze',
+            'projeto.approve',
+            'projeto.reject',
+            'projeto.view_approved',
+            'projeto.assign_number',
+            'projeto.include_session',
+            'tramitacao.manage',
             
             // Módulo Sessões
             'sessions.view',
@@ -85,15 +91,73 @@ class RolesAndPermissionsSeeder extends Seeder
             Permission::create(['name' => $permission]);
         }
 
-        // Criar os 7 perfis do sistema parlamentar
+        // Criar os perfis do sistema parlamentar incluindo tramitação
         $roles = [
+            'parlamentar' => [
+                'name' => 'parlamentar',
+                'description' => 'Cria documentos, assina projetos',
+                'permissions' => [
+                    'projeto.create',
+                    'projeto.edit_own',
+                    'projeto.sign',
+                    'projeto.view_own',
+                    'transparencia.view_publico',
+                    'parlamentares.view',
+                    'sessions.view',
+                    'sessoes.view',
+                    'sessoes.presenca',
+                    'votacoes.view',
+                    'votacoes.votar',
+                    'sistema.dashboard',
+                ]
+            ],
+            
+            'legislativo' => [
+                'name' => 'legislativo',
+                'description' => 'Analisa e aprova/rejeita documentos',
+                'permissions' => [
+                    'projeto.view_all',
+                    'projeto.analyze',
+                    'projeto.approve',
+                    'projeto.reject',
+                    'tramitacao.manage',
+                    'parlamentares.view',
+                    'parlamentares.create',
+                    'parlamentares.edit',
+                    'sessions.view',
+                    'sessions.create',
+                    'sessions.edit',
+                    'sessions.export',
+                    'sessoes.view',
+                    'sessoes.create',
+                    'sessoes.edit',
+                    'sessoes.controlar',
+                    'sistema.dashboard',
+                    'sistema.relatorios',
+                    'sistema.configuracoes',
+                ]
+            ],
+            
+            'protocolo' => [
+                'name' => 'protocolo',
+                'description' => 'Atribui números de protocolo',
+                'permissions' => [
+                    'projeto.view_approved',
+                    'projeto.assign_number',
+                    'projeto.include_session',
+                    'sessions.view',
+                    'sessoes.view',
+                    'sistema.dashboard',
+                ]
+            ],
+            
             User::PERFIL_PUBLICO => [
                 'name' => User::PERFIL_PUBLICO,
                 'description' => 'Acesso público limitado',
                 'permissions' => [
                     'transparencia.view_publico',
                     'parlamentares.view',
-                    'projetos.view',
+                    'projeto.view_all',
                     'sessions.view',
                     'sessoes.view',
                     'votacoes.view',
@@ -107,7 +171,7 @@ class RolesAndPermissionsSeeder extends Seeder
                     'transparencia.view_publico',
                     'transparencia.view_completo',
                     'parlamentares.view',
-                    'projetos.view',
+                    'projeto.view_all',
                     'sessions.view',
                     'sessoes.view',
                     'votacoes.view',
@@ -122,9 +186,9 @@ class RolesAndPermissionsSeeder extends Seeder
                     'transparencia.view_publico',
                     'transparencia.view_completo',
                     'parlamentares.view',
-                    'projetos.view',
-                    'projetos.create',
-                    'projetos.edit',
+                    'projeto.view_all',
+                    'projeto.create',
+                    'projeto.edit_own',
                     'sessions.view',
                     'sessoes.view',
                     'sessoes.presenca',
@@ -143,11 +207,11 @@ class RolesAndPermissionsSeeder extends Seeder
                     'transparencia.view_completo',
                     'parlamentares.view',
                     'parlamentares.edit',
-                    'projetos.view',
-                    'projetos.create',
-                    'projetos.edit',
-                    'projetos.relatar',
-                    'projetos.tramitar',
+                    'projeto.view_all',
+                    'projeto.create',
+                    'projeto.edit_own',
+                    'projeto.analyze',
+                    'tramitacao.manage',
                     'sessions.view',
                     'sessoes.view',
                     'sessoes.presenca',
@@ -170,10 +234,11 @@ class RolesAndPermissionsSeeder extends Seeder
                     'transparencia.view_completo',
                     'parlamentares.view',
                     'parlamentares.edit',
-                    'projetos.view',
-                    'projetos.create',
-                    'projetos.edit',
-                    'projetos.tramitar',
+                    'projeto.view_all',
+                    'projeto.create',
+                    'projeto.edit_own',
+                    'projeto.sign',
+                    'tramitacao.manage',
                     'sessions.view',
                     'sessoes.view',
                     'sessoes.presenca',
@@ -197,10 +262,11 @@ class RolesAndPermissionsSeeder extends Seeder
                     'parlamentares.view',
                     'parlamentares.create',
                     'parlamentares.edit',
-                    'projetos.view',
-                    'projetos.create',
-                    'projetos.edit',
-                    'projetos.tramitar',
+                    'projeto.view_all',
+                    'projeto.analyze',
+                    'projeto.approve',
+                    'projeto.reject',
+                    'tramitacao.manage',
                     'sessions.view',
                     'sessions.create',
                     'sessions.edit',
@@ -280,7 +346,7 @@ class RolesAndPermissionsSeeder extends Seeder
             ]
         );
         
-        $parlamentar->assignRole(User::PERFIL_PARLAMENTAR);
+        $parlamentar->assignRole('parlamentar');
 
         // Criar usuário legislativo de exemplo
         $legislativo = User::firstOrCreate(
@@ -297,12 +363,30 @@ class RolesAndPermissionsSeeder extends Seeder
             ]
         );
         
-        $legislativo->assignRole(User::PERFIL_LEGISLATIVO);
+        $legislativo->assignRole('legislativo');
+
+        // Criar usuário protocolo de exemplo
+        $protocolo = User::firstOrCreate(
+            ['email' => 'protocolo@camara.gov.br'],
+            [
+                'name' => 'Carlos Protocolo Silva',
+                'password' => bcrypt('protocolo123'),
+                'documento' => '333.333.333-33',
+                'telefone' => '(11) 3333-3333',
+                'data_nascimento' => '1980-12-10',
+                'profissao' => 'Técnico em Protocolo',
+                'cargo_atual' => 'Responsável pelo Protocolo',
+                'ativo' => true,
+            ]
+        );
+        
+        $protocolo->assignRole('protocolo');
 
         $this->command->info('Perfis e permissões criados com sucesso!');
         $this->command->info('Usuários criados:');
         $this->command->info('- Admin: admin@sistema.gov.br / admin123');
         $this->command->info('- Parlamentar: parlamentar@camara.gov.br / parlamentar123');
-        $this->command->info('- Servidor: servidor@camara.gov.br / servidor123');
+        $this->command->info('- Legislativo: servidor@camara.gov.br / servidor123');
+        $this->command->info('- Protocolo: protocolo@camara.gov.br / protocolo123');
     }
 }

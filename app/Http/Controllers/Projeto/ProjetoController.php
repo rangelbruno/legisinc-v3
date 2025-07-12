@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Projeto;
 
 use App\Http\Controllers\Controller;
 use App\Services\Projeto\ProjetoService;
+use App\Services\Projeto\ProjetoWorkflowService;
+use App\Services\Projeto\TramitacaoService;
 use App\DTOs\Projeto\ProjetoDTO;
 use App\DTOs\Projeto\ProjetoVersionDTO;
 use Illuminate\Http\Request;
@@ -16,10 +18,17 @@ use Exception;
 class ProjetoController extends Controller
 {
     protected ProjetoService $projetoService;
+    protected ProjetoWorkflowService $workflowService;
+    protected TramitacaoService $tramitacaoService;
 
-    public function __construct(ProjetoService $projetoService)
-    {
+    public function __construct(
+        ProjetoService $projetoService,
+        ProjetoWorkflowService $workflowService,
+        TramitacaoService $tramitacaoService
+    ) {
         $this->projetoService = $projetoService;
+        $this->workflowService = $workflowService;
+        $this->tramitacaoService = $tramitacaoService;
     }
 
     /**
@@ -501,6 +510,337 @@ class ProjetoController extends Controller
 
         } catch (Exception $e) {
             abort(500, 'Erro ao carregar anexos: ' . $e->getMessage());
+        }
+    }
+
+    // ========== MÉTODOS DE WORKFLOW ==========
+
+    /**
+     * Enviar projeto para análise
+     */
+    public function enviarParaAnalise(Request $request, int $id): RedirectResponse
+    {
+        try {
+            $projeto = $this->projetoService->obterPorId($id);
+            
+            if (!$projeto) {
+                abort(404, 'Projeto não encontrado');
+            }
+
+            $this->authorize('projeto.edit_own', $projeto);
+
+            $this->workflowService->enviarParaAnalise($projeto, $request->observacoes);
+
+            return redirect()->route('projetos.show', $id)
+                ->with('success', 'Projeto enviado para análise com sucesso!');
+
+        } catch (Exception $e) {
+            return redirect()->back()
+                ->with('error', 'Erro ao enviar projeto: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Iniciar análise do projeto
+     */
+    public function iniciarAnalise(Request $request, int $id): RedirectResponse
+    {
+        try {
+            $projeto = $this->projetoService->obterPorId($id);
+            
+            if (!$projeto) {
+                abort(404, 'Projeto não encontrado');
+            }
+
+            $this->authorize('projeto.analyze');
+
+            $this->workflowService->iniciarAnalise($projeto, $request->observacoes);
+
+            return redirect()->route('projetos.show', $id)
+                ->with('success', 'Análise iniciada com sucesso!');
+
+        } catch (Exception $e) {
+            return redirect()->back()
+                ->with('error', 'Erro ao iniciar análise: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Aprovar projeto
+     */
+    public function aprovar(Request $request, int $id): RedirectResponse
+    {
+        try {
+            $projeto = $this->projetoService->obterPorId($id);
+            
+            if (!$projeto) {
+                abort(404, 'Projeto não encontrado');
+            }
+
+            $this->authorize('projeto.approve');
+
+            $this->workflowService->aprovarProjeto($projeto, $request->observacoes);
+
+            return redirect()->route('projetos.show', $id)
+                ->with('success', 'Projeto aprovado com sucesso!');
+
+        } catch (Exception $e) {
+            return redirect()->back()
+                ->with('error', 'Erro ao aprovar projeto: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Rejeitar projeto
+     */
+    public function rejeitar(Request $request, int $id): RedirectResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'motivo' => 'required|string|min:10',
+        ], [
+            'motivo.required' => 'O motivo da rejeição é obrigatório',
+            'motivo.min' => 'O motivo deve ter pelo menos 10 caracteres',
+        ]);
+
+        if ($validator->fails()) {
+            return redirect()->back()
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        try {
+            $projeto = $this->projetoService->obterPorId($id);
+            
+            if (!$projeto) {
+                abort(404, 'Projeto não encontrado');
+            }
+
+            $this->authorize('projeto.reject');
+
+            $this->workflowService->rejeitarProjeto($projeto, $request->motivo);
+
+            return redirect()->route('projetos.show', $id)
+                ->with('success', 'Projeto rejeitado.');
+
+        } catch (Exception $e) {
+            return redirect()->back()
+                ->with('error', 'Erro ao rejeitar projeto: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Assinar projeto
+     */
+    public function assinar(Request $request, int $id): RedirectResponse
+    {
+        try {
+            $projeto = $this->projetoService->obterPorId($id);
+            
+            if (!$projeto) {
+                abort(404, 'Projeto não encontrado');
+            }
+
+            $this->authorize('projeto.sign', $projeto);
+
+            $this->workflowService->assinarProjeto($projeto, $request->observacoes);
+
+            return redirect()->route('projetos.show', $id)
+                ->with('success', 'Projeto assinado com sucesso!');
+
+        } catch (Exception $e) {
+            return redirect()->back()
+                ->with('error', 'Erro ao assinar projeto: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Protocolar projeto
+     */
+    public function protocolarProjeto(Request $request, int $id): RedirectResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'numero_protocolo' => 'required|string|max:50',
+        ], [
+            'numero_protocolo.required' => 'O número do protocolo é obrigatório',
+        ]);
+
+        if ($validator->fails()) {
+            return redirect()->back()
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        try {
+            $projeto = $this->projetoService->obterPorId($id);
+            
+            if (!$projeto) {
+                abort(404, 'Projeto não encontrado');
+            }
+
+            $this->authorize('projeto.assign_number');
+
+            $this->workflowService->protocolarProjeto(
+                $projeto, 
+                $request->numero_protocolo, 
+                $request->observacoes
+            );
+
+            return redirect()->route('projetos.show', $id)
+                ->with('success', 'Projeto protocolado com sucesso!');
+
+        } catch (Exception $e) {
+            return redirect()->back()
+                ->with('error', 'Erro ao protocolar projeto: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Incluir projeto em sessão
+     */
+    public function incluirEmSessao(Request $request, int $id): RedirectResponse
+    {
+        try {
+            $projeto = $this->projetoService->obterPorId($id);
+            
+            if (!$projeto) {
+                abort(404, 'Projeto não encontrado');
+            }
+
+            $this->authorize('projeto.include_session');
+
+            $this->workflowService->incluirEmSessao($projeto, $request->observacoes);
+
+            return redirect()->route('projetos.show', $id)
+                ->with('success', 'Projeto incluído em sessão com sucesso!');
+
+        } catch (Exception $e) {
+            return redirect()->back()
+                ->with('error', 'Erro ao incluir projeto em sessão: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Votar projeto
+     */
+    public function votar(Request $request, int $id): RedirectResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'resultado_votacao' => 'required|in:aprovado,rejeitado,adiado',
+        ], [
+            'resultado_votacao.required' => 'O resultado da votação é obrigatório',
+            'resultado_votacao.in' => 'Resultado inválido',
+        ]);
+
+        if ($validator->fails()) {
+            return redirect()->back()
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        try {
+            $projeto = $this->projetoService->obterPorId($id);
+            
+            if (!$projeto) {
+                abort(404, 'Projeto não encontrado');
+            }
+
+            $this->authorize('tramitacao.manage');
+
+            $this->workflowService->votarProjeto(
+                $projeto, 
+                $request->resultado_votacao, 
+                $request->observacoes
+            );
+
+            return redirect()->route('projetos.show', $id)
+                ->with('success', 'Votação registrada com sucesso!');
+
+        } catch (Exception $e) {
+            return redirect()->back()
+                ->with('error', 'Erro ao registrar votação: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Gerar número de protocolo automático (AJAX)
+     */
+    public function gerarNumeroProtocolo(): JsonResponse
+    {
+        try {
+            $this->authorize('projeto.assign_number');
+
+            $numeroProtocolo = $this->workflowService->gerarNumeroProtocolo();
+
+            return response()->json([
+                'success' => true,
+                'numero_protocolo' => $numeroProtocolo
+            ]);
+
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erro ao gerar número de protocolo: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Obter próximas ações do projeto (AJAX)
+     */
+    public function proximasAcoes(int $id): JsonResponse
+    {
+        try {
+            $projeto = $this->projetoService->obterPorId($id);
+            
+            if (!$projeto) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Projeto não encontrado'
+                ], 404);
+            }
+
+            $acoes = $this->workflowService->getProximasAcoes($projeto, auth()->user());
+
+            return response()->json([
+                'success' => true,
+                'acoes' => $acoes
+            ]);
+
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erro ao obter ações: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Obter histórico de tramitação (AJAX)
+     */
+    public function historicoTramitacao(int $id): JsonResponse
+    {
+        try {
+            $projeto = $this->projetoService->obterPorId($id);
+            
+            if (!$projeto) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Projeto não encontrado'
+                ], 404);
+            }
+
+            $historico = $this->workflowService->getHistoricoTramitacao($projeto);
+
+            return response()->json([
+                'success' => true,
+                'historico' => $historico
+            ]);
+
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erro ao obter histórico: ' . $e->getMessage()
+            ], 500);
         }
     }
 }
