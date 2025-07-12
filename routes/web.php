@@ -243,6 +243,18 @@ Route::prefix('admin/sessions')->name('admin.sessions.')->middleware('auth')->gr
     Route::get('/search-parlamentares', [SessionController::class, 'searchParlamentares'])->name('search-parlamentares')->middleware('check.permission:sessions.view');
 });
 
+// Admin Users routes (protected with auth only - Admin only)
+Route::prefix('admin/usuarios')->name('admin.usuarios.')->middleware('auth')->group(function () {
+    Route::get('/', [App\Http\Controllers\AdminUserController::class, 'index'])->name('index');
+    Route::get('/create', [App\Http\Controllers\AdminUserController::class, 'create'])->name('create');
+    Route::post('/', [App\Http\Controllers\AdminUserController::class, 'store'])->name('store');
+    Route::get('/{usuario}', [App\Http\Controllers\AdminUserController::class, 'show'])->name('show');
+    Route::get('/{usuario}/edit', [App\Http\Controllers\AdminUserController::class, 'edit'])->name('edit');
+    Route::put('/{usuario}', [App\Http\Controllers\AdminUserController::class, 'update'])->name('update');
+    Route::delete('/{usuario}', [App\Http\Controllers\AdminUserController::class, 'destroy'])->name('destroy');
+    Route::post('/{usuario}/toggle-ativo', [App\Http\Controllers\AdminUserController::class, 'toggleAtivo'])->name('toggle-ativo');
+});
+
 // Mock API routes moved to routes/api.php to avoid CSRF middleware
 
 Route::get('/api-test/health', function () {

@@ -98,16 +98,6 @@
                         <span class="menu-arrow"></span>
                     </span>
                     <div class="menu-sub menu-sub-accordion">
-                        @if(auth()->check() && auth()->user()->isAdmin())
-                        <div class="menu-item">
-                            <a class="menu-link {{ request()->routeIs('modelos.*') ? 'active' : '' }}" href="{{ route('modelos.index') }}">
-                                <span class="menu-bullet">
-                                    <span class="bullet bullet-dot"></span>
-                                </span>
-                                <span class="menu-title">Modelos de Projeto</span>
-                            </a>
-                        </div>
-                        @endif
                         <div class="menu-item">
                             <a class="menu-link" href="#" onclick="showComingSoon('Configurações Gerais')">
                                 <span class="menu-bullet">
@@ -392,6 +382,66 @@
                 @endcan
                 <!--end:Menu item-->
                 
+                <!--begin:Menu item - Administração-->
+                @if(auth()->check() && auth()->user()->isAdmin())
+                <div data-kt-menu-trigger="click" class="menu-item menu-accordion {{ request()->routeIs('admin.*') ? 'here show' : '' }}">
+                    <span class="menu-link">
+                        <span class="menu-icon">
+                            <i class="ki-duotone ki-shield-tick fs-2">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                                <span class="path3"></span>
+                            </i>
+                        </span>
+                        <span class="menu-title">Administração</span>
+                        <span class="menu-arrow"></span>
+                    </span>
+                    <div class="menu-sub menu-sub-accordion">
+                        <div class="menu-item">
+                            <a class="menu-link {{ request()->routeIs('admin.usuarios.*') ? 'active' : '' }}" href="{{ route('admin.usuarios.index') }}">
+                                <span class="menu-bullet">
+                                    <span class="bullet bullet-dot"></span>
+                                </span>
+                                <span class="menu-title">Usuários</span>
+                            </a>
+                        </div>
+                        <div class="menu-item">
+                            <a class="menu-link {{ request()->routeIs('modelos.*') ? 'active' : '' }}" href="{{ route('modelos.index') }}">
+                                <span class="menu-bullet">
+                                    <span class="bullet bullet-dot"></span>
+                                </span>
+                                <span class="menu-title">Modelos de Projeto</span>
+                            </a>
+                        </div>
+                        <div class="menu-item">
+                            <a class="menu-link" href="#" onclick="showComingSoon('Permissões e Roles')">
+                                <span class="menu-bullet">
+                                    <span class="bullet bullet-dot"></span>
+                                </span>
+                                <span class="menu-title">Permissões</span>
+                            </a>
+                        </div>
+                        <div class="menu-item">
+                            <a class="menu-link" href="#" onclick="showComingSoon('Configurações do Sistema')">
+                                <span class="menu-bullet">
+                                    <span class="bullet bullet-dot"></span>
+                                </span>
+                                <span class="menu-title">Configurações</span>
+                            </a>
+                        </div>
+                        <div class="menu-item">
+                            <a class="menu-link" href="#" onclick="showComingSoon('Logs e Auditoria')">
+                                <span class="menu-bullet">
+                                    <span class="bullet bullet-dot"></span>
+                                </span>
+                                <span class="menu-title">Logs</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                @endif
+                <!--end:Menu item-->
+                
                 <!--begin:Menu item - Configurações-->
                 @can('sistema.configuracoes')
                 <div data-kt-menu-trigger="click" class="menu-item menu-accordion">
@@ -412,26 +462,16 @@
                                 <span class="menu-bullet">
                                     <span class="bullet bullet-dot"></span>
                                 </span>
-                                <span class="menu-title">Usuários</span>
-                            </a>
-                        </div>
-                        @endcan
-                        @can('usuarios.manage_permissions')
-                        <div class="menu-item">
-                            <a class="menu-link" href="#" onclick="showComingSoon('Permissões')">
-                                <span class="menu-bullet">
-                                    <span class="bullet bullet-dot"></span>
-                                </span>
-                                <span class="menu-title">Permissões</span>
+                                <span class="menu-title">Usuários do Sistema</span>
                             </a>
                         </div>
                         @endcan
                         <div class="menu-item">
-                            <a class="menu-link" href="#" onclick="showComingSoon('Sistema')">
+                            <a class="menu-link" href="#" onclick="showComingSoon('Preferências')">
                                 <span class="menu-bullet">
                                     <span class="bullet bullet-dot"></span>
                                 </span>
-                                <span class="menu-title">Sistema</span>
+                                <span class="menu-title">Preferências</span>
                             </a>
                         </div>
                     </div>

@@ -68,6 +68,7 @@ class User extends Authenticatable
     public const PERFIL_LEGISLATIVO = 'LEGISLATIVO';
     public const PERFIL_PARLAMENTAR = 'PARLAMENTAR';
     public const PERFIL_RELATOR = 'RELATOR';
+    public const PERFIL_PROTOCOLO = 'PROTOCOLO';
     public const PERFIL_ASSESSOR = 'ASSESSOR';
     public const PERFIL_CIDADAO_VERIFICADO = 'CIDADAO_VERIFICADO';
     public const PERFIL_PUBLICO = 'PUBLICO';
@@ -79,10 +80,11 @@ class User extends Authenticatable
         self::PERFIL_PUBLICO => 1,
         self::PERFIL_CIDADAO_VERIFICADO => 2,
         self::PERFIL_ASSESSOR => 3,
-        self::PERFIL_RELATOR => 4,
-        self::PERFIL_PARLAMENTAR => 5,
-        self::PERFIL_LEGISLATIVO => 6,
-        self::PERFIL_ADMIN => 7,
+        self::PERFIL_PROTOCOLO => 4,
+        self::PERFIL_RELATOR => 5,
+        self::PERFIL_PARLAMENTAR => 6,
+        self::PERFIL_LEGISLATIVO => 7,
+        self::PERFIL_ADMIN => 8,
     ];
     
     /**
@@ -132,6 +134,14 @@ class User extends Authenticatable
     public function isRelator(): bool
     {
         return $this->hasRole([self::PERFIL_RELATOR, self::PERFIL_ADMIN]);
+    }
+    
+    /**
+     * Verificar se é protocolo
+     */
+    public function isProtocolo(): bool
+    {
+        return $this->hasRole([self::PERFIL_PROTOCOLO, self::PERFIL_ADMIN]);
     }
     
     /**
@@ -305,6 +315,7 @@ class User extends Authenticatable
             self::PERFIL_LEGISLATIVO => 'Servidor Legislativo',
             self::PERFIL_PARLAMENTAR => 'Parlamentar',
             self::PERFIL_RELATOR => 'Relator',
+            self::PERFIL_PROTOCOLO => 'Protocolo',
             self::PERFIL_ASSESSOR => 'Assessor',
             self::PERFIL_CIDADAO_VERIFICADO => 'Cidadão Verificado',
             self::PERFIL_PUBLICO => 'Público',
@@ -324,6 +335,7 @@ class User extends Authenticatable
             self::PERFIL_LEGISLATIVO => 'primary',
             self::PERFIL_PARLAMENTAR => 'success',
             self::PERFIL_RELATOR => 'warning',
+            self::PERFIL_PROTOCOLO => 'dark',
             self::PERFIL_ASSESSOR => 'info',
             self::PERFIL_CIDADAO_VERIFICADO => 'light-primary',
             self::PERFIL_PUBLICO => 'light',

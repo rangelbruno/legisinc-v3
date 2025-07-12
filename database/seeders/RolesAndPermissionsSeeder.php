@@ -93,8 +93,8 @@ class RolesAndPermissionsSeeder extends Seeder
 
         // Criar os perfis do sistema parlamentar incluindo tramitação
         $roles = [
-            'parlamentar' => [
-                'name' => 'parlamentar',
+            User::PERFIL_PARLAMENTAR => [
+                'name' => User::PERFIL_PARLAMENTAR,
                 'description' => 'Cria documentos, assina projetos',
                 'permissions' => [
                     'projeto.create',
@@ -112,8 +112,8 @@ class RolesAndPermissionsSeeder extends Seeder
                 ]
             ],
             
-            'legislativo' => [
-                'name' => 'legislativo',
+            User::PERFIL_LEGISLATIVO => [
+                'name' => User::PERFIL_LEGISLATIVO,
                 'description' => 'Analisa e aprova/rejeita documentos',
                 'permissions' => [
                     'projeto.view_all',
@@ -138,9 +138,9 @@ class RolesAndPermissionsSeeder extends Seeder
                 ]
             ],
             
-            'protocolo' => [
-                'name' => 'protocolo',
-                'description' => 'Atribui números de protocolo',
+            User::PERFIL_PROTOCOLO => [
+                'name' => User::PERFIL_PROTOCOLO,
+                'description' => 'Atribui números de protocolo aos documentos assinados',
                 'permissions' => [
                     'projeto.view_approved',
                     'projeto.assign_number',
@@ -346,7 +346,7 @@ class RolesAndPermissionsSeeder extends Seeder
             ]
         );
         
-        $parlamentar->assignRole('parlamentar');
+        $parlamentar->assignRole(User::PERFIL_PARLAMENTAR);
 
         // Criar usuário legislativo de exemplo
         $legislativo = User::firstOrCreate(
@@ -363,7 +363,7 @@ class RolesAndPermissionsSeeder extends Seeder
             ]
         );
         
-        $legislativo->assignRole('legislativo');
+        $legislativo->assignRole(User::PERFIL_LEGISLATIVO);
 
         // Criar usuário protocolo de exemplo
         $protocolo = User::firstOrCreate(
@@ -380,7 +380,7 @@ class RolesAndPermissionsSeeder extends Seeder
             ]
         );
         
-        $protocolo->assignRole('protocolo');
+        $protocolo->assignRole(User::PERFIL_PROTOCOLO);
 
         $this->command->info('Perfis e permissões criados com sucesso!');
         $this->command->info('Usuários criados:');
