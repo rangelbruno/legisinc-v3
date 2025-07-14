@@ -550,6 +550,18 @@
                                     </div>
                                     <!--end:Menu item-->
                                     <!--begin:Menu item-->
+                                    @if(auth()->user()->isAdmin())
+                                    <div class="menu-item">
+                                        <!--begin:Menu link-->
+                                        <a class="menu-link {{ request()->routeIs('admin.screen-permissions.*') ? 'active' : '' }}" href="{{ route('admin.screen-permissions.index') }}">
+                                            <span class="menu-bullet">
+                                                <span class="bullet bullet-dot"></span>
+                                            </span>
+                                            <span class="menu-title">Permissões</span>
+                                        </a>
+                                        <!--end:Menu link-->
+                                    </div>
+                                    @else
                                     <div class="menu-item">
                                         <!--begin:Menu link-->
                                         <a class="menu-link" href="#" onclick="showComingSoon('Permissões')">
@@ -560,6 +572,32 @@
                                         </a>
                                         <!--end:Menu link-->
                                     </div>
+                                    @endif
+                                    <!--end:Menu item-->
+                                    <!--begin:Menu item-->
+                                    @if(auth()->user()->isAdmin())
+                                    <div class="menu-item">
+                                        <!--begin:Menu link-->
+                                        <a class="menu-link {{ request()->routeIs('admin.screen-permissions.*') ? 'active' : '' }}" href="{{ route('admin.screen-permissions.index') }}">
+                                            <span class="menu-bullet">
+                                                <span class="bullet bullet-dot"></span>
+                                            </span>
+                                            <span class="menu-title">Permissões e Roles</span>
+                                        </a>
+                                        <!--end:Menu link-->
+                                    </div>
+                                    @else
+                                    <div class="menu-item">
+                                        <!--begin:Menu link-->
+                                        <a class="menu-link" href="#" onclick="showComingSoon('Permissões e Roles')">
+                                            <span class="menu-bullet">
+                                                <span class="bullet bullet-dot"></span>
+                                            </span>
+                                            <span class="menu-title">Permissões e Roles</span>
+                                        </a>
+                                        <!--end:Menu link-->
+                                    </div>
+                                    @endif
                                     <!--end:Menu item-->
                                     <!--begin:Menu item-->
                                     <div class="menu-item">

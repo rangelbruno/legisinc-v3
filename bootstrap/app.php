@@ -14,6 +14,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'check.permission' => \App\Http\Middleware\CheckPermission::class,
+            'check.screen.permission' => \App\Http\Middleware\CheckScreenPermission::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

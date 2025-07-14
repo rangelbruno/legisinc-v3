@@ -257,6 +257,14 @@ Route::prefix('admin/usuarios')->name('admin.usuarios.')->middleware('auth')->gr
     Route::post('/{usuario}/toggle-ativo', [App\Http\Controllers\AdminUserController::class, 'toggleAtivo'])->name('toggle-ativo');
 });
 
+// Screen Permissions routes (protected with auth - Admin only)
+Route::prefix('admin/screen-permissions')->name('admin.screen-permissions.')->middleware('auth')->group(function () {
+    Route::get('/', [App\Http\Controllers\Admin\ScreenPermissionController::class, 'index'])->name('index');
+    Route::put('/update', [App\Http\Controllers\Admin\ScreenPermissionController::class, 'update'])->name('update');
+    Route::get('/permissions', [App\Http\Controllers\Admin\ScreenPermissionController::class, 'getPermissions'])->name('get-permissions');
+    Route::post('/reset', [App\Http\Controllers\Admin\ScreenPermissionController::class, 'reset'])->name('reset');
+});
+
 // Mock API routes moved to routes/api.php to avoid CSRF middleware
 
 Route::get('/api-test/health', function () {

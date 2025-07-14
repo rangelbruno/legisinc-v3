@@ -414,7 +414,7 @@
                             </a>
                         </div>
                         <div class="menu-item">
-                            <a class="menu-link" href="#" onclick="showComingSoon('Permissões e Roles')">
+                            <a class="menu-link {{ request()->routeIs('admin.screen-permissions.*') ? 'active' : '' }}" href="{{ route('admin.screen-permissions.index') }}">
                                 <span class="menu-bullet">
                                     <span class="bullet bullet-dot"></span>
                                 </span>
