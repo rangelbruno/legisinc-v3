@@ -24,6 +24,7 @@
                 id="#kt_aside_menu" data-kt-menu="true">
                 
                 <!--begin:Menu item - Dashboard-->
+                @if(\App\Models\ScreenPermission::userCanAccessRoute('dashboard'))
                 <div class="menu-item">
                     <a class="menu-link {{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}">
                         <span class="menu-icon">
@@ -35,10 +36,11 @@
                         <span class="menu-title">Dashboard</span>
                     </a>
                 </div>
+                @endif
                 <!--end:Menu item-->
                 
                 <!--begin:Menu item - Parlamentares-->
-                @can('parlamentares.view')
+                @if(\App\Models\ScreenPermission::userCanAccessModule('parlamentares'))
                 <div data-kt-menu-trigger="click" class="menu-item menu-accordion {{ request()->routeIs('parlamentares.*') ? 'here show' : '' }}">
                     <span class="menu-link">
                         <span class="menu-icon">
@@ -54,6 +56,7 @@
                         <span class="menu-arrow"></span>
                     </span>
                     <div class="menu-sub menu-sub-accordion">
+                        @if(\App\Models\ScreenPermission::userCanAccessRoute('parlamentares.index'))
                         <div class="menu-item">
                             <a class="menu-link {{ request()->routeIs('parlamentares.index') ? 'active' : '' }}" href="{{ route('parlamentares.index') }}">
                                 <span class="menu-bullet">
@@ -62,7 +65,8 @@
                                 <span class="menu-title">Lista de Parlamentares</span>
                             </a>
                         </div>
-                        @can('parlamentares.create')
+                        @endif
+                        @if(\App\Models\ScreenPermission::userCanAccessRoute('parlamentares.create'))
                         <div class="menu-item">
                             <a class="menu-link {{ request()->routeIs('parlamentares.create') ? 'active' : '' }}" href="{{ route('parlamentares.create') }}">
                                 <span class="menu-bullet">
@@ -71,7 +75,8 @@
                                 <span class="menu-title">Novo Parlamentar</span>
                             </a>
                         </div>
-                        @endcan
+                        @endif
+                        @if(\App\Models\ScreenPermission::userCanAccessRoute('parlamentares.mesa-diretora'))
                         <div class="menu-item">
                             <a class="menu-link {{ request()->routeIs('parlamentares.mesa-diretora') ? 'active' : '' }}" href="{{ route('parlamentares.mesa-diretora') }}">
                                 <span class="menu-bullet">
@@ -80,12 +85,14 @@
                                 <span class="menu-title">Mesa Diretora</span>
                             </a>
                         </div>
+                        @endif
                     </div>
                 </div>
-                @endcan
+                @endif
                 <!--end:Menu item-->
                 
                 <!--begin:Menu item - Projetos (futuro)-->
+                @if(auth()->check() && auth()->user()->isAdmin())
                 <div data-kt-menu-trigger="click" class="menu-item menu-accordion {{ request()->routeIs('modelos.*') ? 'here show' : '' }}">
                     <span class="menu-link">
                         <span class="menu-icon">
@@ -124,9 +131,11 @@
                         </div>
                     </div>
                 </div>
+                @endif
                 <!--end:Menu item-->
                 
                 <!--begin:Menu item - Projetos de Lei-->
+                @if(\App\Models\ScreenPermission::userCanAccessModule('projetos'))
                 <div data-kt-menu-trigger="click" class="menu-item menu-accordion {{ request()->routeIs('projetos.*') ? 'here show' : '' }}">
                     <span class="menu-link">
                         <span class="menu-icon">
@@ -139,6 +148,7 @@
                         <span class="menu-arrow"></span>
                     </span>
                     <div class="menu-sub menu-sub-accordion">
+                        @if(\App\Models\ScreenPermission::userCanAccessRoute('projetos.index'))
                         <div class="menu-item">
                             <a class="menu-link {{ request()->routeIs('projetos.index') ? 'active' : '' }}" href="{{ route('projetos.index') }}">
                                 <span class="menu-bullet">
@@ -147,6 +157,8 @@
                                 <span class="menu-title">Todos os Projetos</span>
                             </a>
                         </div>
+                        @endif
+                        @if(\App\Models\ScreenPermission::userCanAccessRoute('projetos.create'))
                         <div class="menu-item">
                             <a class="menu-link {{ request()->routeIs('projetos.create') ? 'active' : '' }}" href="{{ route('projetos.create') }}">
                                 <span class="menu-bullet">
@@ -155,6 +167,8 @@
                                 <span class="menu-title">Novo Projeto</span>
                             </a>
                         </div>
+                        @endif
+                        @if(\App\Models\ScreenPermission::userCanAccessRoute('projetos.index'))
                         <div class="menu-item">
                             <a class="menu-link" href="{{ route('projetos.index', ['status' => 'rascunho']) }}">
                                 <span class="menu-bullet">
@@ -179,12 +193,14 @@
                                 <span class="menu-title">Urgentes</span>
                             </a>
                         </div>
+                        @endif
                     </div>
                 </div>
+                @endif
                 <!--end:Menu item-->
                 
                 <!--begin:Menu item - Sessões-->
-                @can('sessions.view')
+                @if(\App\Models\ScreenPermission::userCanAccessModule('sessoes'))
                 <div data-kt-menu-trigger="click" class="menu-item menu-accordion {{ request()->routeIs('admin.sessions.*') ? 'here show' : '' }}">
                     <span class="menu-link">
                         <span class="menu-icon">
@@ -201,6 +217,7 @@
                         <span class="menu-arrow"></span>
                     </span>
                     <div class="menu-sub menu-sub-accordion">
+                        @if(\App\Models\ScreenPermission::userCanAccessRoute('admin.sessions.index'))
                         <div class="menu-item">
                             <a class="menu-link {{ request()->routeIs('admin.sessions.index') ? 'active' : '' }}" href="{{ route('admin.sessions.index') }}">
                                 <span class="menu-bullet">
@@ -209,7 +226,8 @@
                                 <span class="menu-title">Todas as Sessões</span>
                             </a>
                         </div>
-                        @can('sessions.create')
+                        @endif
+                        @if(\App\Models\ScreenPermission::userCanAccessRoute('admin.sessions.create'))
                         <div class="menu-item">
                             <a class="menu-link {{ request()->routeIs('admin.sessions.create') ? 'active' : '' }}" href="{{ route('admin.sessions.create') }}">
                                 <span class="menu-bullet">
@@ -218,7 +236,8 @@
                                 <span class="menu-title">Nova Sessão</span>
                             </a>
                         </div>
-                        @endcan
+                        @endif
+                        @if(\App\Models\ScreenPermission::userCanAccessRoute('admin.sessions.index'))
                         <div class="menu-item">
                             <a class="menu-link" href="{{ route('admin.sessions.index', ['status' => 'preparacao']) }}">
                                 <span class="menu-bullet">
@@ -243,7 +262,8 @@
                                 <span class="menu-title">Sessões {{ date('Y') }}</span>
                             </a>
                         </div>
-                        @can('sessions.export')
+                        @endif
+                        @if(\App\Models\ScreenPermission::userCanAccessRoute('admin.sessions.export'))
                         <div class="menu-item">
                             <a class="menu-link" href="{{ route('admin.sessions.index', ['status' => 'exportada']) }}">
                                 <span class="menu-bullet">
@@ -252,14 +272,14 @@
                                 <span class="menu-title">Exportadas</span>
                             </a>
                         </div>
-                        @endcan
+                        @endif
                     </div>
                 </div>
-                @endcan
+                @endif
                 <!--end:Menu item-->
                 
                 <!--begin:Menu item - Votações-->
-                @can('sessions.view')
+                @if(\App\Models\ScreenPermission::userCanAccessRoute('admin.sessions.index'))
                 <div data-kt-menu-trigger="click" class="menu-item menu-accordion {{ request()->routeIs('admin.sessions.*') && request()->has('votacao') ? 'here show' : '' }}">
                     <span class="menu-link">
                         <span class="menu-icon">
@@ -307,11 +327,11 @@
                         </div>
                     </div>
                 </div>
-                @endcan
+                @endif
                 <!--end:Menu item-->
                 
                 <!--begin:Menu item - Comissões-->
-                @can('comissoes.view')
+                @if(\App\Models\ScreenPermission::userCanAccessModule('comissoes'))
                 <div data-kt-menu-trigger="click" class="menu-item menu-accordion {{ request()->routeIs('comissoes.*') ? 'here show' : '' }}">
                     <span class="menu-link">
                         <span class="menu-icon">
@@ -326,6 +346,7 @@
                         <span class="menu-arrow"></span>
                     </span>
                     <div class="menu-sub menu-sub-accordion">
+                        @if(\App\Models\ScreenPermission::userCanAccessRoute('comissoes.index'))
                         <div class="menu-item">
                             <a class="menu-link {{ request()->routeIs('comissoes.index') ? 'active' : '' }}" href="{{ route('comissoes.index') }}">
                                 <span class="menu-bullet">
@@ -334,7 +355,8 @@
                                 <span class="menu-title">Lista de Comissões</span>
                             </a>
                         </div>
-                        @can('comissoes.create')
+                        @endif
+                        @if(\App\Models\ScreenPermission::userCanAccessRoute('comissoes.create'))
                         <div class="menu-item">
                             <a class="menu-link {{ request()->routeIs('comissoes.create') ? 'active' : '' }}" href="{{ route('comissoes.create') }}">
                                 <span class="menu-bullet">
@@ -343,7 +365,8 @@
                                 <span class="menu-title">Nova Comissão</span>
                             </a>
                         </div>
-                        @endcan
+                        @endif
+                        @if(\App\Models\ScreenPermission::userCanAccessRoute('comissoes.index'))
                         <div class="menu-item">
                             <a class="menu-link {{ request()->routeIs('comissoes.por-tipo', 'permanente') ? 'active' : '' }}" href="{{ route('comissoes.por-tipo', 'permanente') }}">
                                 <span class="menu-bullet">
@@ -360,13 +383,14 @@
                                 <span class="menu-title">CPIs</span>
                             </a>
                         </div>
+                        @endif
                     </div>
                 </div>
-                @endcan
+                @endif
                 <!--end:Menu item-->
                 
                 <!--begin:Menu item - Relatórios-->
-                @can('sistema.relatorios')
+                @if(auth()->check() && (auth()->user()->isAdmin() || auth()->user()->perfil === 'servidor_legislativo'))
                 <div class="menu-item">
                     <a class="menu-link" href="#" onclick="showComingSoon('Relatórios')">
                         <span class="menu-icon">
@@ -379,7 +403,7 @@
                         <span class="badge badge-light-warning ms-auto">Em breve</span>
                     </a>
                 </div>
-                @endcan
+                @endif
                 <!--end:Menu item-->
                 
                 <!--begin:Menu item - Administração-->
@@ -443,7 +467,7 @@
                 <!--end:Menu item-->
                 
                 <!--begin:Menu item - Configurações-->
-                @can('sistema.configuracoes')
+                @if(\App\Models\ScreenPermission::userCanAccessModule('usuarios') || auth()->check())
                 <div data-kt-menu-trigger="click" class="menu-item menu-accordion">
                     <span class="menu-link">
                         <span class="menu-icon">
@@ -456,7 +480,7 @@
                         <span class="menu-arrow"></span>
                     </span>
                     <div class="menu-sub menu-sub-accordion">
-                        @can('usuarios.view')
+                        @if(\App\Models\ScreenPermission::userCanAccessRoute('usuarios.index'))
                         <div class="menu-item">
                             <a class="menu-link {{ request()->routeIs('usuarios.index') ? 'active' : '' }}" href="{{ route('usuarios.index') }}">
                                 <span class="menu-bullet">
@@ -465,7 +489,8 @@
                                 <span class="menu-title">Usuários do Sistema</span>
                             </a>
                         </div>
-                        @endcan
+                        @endif
+                        @auth
                         <div class="menu-item">
                             <a class="menu-link" href="#" onclick="showComingSoon('Preferências')">
                                 <span class="menu-bullet">
@@ -474,9 +499,10 @@
                                 <span class="menu-title">Preferências</span>
                             </a>
                         </div>
+                        @endauth
                     </div>
                 </div>
-                @endcan
+                @endif
                 <!--end:Menu item-->
                 
                 <!--begin:Menu item - Meu Perfil-->

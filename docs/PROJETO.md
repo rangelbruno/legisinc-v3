@@ -163,7 +163,37 @@ Configuração de serviços externos incluindo:
 
 ## Módulos Principais
 
-### 1. Gestão de Projetos
+### 1. Autenticação e Identidade Digital
+- **Localização**: `app/Http/Controllers/AuthController.php`, `resources/views/auth/`
+- **Funcionalidades**:
+  - Login unificado
+  - Registro
+  - Logout
+  - Middleware de autenticação
+
+### 2. Gestão de Usuários
+- **Localização**: `app/Models/User.php`, `resources/views/modules/usuarios/`
+- **Funcionalidades**:
+  - CRUD completo de usuários
+  - Sistema de permissões (Spatie Laravel Permission)
+  - Campos parlamentares específicos
+  - Autenticação e autorização
+
+### 3. Gestão de Parlamentares
+- **Localização**: `resources/views/modules/parlamentares/`
+- **Funcionalidades**:
+  - CRUD de parlamentares
+  - Mesa diretora
+  - Perfis detalhados
+
+### 4. Gestão de Comissões
+- **Localização**: `resources/views/modules/comissoes/`
+- **Funcionalidades**:
+  - CRUD de comissões
+  - Classificação por tipo
+  - Gestão de membros
+
+### 5. Gestão de Projetos
 - **Localização**: `app/Models/Projeto.php`, `resources/views/modules/projetos/`
 - **Funcionalidades**:
   - CRUD completo de projetos
@@ -171,35 +201,6 @@ Configuração de serviços externos incluindo:
   - Anexos de projetos
   - Controle de versões
   - Editor de texto integrado
-
-### 2. Gestão de Usuários
-- **Localização**: `app/Models/User.php`, `resources/views/modules/usuarios/`
-- **Funcionalidades**:
-  - CRUD de usuários
-  - Sistema de permissões (Spatie Laravel Permission)
-  - Campos parlamentares específicos
-  - Autenticação e autorização
-
-### 3. Gestão de Comissões
-- **Localização**: `resources/views/modules/comissoes/`
-- **Funcionalidades**:
-  - CRUD de comissões
-  - Classificação por tipo
-  - Gestão de membros
-
-### 4. Gestão de Parlamentares
-- **Localização**: `resources/views/modules/parlamentares/`
-- **Funcionalidades**:
-  - CRUD de parlamentares
-  - Mesa diretora
-  - Perfis detalhados
-
-### 5. Sistema de Permissões
-- **Localização**: `config/permission.php`
-- **Funcionalidades**:
-  - Roles e permissões
-  - Controle de acesso granular
-  - Sistema de times (opcional)
 
 ### 6. Gestão de Modelos de Projeto
 - **Localização**: `app/Models/ModeloProjeto.php`, `resources/views/admin/modelos/`
@@ -407,11 +408,11 @@ php artisan test --coverage
 - Middleware de autorização
 
 ### 5. Módulos Funcionais
-- Gestão completa de projetos
-- Sistema de tramitação
-- Gestão de usuários e parlamentares
-- Sistema de comissões
-- Gestão avançada de modelos de projeto
+- Autenticação e Identidade Digital
+- Gestão completa de usuários
+- Gestão de parlamentares e estrutura
+- Gestão de comissões
+- Gestão de projetos e documentos
 
 ### 6. Sistema de Templates e Interface
 - **Interface Metronic Completa**: Todas as páginas administrativas seguem o padrão Metronic
@@ -428,6 +429,12 @@ php artisan test --coverage
 - **Estrutura Organizada**: Assets organizados seguindo padrões Laravel
 - **Integração Vite**: Build system otimizado para desenvolvimento e produção
 
+### 8. Documentação da API
+- Documentação completa em `docs/apiDocumentation.md`
+- Checklist de implementação em `docs/api-implementation-checklist.md`
+- 31 endpoints mock implementados
+- Suporte a autenticação com Laravel Sanctum
+
 ## Documentação Técnica
 
 O projeto possui documentação técnica detalhada localizada em `docs/`:
@@ -436,6 +443,9 @@ O projeto possui documentação técnica detalhada localizada em `docs/`:
 - **`docs/modelos-improvements.md`**: Documentação completa das melhorias na página de listagem de modelos
 - **`docs/create-page-improvements.md`**: Documentação das melhorias na página de criação de modelos
 - **`docs/PROJETO.md`**: Documentação geral do projeto (este arquivo)
+- **`docs/progress.md`**: Acompanhamento detalhado de progresso
+- **`docs/apiDocumentation.md`**: Documentação completa da API
+- **`docs/api-implementation-checklist.md`**: Checklist de implementação da API
 
 ### Características da Documentação
 - **Diagramas Mermaid**: Fluxos visuais das funcionalidades
@@ -453,15 +463,16 @@ Este documento será atualizado conforme o desenvolvimento do projeto progride. 
 2. **Correção de Assets**: Comando automático para correção de caminhos 404
 3. **Documentação Técnica**: Documentação detalhada das melhorias implementadas
 4. **Interface Responsiva**: Design otimizado para todos os dispositivos
+5. **Documentação da API**: Documentação completa e checklist de implementação
 
 ### Próximas Implementações 🔄
-1. Aprimoramento do sistema de tramitação
-2. Integração com APIs externas
-3. Dashboard de analytics avançado
-4. Sistema de notificações em tempo real
-5. Módulos de transparência
-6. Sistema de workflow automatizado
-7. Relatórios e estatísticas avançadas
+1. **Sessões Plenárias**: Controle de sessões, atas, presenças, pauta
+2. **Sistema de Votação**: Votação eletrônica, resultados, histórico
+3. **Transparência e Engajamento**: Portal cidadão, participação pública
+4. **Analytics e Inteligência**: Dashboards, relatórios, estatísticas avançadas
+5. **Notificações e Comunicação**: Sistema unificado, multi-canal
+6. **Segurança e Compliance**: Security center, auditoria, LGPD
+7. **Blockchain e Auditoria**: Trilha de auditoria, smart contracts
 
 ## Comandos Úteis
 
@@ -503,6 +514,6 @@ make logs                  # Ver logs
 
 ---
 
-**Última atualização**: 2025-01-16
+**Última atualização**: 2024-10-10
 **Versão do Laravel**: 12.0
-**Status**: Sistema LegisInc com interface Metronic completa, gestão avançada de modelos e documentação técnica detalhada
+**Status**: 5 módulos core implementados (25% do total), estrutura base completa, documentação da API finalizada, pronto para implementação de módulos de negócio avançados

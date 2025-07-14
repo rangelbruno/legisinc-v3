@@ -122,7 +122,7 @@ Route::prefix('user-api')->name('user-api.')->group(function () {
 });
 
 // Parlamentares routes (protected with permissions)
-Route::prefix('parlamentares')->name('parlamentares.')->middleware('auth')->group(function () {
+Route::prefix('parlamentares')->name('parlamentares.')->middleware(['auth', 'check.screen.permission'])->group(function () {
     Route::get('/', [ParlamentarController::class, 'index'])->name('index')->middleware('check.permission:parlamentares.view');
     Route::get('/create', [ParlamentarController::class, 'create'])->name('create')->middleware('check.permission:parlamentares.create');
     Route::post('/', [ParlamentarController::class, 'store'])->name('store')->middleware('check.permission:parlamentares.create');
@@ -138,7 +138,7 @@ Route::prefix('parlamentares')->name('parlamentares.')->middleware('auth')->grou
 });
 
 // Comissões routes (protected with permissions)
-Route::prefix('comissoes')->name('comissoes.')->middleware('auth')->group(function () {
+Route::prefix('comissoes')->name('comissoes.')->middleware(['auth', 'check.screen.permission'])->group(function () {
     Route::get('/', [App\Http\Controllers\Comissao\ComissaoController::class, 'index'])->name('index')->middleware('check.permission:comissoes.view');
     Route::get('/create', [App\Http\Controllers\Comissao\ComissaoController::class, 'create'])->name('create')->middleware('check.permission:comissoes.create');
     Route::post('/', [App\Http\Controllers\Comissao\ComissaoController::class, 'store'])->name('store')->middleware('check.permission:comissoes.create');
@@ -171,7 +171,7 @@ Route::prefix('usuarios')->name('usuarios.')->middleware('auth')->group(function
 });
 
 // Projetos routes (protected with auth only - TODO: add permissions later)
-Route::prefix('projetos')->name('projetos.')->middleware('auth')->group(function () {
+Route::prefix('projetos')->name('projetos.')->middleware(['auth', 'check.screen.permission'])->group(function () {
     // CRUD básico
     Route::get('/', [ProjetoController::class, 'index'])->name('index');
     Route::get('/create', [ProjetoController::class, 'create'])->name('create');
@@ -201,7 +201,7 @@ Route::prefix('projetos')->name('projetos.')->middleware('auth')->group(function
 });
 
 // Modelos de Projeto routes (protected with auth only - Admin only)
-Route::prefix('admin/modelos')->name('modelos.')->middleware('auth')->group(function () {
+Route::prefix('admin/modelos')->name('modelos.')->middleware(['auth', 'check.screen.permission'])->group(function () {
     // Rotas específicas (devem vir antes das rotas com parâmetros)
     Route::get('/', [ModeloProjetoController::class, 'index'])->name('index');
     Route::get('/create', [ModeloProjetoController::class, 'create'])->name('create');
@@ -221,7 +221,7 @@ Route::prefix('admin/modelos')->name('modelos.')->middleware('auth')->group(func
 });
 
 // Sessões routes (protected with permissions)
-Route::prefix('admin/sessions')->name('admin.sessions.')->middleware('auth')->group(function () {
+Route::prefix('admin/sessions')->name('admin.sessions.')->middleware(['auth', 'check.screen.permission'])->group(function () {
     // CRUD básico
     Route::get('/', [SessionController::class, 'index'])->name('index')->middleware('check.permission:sessions.view');
     Route::get('/create', [SessionController::class, 'create'])->name('create')->middleware('check.permission:sessions.create');
@@ -246,7 +246,7 @@ Route::prefix('admin/sessions')->name('admin.sessions.')->middleware('auth')->gr
 });
 
 // Admin Users routes (protected with auth only - Admin only)
-Route::prefix('admin/usuarios')->name('admin.usuarios.')->middleware('auth')->group(function () {
+Route::prefix('admin/usuarios')->name('admin.usuarios.')->middleware(['auth', 'check.screen.permission'])->group(function () {
     Route::get('/', [App\Http\Controllers\AdminUserController::class, 'index'])->name('index');
     Route::get('/create', [App\Http\Controllers\AdminUserController::class, 'create'])->name('create');
     Route::post('/', [App\Http\Controllers\AdminUserController::class, 'store'])->name('store');
@@ -258,7 +258,7 @@ Route::prefix('admin/usuarios')->name('admin.usuarios.')->middleware('auth')->gr
 });
 
 // Screen Permissions routes (protected with auth - Admin only)
-Route::prefix('admin/screen-permissions')->name('admin.screen-permissions.')->middleware('auth')->group(function () {
+Route::prefix('admin/screen-permissions')->name('admin.screen-permissions.')->middleware(['auth', 'check.screen.permission'])->group(function () {
     Route::get('/', [App\Http\Controllers\Admin\ScreenPermissionController::class, 'index'])->name('index');
     Route::put('/update', [App\Http\Controllers\Admin\ScreenPermissionController::class, 'update'])->name('update');
     Route::get('/permissions', [App\Http\Controllers\Admin\ScreenPermissionController::class, 'getPermissions'])->name('get-permissions');
@@ -298,3 +298,4 @@ Route::get('/test-modelos-editor-tiptap', function () {
 Route::get('/test-editor-funcionando', function () {
     return view('test-editor-funcionando');
 });
+

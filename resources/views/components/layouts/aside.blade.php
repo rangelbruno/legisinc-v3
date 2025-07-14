@@ -33,6 +33,7 @@
                             id="#kt_aside_menu" data-kt-menu="true">
                             
                             <!--begin:Menu item - Dashboard-->
+                            @if(\App\Models\ScreenPermission::userCanAccessRoute('dashboard'))
                             <div class="menu-item">
                                 <!--begin:Menu link-->
                                 <a class="menu-link {{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}">
@@ -48,6 +49,7 @@
                                 </a>
                                 <!--end:Menu link-->
                             </div>
+                            @endif
                             <!--end:Menu item-->
 
                             <!--begin:Menu separator-->
@@ -59,6 +61,7 @@
                             <!--end:Menu separator-->
 
                             <!--begin:Menu item - Parlamentares-->
+                            @if(\App\Models\ScreenPermission::userCanAccessModule('parlamentares'))
                             <div data-kt-menu-trigger="click" class="menu-item menu-accordion {{ request()->routeIs('parlamentares.*') ? 'here show' : '' }}">
                                 <!--begin:Menu link-->
                                 <span class="menu-link">
@@ -78,6 +81,7 @@
                                 <!--begin:Menu sub-->
                                 <div class="menu-sub menu-sub-accordion {{ request()->routeIs('parlamentares.*') ? 'show' : '' }}">
                                     <!--begin:Menu item-->
+                                    @if(\App\Models\ScreenPermission::userCanAccessRoute('parlamentares.index'))
                                     <div class="menu-item">
                                         <!--begin:Menu link-->
                                         <a class="menu-link {{ request()->routeIs('parlamentares.index') ? 'active' : '' }}" href="{{ route('parlamentares.index') }}">
@@ -88,8 +92,10 @@
                                         </a>
                                         <!--end:Menu link-->
                                     </div>
+                                    @endif
                                     <!--end:Menu item-->
                                     <!--begin:Menu item-->
+                                    @if(\App\Models\ScreenPermission::userCanAccessRoute('parlamentares.create'))
                                     <div class="menu-item">
                                         <!--begin:Menu link-->
                                         <a class="menu-link {{ request()->routeIs('parlamentares.create') ? 'active' : '' }}" href="{{ route('parlamentares.create') }}">
@@ -100,8 +106,10 @@
                                         </a>
                                         <!--end:Menu link-->
                                     </div>
+                                    @endif
                                     <!--end:Menu item-->
                                     <!--begin:Menu item-->
+                                    @if(\App\Models\ScreenPermission::userCanAccessRoute('parlamentares.mesa-diretora'))
                                     <div class="menu-item">
                                         <!--begin:Menu link-->
                                         <a class="menu-link {{ request()->routeIs('parlamentares.mesa-diretora') ? 'active' : '' }}" href="{{ route('parlamentares.mesa-diretora') }}">
@@ -112,8 +120,10 @@
                                         </a>
                                         <!--end:Menu link-->
                                     </div>
+                                    @endif
                                     <!--end:Menu item-->
                                     <!--begin:Menu item-->
+                                    @if(\App\Models\ScreenPermission::userCanAccessRoute('parlamentares.index'))
                                     <div class="menu-item">
                                         <!--begin:Menu link-->
                                         <a class="menu-link" href="{{ route('parlamentares.por-partido', 'PT') }}">
@@ -124,13 +134,16 @@
                                         </a>
                                         <!--end:Menu link-->
                                     </div>
+                                    @endif
                                     <!--end:Menu item-->
                                 </div>
                                 <!--end:Menu sub-->
                             </div>
+                            @endif
                             <!--end:Menu item-->
 
                             <!--begin:Menu item - Comissões-->
+                            @if(\App\Models\ScreenPermission::userCanAccessModule('comissoes'))
                             <div data-kt-menu-trigger="click" class="menu-item menu-accordion {{ request()->routeIs('comissoes.*') ? 'here show' : '' }}">
                                 <!--begin:Menu link-->
                                 <span class="menu-link">
@@ -147,6 +160,7 @@
                                 <!--begin:Menu sub-->
                                 <div class="menu-sub menu-sub-accordion {{ request()->routeIs('comissoes.*') ? 'show' : '' }}">
                                     <!--begin:Menu item-->
+                                    @if(\App\Models\ScreenPermission::userCanAccessRoute('comissoes.index'))
                                     <div class="menu-item">
                                         <!--begin:Menu link-->
                                         <a class="menu-link {{ request()->routeIs('comissoes.index') ? 'active' : '' }}" href="{{ route('comissoes.index') }}">
@@ -157,8 +171,10 @@
                                         </a>
                                         <!--end:Menu link-->
                                     </div>
+                                    @endif
                                     <!--end:Menu item-->
                                     <!--begin:Menu item-->
+                                    @if(\App\Models\ScreenPermission::userCanAccessRoute('comissoes.create'))
                                     <div class="menu-item">
                                         <!--begin:Menu link-->
                                         <a class="menu-link {{ request()->routeIs('comissoes.create') ? 'active' : '' }}" href="{{ route('comissoes.create') }}">
@@ -169,8 +185,10 @@
                                         </a>
                                         <!--end:Menu link-->
                                     </div>
+                                    @endif
                                     <!--end:Menu item-->
                                     <!--begin:Menu item-->
+                                    @if(\App\Models\ScreenPermission::userCanAccessRoute('comissoes.index'))
                                     <div class="menu-item">
                                         <!--begin:Menu link-->
                                         <a class="menu-link {{ request()->routeIs('comissoes.por-tipo') ? 'active' : '' }}" href="{{ route('comissoes.por-tipo', 'permanente') }}">
@@ -181,13 +199,16 @@
                                         </a>
                                         <!--end:Menu link-->
                                     </div>
+                                    @endif
                                     <!--end:Menu item-->
                                 </div>
                                 <!--end:Menu sub-->
                             </div>
+                            @endif
                             <!--end:Menu item-->
 
                             <!--begin:Menu item - Projetos-->
+                            @if(\App\Models\ScreenPermission::userCanAccessModule('projetos'))
                             <div data-kt-menu-trigger="click" class="menu-item menu-accordion {{ request()->routeIs('projetos.*') ? 'here show' : '' }}">
                                 <!--begin:Menu link-->
                                 <span class="menu-link">
@@ -266,9 +287,11 @@
                                 </div>
                                 <!--end:Menu sub-->
                             </div>
+                            @endif
                             <!--end:Menu item-->
 
                             <!--begin:Menu item - Sessões-->
+                            @if(\App\Models\ScreenPermission::userCanAccessRoute('admin.sessions.index'))
                             <div data-kt-menu-trigger="click" class="menu-item menu-accordion {{ request()->routeIs('sessoes.*') ? 'here show' : '' }}">
                                 <!--begin:Menu link-->
                                 <span class="menu-link">
@@ -347,9 +370,11 @@
                                 </div>
                                 <!--end:Menu sub-->
                             </div>
+                            @endif
                             <!--end:Menu item-->
 
                             <!--begin:Menu item - Votações-->
+                            @if(\App\Models\ScreenPermission::userCanAccessRoute('admin.sessions.index'))
                             <div data-kt-menu-trigger="click" class="menu-item menu-accordion {{ request()->routeIs('votacoes.*') ? 'here show' : '' }}">
                                 <!--begin:Menu link-->
                                 <span class="menu-link">
@@ -430,6 +455,7 @@
                                 </div>
                                 <!--end:Menu sub-->
                             </div>
+                            @endif
                             <!--end:Menu item-->
 
                             <!--begin:Menu separator-->
@@ -441,6 +467,7 @@
                             <!--end:Menu separator-->
 
                             <!--begin:Menu item - Usuários-->
+                            @if(\App\Models\ScreenPermission::userCanAccessModule('usuarios'))
                             <div data-kt-menu-trigger="click" class="menu-item menu-accordion {{ request()->routeIs('usuarios.*') || request()->routeIs('user-api.*') ? 'here show' : '' }}">
                                 <!--begin:Menu link-->
                                 <span class="menu-link">
@@ -495,6 +522,7 @@
                                 </div>
                                 <!--end:Menu sub-->
                             </div>
+                            @endif
                             <!--end:Menu item-->
 
                             <!--begin:Menu separator-->

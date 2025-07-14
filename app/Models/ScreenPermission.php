@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Auth;
 
 class ScreenPermission extends Model
 {
@@ -135,4 +136,163 @@ class ScreenPermission extends Model
 
         return $result;
     }
+
+    /**
+     * Verificar se o usuário atual pode acessar uma rota específica
+     */
+    public static function userCanAccessRoute(string $route): bool
+    {
+        if (!Auth::check()) {
+            return false;
+        }
+
+        $user = Auth::user();
+        
+        // Admin sempre tem acesso total
+        if ($user->isAdmin()) {
+            return true;
+        }
+
+        $roleName = $user->getRoleNames()->first() ?? 'PUBLICO';
+        
+        // Verificar na tabela de permissões
+        $permission = self::where('role_name', $roleName)
+            ->where('screen_route', $route)
+            ->first();
+
+        if ($permission) {
+            return $permission->can_access;
+        }
+
+        // Fallback: aplicar regras padrão baseadas no perfil
+        return self::getDefaultAccessByRole($roleName, $route);
+    }
+
+    /**
+     * Obter acesso padrão por perfil (fallback quando não existe permissão específica)
+     */
+    private static function getDefaultAccessByRole(string $roleName, string $route): bool
+    {
+        // Regras padrão baseadas no middleware CheckScreenPermission
+        switch ($roleName) {
+            case 'ADMIN':
+                return true;
+            
+            case 'LEGISLATIVO':
+                return true; // Acesso total
+            
+            case 'PARLAMENTAR':
+                $parlamentarRoutes = [
+                    'dashboard',
+                    'parlamentares.index',
+                    'parlamentares.mesa-diretora',
+                    'parlamentares.create',
+                    'projetos.index',
+                    'projetos.create',
+                    'admin.sessions.index',
+                    'admin.sessions.create',
+                    'comissoes.index',
+                ];
+                return in_array($route, $parlamentarRoutes);
+            
+            case 'RELATOR':
+                $relatorRoutes = [
+                    'dashboard',
+                    'parlamentares.index',
+                    'parlamentares.mesa-diretora',
+                    'projetos.index',
+                    'admin.sessions.index',
+                    'comissoes.index',
+                ];
+                return in_array($route, $relatorRoutes);
+            
+            case 'PROTOCOLO':
+                $protocoloRoutes = [
+                    'dashboard',
+                    'projetos.index',
+                    'projetos.create',
+                    'admin.sessions.index',
+                ];
+                return in_array($route, $protocoloRoutes);
+            
+            case 'ASSESSOR':
+                $assessorRoutes = [
+                    'dashboard',
+                    'parlamentares.index',
+                    'projetos.index',
+                    'admin.sessions.index',
+                ];
+                return in_array($route, $assessorRoutes);
+            
+            case 'CIDADAO_VERIFICADO':
+            case 'PUBLICO':
+                $publicRoutes = [
+                    'dashboard',
+                    'parlamentares.index',
+                    'admin.sessions.index',
+                ];
+                return in_array($route, $publicRoutes);
+            
+            default:
+                return false;
+        }
+    }
+
+    /**
+     * Verificar se o usuário pode acessar qualquer rota de um módulo
+     */
+    public static function userCanAccessModule(string $module): bool
+    {
+        if (!Auth::check()) {
+            return false;
+        }
+
+        $user = Auth::user();
+        
+        // Admin sempre tem acesso total
+        if ($user->isAdmin()) {
+            return true;
+        }
+
+        $roleName = $user->getRoleNames()->first() ?? 'PUBLICO';
+        
+        // Verificar se tem acesso a qualquer rota do módulo
+        $hasAccess = self::where('role_name', $roleName)
+            ->where('screen_module', $module)
+            ->where('can_access', true)
+            ->exists();
+
+        if ($hasAccess) {
+            return true;
+        }
+
+        // Fallback: verificar rotas principais do módulo
+        $moduleRoutes = self::getModuleMainRoutes($module);
+        foreach ($moduleRoutes as $route) {
+            if (self::userCanAccessRoute($route)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Obter rotas principais de cada módulo
+     */
+    private static function getModuleMainRoutes(string $module): array
+    {
+        $routes = [
+            'dashboard' => ['dashboard'],
+            'parlamentares' => ['parlamentares.index', 'parlamentares.mesa-diretora'],
+            'comissoes' => ['comissoes.index'],
+            'projetos' => ['projetos.index'],
+            'sessoes' => ['admin.sessions.index'],
+            'usuarios' => ['usuarios.index', 'admin.usuarios.index'],
+            'modelos' => ['modelos.index'],
+        ];
+
+        return $routes[$module] ?? [];
+    }
+
 }
