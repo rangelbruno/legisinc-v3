@@ -141,18 +141,18 @@
 
                     <!-- Informações do Perfil Selecionado -->
                     <div id="role-info" class="d-none mb-6">
-                        <div class="card bg-light">
+                        <div class="card bg-light-info border-0">
                             <div class="card-body">
                                 <div class="d-flex align-items-center">
-                                    <div class="symbol symbol-50px me-5">
-                                        <span class="symbol-label bg-primary text-white fw-bold" id="role-initial">A</span>
+                                    <div class="symbol symbol-60px me-5">
+                                        <span class="symbol-label bg-info text-white fw-bold fs-1" id="role-initial">A</span>
                                     </div>
                                     <div class="flex-grow-1">
-                                        <h4 class="fw-bold mb-1" id="role-name">Nome do Perfil</h4>
-                                        <p class="text-muted mb-0" id="role-description">Descrição do perfil</p>
+                                        <h4 class="fw-bold mb-1 text-gray-900" id="role-name">Nome do Perfil</h4>
+                                        <p class="text-gray-700 mb-0 fs-6" id="role-description">Descrição do perfil</p>
                                     </div>
                                     <div class="text-end">
-                                        <span class="badge badge-light-primary" id="role-level">Nível: 0</span>
+                                        <span class="badge badge-info fs-7" id="role-level">Nível: 0</span>
                                     </div>
                                 </div>
                             </div>
@@ -160,76 +160,24 @@
                     </div>
 
                     <!--begin::Permissions grid-->
-                    <div class="row g-6 g-xl-9" id="permissions-grid" style="display: none;">
-                        @foreach($modules as $module)
-                            <div class="col-md-6 col-xl-4">
-                                <!--begin::Card-->
-                                <div class="card h-100">
-                                    <!--begin::Card header-->
-                                    <div class="card-header">
-                                        <div class="card-title d-flex align-items-center">
-                                            <i class="{{ $module['iconClass'] }} fs-2x text-{{ $module['color'] }} me-3"></i>
-                                            <h3 class="fw-bold m-0">{{ $module['label'] }}</h3>
-                                        </div>
-                                        <div class="card-toolbar">
-                                            <span class="badge badge-light-{{ $module['color'] }}" data-module="{{ $module['value'] }}" id="module-percentage-{{ $module['value'] }}">0%</span>
-                                        </div>
-                                    </div>
-                                    <!--end::Card header-->
-                                    
-                                    <!--begin::Card body-->
-                                    <div class="card-body">
-                                        <div class="mb-4">
-                                            <div class="progress h-6px bg-light-{{ $module['color'] }}">
-                                                <div class="progress-bar bg-{{ $module['color'] }}" id="module-progress-{{ $module['value'] }}" style="width: 0%"></div>
-                                            </div>
-                                        </div>
-                                        
-                                        <div class="permissions-list" data-module="{{ $module['value'] }}">
-                                            @foreach($module['routes'] as $route => $routeName)
-                                                <div class="permission-item mb-3" data-route="{{ $route }}">
-                                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                                        <span class="fw-semibold text-gray-800">{{ $routeName }}</span>
-                                                        <div class="form-check form-switch">
-                                                            <input class="form-check-input permission-switch" 
-                                                                   type="checkbox" 
-                                                                   data-route="{{ $route }}" 
-                                                                   data-action="view"
-                                                                   id="perm_{{ $route }}_view">
-                                                        </div>
-                                                    </div>
-                                                    
-                                                    <div class="permission-actions" style="display: none;">
-                                                        <div class="d-flex gap-2">
-                                                            <label class="btn btn-sm btn-outline btn-outline-success btn-active-success">
-                                                                <input type="checkbox" class="btn-check permission-action" data-route="{{ $route }}" data-action="create">
-                                                                <i class="ki-duotone ki-plus fs-7"></i> C
-                                                            </label>
-                                                            <label class="btn btn-sm btn-outline btn-outline-warning btn-active-warning">
-                                                                <input type="checkbox" class="btn-check permission-action" data-route="{{ $route }}" data-action="edit">
-                                                                <i class="ki-duotone ki-pencil fs-7"></i> E
-                                                            </label>
-                                                            <label class="btn btn-sm btn-outline btn-outline-danger btn-active-danger">
-                                                                <input type="checkbox" class="btn-check permission-action" data-route="{{ $route }}" data-action="delete">
-                                                                <i class="ki-duotone ki-trash fs-7"></i> D
-                                                            </label>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            @endforeach
-                                        </div>
-                                    </div>
-                                    <!--end::Card body-->
-                                </div>
-                                <!--end::Card-->
-                            </div>
-                        @endforeach
+                    <div id="permissions-grid" style="display: none;">
+                        <div class="d-flex flex-wrap gap-6 justify-content-start">
+                            @foreach($modules as $module)
+                                <x-permission-card 
+                                    :module="$module" 
+                                    :show-actions="true"
+                                    :readonly="false"
+                                    size="default"
+                                    theme="light"
+                                />
+                            @endforeach
+                        </div>
                     </div>
                     <!--end::Permissions grid-->
 
                     <!-- Estado vazio -->
-                    <div id="empty-state" class="text-center py-10">
-                        <div class="symbol symbol-100px mx-auto mb-7">
+                    <div id="empty-state" class="text-center py-15">
+                        <div class="symbol symbol-150px mx-auto mb-8">
                             <span class="symbol-label bg-light-primary text-primary">
                                 <i class="ki-duotone ki-security-user fs-1">
                                     <span class="path1"></span>
@@ -237,8 +185,8 @@
                                 </i>
                             </span>
                         </div>
-                        <h3 class="text-gray-800 fw-bold mb-3">Selecione um Perfil</h3>
-                        <p class="text-gray-400 fs-6 mb-0">Escolha um perfil de usuário acima para configurar suas permissões de acesso às telas do sistema.</p>
+                        <h3 class="text-gray-800 fw-bold mb-4 fs-2">Selecione um Perfil</h3>
+                        <p class="text-gray-500 fs-5 mb-0 mw-500px mx-auto">Escolha um perfil de usuário no menu suspenso acima para configurar suas permissões de acesso às telas do sistema.</p>
                     </div>
 
                 </div>
@@ -251,6 +199,220 @@
     <!--end::Content-->
 </div>
 <!--end::Content wrapper-->
+
+<style>
+.permission-card-container {
+    flex: 1 1 380px;
+    max-width: 420px;
+    min-width: 360px;
+}
+
+.permission-card {
+    transition: all 0.3s ease;
+    border: 1px solid #e4e6ef;
+    border-radius: 8px;
+    background: #ffffff;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+.permission-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+    border-color: #c8d4e6;
+}
+
+.permission-card .card-header {
+    background: #ffffff;
+    border-bottom: 1px solid #f1f3f6;
+}
+
+.permission-item {
+    transition: all 0.2s ease;
+    border: 1px solid #f1f3f6;
+    background: #ffffff;
+    position: relative;
+}
+
+.permission-item:hover {
+    background: #f8f9fa;
+    border-color: #e4e6ef;
+}
+
+.permission-item:last-child {
+    margin-bottom: 0;
+}
+
+.permission-actions {
+    transition: all 0.3s ease;
+    background: #f8f9fa;
+    border-top: 1px solid #f1f3f6;
+}
+
+.action-btn {
+    transition: all 0.2s ease;
+    border-radius: 6px;
+    font-weight: 500;
+    min-width: 80px;
+    border: 1px solid transparent;
+}
+
+.action-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.form-switch .form-check-input {
+    width: 2.5rem;
+    height: 1.25rem;
+    border-radius: 1rem;
+    background-color: #e4e6ef;
+    border: 1px solid #d1d5db;
+    transition: all 0.2s ease;
+}
+
+.form-switch .form-check-input:checked {
+    background-color: #198754;
+    border-color: #198754;
+}
+
+.form-switch .form-check-input:focus {
+    box-shadow: 0 0 0 3px rgba(25, 135, 84, 0.1);
+}
+
+.progress {
+    background-color: #f1f3f6;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.progress-bar {
+    transition: width 0.4s ease;
+}
+
+.symbol-label {
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.permission-status .badge {
+    transition: all 0.2s ease;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 500;
+    padding: 4px 8px;
+    border: 1px solid transparent;
+}
+
+.permission-status .badge-light-success {
+    background-color: #d4edda;
+    color: #155724;
+    border-color: #c3e6cb;
+}
+
+.permission-status .badge-light-danger {
+    background-color: #f8d7da;
+    color: #721c24;
+    border-color: #f5c6cb;
+}
+
+.permission-status .badge-light-gray {
+    background-color: #f8f9fa;
+    color: #6c757d;
+    border-color: #e9ecef;
+}
+
+.separator {
+    height: 1px;
+    background-color: #e4e6ef;
+    border: none;
+}
+
+.separator-dashed {
+    border-top: 1px dashed #d1d5db;
+    background: none;
+}
+
+/* Melhorias na responsividade */
+@media (max-width: 768px) {
+    .permission-card-container {
+        flex: 1 1 100%;
+        max-width: 100%;
+        min-width: 300px;
+    }
+    
+    .permission-card .card-header {
+        padding: 1.5rem 1rem;
+    }
+    
+    .permission-item {
+        margin-bottom: 0.75rem;
+    }
+    
+    .action-btn {
+        min-width: 70px;
+        font-size: 0.8rem;
+    }
+}
+
+@media (min-width: 769px) and (max-width: 1199px) {
+    .permission-card-container {
+        flex: 1 1 calc(50% - 12px);
+    }
+}
+
+@media (min-width: 1200px) {
+    .permission-card-container {
+        flex: 1 1 calc(33.333% - 16px);
+    }
+}
+
+@media (min-width: 1600px) {
+    .permission-card-container {
+        flex: 1 1 calc(25% - 18px);
+    }
+}
+
+/* Estados de foco melhorados */
+.permission-switch:focus,
+.action-btn:focus,
+.form-select:focus {
+    box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1);
+    outline: none;
+}
+
+/* Animações suaves */
+.permission-card,
+.permission-item,
+.action-btn,
+.form-switch .form-check-input {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Loading states mais sutis */
+.loading {
+    opacity: 0.7;
+    pointer-events: none;
+}
+
+.loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 16px;
+    height: 16px;
+    margin: -8px 0 0 -8px;
+    border: 2px solid #e4e6ef;
+    border-top: 2px solid #6c757d;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+</style>
 
 @push('scripts')
 <script>
@@ -269,6 +431,12 @@ document.addEventListener('DOMContentLoaded', function() {
     // Dados dos roles passados do backend
     const roles = @json($roles);
     const modules = @json($modules);
+
+    // Inicializar tooltips
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    const tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
 
     roleSelector.addEventListener('change', function() {
         const selectedRole = this.value;
@@ -339,6 +507,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         if (viewSwitch) {
                             viewSwitch.checked = true;
                             togglePermissionActions(route, true);
+                            updatePermissionStatus(route, true);
                         }
                     }
 
@@ -371,6 +540,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 const isChecked = e.target.checked;
                 
                 togglePermissionActions(route, isChecked);
+                updatePermissionStatus(route, isChecked);
+                
                 if (!isChecked) {
                     // Desmarcar todas as ações se o acesso principal for removido
                     document.querySelectorAll(`[data-route="${route}"].permission-action`).forEach(input => {
@@ -393,10 +564,24 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    function updatePermissionStatus(route, hasAccess) {
+        const statusEl = document.getElementById(`status-${route}`);
+        if (statusEl) {
+            const badge = statusEl.querySelector('.badge');
+            if (hasAccess) {
+                badge.className = 'badge badge-light-success fs-8';
+                badge.textContent = 'Ativo';
+            } else {
+                badge.className = 'badge badge-light-gray fs-8';
+                badge.textContent = 'Desabilitado';
+            }
+        }
+    }
+
     function updateModuleProgress() {
         modules.forEach(module => {
             const moduleValue = module.value;
-            const totalRoutes = module.routeCount;
+            const totalRoutes = module.routeCount || Object.keys(module.routes).length;
             let activeRoutes = 0;
 
             Object.entries(module.routes).forEach(([route, routeName]) => {
@@ -410,9 +595,26 @@ document.addEventListener('DOMContentLoaded', function() {
             
             const percentageEl = document.getElementById(`module-percentage-${moduleValue}`);
             const progressEl = document.getElementById(`module-progress-${moduleValue}`);
+            const activeCountEl = document.getElementById(`module-active-count-${moduleValue}`);
+            const totalCountEl = document.getElementById(`module-total-count-${moduleValue}`);
+            const statusEl = document.getElementById(`module-status-${moduleValue}`);
             
             if (percentageEl) percentageEl.textContent = `${percentage}%`;
             if (progressEl) progressEl.style.width = `${percentage}%`;
+            if (activeCountEl) activeCountEl.textContent = activeRoutes;
+            if (totalCountEl) totalCountEl.textContent = totalRoutes;
+            if (statusEl) {
+                if (percentage === 100) {
+                    statusEl.textContent = 'Completo';
+                    statusEl.className = 'text-success fs-8';
+                } else if (percentage > 0) {
+                    statusEl.textContent = 'Parcial';
+                    statusEl.className = 'text-warning fs-8';
+                } else {
+                    statusEl.textContent = 'Desabilitado';
+                    statusEl.className = 'text-muted fs-8';
+                }
+            }
         });
     }
 
@@ -547,11 +749,16 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function showLoading() {
-        // Implementar indicador de loading
+        document.querySelectorAll('.permission-card').forEach(card => {
+            card.classList.add('loading');
+        });
         document.body.style.cursor = 'wait';
     }
 
     function hideLoading() {
+        document.querySelectorAll('.permission-card').forEach(card => {
+            card.classList.remove('loading');
+        });
         document.body.style.cursor = 'default';
     }
 });
