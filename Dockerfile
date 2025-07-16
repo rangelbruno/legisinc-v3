@@ -17,10 +17,22 @@ RUN apk add --no-cache \
     supervisor \
     nginx \
     nodejs \
-    npm
+    npm \
+    postgresql-dev \
+    libpq-dev \
+    autoconf \
+    build-base
 
-# Instalar extensões PHP
-RUN docker-php-ext-install mbstring exif pcntl bcmath gd
+# Instalar extensões PHP primeiro
+RUN docker-php-ext-install mbstring exif pcntl bcmath gd pdo
+
+# Instalar PostgreSQL extensions
+RUN docker-php-ext-configure pgsql -with-pgsql \
+    && docker-php-ext-install pgsql pdo_pgsql
+
+# Instalar Redis extension
+RUN pecl install redis \
+    && docker-php-ext-enable redis
 
 # Instalar Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer

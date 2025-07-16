@@ -20,7 +20,7 @@ Existem dois ambientes principais definidos:
 #### a) Ambiente Padrão (`docker-compose.yml`)
 
 - **Acesso:** `http://localhost:8000`
-- **Banco de Dados:** Utiliza **SQLite**. O arquivo do banco de dados está localizado em `database/database.sqlite` e é compartilhado diretamente do host.
+- **Banco de Dados:** Utiliza **PostgreSQL** containerizado. O banco de dados roda em um container separado com persistência de dados via volumes Docker.
 - **Propósito:** Ambiente completo para desenvolvimento e testes que necessitam de persistência de dados.
 
 #### b) Ambiente de Desenvolvimento (`docker-compose.dev.yml`)
@@ -60,7 +60,7 @@ O sistema possui uma clara separação entre rotas web, rotas de API e uma API d
 
 ### 2.3. Comunicação com Banco de Dados
 
-- A aplicação está configurada para usar **SQLite** no ambiente padrão, o que simplifica a configuração inicial.
+- A aplicação está configurada para usar **PostgreSQL** containerizado, proporcionando melhor performance e recursos avançados de banco de dados.
 - Os Models do Eloquent (em `app/Models/`) são responsáveis pela interação com o banco de dados. A estrutura exata dos models precisaria ser analisada para um detalhamento maior das tabelas.
 
 ## 3. Arquitetura do Frontend
@@ -81,6 +81,6 @@ O frontend segue uma abordagem clássica do Laravel, sem a complexidade de um fr
 
 ## 4. Resumo e Fluxo de Trabalho
 
-1.  **Ambiente:** O desenvolvedor pode escolher entre o ambiente completo com SQLite (`docker-compose up`) ou o ambiente focado em frontend sem banco de dados (`docker-compose -f docker-compose.dev.yml up`).
+1.  **Ambiente:** O desenvolvedor pode escolher entre o ambiente completo com PostgreSQL (`docker-compose up`) ou o ambiente focado em frontend sem banco de dados (`docker-compose -f docker-compose.dev.yml up`).
 2.  **Backend:** A lógica de negócio, regras de acesso e manipulação de dados são controladas pela aplicação Laravel.
 3.  **Frontend:** As views são renderizadas no lado do servidor com Blade e estilizadas com Tailwind CSS. A interatividade do lado do cliente é adicionada com JavaScript e as chamadas de API são feitas com Axios, principalmente para a API de mock durante o desenvolvimento. 

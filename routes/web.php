@@ -258,11 +258,17 @@ Route::prefix('admin/usuarios')->name('admin.usuarios.')->middleware(['auth', 'c
 });
 
 // Screen Permissions routes (protected with auth - Admin only)
-Route::prefix('admin/screen-permissions')->name('admin.screen-permissions.')->middleware(['auth', 'check.screen.permission'])->group(function () {
+Route::prefix('admin/screen-permissions')->name('admin.screen-permissions.')->middleware(['auth'])->group(function () {
     Route::get('/', [App\Http\Controllers\Admin\ScreenPermissionController::class, 'index'])->name('index');
-    Route::put('/update', [App\Http\Controllers\Admin\ScreenPermissionController::class, 'update'])->name('update');
-    Route::get('/permissions', [App\Http\Controllers\Admin\ScreenPermissionController::class, 'getPermissions'])->name('get-permissions');
+    Route::post('/', [App\Http\Controllers\Admin\ScreenPermissionController::class, 'update'])->name('update');
+    Route::get('/role/{role}', [App\Http\Controllers\Admin\ScreenPermissionController::class, 'getRolePermissions'])->name('get-role-permissions');
     Route::post('/reset', [App\Http\Controllers\Admin\ScreenPermissionController::class, 'reset'])->name('reset');
+    Route::post('/sync', [App\Http\Controllers\Admin\ScreenPermissionController::class, 'sync'])->name('sync');
+    Route::get('/export', [App\Http\Controllers\Admin\ScreenPermissionController::class, 'export'])->name('export');
+    Route::post('/import', [App\Http\Controllers\Admin\ScreenPermissionController::class, 'import'])->name('import');
+    Route::get('/cache/stats', [App\Http\Controllers\Admin\ScreenPermissionController::class, 'cacheStats'])->name('cache-stats');
+    Route::post('/cache/clear', [App\Http\Controllers\Admin\ScreenPermissionController::class, 'clearCache'])->name('cache-clear');
+    Route::post('/cache/warm', [App\Http\Controllers\Admin\ScreenPermissionController::class, 'warmCache'])->name('cache-warm');
 });
 
 // Mock API routes moved to routes/api.php to avoid CSRF middleware

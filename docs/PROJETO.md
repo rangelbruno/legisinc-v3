@@ -259,8 +259,8 @@ npm run build         # Build para produção
 ```
 
 ### Banco de Dados
-- **Tipo**: SQLite (development)
-- **Localização**: `database/database.sqlite`
+- **Tipo**: PostgreSQL (development/production)
+- **Localização**: Container Docker com volumes persistentes
 - **Migrations**: Incluídas para users, projetos, tramitação, anexos, versões, permissões
 
 ## Configuração Docker

@@ -15,12 +15,59 @@ services:
     ports:
       - "8001:80"
       - "8444:443"
+    depends_on:
+      - db
+      - redis
     environment:
       - APP_ENV=local
       - APP_DEBUG=true
-      - APP_URL=http://localhost:8000
-      - DB_CONNECTION=sqlite
-      - DB_DATABASE=/var/www/html/database/database.sqlite
-      - CACHE_DRIVER=file
-      - SESSION_DRIVER=file
-      - QUEUE_CONNECTION=sync
+      - APP_URL=http://localhost:8001
+      - DB_CONNECTION=pgsql
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_DATABASE=legisinc
+      - DB_USERNAME=legisinc_user
+      - DB_PASSWORD=legisinc_password
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=null
+      - CACHE_DRIVER=redis
+      - SESSION_DRIVER=redis
+      - QUEUE_CONNECTION=redis
+    networks:
+      - legisinc_network
+
+  db:
+    image: postgres:15-alpine
+    container_name: legisinc-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: legisinc
+      POSTGRES_USER: legisinc_user
+      POSTGRES_PASSWORD: legisinc_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - legisinc_network
+
+  redis:
+    image: redis:7-alpine
+    container_name: legisinc-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - legisinc_network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  legisinc_network:
+    driver: bridge

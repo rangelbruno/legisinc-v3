@@ -1,6 +1,6 @@
 @extends('components.layouts.app')
 
-@section('title', 'Atribuição de Permissões de Telas')
+@section('title', 'Gerenciamento de Permissões')
 
 @section('content')
 <!--begin::Content wrapper-->
@@ -12,7 +12,7 @@
             <!--begin::Page title-->
             <div class="page-title d-flex flex-column justify-content-center flex-wrap me-3">
                 <!--begin::Title-->
-                <h1 class="page-heading d-flex text-dark fw-bold fs-3 flex-column justify-content-center my-0">Atribuição de Permissões de Telas</h1>
+                <h1 class="page-heading d-flex text-dark fw-bold fs-3 flex-column justify-content-center my-0">Gerenciamento de Permissões</h1>
                 <!--end::Title-->
                 <!--begin::Breadcrumb-->
                 <ul class="breadcrumb breadcrumb-separatorless fw-semibold fs-7 my-0 pt-1">
@@ -26,7 +26,7 @@
                     <li class="breadcrumb-item">
                         <span class="bullet bg-gray-400 w-5px h-2px"></span>
                     </li>
-                    <li class="breadcrumb-item text-muted">Permissões de Telas</li>
+                    <li class="breadcrumb-item text-muted">Permissões</li>
                 </ul>
                 <!--end::Breadcrumb-->
             </div>
@@ -40,18 +40,9 @@
     <div id="kt_app_content" class="app-content flex-column-fluid">
         <!--begin::Content container-->
         <div id="kt_app_content_container" class="app-container container-xxl">
-            @if (session('success'))
-                <div class="alert alert-success d-flex align-items-center p-5 mb-10">
-                    <i class="ki-duotone ki-shield-tick fs-2hx text-success me-4">
-                        <span class="path1"></span>
-                        <span class="path2"></span>
-                    </i>
-                    <div class="d-flex flex-column">
-                        <h4 class="mb-1 text-success">Sucesso!</h4>
-                        <span>{{ session('success') }}</span>
-                    </div>
-                </div>
-            @endif
+            
+            <!-- Mensagens de sucesso/erro -->
+            <div id="notification-area"></div>
 
             <!--begin::Card-->
             <div class="card">
@@ -64,24 +55,43 @@
                                 <span class="path1"></span>
                                 <span class="path2"></span>
                             </i>
-                            <h3 class="fw-bold m-0 ps-15">Configurar Permissões por Perfil</h3>
+                            <h3 class="fw-bold m-0 ps-15">Sistema de Permissões Avançado</h3>
                         </div>
                     </div>
                     <!--end::Card title-->
                     <!--begin::Card toolbar-->
                     <div class="card-toolbar">
-                        <div class="d-flex justify-content-end" data-kt-user-table-toolbar="base">
+                        <div class="d-flex justify-content-end gap-3">
                             <!--begin::Role selector-->
-                            <div class="w-300px">
-                                <select class="form-select form-select-solid" id="role-selector">
-                                    @foreach($roles as $roleKey => $roleName)
-                                        <option value="{{ $roleKey }}" {{ $selectedRole === $roleKey ? 'selected' : '' }}>
-                                            {{ $roleName }}
+                            <div class="w-250px">
+                                <select class="form-select form-select-solid" id="role-selector" data-placeholder="Selecionar Perfil">
+                                    <option value="">Selecione um perfil...</option>
+                                    @foreach($roles as $role)
+                                        <option value="{{ $role['value'] }}" data-level="{{ $role['level'] }}">
+                                            {{ $role['label'] }}
                                         </option>
                                     @endforeach
                                 </select>
                             </div>
                             <!--end::Role selector-->
+                            
+                            <!--begin::Actions-->
+                            <button type="button" class="btn btn-primary" id="save-permissions" disabled>
+                                <i class="ki-duotone ki-check fs-2">
+                                    <span class="path1"></span>
+                                    <span class="path2"></span>
+                                </i>
+                                Salvar Alterações
+                            </button>
+                            
+                            <button type="button" class="btn btn-secondary" id="reset-permissions" disabled>
+                                <i class="ki-duotone ki-arrows-circle fs-2">
+                                    <span class="path1"></span>
+                                    <span class="path2"></span>
+                                </i>
+                                Restaurar Padrão
+                            </button>
+                            <!--end::Actions-->
                         </div>
                     </div>
                     <!--end::Card toolbar-->
@@ -90,187 +100,147 @@
 
                 <!--begin::Card body-->
                 <div class="card-body py-4">
-                    <form id="permissions-form" method="POST" action="{{ route('admin.screen-permissions.update') }}">
-                        @csrf
-                        @method('PUT')
-                        <input type="hidden" name="role_name" value="{{ $selectedRole }}">
+                    
+                    <!-- Estatísticas do Cache -->
+                    @if(isset($cacheStats))
+                    <div class="row g-5 mb-6">
+                        <div class="col-xl-3 col-md-6">
+                            <div class="card card-flush h-xl-100">
+                                <div class="card-body text-center">
+                                    <div class="text-gray-800 fw-bold fs-2hx">{{ $cacheStats['hit_ratio'] }}%</div>
+                                    <div class="text-gray-400 fw-semibold fs-6">Cache Hit Ratio</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-xl-3 col-md-6">
+                            <div class="card card-flush h-xl-100">
+                                <div class="card-body text-center">
+                                    <div class="text-gray-800 fw-bold fs-2hx">{{ $statistics['total_permissions'] ?? 0 }}</div>
+                                    <div class="text-gray-400 fw-semibold fs-6">Total Permissões</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-xl-3 col-md-6">
+                            <div class="card card-flush h-xl-100">
+                                <div class="card-body text-center">
+                                    <div class="text-gray-800 fw-bold fs-2hx">{{ $statistics['active_permissions'] ?? 0 }}</div>
+                                    <div class="text-gray-400 fw-semibold fs-6">Permissões Ativas</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-xl-3 col-md-6">
+                            <div class="card card-flush h-xl-100">
+                                <div class="card-body text-center">
+                                    <div class="text-gray-800 fw-bold fs-2hx">{{ $statistics['coverage_percentage'] ?? 0 }}%</div>
+                                    <div class="text-gray-400 fw-semibold fs-6">Cobertura</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    @endif
 
-                        <!--begin::Permissions grid-->
-                        <div class="row g-6 g-xl-9">
-                            @foreach($screens as $moduleKey => $module)
-                                <!--begin::Col-->
-                                <div class="col-md-6 col-lg-6 col-xl-4">
-                                    <!--begin::Card-->
-                                    <div class="card card-flush h-100 mb-5 mb-xl-10">
-                                        <!--begin::Header-->
-                                        <div class="card-header pt-5 pb-3">
-                                            <!--begin::Title-->
-                                            <div class="card-title d-flex flex-column w-100">
-                                                <div class="d-flex align-items-center">
-                                                    <!--begin::Icon-->
-                                                    <div class="symbol symbol-35px me-3">
-                                                        <span class="symbol-label bg-light-primary">
-                                                            @if($moduleKey === 'dashboard')
-                                                                <i class="ki-duotone ki-element-11 fs-2x text-primary">
-                                                                    <span class="path1"></span>
-                                                                    <span class="path2"></span>
-                                                                    <span class="path3"></span>
-                                                                    <span class="path4"></span>
-                                                                </i>
-                                                            @elseif($moduleKey === 'parlamentares')
-                                                                <i class="ki-duotone ki-people fs-2x text-primary">
-                                                                    <span class="path1"></span>
-                                                                    <span class="path2"></span>
-                                                                    <span class="path3"></span>
-                                                                    <span class="path4"></span>
-                                                                    <span class="path5"></span>
-                                                                </i>
-                                                            @elseif($moduleKey === 'comissoes')
-                                                                <i class="ki-duotone ki-handshake fs-2x text-primary">
-                                                                    <span class="path1"></span>
-                                                                    <span class="path2"></span>
-                                                                </i>
-                                                            @elseif($moduleKey === 'projetos')
-                                                                <i class="ki-duotone ki-document fs-2x text-primary">
-                                                                    <span class="path1"></span>
-                                                                    <span class="path2"></span>
-                                                                </i>
-                                                            @elseif($moduleKey === 'sessoes')
-                                                                <i class="ki-duotone ki-calendar fs-2x text-primary">
-                                                                    <span class="path1"></span>
-                                                                    <span class="path2"></span>
-                                                                </i>
-                                                            @elseif($moduleKey === 'usuarios')
-                                                                <i class="ki-duotone ki-user fs-2x text-primary">
-                                                                    <span class="path1"></span>
-                                                                    <span class="path2"></span>
-                                                                </i>
-                                                            @elseif($moduleKey === 'modelos')
-                                                                <i class="ki-duotone ki-copy fs-2x text-primary">
-                                                                    <span class="path1"></span>
-                                                                    <span class="path2"></span>
-                                                                    <span class="path3"></span>
-                                                                    <span class="path4"></span>
-                                                                    <span class="path5"></span>
-                                                                </i>
-                                                            @else
-                                                                <i class="ki-duotone ki-setting-2 fs-2x text-primary">
-                                                                    <span class="path1"></span>
-                                                                    <span class="path2"></span>
-                                                                </i>
-                                                            @endif
-                                                        </span>
-                                                    </div>
-                                                    <!--end::Icon-->
-                                                    <!--begin::Info-->
-                                                    <div class="d-flex flex-column flex-grow-1">
-                                                        <div class="fs-5 fw-bold text-gray-900">{{ $module['name'] }}</div>
-                                                        <div class="fs-7 fw-semibold text-gray-500">
-                                                            @php
-                                                                $totalScreens = 0;
-                                                                $activeScreens = 0;
-                                                                
-                                                                if(isset($module['route'])) {
-                                                                    $totalScreens++;
-                                                                    if(isset($currentPermissions[$module['route']]) && $currentPermissions[$module['route']]['can_access']) {
-                                                                        $activeScreens++;
-                                                                    }
-                                                                }
-                                                                
-                                                                if(isset($module['children'])) {
-                                                                    foreach($module['children'] as $screen) {
-                                                                        $totalScreens++;
-                                                                        if(isset($currentPermissions[$screen['route']]) && $currentPermissions[$screen['route']]['can_access']) {
-                                                                            $activeScreens++;
-                                                                        }
-                                                                    }
-                                                                }
-                                                            @endphp
-                                                            {{ $activeScreens }}/{{ $totalScreens }} permissões ativas
-                                                        </div>
-                                                    </div>
-                                                    <!--end::Info-->
-                                                    <!--begin::Badge-->
-                                                    @if($activeScreens > 0)
-                                                        <div class="badge badge-light-success fs-8">
-                                                            {{ round(($activeScreens / $totalScreens) * 100) }}%
-                                                        </div>
-                                                    @else
-                                                        <div class="badge badge-light-danger fs-8">
-                                                            0%
-                                                        </div>
-                                                    @endif
-                                                    <!--end::Badge-->
-                                                </div>
-                                            </div>
-                                            <!--end::Title-->
+                    <!-- Informações do Perfil Selecionado -->
+                    <div id="role-info" class="d-none mb-6">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="symbol symbol-50px me-5">
+                                        <span class="symbol-label bg-primary text-white fw-bold" id="role-initial">A</span>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <h4 class="fw-bold mb-1" id="role-name">Nome do Perfil</h4>
+                                        <p class="text-muted mb-0" id="role-description">Descrição do perfil</p>
+                                    </div>
+                                    <div class="text-end">
+                                        <span class="badge badge-light-primary" id="role-level">Nível: 0</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!--begin::Permissions grid-->
+                    <div class="row g-6 g-xl-9" id="permissions-grid" style="display: none;">
+                        @foreach($modules as $module)
+                            <div class="col-md-6 col-xl-4">
+                                <!--begin::Card-->
+                                <div class="card h-100">
+                                    <!--begin::Card header-->
+                                    <div class="card-header">
+                                        <div class="card-title d-flex align-items-center">
+                                            <i class="{{ $module['iconClass'] }} fs-2x text-{{ $module['color'] }} me-3"></i>
+                                            <h3 class="fw-bold m-0">{{ $module['label'] }}</h3>
                                         </div>
-                                        <!--end::Header-->
-
-                                        <!--begin::Body-->
-                                        <div class="card-body pt-2 pb-4">
-                                            <!--begin::Permissions list-->
-                                            <div class="fv-row">
-                                                @if(isset($module['route']))
-                                                    <!--begin::Main screen permission-->
-                                                    <div class="d-flex align-items-center py-2 border-bottom border-gray-300 mb-2">
-                                                        <label class="form-check form-switch form-check-custom form-check-solid flex-grow-1">
-                                                            <input class="form-check-input" type="checkbox" 
-                                                                   name="permissions[{{ $module['route'] }}]" 
-                                                                   value="1"
-                                                                   {{ isset($currentPermissions[$module['route']]) && $currentPermissions[$module['route']]['can_access'] ? 'checked' : '' }}>
-                                                            <span class="form-check-label text-gray-800 fs-6 fw-semibold">{{ $module['name'] }}</span>
-                                                        </label>
+                                        <div class="card-toolbar">
+                                            <span class="badge badge-light-{{ $module['color'] }}" data-module="{{ $module['value'] }}" id="module-percentage-{{ $module['value'] }}">0%</span>
+                                        </div>
+                                    </div>
+                                    <!--end::Card header-->
+                                    
+                                    <!--begin::Card body-->
+                                    <div class="card-body">
+                                        <div class="mb-4">
+                                            <div class="progress h-6px bg-light-{{ $module['color'] }}">
+                                                <div class="progress-bar bg-{{ $module['color'] }}" id="module-progress-{{ $module['value'] }}" style="width: 0%"></div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="permissions-list" data-module="{{ $module['value'] }}">
+                                            @foreach($module['routes'] as $route => $routeName)
+                                                <div class="permission-item mb-3" data-route="{{ $route }}">
+                                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                                        <span class="fw-semibold text-gray-800">{{ $routeName }}</span>
+                                                        <div class="form-check form-switch">
+                                                            <input class="form-check-input permission-switch" 
+                                                                   type="checkbox" 
+                                                                   data-route="{{ $route }}" 
+                                                                   data-action="view"
+                                                                   id="perm_{{ $route }}_view">
+                                                        </div>
                                                     </div>
-                                                    <!--end::Main screen permission-->
-                                                @endif
-
-                                                @if(isset($module['children']))
-                                                    @foreach($module['children'] as $screenKey => $screen)
-                                                        <!--begin::Child screen permission-->
-                                                        <div class="d-flex align-items-center py-2">
-                                                            <label class="form-check form-switch form-check-custom form-check-solid flex-grow-1">
-                                                                <input class="form-check-input" type="checkbox" 
-                                                                       name="permissions[{{ $screen['route'] }}]" 
-                                                                       value="1"
-                                                                       {{ isset($currentPermissions[$screen['route']]) && $currentPermissions[$screen['route']]['can_access'] ? 'checked' : '' }}>
-                                                                <span class="form-check-label text-gray-700 fs-7">{{ $screen['name'] }}</span>
+                                                    
+                                                    <div class="permission-actions" style="display: none;">
+                                                        <div class="d-flex gap-2">
+                                                            <label class="btn btn-sm btn-outline btn-outline-success btn-active-success">
+                                                                <input type="checkbox" class="btn-check permission-action" data-route="{{ $route }}" data-action="create">
+                                                                <i class="ki-duotone ki-plus fs-7"></i> C
+                                                            </label>
+                                                            <label class="btn btn-sm btn-outline btn-outline-warning btn-active-warning">
+                                                                <input type="checkbox" class="btn-check permission-action" data-route="{{ $route }}" data-action="edit">
+                                                                <i class="ki-duotone ki-pencil fs-7"></i> E
+                                                            </label>
+                                                            <label class="btn btn-sm btn-outline btn-outline-danger btn-active-danger">
+                                                                <input type="checkbox" class="btn-check permission-action" data-route="{{ $route }}" data-action="delete">
+                                                                <i class="ki-duotone ki-trash fs-7"></i> D
                                                             </label>
                                                         </div>
-                                                        <!--end::Child screen permission-->
-                                                    @endforeach
-                                                @endif
-                                            </div>
-                                            <!--end::Permissions list-->
+                                                    </div>
+                                                </div>
+                                            @endforeach
                                         </div>
-                                        <!--end::Body-->
                                     </div>
-                                    <!--end::Card-->
+                                    <!--end::Card body-->
                                 </div>
-                                <!--end::Col-->
-                            @endforeach
-                        </div>
-                        <!--end::Permissions grid-->
+                                <!--end::Card-->
+                            </div>
+                        @endforeach
+                    </div>
+                    <!--end::Permissions grid-->
 
-                        <!--begin::Actions-->
-                        <div class="card-footer d-flex justify-content-end py-6 px-9">
-                            <button type="button" class="btn btn-light btn-active-light-primary me-2" id="reset-permissions">
-                                <i class="ki-duotone ki-arrows-circle fs-2">
+                    <!-- Estado vazio -->
+                    <div id="empty-state" class="text-center py-10">
+                        <div class="symbol symbol-100px mx-auto mb-7">
+                            <span class="symbol-label bg-light-primary text-primary">
+                                <i class="ki-duotone ki-security-user fs-1">
                                     <span class="path1"></span>
                                     <span class="path2"></span>
                                 </i>
-                                Resetar para Padrão
-                            </button>
-                            <button type="submit" class="btn btn-primary">
-                                <i class="ki-duotone ki-check fs-2">
-                                    <span class="path1"></span>
-                                    <span class="path2"></span>
-                                </i>
-                                Salvar Permissões
-                            </button>
+                            </span>
                         </div>
-                        <!--end::Actions-->
-                    </form>
+                        <h3 class="text-gray-800 fw-bold mb-3">Selecione um Perfil</h3>
+                        <p class="text-gray-400 fs-6 mb-0">Escolha um perfil de usuário acima para configurar suas permissões de acesso às telas do sistema.</p>
+                    </div>
+
                 </div>
                 <!--end::Card body-->
             </div>
@@ -282,114 +252,309 @@
 </div>
 <!--end::Content wrapper-->
 
-<!--begin::Modal - Reset Permissions-->
-<div class="modal fade" id="kt_modal_reset_permissions" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered mw-550px">
-        <div class="modal-content">
-            <form id="reset-form" action="{{ route('admin.screen-permissions.reset') }}" method="POST">
-                @csrf
-                <input type="hidden" name="role_name" value="{{ $selectedRole }}">
-                
-                <div class="modal-header" id="kt_modal_reset_permissions_header">
-                    <h2 class="fw-bold">Resetar Permissões</h2>
-                    <div class="btn btn-icon btn-sm btn-active-icon-primary" data-kt-users-modal-action="close">
-                        <i class="ki-duotone ki-cross fs-1">
-                            <span class="path1"></span>
-                            <span class="path2"></span>
-                        </i>
-                    </div>
-                </div>
-                
-                <div class="modal-body scroll-y mx-5 mx-xl-15 my-7">
-                    <div class="fw-semibold fs-6 text-gray-600 mb-7">
-                        Tem certeza de que deseja resetar as permissões do perfil <span class="fw-bold text-gray-900">{{ $roles[$selectedRole] ?? $selectedRole }}</span> para as configurações padrão?
-                    </div>
-                    <div class="notice d-flex bg-light-warning rounded border-warning border border-dashed p-6">
-                        <i class="ki-duotone ki-information fs-2tx text-warning me-4">
-                            <span class="path1"></span>
-                            <span class="path2"></span>
-                            <span class="path3"></span>
-                        </i>
-                        <div class="d-flex flex-stack flex-grow-1">
-                            <div class="fw-semibold">
-                                <div class="fs-6 text-gray-700">
-                                    Esta ação irá remover todas as personalizações feitas para este perfil e aplicar as permissões padrão do sistema.
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="modal-footer flex-center">
-                    <button type="button" class="btn btn-light me-3" data-kt-users-modal-action="cancel">Cancelar</button>
-                    <button type="submit" class="btn btn-warning" data-kt-users-modal-action="submit">
-                        <span class="indicator-label">Resetar</span>
-                        <span class="indicator-progress">Por favor aguarde...
-                            <span class="spinner-border spinner-border-sm align-middle ms-2"></span>
-                        </span>
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-<!--end::Modal-->
-@endsection
-
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Role selector change handler
     const roleSelector = document.getElementById('role-selector');
-    const permissionsForm = document.getElementById('permissions-form');
-    const resetForm = document.getElementById('reset-form');
-    
+    const saveBtn = document.getElementById('save-permissions');
+    const resetBtn = document.getElementById('reset-permissions');
+    const permissionsGrid = document.getElementById('permissions-grid');
+    const emptyState = document.getElementById('empty-state');
+    const roleInfo = document.getElementById('role-info');
+    const notificationArea = document.getElementById('notification-area');
+
+    let currentPermissions = {};
+    let hasChanges = false;
+
+    // Dados dos roles passados do backend
+    const roles = @json($roles);
+    const modules = @json($modules);
+
     roleSelector.addEventListener('change', function() {
         const selectedRole = this.value;
+        if (selectedRole) {
+            loadRolePermissions(selectedRole);
+            updateRoleInfo(selectedRole);
+            permissionsGrid.style.display = 'block';
+            emptyState.style.display = 'none';
+            roleInfo.classList.remove('d-none');
+            saveBtn.disabled = false;
+            resetBtn.disabled = false;
+        } else {
+            permissionsGrid.style.display = 'none';
+            emptyState.style.display = 'block';
+            roleInfo.classList.add('d-none');
+            saveBtn.disabled = true;
+            resetBtn.disabled = true;
+        }
+    });
+
+    function updateRoleInfo(roleValue) {
+        const role = roles.find(r => r.value === roleValue);
+        if (role) {
+            document.getElementById('role-initial').textContent = role.label.charAt(0);
+            document.getElementById('role-name').textContent = role.label;
+            document.getElementById('role-description').textContent = role.description;
+            document.getElementById('role-level').textContent = `Nível: ${role.level}`;
+        }
+    }
+
+    function loadRolePermissions(role) {
+        showLoading();
         
-        // Update form action
-        permissionsForm.querySelector('input[name="role_name"]').value = selectedRole;
-        resetForm.querySelector('input[name="role_name"]').value = selectedRole;
+        fetch(`/admin/screen-permissions/role/${role}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    currentPermissions = data.permissions || {};
+                    updatePermissionsUI();
+                } else {
+                    showNotification('Erro ao carregar permissões', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                showNotification('Erro de comunicação', 'error');
+            })
+            .finally(() => {
+                hideLoading();
+            });
+    }
+
+    function updatePermissionsUI() {
+        // Resetar todas as permissões
+        document.querySelectorAll('.permission-switch, .permission-action').forEach(input => {
+            input.checked = false;
+        });
+
+        // Aplicar permissões carregadas
+        Object.entries(currentPermissions).forEach(([module, permissions]) => {
+            if (permissions && Array.isArray(permissions)) {
+                permissions.forEach(permission => {
+                    const route = permission.screen_route;
+                    
+                    // Marcar switch principal
+                    if (permission.can_access) {
+                        const viewSwitch = document.querySelector(`[data-route="${route}"][data-action="view"]`);
+                        if (viewSwitch) {
+                            viewSwitch.checked = true;
+                            togglePermissionActions(route, true);
+                        }
+                    }
+
+                    // Marcar ações específicas
+                    if (permission.can_create) {
+                        const createInput = document.querySelector(`[data-route="${route}"][data-action="create"]`);
+                        if (createInput) createInput.checked = true;
+                    }
+                    if (permission.can_edit) {
+                        const editInput = document.querySelector(`[data-route="${route}"][data-action="edit"]`);
+                        if (editInput) editInput.checked = true;
+                    }
+                    if (permission.can_delete) {
+                        const deleteInput = document.querySelector(`[data-route="${route}"][data-action="delete"]`);
+                        if (deleteInput) deleteInput.checked = true;
+                    }
+                });
+            }
+        });
+
+        updateModuleProgress();
+        hasChanges = false;
+    }
+
+    // Event listeners para switches de permissão
+    document.addEventListener('change', function(e) {
+        if (e.target.classList.contains('permission-switch') || e.target.classList.contains('permission-action')) {
+            if (e.target.classList.contains('permission-switch')) {
+                const route = e.target.dataset.route;
+                const isChecked = e.target.checked;
+                
+                togglePermissionActions(route, isChecked);
+                if (!isChecked) {
+                    // Desmarcar todas as ações se o acesso principal for removido
+                    document.querySelectorAll(`[data-route="${route}"].permission-action`).forEach(input => {
+                        input.checked = false;
+                    });
+                }
+            }
+            
+            updateModuleProgress();
+            hasChanges = true;
+            
+            console.log('Mudança detectada:', e.target.dataset.route, e.target.dataset.action, e.target.checked);
+        }
+    });
+
+    function togglePermissionActions(route, show) {
+        const actionsDiv = document.querySelector(`[data-route="${route}"] .permission-actions`);
+        if (actionsDiv) {
+            actionsDiv.style.display = show ? 'block' : 'none';
+        }
+    }
+
+    function updateModuleProgress() {
+        modules.forEach(module => {
+            const moduleValue = module.value;
+            const totalRoutes = module.routeCount;
+            let activeRoutes = 0;
+
+            Object.entries(module.routes).forEach(([route, routeName]) => {
+                const viewSwitch = document.querySelector(`[data-route="${route}"][data-action="view"]`);
+                if (viewSwitch && viewSwitch.checked) {
+                    activeRoutes++;
+                }
+            });
+
+            const percentage = totalRoutes > 0 ? Math.round((activeRoutes / totalRoutes) * 100) : 0;
+            
+            const percentageEl = document.getElementById(`module-percentage-${moduleValue}`);
+            const progressEl = document.getElementById(`module-progress-${moduleValue}`);
+            
+            if (percentageEl) percentageEl.textContent = `${percentage}%`;
+            if (progressEl) progressEl.style.width = `${percentage}%`;
+        });
+    }
+
+    // Salvar permissões
+    saveBtn.addEventListener('click', function() {
+        if (!hasChanges) {
+            showNotification('Nenhuma alteração para salvar', 'warning');
+            return;
+        }
+
+        const selectedRole = roleSelector.value;
+        if (!selectedRole) return;
+
+        const permissions = collectPermissions();
         
-        // Reload page with new role
-        window.location.href = '{{ route("admin.screen-permissions.index") }}?role=' + selectedRole;
-    });
-    
-    // Reset permissions modal
-    const resetButton = document.getElementById('reset-permissions');
-    const resetModal = new bootstrap.Modal(document.getElementById('kt_modal_reset_permissions'));
-    
-    resetButton.addEventListener('click', function() {
-        resetModal.show();
-    });
-    
-    // Modal close handlers
-    document.querySelectorAll('[data-kt-users-modal-action="close"]').forEach(function(element) {
-        element.addEventListener('click', function() {
-            resetModal.hide();
+        showLoading();
+        
+        fetch('/admin/screen-permissions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            },
+            body: JSON.stringify({
+                role: selectedRole,
+                permissions: permissions
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification(data.message || 'Permissões salvas com sucesso!', 'success');
+                hasChanges = false;
+            } else {
+                showNotification(data.message || 'Erro ao salvar permissões', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            showNotification('Erro de comunicação', 'error');
+        })
+        .finally(() => {
+            hideLoading();
         });
     });
-    
-    document.querySelectorAll('[data-kt-users-modal-action="cancel"]').forEach(function(element) {
-        element.addEventListener('click', function() {
-            resetModal.hide();
+
+    // Resetar permissões
+    resetBtn.addEventListener('click', function() {
+        const selectedRole = roleSelector.value;
+        if (!selectedRole) return;
+
+        if (!confirm('Tem certeza que deseja restaurar as permissões padrão? Esta ação não pode ser desfeita.')) {
+            return;
+        }
+
+        showLoading();
+        
+        fetch('/admin/screen-permissions/reset', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            },
+            body: JSON.stringify({
+                role: selectedRole
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification(data.message || 'Permissões resetadas com sucesso!', 'success');
+                loadRolePermissions(selectedRole);
+            } else {
+                showNotification(data.message || 'Erro ao resetar permissões', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            showNotification('Erro de comunicação', 'error');
+        })
+        .finally(() => {
+            hideLoading();
         });
     });
-    
-    // Form submission indicator
-    document.querySelectorAll('[data-kt-users-modal-action="submit"]').forEach(function(element) {
-        element.addEventListener('click', function() {
-            const button = this;
-            const indicator = button.querySelector('.indicator-label');
-            const progress = button.querySelector('.indicator-progress');
-            
-            button.setAttribute('data-kt-indicator', 'on');
-            button.disabled = true;
-            
-            indicator.style.display = 'none';
-            progress.style.display = 'inline-block';
+
+    function collectPermissions() {
+        const permissions = [];
+
+        modules.forEach(module => {
+            Object.entries(module.routes).forEach(([route, routeName]) => {
+                const viewSwitch = document.querySelector(`[data-route="${route}"][data-action="view"]`);
+                const createInput = document.querySelector(`[data-route="${route}"][data-action="create"]`);
+                const editInput = document.querySelector(`[data-route="${route}"][data-action="edit"]`);
+                const deleteInput = document.querySelector(`[data-route="${route}"][data-action="delete"]`);
+
+                permissions.push({
+                    screen_route: route,
+                    screen_name: routeName,
+                    screen_module: module.value,
+                    can_access: viewSwitch ? viewSwitch.checked : false,
+                    can_create: createInput ? createInput.checked : false,
+                    can_edit: editInput ? editInput.checked : false,
+                    can_delete: deleteInput ? deleteInput.checked : false
+                });
+            });
         });
-    });
+
+        return permissions;
+    }
+
+    function showNotification(message, type = 'info') {
+        const alertClass = type === 'success' ? 'alert-success' : 
+                          type === 'error' ? 'alert-danger' : 
+                          type === 'warning' ? 'alert-warning' : 'alert-info';
+        
+        const notification = `
+            <div class="alert ${alertClass} d-flex align-items-center p-5 mb-6">
+                <div class="d-flex flex-column">
+                    <span>${message}</span>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        `;
+        
+        notificationArea.innerHTML = notification;
+        
+        // Auto-remove após 5 segundos
+        setTimeout(() => {
+            const alert = notificationArea.querySelector('.alert');
+            if (alert) alert.remove();
+        }, 5000);
+    }
+
+    function showLoading() {
+        // Implementar indicador de loading
+        document.body.style.cursor = 'wait';
+    }
+
+    function hideLoading() {
+        document.body.style.cursor = 'default';
+    }
 });
 </script>
 @endpush
+@endsection

@@ -2,4 +2,4 @@
 
 use Illuminate\Support\Facades\Route;
 
-// Arquivo de rotas API removido - usando apenas banco SQLite diretamente 
+// Arquivo de rotas API - aplicação migrada para PostgreSQL 

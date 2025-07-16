@@ -117,7 +117,7 @@ class ParlamentarService
             ->where('status', 'ativo')
             ->get();
             
-        // Ordenar manualmente para compatibilidade com SQLite
+        // Ordenar por nome
         return $parlamentares->sortBy(function ($parlamentar) use ($cargosMesa) {
             return array_search($parlamentar->cargo, $cargosMesa);
         })->values();

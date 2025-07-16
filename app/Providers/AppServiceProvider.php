@@ -11,7 +11,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        // API removida - usando apenas SQLite diretamente
+        // Aplicação migrada para PostgreSQL
     }
 
     /**

@@ -93,7 +93,7 @@ A estrutura base está 100% completa e os primeiros 5 módulos core do sistema f
 
 ### Backend (Laravel)
 - **Framework:** Laravel 12 + PHP 8.2
-- **Database:** SQLite (desenvolvimento), preparado para PostgreSQL/MySQL
+- **Database:** PostgreSQL (produção/desenvolvimento) via Docker
 - **Cache:** Laravel Cache (File/Redis)
 - **Queue:** Laravel Queue configurado
 - **Auth:** Laravel Sanctum + JWT
