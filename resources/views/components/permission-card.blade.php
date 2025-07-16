@@ -111,7 +111,8 @@
                                 </div>
                             </div>
                             
-                            @if($showActions && !$readonly)
+                            {{-- Ações removidas - não precisa mostrar criar, editar, excluir --}}
+                            @if(false)
                                 <div class="permission-actions px-3 pb-3" style="display: none;">
                                     <div class="separator separator-dashed mb-3"></div>
                                     <div class="d-flex gap-2 justify-content-center">

@@ -269,6 +269,7 @@ Route::prefix('admin/screen-permissions')->name('admin.screen-permissions.')->mi
     Route::get('/cache/stats', [App\Http\Controllers\Admin\ScreenPermissionController::class, 'cacheStats'])->name('cache-stats');
     Route::post('/cache/clear', [App\Http\Controllers\Admin\ScreenPermissionController::class, 'clearCache'])->name('cache-clear');
     Route::post('/cache/warm', [App\Http\Controllers\Admin\ScreenPermissionController::class, 'warmCache'])->name('cache-warm');
+    Route::post('/initialize', [App\Http\Controllers\Admin\ScreenPermissionController::class, 'initialize'])->name('initialize');
 });
 
 // Mock API routes moved to routes/api.php to avoid CSRF middleware

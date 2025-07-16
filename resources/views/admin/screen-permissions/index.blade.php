@@ -55,7 +55,7 @@
                                 <span class="path1"></span>
                                 <span class="path2"></span>
                             </i>
-                            <h3 class="fw-bold m-0 ps-15">Sistema de Permissões Avançado</h3>
+                            <h3 class="fw-bold m-0 ps-15">Controle de Acesso às Telas</h3>
                         </div>
                     </div>
                     <!--end::Card title-->
@@ -91,6 +91,17 @@
                                 </i>
                                 Restaurar Padrão
                             </button>
+                            
+                            <button type="button" class="btn btn-info" id="initialize-permissions">
+                                <i class="ki-duotone ki-setting-3 fs-2">
+                                    <span class="path1"></span>
+                                    <span class="path2"></span>
+                                    <span class="path3"></span>
+                                    <span class="path4"></span>
+                                    <span class="path5"></span>
+                                </i>
+                                Inicializar Sistema
+                            </button>
                             <!--end::Actions-->
                         </div>
                     </div>
@@ -107,8 +118,9 @@
                         <div class="col-xl-3 col-md-6">
                             <div class="card card-flush h-xl-100">
                                 <div class="card-body text-center">
-                                    <div class="text-gray-800 fw-bold fs-2hx">{{ $cacheStats['hit_ratio'] }}%</div>
+                                    <div class="text-gray-800 fw-bold fs-2hx">{{ $cacheStats['hit_ratio'] ?? 0 }}%</div>
                                     <div class="text-gray-400 fw-semibold fs-6">Cache Hit Ratio</div>
+                                    <div class="text-gray-500 fs-8">{{ $cacheStats['hits'] ?? 0 }}/{{ $cacheStats['total'] ?? 0 }}</div>
                                 </div>
                             </div>
                         </div>
@@ -117,6 +129,7 @@
                                 <div class="card-body text-center">
                                     <div class="text-gray-800 fw-bold fs-2hx">{{ $statistics['total_permissions'] ?? 0 }}</div>
                                     <div class="text-gray-400 fw-semibold fs-6">Total Permissões</div>
+                                    <div class="text-gray-500 fs-8">Configuradas no Sistema</div>
                                 </div>
                             </div>
                         </div>
@@ -125,6 +138,7 @@
                                 <div class="card-body text-center">
                                     <div class="text-gray-800 fw-bold fs-2hx">{{ $statistics['active_permissions'] ?? 0 }}</div>
                                     <div class="text-gray-400 fw-semibold fs-6">Permissões Ativas</div>
+                                    <div class="text-gray-500 fs-8">Telas Liberadas</div>
                                 </div>
                             </div>
                         </div>
@@ -133,6 +147,7 @@
                                 <div class="card-body text-center">
                                     <div class="text-gray-800 fw-bold fs-2hx">{{ $statistics['coverage_percentage'] ?? 0 }}%</div>
                                     <div class="text-gray-400 fw-semibold fs-6">Cobertura</div>
+                                    <div class="text-gray-500 fs-8">Perfis Configurados</div>
                                 </div>
                             </div>
                         </div>
@@ -186,7 +201,48 @@
                             </span>
                         </div>
                         <h3 class="text-gray-800 fw-bold mb-4 fs-2">Selecione um Perfil</h3>
-                        <p class="text-gray-500 fs-5 mb-0 mw-500px mx-auto">Escolha um perfil de usuário no menu suspenso acima para configurar suas permissões de acesso às telas do sistema.</p>
+                        <p class="text-gray-500 fs-5 mb-0 mw-500px mx-auto">Escolha um perfil de usuário no menu suspenso acima para configurar quais telas ele terá acesso. As telas selecionadas aparecerão no menu lateral do usuário.</p>
+                        
+                        <!-- Dica de uso -->
+                        <div class="alert alert-primary d-flex align-items-center mt-6 mw-600px mx-auto">
+                            <i class="ki-duotone ki-information-5 fs-2hx text-primary me-4">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                                <span class="path3"></span>
+                            </i>
+                            <div class="d-flex flex-column">
+                                <h5 class="mb-1">Como funciona?</h5>
+                                <span>Marque as telas que o tipo de usuário poderá acessar. Apenas as telas selecionadas aparecerão no menu lateral para usuários desse perfil.</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Aviso importante -->
+                        <div class="alert alert-warning d-flex align-items-center mt-4 mw-600px mx-auto">
+                            <i class="ki-duotone ki-warning-2 fs-2hx text-warning me-4">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                                <span class="path3"></span>
+                            </i>
+                            <div class="d-flex flex-column">
+                                <h5 class="mb-1">Importante!</h5>
+                                <span>O Dashboard sempre estará habilitado para todos os usuários. Configure as demais permissões para cada perfil liberando as telas necessárias.</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Aviso quando não há permissões configuradas -->
+                        @if(($statistics['total_permissions'] ?? 0) == 0)
+                        <div class="alert alert-info d-flex align-items-center mt-4 mw-600px mx-auto">
+                            <i class="ki-duotone ki-information-4 fs-2hx text-info me-4">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                                <span class="path3"></span>
+                            </i>
+                            <div class="d-flex flex-column">
+                                <h5 class="mb-1">Sistema Não Inicializado</h5>
+                                <span>Clique em "Inicializar Sistema" para configurar automaticamente as permissões básicas (Dashboard para todos os perfis).</span>
+                            </div>
+                        </div>
+                        @endif
                     </div>
 
                 </div>
@@ -412,6 +468,24 @@
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
 }
+
+/* Admin switches - disabled but visually different */
+.permission-switch:disabled {
+    opacity: 0.8;
+    cursor: not-allowed;
+}
+
+.permission-switch:disabled:checked {
+    background-color: #198754 !important;
+    border-color: #198754 !important;
+}
+
+/* Dashboard switch - sempre habilitado */
+.permission-switch[data-route="dashboard.index"]:disabled {
+    opacity: 1;
+    background-color: #0d6efd !important;
+    border-color: #0d6efd !important;
+}
 </style>
 
 @push('scripts')
@@ -420,6 +494,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const roleSelector = document.getElementById('role-selector');
     const saveBtn = document.getElementById('save-permissions');
     const resetBtn = document.getElementById('reset-permissions');
+    const initializeBtn = document.getElementById('initialize-permissions');
     const permissionsGrid = document.getElementById('permissions-grid');
     const emptyState = document.getElementById('empty-state');
     const roleInfo = document.getElementById('role-info');
@@ -470,11 +545,36 @@ document.addEventListener('DOMContentLoaded', function() {
     function loadRolePermissions(role) {
         showLoading();
         
+        // Se for administrador, não precisa carregar do servidor - todas as permissões devem estar ativas
+        if (role === 'ADMIN') {
+            currentPermissions = {};
+            updatePermissionsUI();
+            hideLoading();
+            return;
+        }
+        
         fetch(`/admin/screen-permissions/role/${role}`)
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
                     currentPermissions = data.permissions || {};
+                    
+                    // Garantir que Dashboard sempre esteja nas permissões para todos os perfis
+                    if (!currentPermissions.dashboard) {
+                        currentPermissions.dashboard = [];
+                    }
+                    
+                    // Forçar Dashboard como habilitado se não estiver presente
+                    const dashboardExists = currentPermissions.dashboard.some(perm => perm.screen_route === 'dashboard.index');
+                    if (!dashboardExists) {
+                        currentPermissions.dashboard.push({
+                            screen_route: 'dashboard.index',
+                            screen_name: 'Painel Principal',
+                            screen_module: 'dashboard',
+                            can_access: true
+                        });
+                    }
+                    
                     updatePermissionsUI();
                 } else {
                     showNotification('Erro ao carregar permissões', 'error');
@@ -495,74 +595,117 @@ document.addEventListener('DOMContentLoaded', function() {
             input.checked = false;
         });
 
-        // Aplicar permissões carregadas
-        Object.entries(currentPermissions).forEach(([module, permissions]) => {
-            if (permissions && Array.isArray(permissions)) {
-                permissions.forEach(permission => {
-                    const route = permission.screen_route;
-                    
-                    // Marcar switch principal
-                    if (permission.can_access) {
-                        const viewSwitch = document.querySelector(`[data-route="${route}"][data-action="view"]`);
-                        if (viewSwitch) {
-                            viewSwitch.checked = true;
-                            togglePermissionActions(route, true);
-                            updatePermissionStatus(route, true);
+        // Verificar se é administrador
+        const selectedRole = roleSelector.value;
+        const isAdmin = selectedRole === 'ADMIN';
+
+        if (isAdmin) {
+            // Para administrador: habilitar todas as telas por padrão e desabilitar edição
+            document.querySelectorAll('.permission-switch[data-action="view"]').forEach(viewSwitch => {
+                viewSwitch.checked = true;
+                viewSwitch.disabled = true; // Não permitir desabilitar
+                const route = viewSwitch.dataset.route;
+                updatePermissionStatus(route, true);
+            });
+            
+            // Mostrar mensagem informativa para administrador
+            showNotification('Perfil Administrador: Todas as telas estão habilitadas por padrão e não podem ser desabilitadas.', 'info');
+            
+            // Desabilitar botões para administrador
+            saveBtn.disabled = true;
+            resetBtn.disabled = true;
+        } else {
+            // Para outros perfis: habilitar edição e aplicar permissões carregadas
+            document.querySelectorAll('.permission-switch[data-action="view"]').forEach(viewSwitch => {
+                viewSwitch.disabled = false; // Permitir edição
+                
+                // Dashboard sempre habilitado por padrão para todos os usuários
+                if (viewSwitch.dataset.route === 'dashboard.index') {
+                    viewSwitch.checked = true;
+                    viewSwitch.disabled = true; // Dashboard não pode ser desabilitado
+                    updatePermissionStatus('dashboard.index', true);
+                }
+            });
+            
+            // Habilitar botões para outros perfis
+            saveBtn.disabled = false;
+            resetBtn.disabled = false;
+            
+            // Para outros perfis: aplicar permissões carregadas
+            Object.entries(currentPermissions).forEach(([module, permissions]) => {
+                if (permissions && Array.isArray(permissions)) {
+                    permissions.forEach(permission => {
+                        const route = permission.screen_route;
+                        
+                        // Marcar switch principal
+                        if (permission.can_access) {
+                            const viewSwitch = document.querySelector(`[data-route="${route}"][data-action="view"]`);
+                            if (viewSwitch) {
+                                viewSwitch.checked = true;
+                                // Dashboard não pode ser desabilitado para nenhum perfil
+                                if (route === 'dashboard.index') {
+                                    viewSwitch.disabled = true;
+                                }
+                                updatePermissionStatus(route, true);
+                            }
                         }
-                    }
 
-                    // Marcar ações específicas
-                    if (permission.can_create) {
-                        const createInput = document.querySelector(`[data-route="${route}"][data-action="create"]`);
-                        if (createInput) createInput.checked = true;
-                    }
-                    if (permission.can_edit) {
-                        const editInput = document.querySelector(`[data-route="${route}"][data-action="edit"]`);
-                        if (editInput) editInput.checked = true;
-                    }
-                    if (permission.can_delete) {
-                        const deleteInput = document.querySelector(`[data-route="${route}"][data-action="delete"]`);
-                        if (deleteInput) deleteInput.checked = true;
-                    }
-                });
+                        // Ações específicas removidas - agora só controla acesso às telas
+                    });
+                }
+            });
+            
+            // Garantir que Dashboard sempre esteja marcado mesmo se não estiver nas permissões carregadas
+            const dashboardSwitch = document.querySelector('[data-route="dashboard.index"][data-action="view"]');
+            if (dashboardSwitch) {
+                if (!dashboardSwitch.checked) {
+                    dashboardSwitch.checked = true;
+                    dashboardSwitch.disabled = true;
+                    updatePermissionStatus('dashboard.index', true);
+                }
+                console.log('Dashboard switch encontrado e configurado:', dashboardSwitch.checked);
+            } else {
+                console.error('Dashboard switch não encontrado!');
             }
-        });
+        }
 
-        updateModuleProgress();
+        // Forçar atualização do progresso após um pequeno delay para garantir que os elementos estejam prontos
+        setTimeout(() => {
+            updateModuleProgress();
+        }, 100);
+        
         hasChanges = false;
     }
 
     // Event listeners para switches de permissão
     document.addEventListener('change', function(e) {
-        if (e.target.classList.contains('permission-switch') || e.target.classList.contains('permission-action')) {
-            if (e.target.classList.contains('permission-switch')) {
-                const route = e.target.dataset.route;
-                const isChecked = e.target.checked;
-                
-                togglePermissionActions(route, isChecked);
-                updatePermissionStatus(route, isChecked);
-                
-                if (!isChecked) {
-                    // Desmarcar todas as ações se o acesso principal for removido
-                    document.querySelectorAll(`[data-route="${route}"].permission-action`).forEach(input => {
-                        input.checked = false;
-                    });
-                }
+        if (e.target.classList.contains('permission-switch')) {
+            const route = e.target.dataset.route;
+            const isChecked = e.target.checked;
+            
+            // Verificar se é administrador - não permitir alterações
+            const selectedRole = roleSelector.value;
+            if (selectedRole === 'ADMIN') {
+                e.target.checked = true; // Forçar a permanecer marcado
+                return;
             }
             
+            // Dashboard não pode ser desmarcado para nenhum perfil
+            if (route === 'dashboard.index' && !isChecked) {
+                e.target.checked = true; // Forçar Dashboard a permanecer marcado
+                showNotification('O Dashboard não pode ser removido. Todos os usuários devem ter acesso ao Dashboard.', 'warning');
+                return;
+            }
+            
+            updatePermissionStatus(route, isChecked);
             updateModuleProgress();
             hasChanges = true;
             
-            console.log('Mudança detectada:', e.target.dataset.route, e.target.dataset.action, e.target.checked);
+            console.log('Mudança de permissão detectada:', route, isChecked);
         }
     });
 
-    function togglePermissionActions(route, show) {
-        const actionsDiv = document.querySelector(`[data-route="${route}"] .permission-actions`);
-        if (actionsDiv) {
-            actionsDiv.style.display = show ? 'block' : 'none';
-        }
-    }
+    // Função togglePermissionActions removida - ações não são mais exibidas
 
     function updatePermissionStatus(route, hasAccess) {
         const statusEl = document.getElementById(`status-${route}`);
@@ -608,8 +751,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     statusEl.textContent = 'Completo';
                     statusEl.className = 'text-success fs-8';
                 } else if (percentage > 0) {
-                    statusEl.textContent = 'Parcial';
-                    statusEl.className = 'text-warning fs-8';
+                    statusEl.textContent = 'Ativo';
+                    statusEl.className = 'text-primary fs-8';
                 } else {
                     statusEl.textContent = 'Desabilitado';
                     statusEl.className = 'text-muted fs-8';
@@ -646,7 +789,7 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                showNotification(data.message || 'Permissões salvas com sucesso!', 'success');
+                showNotification(data.message || 'Permissões salvas com sucesso! As telas selecionadas agora aparecerão no menu lateral dos usuários deste perfil.', 'success');
                 hasChanges = false;
             } else {
                 showNotification(data.message || 'Erro ao salvar permissões', 'error');
@@ -700,24 +843,60 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
+    // Inicializar sistema de permissões
+    initializeBtn.addEventListener('click', function() {
+        if (!confirm('Tem certeza que deseja inicializar o sistema de permissões? Isso irá configurar as permissões básicas automaticamente.')) {
+            return;
+        }
+
+        showLoading();
+        
+        fetch('/admin/screen-permissions/initialize', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification(data.message || 'Sistema de permissões inicializado com sucesso!', 'success');
+                // Recarregar a página para mostrar as estatísticas atualizadas
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+            } else {
+                showNotification(data.message || 'Erro ao inicializar sistema', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            showNotification('Erro de comunicação', 'error');
+        })
+        .finally(() => {
+            hideLoading();
+        });
+    });
+
     function collectPermissions() {
         const permissions = [];
 
         modules.forEach(module => {
             Object.entries(module.routes).forEach(([route, routeName]) => {
                 const viewSwitch = document.querySelector(`[data-route="${route}"][data-action="view"]`);
-                const createInput = document.querySelector(`[data-route="${route}"][data-action="create"]`);
-                const editInput = document.querySelector(`[data-route="${route}"][data-action="edit"]`);
-                const deleteInput = document.querySelector(`[data-route="${route}"][data-action="delete"]`);
+                
+                // Dashboard sempre habilitado para todos os perfis
+                const canAccess = route === 'dashboard.index' ? true : (viewSwitch ? viewSwitch.checked : false);
 
                 permissions.push({
                     screen_route: route,
                     screen_name: routeName,
                     screen_module: module.value,
-                    can_access: viewSwitch ? viewSwitch.checked : false,
-                    can_create: createInput ? createInput.checked : false,
-                    can_edit: editInput ? editInput.checked : false,
-                    can_delete: deleteInput ? deleteInput.checked : false
+                    can_access: canAccess,
+                    can_create: false, // Sempre false - não usado
+                    can_edit: false,   // Sempre false - não usado
+                    can_delete: false  // Sempre false - não usado
                 });
             });
         });

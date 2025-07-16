@@ -30,6 +30,9 @@ class ScreenPermissionController extends Controller
         $modules = SystemModule::getAllWithRoutes();
         
         try {
+            // Garantir que o Dashboard esteja habilitado para todos os perfis
+            $this->ensureDashboardForAllRoles();
+            
             $permissionMatrix = $this->permissionService->getPermissionMatrix();
             $statistics = $this->permissionService->getPermissionStatistics();
             $cacheStats = $this->cacheService->getCacheStatistics();
@@ -49,7 +52,8 @@ class ScreenPermissionController extends Controller
             $cacheStats = [
                 'hits' => 0,
                 'misses' => 0,
-                'hit_ratio' => 0
+                'hit_ratio' => 0,
+                'total' => 0
             ];
         }
         
@@ -60,6 +64,26 @@ class ScreenPermissionController extends Controller
             'statistics',
             'cacheStats'
         ));
+    }
+
+    /**
+     * Garantir que o Dashboard esteja habilitado para todos os perfis
+     */
+    private function ensureDashboardForAllRoles(): void
+    {
+        foreach (UserRole::cases() as $role) {
+            \App\Models\ScreenPermission::updateOrCreate(
+                [
+                    'role_name' => $role->value,
+                    'screen_route' => 'dashboard.index',
+                ],
+                [
+                    'screen_name' => 'Painel Principal',
+                    'screen_module' => 'dashboard',
+                    'can_access' => true,
+                ]
+            );
+        }
     }
 
     /**
@@ -78,17 +102,21 @@ class ScreenPermissionController extends Controller
         ]);
 
         try {
-            $this->permissionService->updateRolePermissions(
-                $request->input('role'),
-                $request->input('permissions')
-            );
+            $roleName = $request->input('role');
+            $permissions = $request->input('permissions');
+
+            // Atualizar usando o serviço existente
+            $this->permissionService->updateRolePermissions($roleName, $permissions);
+
+            // Também atualizar na tabela ScreenPermission para compatibilidade
+            $this->updateScreenPermissions($roleName, $permissions);
 
             // Limpar cache após alterações
             $this->cacheService->clearAllPermissionCaches();
 
             return response()->json([
                 'success' => true,
-                'message' => 'Permissões atualizadas com sucesso!'
+                'message' => 'Permissões atualizadas com sucesso! As telas selecionadas agora aparecerão no menu lateral do usuário.'
             ]);
             
         } catch (\Exception $e) {
@@ -100,11 +128,36 @@ class ScreenPermissionController extends Controller
     }
 
     /**
+     * Atualizar permissões na tabela ScreenPermission
+     */
+    private function updateScreenPermissions(string $roleName, array $permissions): void
+    {
+        foreach ($permissions as $permission) {
+            // Dashboard sempre habilitado para todos os perfis (exceto se for ADMIN que já tem tudo)
+            $canAccess = $permission['screen_route'] === 'dashboard.index' ? true : ($permission['can_access'] ?? false);
+            
+            \App\Models\ScreenPermission::setScreenAccess(
+                $roleName,
+                $permission['screen_route'],
+                $permission['screen_name'] ?? '',
+                $permission['screen_module'] ?? '',
+                $canAccess
+            );
+        }
+    }
+
+    /**
      * Obter permissões de um role específico
      */
-    public function getRolePermissions(Request $request, string $role): JsonResponse
+    public function getRolePermissions(string $role): JsonResponse
     {
         try {
+            $permissions = $this->permissionService->getRolePermissions($role);
+            
+            // Garantir que Dashboard sempre esteja presente e habilitado
+            $this->ensureDashboardForRole($role);
+            
+            // Recarregar permissões após garantir Dashboard
             $permissions = $this->permissionService->getRolePermissions($role);
             
             return response()->json([
@@ -123,6 +176,24 @@ class ScreenPermissionController extends Controller
                 'message' => 'Erro ao carregar permissões: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Garantir que o Dashboard esteja habilitado para um perfil específico
+     */
+    private function ensureDashboardForRole(string $roleName): void
+    {
+        \App\Models\ScreenPermission::updateOrCreate(
+            [
+                'role_name' => $roleName,
+                'screen_route' => 'dashboard.index',
+            ],
+            [
+                'screen_name' => 'Painel Principal',
+                'screen_module' => 'dashboard',
+                'can_access' => true,
+            ]
+        );
     }
 
     /**
@@ -266,6 +337,29 @@ class ScreenPermissionController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Erro ao pré-carregar cache: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Inicializar sistema de permissões
+     */
+    public function initialize(): JsonResponse
+    {
+        try {
+            $this->ensureDashboardForAllRoles();
+            
+            // Executar comando de inicialização
+            \Artisan::call('permissions:initialize');
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Sistema de permissões inicializado com sucesso! Dashboard habilitado para todos os perfis.'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erro ao inicializar sistema: ' . $e->getMessage()
             ], 500);
         }
     }

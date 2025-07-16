@@ -148,24 +148,35 @@ class ScreenPermission extends Model
 
         $user = Auth::user();
         
-        // Admin sempre tem acesso total
+        // Admin sempre tem acesso total a todas as telas
         if ($user->isAdmin()) {
             return true;
         }
 
         $roleName = $user->getRoleNames()->first() ?? 'PUBLICO';
         
-        // Verificar na tabela de permissões
-        $permission = self::where('role_name', $roleName)
-            ->where('screen_route', $route)
-            ->first();
+        // Admin via role name também tem acesso total
+        if ($roleName === 'ADMIN') {
+            return true;
+        }
+        
+        // Verificar se existe configuração de permissões para este perfil
+        if (self::hasConfiguredPermissions($roleName)) {
+            // Se há permissões configuradas, só permitir o que foi explicitamente liberado
+            $permission = self::where('role_name', $roleName)
+                ->where('screen_route', $route)
+                ->first();
 
-        if ($permission) {
-            return $permission->can_access;
+            return $permission ? $permission->can_access : false;
         }
 
-        // Fallback: aplicar regras padrão baseadas no perfil
-        return self::getDefaultAccessByRole($roleName, $route);
+        // Se não há permissões configuradas, permitir apenas dashboard para não deixar usuário sem acesso
+        if ($route === 'dashboard.index') {
+            return true;
+        }
+        
+        // Outras rotas requerem configuração explícita pelo administrador
+        return false;
     }
 
     /**
@@ -249,31 +260,35 @@ class ScreenPermission extends Model
 
         $user = Auth::user();
         
-        // Admin sempre tem acesso total
+        // Admin sempre tem acesso total a todos os módulos
         if ($user->isAdmin()) {
             return true;
         }
 
         $roleName = $user->getRoleNames()->first() ?? 'PUBLICO';
         
-        // Verificar se tem acesso a qualquer rota do módulo
-        $hasAccess = self::where('role_name', $roleName)
-            ->where('screen_module', $module)
-            ->where('can_access', true)
-            ->exists();
-
-        if ($hasAccess) {
+        // Admin via role name também tem acesso total
+        if ($roleName === 'ADMIN') {
             return true;
         }
+        
+        // Verificar se existem permissões configuradas para este role
+        if (self::hasConfiguredPermissions($roleName)) {
+            // Se há permissões configuradas, só permitir módulos com pelo menos uma rota liberada
+            $hasAccess = self::where('role_name', $roleName)
+                ->where('screen_module', $module)
+                ->where('can_access', true)
+                ->exists();
 
-        // Fallback: verificar rotas principais do módulo
-        $moduleRoutes = self::getModuleMainRoutes($module);
-        foreach ($moduleRoutes as $route) {
-            if (self::userCanAccessRoute($route)) {
-                return true;
-            }
+            return $hasAccess;
         }
 
+        // Se não há permissões configuradas, permitir apenas dashboard para não deixar usuário sem acesso
+        if ($module === 'dashboard') {
+            return true;
+        }
+        
+        // Outros módulos requerem configuração explícita pelo administrador
         return false;
     }
 
@@ -293,6 +308,45 @@ class ScreenPermission extends Model
         ];
 
         return $routes[$module] ?? [];
+    }
+
+    /**
+     * Aplicar permissões configuradas para um perfil específico
+     */
+    public static function applyRolePermissions(string $roleName, array $permissions): void
+    {
+        // Primeiro, remover todas as permissões existentes do role
+        self::where('role_name', $roleName)->delete();
+
+        // Aplicar as novas permissões
+        foreach ($permissions as $permission) {
+            self::setScreenAccess(
+                $roleName,
+                $permission['screen_route'],
+                $permission['screen_name'] ?? '',
+                $permission['screen_module'] ?? '',
+                $permission['can_access'] ?? false
+            );
+        }
+    }
+
+    /**
+     * Obter todas as permissões configuradas para um perfil
+     */
+    public static function getRolePermissions(string $roleName): array
+    {
+        return self::where('role_name', $roleName)
+            ->get()
+            ->keyBy('screen_route')
+            ->toArray();
+    }
+
+    /**
+     * Verificar se existem permissões configuradas para um perfil
+     */
+    public static function hasConfiguredPermissions(string $roleName): bool
+    {
+        return self::where('role_name', $roleName)->exists();
     }
 
 }
