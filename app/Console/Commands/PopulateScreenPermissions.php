@@ -1,30 +1,56 @@
 <?php
 
-namespace Database\Seeders;
+namespace App\Console\Commands;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
-use Illuminate\Database\Seeder;
+use Illuminate\Console\Command;
 use App\Models\ScreenPermission;
-use App\Models\User;
 
-class ScreenPermissionSeeder extends Seeder
+class PopulateScreenPermissions extends Command
 {
     /**
-     * Run the database seeds.
+     * The name and signature of the console command.
+     *
+     * @var string
      */
-    public function run(): void
+    protected $signature = 'permissions:populate-screens';
+
+    /**
+     * The console command description.
+     *
+     * @var string
+     */
+    protected $description = 'Popula as permissões de tela para todos os perfis';
+
+    /**
+     * Execute the console command.
+     */
+    public function handle()
     {
-        // Limpar permissões existentes
-        ScreenPermission::truncate();
+        $this->info('Populando permissões de tela...');
         
-        // Configurar permissões para cada perfil
+        // Configurar permissões para PARLAMENTAR
         $this->configurarPermissoesParlamentar();
-        $this->configurarPermissoesRelator();
-        $this->configurarPermissoesProtocolo();
-        $this->configurarPermissoesAssessor();
-        $this->configurarPermissoesPublico();
+        $this->line('✓ Permissões do PARLAMENTAR configuradas');
         
-        $this->command->info('Permissões de tela configuradas com sucesso!');
+        // Configurar permissões para RELATOR
+        $this->configurarPermissoesRelator();
+        $this->line('✓ Permissões do RELATOR configuradas');
+        
+        // Configurar permissões para PROTOCOLO
+        $this->configurarPermissoesProtocolo();
+        $this->line('✓ Permissões do PROTOCOLO configuradas');
+        
+        // Configurar permissões para ASSESSOR
+        $this->configurarPermissoesAssessor();
+        $this->line('✓ Permissões do ASSESSOR configuradas');
+        
+        // Configurar permissões para PUBLICO
+        $this->configurarPermissoesPublico();
+        $this->line('✓ Permissões do PUBLICO configuradas');
+        
+        $this->info('Permissões de tela populadas com sucesso!');
+        
+        return Command::SUCCESS;
     }
     
     /**
@@ -58,7 +84,7 @@ class ScreenPermissionSeeder extends Seeder
                 'can_access' => true,
             ],
             
-            // Projetos - pode visualizar, criar e editar
+            // Projetos - pode visualizar, criar e editar seus próprios
             [
                 'role_name' => 'PARLAMENTAR',
                 'screen_route' => 'projetos.index',

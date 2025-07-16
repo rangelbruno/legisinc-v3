@@ -526,11 +526,18 @@ class ProjetoService
      */
     public function obterOpcoes(): array
     {
+        try {
+            $autores = User::orderBy('name')->get();
+        } catch (Exception $e) {
+            Log::error('Erro ao buscar autores', ['erro' => $e->getMessage()]);
+            $autores = collect(); // Return empty collection on error
+        }
+
         return [
             'tipos' => Projeto::TIPOS,
             'status' => Projeto::STATUS,
             'urgencias' => Projeto::URGENCIA,
-            'autores' => User::orderBy('name')->get(),
+            'autores' => $autores,
             'comissoes' => [], // TODO: Buscar comissões via API externa
         ];
     }

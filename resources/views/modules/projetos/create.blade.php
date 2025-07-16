@@ -111,6 +111,11 @@
                                                 <div class="fv-help-block">{{ $message }}</div>
                                             </div>
                                         @enderror
+                                        @if(empty($opcoes['tipos'] ?? []))
+                                            <div class="alert alert-warning mt-2">
+                                                <small>Nenhum tipo de projeto disponível. Verifique a configuração do sistema.</small>
+                                            </div>
+                                        @endif
                                     </div>
 
                                     <div class="fv-row mb-8" id="modeloContainer" style="display: none;">

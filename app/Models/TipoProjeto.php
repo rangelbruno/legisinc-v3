@@ -26,7 +26,7 @@ class TipoProjeto extends Model
     // Relacionamentos
     public function projetos(): HasMany
     {
-        return $this->hasMany(Projeto::class, 'tipo_projeto_id');
+        return $this->hasMany(Projeto::class, 'tipo');
     }
 
     // Scopes

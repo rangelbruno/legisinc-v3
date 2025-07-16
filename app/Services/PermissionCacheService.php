@@ -237,22 +237,17 @@ class PermissionCacheService
     public function clearAllPermissionCaches(): void
     {
         try {
-            $pattern = self::CACHE_PREFIX . '*';
+            // Limpar apenas cache de estatísticas e matriz de permissões
+            Cache::forget('permissions_statistics');
+            Cache::forget('permissions_matrix');
             
-            if (Cache::getStore() instanceof \Illuminate\Cache\RedisStore) {
-                $keys = Cache::getStore()->connection()->keys($pattern);
-                if (!empty($keys)) {
-                    Cache::getStore()->connection()->del($keys);
-                }
-            } else {
-                // Fallback para outros drivers de cache
-                $userIds = User::pluck('id');
-                foreach ($userIds as $userId) {
-                    $this->clearUserCache($userId);
-                }
+            // Limpar caches de usuários ativos recentemente para otimizar performance
+            $userIds = User::where('updated_at', '>', now()->subWeek())->pluck('id');
+            foreach ($userIds as $userId) {
+                $this->clearUserCache($userId);
             }
             
-            Log::info("Todos os caches de permissões foram limpos");
+            Log::info("Caches de permissões limpos para " . count($userIds) . " usuários");
         } catch (\Exception $e) {
             Log::error("Erro ao limpar caches de permissões: " . $e->getMessage());
         }

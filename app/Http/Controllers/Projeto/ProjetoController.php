@@ -64,8 +64,28 @@ class ProjetoController extends Controller
      */
     public function create(): View
     {
-        $opcoes = $this->projetoService->obterOpcoes();
-        return view('modules.projetos.create', compact('opcoes'));
+        try {
+            $opcoes = $this->projetoService->obterOpcoes();
+            
+            // Debug: Log the options to see what's being passed
+            \Log::info('Opções para criação de projeto', $opcoes);
+            
+            return view('modules.projetos.create', compact('opcoes'));
+        } catch (Exception $e) {
+            \Log::error('Erro ao carregar formulário de criação', ['erro' => $e->getMessage()]);
+            
+            // Fallback options in case of database issues
+            $opcoes = [
+                'tipos' => \App\Models\Projeto::TIPOS,
+                'status' => \App\Models\Projeto::STATUS,
+                'urgencias' => \App\Models\Projeto::URGENCIA,
+                'autores' => collect(),
+                'comissoes' => [],
+            ];
+            
+            return view('modules.projetos.create', compact('opcoes'))
+                ->with('error', 'Erro ao carregar dados do formulário. Alguns campos podem estar limitados.');
+        }
     }
 
     /**
@@ -73,6 +93,9 @@ class ProjetoController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
+        // Debug: Log incoming request data
+        \Log::info('Request data para criação de projeto', $request->all());
+        
         $validator = Validator::make($request->all(), [
             'titulo' => 'required|string|max:255',
             'ementa' => 'required|string',
@@ -90,6 +113,11 @@ class ProjetoController extends Controller
         ]);
 
         if ($validator->fails()) {
+            \Log::error('Validação falhou na criação do projeto', [
+                'errors' => $validator->errors()->toArray(),
+                'input' => $request->all()
+            ]);
+            
             return redirect()->back()
                 ->withErrors($validator)
                 ->withInput();

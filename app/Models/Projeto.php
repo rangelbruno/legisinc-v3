@@ -15,7 +15,7 @@ class Projeto extends Model
     protected $fillable = [
         'titulo',
         'descricao',
-        'tipo_projeto_id',
+        'tipo',
         'autor_id',
         'conteudo',
         'status',
@@ -78,10 +78,11 @@ class Projeto extends Model
     ];
 
     // Relacionamentos
-    public function tipoProjeto(): BelongsTo
-    {
-        return $this->belongsTo(TipoProjeto::class, 'tipo_projeto_id');
-    }
+    // Note: tipo is now an enum field, not a foreign key
+    // public function tipoProjeto(): BelongsTo
+    // {
+    //     return $this->belongsTo(TipoProjeto::class, 'tipo');
+    // }
 
     public function autor(): BelongsTo
     {
