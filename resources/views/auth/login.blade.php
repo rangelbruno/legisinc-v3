@@ -4,21 +4,246 @@
 <!--begin::Head-->
 
 <head>
-    <title>Template - Login</title>
+    <title>LegisInc - Sistema de Tramitação Legislativa</title>
     <meta charset="utf-8" />
     
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta property="og:locale" content="en_US" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, user-scalable=no" />
+    <meta property="og:locale" content="pt_BR" />
     <meta property="og:type" content="article" />
-    <meta property="og:title" content="Metronic - The World's #1 Selling Bootstrap Admin Template by KeenThemes" />
+    <meta property="og:title" content="LegisInc - Sistema de Tramitação Legislativa" />
     <link rel="shortcut icon" href="{{ asset('assets/media/logos/favicon.ico') }}" />
     <!--begin::Fonts(mandatory for all pages)-->
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,400,500,600,700" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <!--end::Fonts-->
     <!--begin::Stylesheets-->
     <link href="{{ asset('assets/plugins/global/plugins.bundle.css') }}" rel="stylesheet">
     <link href="{{ asset('assets/css/style.bundle.css') }}" rel="stylesheet">
     <!--end::Stylesheets-->
+    <style>
+        .auth-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .legislative-pattern {
+            background: linear-gradient(45deg, rgba(255,255,255,0.1) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.1) 75%, transparent 75%, transparent);
+            background-size: 20px 20px;
+        }
+        
+        .form-control {
+            border-radius: 8px;
+            border: 2px solid #e1e5e9;
+            padding: 12px 16px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+        
+        .form-control:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 8px;
+            padding: 12px 24px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn-outline-primary {
+            border: 2px solid #667eea;
+            color: #667eea;
+            background: transparent;
+            border-radius: 20px;
+            padding: 8px 20px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-outline-primary:hover {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-color: #667eea;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+        
+        .legislative-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            margin: 0 auto;
+            max-width: 100%;
+        }
+        
+        .logo-container {
+            position: relative;
+            margin-bottom: 2rem;
+        }
+        
+        .logo-glow {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 100px;
+            height: 100px;
+            background: radial-gradient(circle, rgba(102, 126, 234, 0.2) 0%, transparent 70%);
+            border-radius: 50%;
+            z-index: 1;
+        }
+        
+        .legislative-icon {
+            color: #667eea;
+            font-size: 1.2rem;
+            margin-right: 0.5rem;
+        }
+        
+        .feature-badge {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            margin: 2px;
+            display: inline-flex;
+            align-items: center;
+        }
+        
+        /* Mobile Responsive Styles */
+        @media (max-width: 991.98px) {
+            .auth-bg {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                padding: 1rem;
+            }
+            
+            .legislative-card {
+                margin: 0;
+                padding: 1.5rem !important;
+                border-radius: 12px;
+                width: 100%;
+                max-width: none;
+            }
+            
+            .logo-container {
+                margin-bottom: 1.5rem;
+            }
+            
+            .logo-glow {
+                width: 80px;
+                height: 80px;
+            }
+            
+            .feature-badge {
+                font-size: 10px;
+                padding: 3px 6px;
+                margin: 1px;
+            }
+            
+            .legislative-icon {
+                font-size: 1rem;
+            }
+            
+            .form-control {
+                padding: 10px 12px;
+                font-size: 16px; /* Prevent zoom on iOS */
+            }
+            
+            .btn-primary {
+                padding: 14px 24px;
+                font-size: 14px;
+            }
+            
+            .btn-primary:hover {
+                transform: none; /* Remove hover effect on mobile */
+            }
+            
+            .btn-outline-primary:hover {
+                transform: none; /* Remove hover effect on mobile */
+            }
+            
+            .btn-outline-primary {
+                padding: 6px 16px;
+                font-size: 13px;
+            }
+            
+            h1 {
+                font-size: 1.75rem !important;
+            }
+            
+            .d-flex.flex-column.flex-lg-row-fluid.w-lg-50.w-100 {
+                width: 100% !important;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .auth-bg {
+                padding: 0.5rem;
+            }
+            
+            .legislative-card {
+                padding: 1rem !important;
+                border-radius: 8px;
+            }
+            
+            .logo-container {
+                margin-bottom: 1rem;
+            }
+            
+            .logo-glow {
+                width: 60px;
+                height: 60px;
+            }
+            
+            .feature-badge {
+                font-size: 9px;
+                padding: 2px 4px;
+            }
+            
+            .d-flex.justify-content-center.flex-wrap.gap-2 {
+                gap: 0.25rem !important;
+            }
+            
+            h1 {
+                font-size: 1.5rem !important;
+                margin-bottom: 1rem !important;
+            }
+            
+            .text-gray-600 {
+                font-size: 0.875rem !important;
+            }
+        }
+        
+        /* Landscape orientation adjustments */
+        @media (max-width: 991.98px) and (orientation: landscape) {
+            .auth-bg {
+                padding: 0.5rem;
+            }
+            
+            .legislative-card {
+                padding: 1rem !important;
+            }
+            
+            .logo-container {
+                margin-bottom: 0.5rem;
+            }
+            
+            .mb-11 {
+                margin-bottom: 1.5rem !important;
+            }
+        }
+    </style>
 </head>
 <!--end::Head-->
 <!--begin::Body-->
@@ -31,13 +256,22 @@
     <!--begin::Root-->
     <div class="d-flex flex-column flex-root">
         <!--begin::Authentication - Sign-in -->
-        <div class="d-flex flex-column flex-lg-row flex-column-fluid">
+        <div class="d-flex flex-column flex-lg-row flex-column-fluid min-vh-100">
             <!--begin::Body-->
-            <div class="d-flex flex-column flex-lg-row-fluid w-lg-50 p-10 order-2 order-lg-1">
+            <div class="d-flex flex-column flex-lg-row-fluid w-lg-50 w-100 p-lg-10 p-3 order-2 order-lg-1">
                 <!--begin::Form-->
                 <div class="d-flex flex-center flex-column flex-lg-row-fluid">
                     <!--begin::Wrapper-->
-                    <div class="w-lg-500px p-10">
+                    <div class="w-lg-500px w-100 p-lg-10 p-4 legislative-card">
+                        <!--begin::Logo Mobile-->
+                        <div class="text-center mb-6 d-lg-none">
+                            <div class="logo-container">
+                                <div class="logo-glow"></div>
+                                <img alt="LegisInc Logo" src="{{ asset('assets/media/logos/legisinc.png') }}" class="h-60px" style="position: relative; z-index: 2;" />
+                            </div>
+                        </div>
+                        <!--end::Logo Mobile-->
+                        
                         <!--begin::Form-->
                         <form class="form w-100" novalidate="novalidate" id="kt_sign_in_form"
                             method="POST" action="{{ route('login') }}">
@@ -45,189 +279,207 @@
                             <!--begin::Heading-->
                             <div class="text-center mb-11">
                                 <!--begin::Title-->
-                                <h1 class="text-gray-900 fw-bolder mb-3">Sign In</h1>
+                                <h1 class="text-gray-900 fw-bolder mb-3 fs-1">
+                                    <i class="fas fa-gavel legislative-icon"></i>
+                                    Acesso ao Sistema
+                                </h1>
                                 <!--end::Title-->
                                 <!--begin::Subtitle-->
-                                <div class="text-gray-500 fw-semibold fs-6">Your Social Campaigns</div>
+                                <div class="text-gray-600 fw-semibold fs-6 mb-4">
+                                    Sistema de Tramitação Legislativa
+                                </div>
+                                <div class="d-flex justify-content-center flex-wrap gap-2">
+                                    <span class="feature-badge">
+                                        <i class="fas fa-file-alt me-1"></i>
+                                        Projetos
+                                    </span>
+                                    <span class="feature-badge">
+                                        <i class="fas fa-route me-1"></i>
+                                        Tramitação
+                                    </span>
+                                    <span class="feature-badge">
+                                        <i class="fas fa-users me-1"></i>
+                                        Parlamentares
+                                    </span>
+                                    <span class="feature-badge">
+                                        <i class="fas fa-gavel me-1"></i>
+                                        Comissões
+                                    </span>
+                                </div>
                                 <!--end::Subtitle=-->
                             </div>
                             <!--begin::Heading-->
                             
                             @if (session('success'))
-                                <div class="alert alert-success mb-8">
+                                <div class="alert alert-success mb-8 rounded-3">
+                                    <i class="fas fa-check-circle me-2"></i>
                                     {{ session('success') }}
                                 </div>
                             @endif
                             
                             @if ($errors->has('email'))
-                                <div class="alert alert-danger mb-8">
+                                <div class="alert alert-danger mb-8 rounded-3">
+                                    <i class="fas fa-exclamation-circle me-2"></i>
                                     {{ $errors->first('email') }}
                                 </div>
                             @endif
                             <!--begin::Input group=-->
                             <div class="fv-row mb-8">
                                 <!--begin::Email-->
-                                <input type="text" placeholder="Email" name="email" autocomplete="off"
-                                    class="form-control bg-transparent" value="{{ old('email') }}" />
+                                <label class="form-label fs-6 fw-bold text-gray-900 mb-2">
+                                    <i class="fas fa-envelope me-2"></i>
+                                    E-mail
+                                </label>
+                                <input type="email" placeholder="Digite seu e-mail" name="email" autocomplete="off"
+                                    class="form-control" value="{{ old('email') }}" />
                                 <!--end::Email-->
                             </div>
                             <!--end::Input group=-->
                             <div class="fv-row mb-3">
                                 <!--begin::Password-->
-                                <input type="password" placeholder="Password" name="password" autocomplete="off"
-                                    class="form-control bg-transparent" />
+                                <label class="form-label fs-6 fw-bold text-gray-900 mb-2">
+                                    <i class="fas fa-lock me-2"></i>
+                                    Senha
+                                </label>
+                                <input type="password" placeholder="Digite sua senha" name="password" autocomplete="off"
+                                    class="form-control" />
                                 <!--end::Password-->
                             </div>
                             <!--end::Input group=-->
                             <!--begin::Wrapper-->
                             <div class="d-flex flex-stack flex-wrap gap-3 fs-base fw-semibold mb-8">
-                                <div></div>
+                                <div class="d-flex align-items-center">
+                                    <input type="checkbox" class="form-check-input me-2" id="remember_me" name="remember">
+                                    <label class="form-check-label text-gray-600" for="remember_me">
+                                        Lembrar-me
+                                    </label>
+                                </div>
                                 <!--begin::Link-->
-                                <a href="authentication/layouts/corporate/reset-password.html"
-                                    class="link-primary">Forgot Password ?</a>
+                                <a href="#" class="link-primary">
+                                    <i class="fas fa-key me-1"></i>
+                                    Esqueceu a senha?
+                                </a>
                                 <!--end::Link-->
                             </div>
                             <!--end::Wrapper-->
                             <!--begin::Submit button-->
                             <div class="d-grid mb-10">
-                                <button type="submit" id="kt_sign_in_submit" class="btn btn-primary">
+                                <button type="submit" id="kt_sign_in_submit" class="btn btn-primary btn-lg">
                                     <!--begin::Indicator label-->
-                                    <span class="indicator-label">Sign In</span>
+                                    <span class="indicator-label">
+                                        <i class="fas fa-sign-in-alt me-2"></i>
+                                        Entrar no Sistema
+                                    </span>
                                     <!--end::Indicator label-->
                                     <!--begin::Indicator progress-->
-                                    <span class="indicator-progress">Please wait...
-                                        <span class="spinner-border spinner-border-sm align-middle ms-2"></span></span>
+                                    <span class="indicator-progress">
+                                        <i class="fas fa-spinner fa-spin me-2"></i>
+                                        Aguarde...
+                                    </span>
                                     <!--end::Indicator progress-->
                                 </button>
                             </div>
                             <!--end::Submit button-->
                             <!--begin::Sign up-->
-                            <div class="text-gray-500 text-center fw-semibold fs-6">Not a Member yet?
-                                <a href="{{ route('auth.register') }}" class="link-primary">Sign up</a>
+                            <div class="text-gray-500 text-center fw-semibold fs-6">
+                                Não possui acesso? 
+                                <a href="{{ route('auth.register') }}" class="link-primary fw-bold">
+                                    <i class="fas fa-user-plus me-1"></i>
+                                    Solicitar Cadastro
+                                </a>
                             </div>
                             <!--end::Sign up-->
+                            
+                            <!--begin::Progress Link-->
+                            <div class="text-center mt-4">
+                                <a href="{{ route('progress.index') }}" class="btn btn-outline-primary btn-sm rounded-pill">
+                                    <i class="fas fa-chart-line me-2"></i>
+                                    Progresso do Projeto
+                                </a>
+                            </div>
+                            <!--end::Progress Link-->
                         </form>
                         <!--end::Form-->
                     </div>
                     <!--end::Wrapper-->
                 </div>
                 <!--end::Form-->
-                <!--begin::Footer-->
-                <div class="w-lg-500px d-flex flex-stack px-10 mx-auto">
-                    <!--begin::Languages-->
-                    <div class="me-10">
-                        <!--begin::Toggle-->
-                        <button class="btn btn-flex btn-link btn-color-gray-700 btn-active-color-primary rotate fs-base"
-                            data-kt-menu-trigger="click" data-kt-menu-placement="bottom-start"
-                            data-kt-menu-offset="0px, 0px">
-                            <img data-kt-element="current-lang-flag" class="w-20px h-20px rounded me-3"
-                                src="{{ asset('assets/media/flags/united-states.svg') }}" alt="" />
-                            <span data-kt-element="current-lang-name" class="me-1">English</span>
-                            <span class="d-flex flex-center rotate-180">
-                                <i class="ki-duotone ki-down fs-5 text-muted m-0"></i>
-                            </span>
-                        </button>
-                        <!--end::Toggle-->
-                        <!--begin::Menu-->
-                        <div class="menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-gray-800 menu-state-bg-light-primary fw-semibold w-200px py-4 fs-7"
-                            data-kt-menu="true" id="kt_auth_lang_menu">
-                            <!--begin::Menu item-->
-                            <div class="menu-item px-3">
-                                <a href="#" class="menu-link d-flex px-5" data-kt-lang="English">
-                                    <span class="symbol symbol-20px me-4">
-                                        <img data-kt-element="lang-flag" class="rounded-1"
-                                            src="{{ asset('assets/media/flags/united-states.svg') }}" alt="" />
-                                    </span>
-                                    <span data-kt-element="lang-name">English</span>
-                                </a>
-                            </div>
-                            <!--end::Menu item-->
-                            <!--begin::Menu item-->
-                            <div class="menu-item px-3">
-                                <a href="#" class="menu-link d-flex px-5" data-kt-lang="Spanish">
-                                    <span class="symbol symbol-20px me-4">
-                                        <img data-kt-element="lang-flag" class="rounded-1"
-                                            src="{{ asset('assets/media/flags/spain.svg') }}" alt="" />
-                                    </span>
-                                    <span data-kt-element="lang-name">Spanish</span>
-                                </a>
-                            </div>
-                            <!--end::Menu item-->
-                            <!--begin::Menu item-->
-                            <div class="menu-item px-3">
-                                <a href="#" class="menu-link d-flex px-5" data-kt-lang="German">
-                                    <span class="symbol symbol-20px me-4">
-                                        <img data-kt-element="lang-flag" class="rounded-1"
-                                            src="{{ asset('assets/media/flags/germany.svg') }}" alt="" />
-                                    </span>
-                                    <span data-kt-element="lang-name">German</span>
-                                </a>
-                            </div>
-                            <!--end::Menu item-->
-                            <!--begin::Menu item-->
-                            <div class="menu-item px-3">
-                                <a href="#" class="menu-link d-flex px-5" data-kt-lang="Japanese">
-                                    <span class="symbol symbol-20px me-4">
-                                        <img data-kt-element="lang-flag" class="rounded-1"
-                                            src="{{ asset('assets/media/flags/japan.svg') }}" alt="" />
-                                    </span>
-                                    <span data-kt-element="lang-name">Japanese</span>
-                                </a>
-                            </div>
-                            <!--end::Menu item-->
-                            <!--begin::Menu item-->
-                            <div class="menu-item px-3">
-                                <a href="#" class="menu-link d-flex px-5" data-kt-lang="French">
-                                    <span class="symbol symbol-20px me-4">
-                                        <img data-kt-element="lang-flag" class="rounded-1"
-                                            src="{{ asset('assets/media/flags/france.svg') }}" alt="" />
-                                    </span>
-                                    <span data-kt-element="lang-name">French</span>
-                                </a>
-                            </div>
-                            <!--end::Menu item-->
-                        </div>
-                        <!--end::Menu-->
-                    </div>
-                    <!--end::Languages-->
-                    <!--begin::Links-->
-                    <div class="d-flex fw-semibold text-primary fs-base gap-5">
-                        <a href="pages/team.html" target="_blank">Terms</a>
-                        <a href="pages/pricing/column.html" target="_blank">Plans</a>
-                        <a href="pages/contact.html" target="_blank">Contact Us</a>
-                    </div>
-                    <!--end::Links-->
-                </div>
-                <!--end::Footer-->
+                
             </div>
             <!--end::Body-->
             <!--begin::Aside-->
-            <div class="d-flex flex-lg-row-fluid w-lg-50 bgi-size-cover bgi-position-center order-1 order-lg-2"
-                style="background-image: url({{ asset('assets/media/misc/auth-bg.png') }})">
+            <div class="d-none d-lg-flex flex-lg-row-fluid w-lg-50 legislative-pattern order-1 order-lg-2 position-relative"
+                style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
                 <!--begin::Content-->
                 <div class="d-flex flex-column flex-center py-7 py-lg-15 px-5 px-md-15 w-100">
                     <!--begin::Logo-->
-                    <a href="{{ route('dashboard') }}" class="mb-0 mb-lg-12">
-                        <img alt="Logo" src="{{ asset('assets/media/logos/custom-1.png') }}" class="h-60px h-lg-75px" />
-                    </a>
+                    <div class="logo-container mb-lg-12">
+                        <div class="logo-glow"></div>
+                        <img alt="LegisInc Logo" src="{{ asset('assets/media/logos/legisinc.png') }}" 
+                             class="h-120px h-lg-150px" style="position: relative; z-index: 2;" />
+                    </div>
                     <!--end::Logo-->
                     <!--begin::Image-->
-                    <img class="d-none d-lg-block mx-auto w-275px w-md-50 w-xl-500px mb-10 mb-lg-20"
-                        src="{{ asset('assets/media/misc/auth-screens.png') }}" alt="" />
+                    <div class="d-none d-lg-block text-center mb-10 mb-lg-20">
+                        <div class="d-flex justify-content-center mb-8">
+                            <div class="bg-white bg-opacity-20 rounded-circle p-4 mx-3">
+                                <i class="fas fa-file-alt text-white fs-2x"></i>
+                            </div>
+                            <div class="bg-white bg-opacity-20 rounded-circle p-4 mx-3">
+                                <i class="fas fa-route text-white fs-2x"></i>
+                            </div>
+                            <div class="bg-white bg-opacity-20 rounded-circle p-4 mx-3">
+                                <i class="fas fa-check-circle text-white fs-2x"></i>
+                            </div>
+                        </div>
+                    </div>
                     <!--end::Image-->
                     <!--begin::Title-->
-                    <h1 class="d-none d-lg-block text-white fs-2qx fw-bolder text-center mb-7">Fast, Efficient and
-                        Productive</h1>
+                    <h1 class="d-none d-lg-block text-white fs-2qx fw-bolder text-center mb-7">
+                        Rápido, Eficiente e Seguro
+                    </h1>
                     <!--end::Title-->
                     <!--begin::Text-->
-                    <div class="d-none d-lg-block text-white fs-base text-center">In this kind of post,
-                        <a href="#" class="opacity-75-hover text-warning fw-bold me-1">the blogger</a>introduces a
-                        person they’ve interviewed
-                        <br />and provides some background information about
-                        <a href="#" class="opacity-75-hover text-warning fw-bold me-1">the interviewee</a>and their
-                        <br />work following this is a transcript of the interview.
+                    <div class="d-none d-lg-block text-white fs-base text-center mb-8">
+                        Sistema completo para <strong>tramitação legislativa</strong> que otimiza o processo 
+                        <br />de análise e aprovação de projetos, oferecendo 
+                        <br />controle total sobre cada etapa do fluxo parlamentar.
                     </div>
                     <!--end::Text-->
+                    
+                    <!--begin::Features-->
+                    <div class="d-none d-lg-block">
+                        <div class="row text-center">
+                            <div class="col-4">
+                                <div class="d-flex flex-column align-items-center">
+                                    <div class="bg-white bg-opacity-20 rounded-circle p-3 mb-3">
+                                        <i class="fas fa-shield-alt text-white fs-3"></i>
+                                    </div>
+                                    <span class="text-white fw-bold fs-6">Segurança</span>
+                                    <span class="text-white-50 fs-7">Dados protegidos</span>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="d-flex flex-column align-items-center">
+                                    <div class="bg-white bg-opacity-20 rounded-circle p-3 mb-3">
+                                        <i class="fas fa-tachometer-alt text-white fs-3"></i>
+                                    </div>
+                                    <span class="text-white fw-bold fs-6">Performance</span>
+                                    <span class="text-white-50 fs-7">Processo ágil</span>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="d-flex flex-column align-items-center">
+                                    <div class="bg-white bg-opacity-20 rounded-circle p-3 mb-3">
+                                        <i class="fas fa-users text-white fs-3"></i>
+                                    </div>
+                                    <span class="text-white fw-bold fs-6">Colaboração</span>
+                                    <span class="text-white-50 fs-7">Trabalho em equipe</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!--end::Features-->
                 </div>
                 <!--end::Content-->
                 
@@ -240,14 +492,7 @@
                 </div>
                 <!--end::API Status Indicator-->
                 
-                <!--begin::Progress Link-->
-                <div class="position-absolute bottom-0 start-0 ms-8 mb-8">
-                    <a href="{{ route('progress.index') }}" class="btn btn-outline-light btn-sm">
-                        <i class="fas fa-chart-line me-2"></i>
-                        Progresso do Projeto
-                    </a>
-                </div>
-                <!--end::Progress Link-->
+               
             </div>
             <!--end::Aside-->
         </div>
@@ -364,5 +609,4 @@
     <!--end::Javascript-->
 </body>
 <!--end::Body-->
-
 </html>
