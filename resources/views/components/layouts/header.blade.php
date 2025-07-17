@@ -31,9 +31,9 @@
                             <!--end::Aside mobile toggle-->
                             <!--begin::Logo-->
                             <a href="{{ route('dashboard') }}" class="d-flex align-items-center">
-                                <img alt="Logo" src="{{ asset('assets/media/logos/demo3.svg') }}" class="theme-light-show h-20px" />
-                                <img alt="Logo" src="{{ asset('assets/media/logos/demo3-dark.svg') }}"
-                                    class="theme-dark-show h-20px" />
+                                <img alt="Logo" src="{{ asset('assets/media/logos/legisinc.svg') }}" class="theme-light-show h-100px" />
+                                <img alt="Logo" src="{{ asset('assets/media/logos/legisinc-bg.svg') }}"
+                                    class="theme-dark-show h-100px" />
                             </a>
                             <!--end::Logo-->
                         </div>
