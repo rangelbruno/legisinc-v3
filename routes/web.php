@@ -284,6 +284,29 @@ Route::prefix('admin/screen-permissions')->name('admin.screen-permissions.')->mi
     Route::post('/initialize', [App\Http\Controllers\Admin\ScreenPermissionController::class, 'initialize'])->name('initialize');
 });
 
+// Parâmetros routes (protected with auth and permissions - Admin only)
+Route::prefix('admin/parametros')->name('admin.parametros.')->middleware(['auth', 'check.screen.permission'])->group(function () {
+    Route::get('/', [App\Http\Controllers\Admin\ParametroController::class, 'index'])->name('index')->middleware('check.permission:parametros.view');
+    Route::get('/create', [App\Http\Controllers\Admin\ParametroController::class, 'create'])->name('create')->middleware('check.permission:parametros.create');
+    Route::post('/', [App\Http\Controllers\Admin\ParametroController::class, 'store'])->name('store')->middleware('check.permission:parametros.create');
+    Route::get('/{id}', [App\Http\Controllers\Admin\ParametroController::class, 'show'])->name('show')->middleware('check.permission:parametros.view');
+    Route::get('/{id}/edit', [App\Http\Controllers\Admin\ParametroController::class, 'edit'])->name('edit')->middleware('check.permission:parametros.edit');
+    Route::put('/{id}', [App\Http\Controllers\Admin\ParametroController::class, 'update'])->name('update')->middleware('check.permission:parametros.edit');
+    Route::delete('/{id}', [App\Http\Controllers\Admin\ParametroController::class, 'destroy'])->name('destroy')->middleware('check.permission:parametros.delete');
+    
+    // Ações especiais
+    Route::get('/grupo/{grupoId}', [App\Http\Controllers\Admin\ParametroController::class, 'porGrupo'])->name('por-grupo')->middleware('check.permission:parametros.view');
+    Route::post('/multiplos', [App\Http\Controllers\Admin\ParametroController::class, 'atualizarMultiplos'])->name('atualizar-multiplos')->middleware('check.permission:parametros.edit');
+    Route::post('/{id}/duplicar', [App\Http\Controllers\Admin\ParametroController::class, 'duplicar'])->name('duplicar')->middleware('check.permission:parametros.create');
+    Route::post('/{id}/resetar-padrao', [App\Http\Controllers\Admin\ParametroController::class, 'resetarPadrao'])->name('resetar-padrao')->middleware('check.permission:parametros.edit');
+    Route::post('/{id}/alterar-status', [App\Http\Controllers\Admin\ParametroController::class, 'alterarStatus'])->name('alterar-status')->middleware('check.permission:parametros.edit');
+    Route::post('/reordenar', [App\Http\Controllers\Admin\ParametroController::class, 'reordenar'])->name('reordenar')->middleware('check.permission:parametros.edit');
+    
+    // Configurações e validação
+    Route::get('/tipo/{tipoId}/configuracoes', [App\Http\Controllers\Admin\ParametroController::class, 'obterConfiguracoesTipo'])->name('tipo-configuracoes')->middleware('check.permission:parametros.view');
+    Route::post('/validar-valor', [App\Http\Controllers\Admin\ParametroController::class, 'validarValor'])->name('validar-valor')->middleware('check.permission:parametros.view');
+});
+
 // Mock API routes moved to routes/api.php to avoid CSRF middleware
 
 Route::get('/api-test/health', function () {

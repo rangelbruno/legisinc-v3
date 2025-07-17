@@ -446,6 +446,14 @@
                             </a>
                         </div>
                         <div class="menu-item">
+                            <a class="menu-link {{ request()->routeIs('admin.parametros.*') ? 'active' : '' }}" href="{{ route('admin.parametros.index') }}">
+                                <span class="menu-bullet">
+                                    <span class="bullet bullet-dot"></span>
+                                </span>
+                                <span class="menu-title">Parâmetros</span>
+                            </a>
+                        </div>
+                        <div class="menu-item">
                             <a class="menu-link" href="#" onclick="showComingSoon('Configurações do Sistema')">
                                 <span class="menu-bullet">
                                     <span class="bullet bullet-dot"></span>
