@@ -41,6 +41,14 @@
                     </a>
                     @endif
                     
+                    <a href="{{ route('projetos.export-word', $projeto->id) }}" class="btn btn-light-success btn-sm">
+                        <i class="ki-duotone ki-file-down fs-3">
+                            <span class="path1"></span>
+                            <span class="path2"></span>
+                        </i>
+                        Abrir no Word/Writer
+                    </a>
+                    
                     <a href="{{ route('projetos.edit', $projeto->id) }}" class="btn btn-light btn-sm">
                         <i class="ki-duotone ki-pencil fs-3">
                             <span class="path1"></span>
@@ -229,6 +237,24 @@
                                         </i>
                                         Anexos ({{ $projeto->anexos->count() }})
                                     </a>
+
+                                    <a href="{{ route('projetos.export-word', $projeto->id) }}" class="btn btn-light-success w-100">
+                                        <i class="ki-duotone ki-file-down fs-3 me-2">
+                                            <span class="path1"></span>
+                                            <span class="path2"></span>
+                                        </i>
+                                        Abrir no Word/Writer
+                                    </a>
+
+                                    @if($projeto->podeEditarConteudo())
+                                    <button type="button" class="btn btn-light-info w-100" data-bs-toggle="modal" data-bs-target="#modal_upload_word">
+                                        <i class="ki-duotone ki-file-up fs-3 me-2">
+                                            <span class="path1"></span>
+                                            <span class="path2"></span>
+                                        </i>
+                                        Enviar Arquivo Editado
+                                    </button>
+                                    @endif
                                 </div>
                             </div>
                         </div>
@@ -275,13 +301,29 @@
                         </div>
                         <div class="card-toolbar">
                             @if($projeto->podeEditarConteudo())
-                            <a href="{{ route('projetos.editor', $projeto->id) }}" class="btn btn-sm btn-primary" target="_blank">
+                            <a href="{{ route('projetos.editor', $projeto->id) }}" class="btn btn-sm btn-primary me-2" target="_blank">
                                 <i class="ki-duotone ki-pencil fs-3">
                                     <span class="path1"></span>
                                     <span class="path2"></span>
                                 </i>
                                 Editar no Editor
                             </a>
+                            @endif
+                            <a href="{{ route('projetos.export-word', $projeto->id) }}" class="btn btn-sm btn-light-success me-2">
+                                <i class="ki-duotone ki-file-down fs-3">
+                                    <span class="path1"></span>
+                                    <span class="path2"></span>
+                                </i>
+                                Abrir no Word/Writer
+                            </a>
+                            @if($projeto->podeEditarConteudo())
+                            <button type="button" class="btn btn-sm btn-light-info" data-bs-toggle="modal" data-bs-target="#modal_upload_word">
+                                <i class="ki-duotone ki-file-up fs-3">
+                                    <span class="path1"></span>
+                                    <span class="path2"></span>
+                                </i>
+                                Enviar Editado
+                            </button>
                             @endif
                         </div>
                     </div>
@@ -353,6 +395,67 @@
                     <div class="modal-footer">
                         <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
                         <button type="submit" class="btn btn-primary">Encaminhar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    <!-- Modal Upload Arquivo Word -->
+    @if($projeto->podeEditarConteudo())
+    <div class="modal fade" id="modal_upload_word" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered mw-650px">
+            <div class="modal-content">
+                <form action="{{ route('projetos.import-word', $projeto->id) }}" method="POST" enctype="multipart/form-data">
+                    @csrf
+                    <div class="modal-header">
+                        <h2>Enviar Arquivo Editado</h2>
+                        <div class="btn btn-sm btn-icon btn-active-color-primary" data-bs-dismiss="modal">
+                            <i class="ki-duotone ki-cross fs-1">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                            </i>
+                        </div>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-5">
+                            <div class="alert alert-info d-flex align-items-center mb-5">
+                                <i class="ki-duotone ki-information fs-2hx text-info me-4">
+                                    <span class="path1"></span>
+                                    <span class="path2"></span>
+                                    <span class="path3"></span>
+                                </i>
+                                <div class="d-flex flex-column">
+                                    <h4 class="mb-1 text-info">Como usar:</h4>
+                                    <span>1. Clique em "Abrir no Word/Writer" para baixar o arquivo</span>
+                                    <span>2. Edite o arquivo no Word/LibreOffice Writer</span>
+                                    <span>3. Salve o arquivo editado</span>
+                                    <span>4. Envie o arquivo editado usando este formulário</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="fv-row mb-7">
+                            <label class="required fs-6 fw-semibold mb-2">Arquivo Editado</label>
+                            <input type="file" class="form-control form-control-solid" name="arquivo" accept=".doc,.docx,.html,.htm" required>
+                            <div class="form-text">Formatos aceitos: DOC, DOCX, HTML (máximo 10MB)</div>
+                        </div>
+                        
+                        <div class="fv-row mb-7">
+                            <label class="fs-6 fw-semibold mb-2">Descrição das Alterações</label>
+                            <textarea class="form-control form-control-solid" name="changelog" rows="3" placeholder="Descreva brevemente as alterações realizadas..."></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="ki-duotone ki-file-up fs-3 me-2">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                            </i>
+                            Enviar Arquivo
+                        </button>
                     </div>
                 </form>
             </div>

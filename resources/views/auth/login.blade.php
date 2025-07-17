@@ -239,6 +239,15 @@
                     </div>
                 </div>
                 <!--end::API Status Indicator-->
+                
+                <!--begin::Progress Link-->
+                <div class="position-absolute bottom-0 start-0 ms-8 mb-8">
+                    <a href="{{ route('progress.index') }}" class="btn btn-outline-light btn-sm">
+                        <i class="fas fa-chart-line me-2"></i>
+                        Progresso do Projeto
+                    </a>
+                </div>
+                <!--end::Progress Link-->
             </div>
             <!--end::Aside-->
         </div>

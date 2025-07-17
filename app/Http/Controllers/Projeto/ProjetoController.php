@@ -485,6 +485,396 @@ class ProjetoController extends Controller
     }
 
     /**
+     * Exportar projeto para Word/Writer
+     */
+    public function exportarWord(int $id)
+    {
+        try {
+            $projeto = $this->projetoService->obterPorId($id);
+
+            if (!$projeto) {
+                abort(404, 'Projeto não encontrado');
+            }
+
+            // Criar conteúdo do arquivo Word
+            $conteudo = $this->gerarConteudoWord($projeto);
+            
+            // Nome do arquivo
+            $nomeArquivo = $this->gerarNomeArquivo($projeto);
+            
+            // Criar arquivo temporário
+            $tempFile = tempnam(sys_get_temp_dir(), 'projeto_') . '.html';
+            
+            // Gerar arquivo HTML que pode ser aberto pelo Word/Writer
+            $this->criarArquivoWord($conteudo, $tempFile);
+            
+            // Fazer download do arquivo para que o usuário possa abrir no Word/Writer
+            return response()->download($tempFile, $nomeArquivo, [
+                'Content-Type' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            ])->deleteFileAfterSend(true);
+
+        } catch (Exception $e) {
+            return redirect()->back()
+                ->with('error', 'Erro ao exportar projeto: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Receber arquivo editado do Word/Writer
+     */
+    public function importarWord(Request $request, int $id)
+    {
+        try {
+            $projeto = $this->projetoService->obterPorId($id);
+
+            if (!$projeto) {
+                abort(404, 'Projeto não encontrado');
+            }
+
+            if (!$projeto->podeEditarConteudo()) {
+                return redirect()->back()
+                    ->with('error', 'Não é possível editar o conteúdo neste status');
+            }
+
+            $validator = Validator::make($request->all(), [
+                'arquivo' => 'required|file|mimes:doc,docx,html,htm|max:10240', // 10MB max
+                'changelog' => 'nullable|string|max:500',
+            ]);
+
+            if ($validator->fails()) {
+                return redirect()->back()
+                    ->withErrors($validator)
+                    ->with('error', 'Arquivo inválido. Aceitos: DOC, DOCX, HTML');
+            }
+
+            $arquivo = $request->file('arquivo');
+            $conteudo = $this->extrairConteudoDoArquivo($arquivo);
+
+            if (!$conteudo) {
+                return redirect()->back()
+                    ->with('error', 'Não foi possível extrair o conteúdo do arquivo');
+            }
+
+            // Criar nova versão com o conteúdo editado
+            $versionDTO = ProjetoVersionDTO::fromArray([
+                'projeto_id' => $id,
+                'version_number' => $projeto->version_atual + 1,
+                'conteudo' => $conteudo,
+                'changelog' => $request->changelog ?: 'Importação de arquivo editado no Word/Writer',
+                'tipo_alteracao' => 'revisao',
+                'author_id' => auth()->id(),
+                'is_current' => true,
+            ]);
+
+            $version = $this->projetoService->criarVersao($id, $versionDTO);
+
+            return redirect()->route('projetos.show', $id)
+                ->with('success', 'Projeto atualizado com sucesso a partir do arquivo editado!');
+
+        } catch (Exception $e) {
+            return redirect()->back()
+                ->with('error', 'Erro ao importar arquivo: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Extrair conteúdo do arquivo enviado
+     */
+    private function extrairConteudoDoArquivo($arquivo): ?string
+    {
+        $extensao = $arquivo->getClientOriginalExtension();
+        $caminhoArquivo = $arquivo->getPathname();
+
+        try {
+            switch (strtolower($extensao)) {
+                case 'html':
+                case 'htm':
+                    return $this->extrairConteudoHTML($caminhoArquivo);
+                
+                case 'doc':
+                case 'docx':
+                    return $this->extrairConteudoWord($caminhoArquivo);
+                
+                default:
+                    return null;
+            }
+        } catch (Exception $e) {
+            \Log::error('Erro ao extrair conteúdo do arquivo: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Extrair conteúdo de arquivo HTML
+     */
+    private function extrairConteudoHTML($caminhoArquivo): ?string
+    {
+        $conteudo = file_get_contents($caminhoArquivo);
+        
+        if (!$conteudo) {
+            return null;
+        }
+
+        return $this->limparConteudoWord($conteudo);
+    }
+
+    /**
+     * Limpar conteúdo do Word removendo metadados e tags desnecessárias
+     */
+    private function limparConteudoWord($conteudo): string
+    {
+        // Remover comentários condicionais do Word
+        $conteudo = preg_replace('/<!--\[if[^>]*>.*?<!\[endif\]-->/s', '', $conteudo);
+        $conteudo = preg_replace('/<!\[if[^>]*>.*?<!\[endif\]>/s', '', $conteudo);
+        
+        // Remover tags XML específicas do Word
+        $conteudo = preg_replace('/<xml[^>]*>.*?<\/xml>/s', '', $conteudo);
+        $conteudo = preg_replace('/<\?xml[^>]*\?>/s', '', $conteudo);
+        $conteudo = preg_replace('/<o:p[^>]*>.*?<\/o:p>/s', '', $conteudo);
+        $conteudo = preg_replace('/<o:p[^>]*\/>/s', '', $conteudo);
+        
+        // Remover namespaces do Word
+        $conteudo = preg_replace('/xmlns:[^=]*="[^"]*"/', '', $conteudo);
+        $conteudo = preg_replace('/xmlns="[^"]*"/', '', $conteudo);
+        
+        // Remover metadados e links
+        $conteudo = preg_replace('/<meta[^>]*>/i', '', $conteudo);
+        $conteudo = preg_replace('/<link[^>]*>/i', '', $conteudo);
+        $conteudo = preg_replace('/<title[^>]*>.*?<\/title>/s', '', $conteudo);
+        
+        // Remover estilos e scripts
+        $conteudo = preg_replace('/<style[^>]*>.*?<\/style>/s', '', $conteudo);
+        $conteudo = preg_replace('/<script[^>]*>.*?<\/script>/s', '', $conteudo);
+        
+        // Remover tag head completa
+        $conteudo = preg_replace('/<head[^>]*>.*?<\/head>/s', '', $conteudo);
+        
+        // Extrair apenas o conteúdo do body se existir
+        if (preg_match('/<body[^>]*>(.*?)<\/body>/s', $conteudo, $matches)) {
+            $conteudo = $matches[1];
+        }
+        
+        // Remover tags HTML específicas do Word que podem ter sobrado
+        $conteudo = preg_replace('/<w:[^>]*>.*?<\/w:[^>]*>/s', '', $conteudo);
+        $conteudo = preg_replace('/<w:[^>]*\/>/s', '', $conteudo);
+        $conteudo = preg_replace('/<v:[^>]*>.*?<\/v:[^>]*>/s', '', $conteudo);
+        $conteudo = preg_replace('/<v:[^>]*\/>/s', '', $conteudo);
+        
+        // Remover todas as tags HTML restantes
+        $conteudo = strip_tags($conteudo);
+        
+        // Decodificar entidades HTML
+        $conteudo = html_entity_decode($conteudo, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        
+        // Limpar espaços em branco excessivos
+        $conteudo = preg_replace('/\s+/', ' ', $conteudo);
+        $conteudo = preg_replace('/\n\s*\n/', "\n\n", $conteudo);
+        
+        // Remover linhas vazias no início e fim
+        $conteudo = trim($conteudo);
+        
+        return $conteudo;
+    }
+
+    /**
+     * Extrair conteúdo de arquivo Word (DOC/DOCX)
+     */
+    private function extrairConteudoWord($caminhoArquivo): ?string
+    {
+        try {
+            // Para arquivos DOC/DOCX, tentamos extrair o texto
+            $conteudo = file_get_contents($caminhoArquivo);
+            
+            if (!$conteudo) {
+                return null;
+            }
+
+            // Se for um arquivo HTML salvo como DOC (comum quando se salva do Word)
+            if (strpos($conteudo, '<html') !== false || strpos($conteudo, '<HTML') !== false) {
+                return $this->limparConteudoWord($conteudo);
+            }
+
+            // Tentar extrair texto básico do arquivo Word
+            // Remover caracteres não imprimíveis e manter apenas texto
+            $conteudo = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/', '', $conteudo);
+            $conteudo = preg_replace('/\s+/', ' ', $conteudo);
+            
+            // Tentar encontrar texto entre tags XML (para DOCX)
+            if (preg_match_all('/<w:t[^>]*>([^<]+)<\/w:t>/', $conteudo, $matches)) {
+                $texto = implode(' ', $matches[1]);
+                return trim($texto);
+            }
+            
+            // Fallback: tentar extrair qualquer texto legível
+            preg_match_all('/[a-zA-Z0-9\s\.,!?;:áéíóúàèìòùâêîôûãõçÁÉÍÓÚÀÈÌÒÙÂÊÎÔÛÃÕÇ\-\(\)\[\]\"\']+/', $conteudo, $matches);
+            $texto = implode(' ', $matches[0]);
+            
+            return trim($texto);
+            
+        } catch (Exception $e) {
+            \Log::error('Erro ao extrair conteúdo do Word: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Gerar conteúdo formatado para Word
+     */
+    private function gerarConteudoWord($projeto): string
+    {
+        $conteudo = "";
+        
+        // Cabeçalho
+        $conteudo .= "PROJETO DE LEI\n";
+        $conteudo .= str_repeat("=", 50) . "\n\n";
+        
+        // Informações básicas
+        $conteudo .= "Número: " . ($projeto->numero_completo ?? 'Não numerado') . "\n";
+        $conteudo .= "Título: " . $projeto->titulo . "\n";
+        $conteudo .= "Tipo: " . ($projeto->tipo_formatado ?? $projeto->tipo) . "\n";
+        $conteudo .= "Autor: " . ($projeto->autor->name ?? 'N/A') . "\n";
+        $conteudo .= "Status: " . ($projeto->status_formatado ?? ucfirst($projeto->status)) . "\n";
+        $conteudo .= "Data: " . $projeto->created_at->format('d/m/Y H:i') . "\n\n";
+        
+        // Ementa
+        $conteudo .= "EMENTA\n";
+        $conteudo .= str_repeat("-", 20) . "\n";
+        $conteudo .= $projeto->ementa . "\n\n";
+        
+        // Resumo (se existir)
+        if ($projeto->resumo) {
+            $conteudo .= "RESUMO\n";
+            $conteudo .= str_repeat("-", 20) . "\n";
+            $conteudo .= $projeto->resumo . "\n\n";
+        }
+        
+        // Conteúdo principal
+        if ($projeto->conteudo) {
+            $conteudo .= "CONTEÚDO\n";
+            $conteudo .= str_repeat("-", 20) . "\n";
+            $conteudo .= $projeto->conteudo . "\n\n";
+        }
+        
+        // Palavras-chave (se existirem)
+        if ($projeto->palavras_chave) {
+            $conteudo .= "PALAVRAS-CHAVE\n";
+            $conteudo .= str_repeat("-", 20) . "\n";
+            $conteudo .= $projeto->palavras_chave . "\n\n";
+        }
+        
+        // Observações (se existirem)
+        if ($projeto->observacoes) {
+            $conteudo .= "OBSERVAÇÕES\n";
+            $conteudo .= str_repeat("-", 20) . "\n";
+            $conteudo .= $projeto->observacoes . "\n\n";
+        }
+        
+        return $conteudo;
+    }
+
+    /**
+     * Gerar nome do arquivo
+     */
+    private function gerarNomeArquivo($projeto): string
+    {
+        $numero = $projeto->numero_completo ? str_replace(['/', ' '], ['_', '_'], $projeto->numero_completo) : 'sem_numero';
+        $titulo = str_replace([' ', '/', '\\', ':', '*', '?', '"', '<', '>', '|'], '_', $projeto->titulo);
+        $titulo = substr($titulo, 0, 50); // Limitar tamanho
+        
+        return "projeto_{$numero}_{$titulo}.doc";
+    }
+
+    /**
+     * Criar arquivo Word usando HTML
+     */
+    private function criarArquivoWord($conteudo, $tempFile)
+    {
+        // Converter quebras de linha para HTML
+        $htmlContent = nl2br(htmlspecialchars($conteudo));
+        
+        // Template HTML otimizado para Word/Writer
+        $html = '<!DOCTYPE html>
+<html xmlns:o="urn:schemas-microsoft-com:office:office" 
+      xmlns:w="urn:schemas-microsoft-com:office:word" 
+      xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+    <meta charset="UTF-8">
+    <meta name="ProgId" content="Word.Document">
+    <meta name="Generator" content="Microsoft Word 15">
+    <meta name="Originator" content="Microsoft Word 15">
+    <title>Projeto de Lei</title>
+    <!--[if gte mso 9]>
+    <xml>
+        <w:WordDocument>
+            <w:View>Print</w:View>
+            <w:Zoom>100</w:Zoom>
+            <w:DoNotPromptForConvert/>
+            <w:DoNotShowRevisions/>
+            <w:DoNotPrintRevisions/>
+            <w:DisplayHorizontalDrawingGridEvery>0</w:DisplayHorizontalDrawingGridEvery>
+            <w:DisplayVerticalDrawingGridEvery>2</w:DisplayVerticalDrawingGridEvery>
+            <w:UseMarginsForDrawingGridOrigin/>
+            <w:ValidateAgainstSchemas/>
+            <w:SaveIfXMLInvalid>false</w:SaveIfXMLInvalid>
+            <w:IgnoreMixedContent>false</w:IgnoreMixedContent>
+            <w:AlwaysShowPlaceholderText>false</w:AlwaysShowPlaceholderText>
+        </w:WordDocument>
+    </xml>
+    <![endif]-->
+    <style>
+        @page {
+            size: 8.5in 11in;
+            margin: 1in;
+        }
+        body { 
+            font-family: "Times New Roman", serif; 
+            font-size: 12pt; 
+            line-height: 1.5; 
+            margin: 0;
+            padding: 0;
+        }
+        h1 { 
+            font-size: 18pt; 
+            font-weight: bold; 
+            text-align: center; 
+            margin-bottom: 20pt;
+        }
+        h2 { 
+            font-size: 14pt; 
+            font-weight: bold; 
+            margin-top: 20pt;
+            margin-bottom: 10pt;
+        }
+        .content { 
+            text-align: justify; 
+            text-indent: 0;
+        }
+        .header {
+            text-align: center;
+            font-weight: bold;
+            font-size: 14pt;
+            margin-bottom: 20pt;
+        }
+        .section {
+            margin-bottom: 15pt;
+        }
+        .section-title {
+            font-weight: bold;
+            font-size: 12pt;
+            margin-bottom: 5pt;
+        }
+    </style>
+</head>
+<body>
+    <div class="content">' . $htmlContent . '</div>
+</body>
+</html>';
+        
+        // Salvar como arquivo HTML que pode ser aberto pelo Word/Writer
+        file_put_contents($tempFile, $html);
+    }
+
+    /**
      * Histórico de versões
      */
     public function versoes(int $id): View

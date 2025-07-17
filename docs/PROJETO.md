@@ -22,7 +22,9 @@ O **LegisInc** é um sistema de gestão legislativa desenvolvido com Laravel 12 
 {
     "laravel/framework": "^12.0",
     "laravel/tinker": "^2.10.1",
-    "spatie/laravel-permission": "^6.20"
+    "spatie/laravel-permission": "^6.20",
+    "doctrine/dbal": "*",
+    "phpoffice/phpword": "*"
 }
 ```
 
@@ -34,7 +36,11 @@ O **LegisInc** é um sistema de gestão legislativa desenvolvido com Laravel 12 
     "concurrently": "^9.0.1",
     "laravel-vite-plugin": "^1.2.0",
     "tailwindcss": "^4.0.0",
-    "vite": "^6.2.4"
+    "vite": "^6.2.4",
+    "@tiptap/core": "^2.10.0",
+    "@tiptap/starter-kit": "^2.10.0",
+    "@tiptap/extension-table": "^2.10.0",
+    "yjs": "^13.6.18"
 }
 ```
 
@@ -514,6 +520,6 @@ make logs                  # Ver logs
 
 ---
 
-**Última atualização**: 2024-10-10
+**Última atualização**: 2025-01-16
 **Versão do Laravel**: 12.0
 **Status**: 5 módulos core implementados (25% do total), estrutura base completa, documentação da API finalizada, pronto para implementação de módulos de negócio avançados

@@ -9,6 +9,8 @@ use App\Http\Controllers\User\UserController as UserManagementController;
 use App\Http\Controllers\Projeto\ProjetoController;
 use App\Http\Controllers\ModeloProjetoController;
 use App\Http\Controllers\Session\SessionController;
+use App\Http\Controllers\ProgressController;
+use App\Http\Controllers\ApiDocumentationController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -20,6 +22,12 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::get('/register', [AuthController::class, 'showRegisterForm'])->name('auth.register');
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/logout', [AuthController::class, 'logout'])->name('auth.logout');
+
+// Progress route (public)
+Route::get('/progress', [ProgressController::class, 'index'])->name('progress.index');
+
+// API Documentation route (public)
+Route::get('/api-docs', [ApiDocumentationController::class, 'index'])->name('api-docs.index');
 
 // Dashboard route (protected)
 Route::get('/dashboard', function () {
@@ -198,6 +206,10 @@ Route::prefix('projetos')->name('projetos.')->middleware(['auth', 'check.screen.
     Route::get('/{id}/versoes', [ProjetoController::class, 'versoes'])->name('versoes');
     Route::get('/{id}/tramitacao', [ProjetoController::class, 'tramitacao'])->name('tramitacao');
     Route::get('/{id}/anexos', [ProjetoController::class, 'anexos'])->name('anexos');
+    
+    // Exportação e importação
+    Route::get('/{id}/export-word', [ProjetoController::class, 'exportarWord'])->name('export-word');
+    Route::post('/{id}/import-word', [ProjetoController::class, 'importarWord'])->name('import-word');
 });
 
 // Modelos de Projeto routes (protected with auth only - Admin only)

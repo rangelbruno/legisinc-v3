@@ -13,6 +13,7 @@
         "doctrine/dbal": "*",
         "laravel/framework": "^12.0",
         "laravel/tinker": "^2.10.1",
+        "phpoffice/phpword": "*",
         "spatie/laravel-permission": "^6.20"
     },
     "require-dev": {

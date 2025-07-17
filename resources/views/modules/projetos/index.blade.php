@@ -430,6 +430,9 @@
                                             </div>
                                             @endif
                                             <div class="menu-item px-3">
+                                                <a href="{{ route('projetos.export-word', $projeto->id) }}" class="menu-link px-3">Abrir no Word/Writer</a>
+                                            </div>
+                                            <div class="menu-item px-3">
                                                 <a href="{{ route('projetos.versoes', $projeto->id) }}" class="menu-link px-3">Versões</a>
                                             </div>
                                             <div class="menu-item px-3">
