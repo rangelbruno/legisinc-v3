@@ -26,6 +26,7 @@ class DatabaseSeeder extends Seeder
             GrupoParametroSeeder::class,
             ParametroSeeder::class,
             ParametroPermissionSeeder::class,
+            ParametroExemploSeeder::class,
         ]);
     }
 }

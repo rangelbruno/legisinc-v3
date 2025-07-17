@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\UserApiController;
 use App\Http\Controllers\UserController;
@@ -11,9 +12,10 @@ use App\Http\Controllers\ModeloProjetoController;
 use App\Http\Controllers\Session\SessionController;
 use App\Http\Controllers\ProgressController;
 use App\Http\Controllers\ApiDocumentationController;
+use App\Http\Controllers\DocumentationController;
 
 Route::get('/', function () {
-    return view('welcome');
+    return redirect()->route('login');
 });
 
 // Authentication routes
@@ -29,10 +31,17 @@ Route::get('/progress', [ProgressController::class, 'index'])->name('progress.in
 // API Documentation route (public)
 Route::get('/api-docs', [ApiDocumentationController::class, 'index'])->name('api-docs.index');
 
+// Documentation routes (public)
+Route::get('/docs', [DocumentationController::class, 'index'])->name('documentation.index');
+Route::get('/docs/{docId}', [DocumentationController::class, 'show'])->name('documentation.show');
+Route::get('/docs/search', [DocumentationController::class, 'search'])->name('documentation.search');
+Route::get('/docs/api/documents', [DocumentationController::class, 'documents'])->name('documentation.documents');
+Route::get('/docs/api/stats', [DocumentationController::class, 'stats'])->name('documentation.stats');
+
 // Dashboard route (protected)
 Route::get('/dashboard', function () {
     // Auto-login as admin if no user is authenticated (for demo purposes)
-    if (!auth()->check()) {
+    if (!Auth::check()) {
         $user = new \App\Models\User();
         $user->id = 1;
         $user->name = 'Administrador do Sistema';
@@ -59,24 +68,6 @@ Route::middleware('auth')->group(function () {
     Route::post('/update-last-access', [UserController::class, 'updateLastAccess'])->name('user.update-last-access');
 });
 
-// Test route for debugging
-Route::get('/test-auth', function () {
-    if (auth()->check()) {
-        $user = auth()->user();
-        $info = [
-            'name' => $user->name,
-            'email' => $user->email,
-            'isAdmin' => $user->isAdmin(),
-            'hasSessionsView' => $user->hasPermissionTo('sessions.view'),
-            'hasAdminRole' => $user->hasRole('ADMIN'),
-            'roles' => $user->getRoleNames()->toArray(),
-            'debug_email_check' => ($user->email === 'test@example.com'),
-        ];
-        return response()->json($info);
-    }
-    return 'Usuário não está logado';
-})->name('test.auth');
-
 // Test route to auto-login as admin for demo
 Route::get('/auto-login-admin', function () {
     // Force logout first
@@ -100,18 +91,6 @@ Route::get('/auto-login-admin', function () {
     return redirect()->route('dashboard')->with('success', 'Logado como administrador (modo demo)');
 })->name('auto-login-admin');
 
-// Test get session by ID
-Route::get('/test-get-session/{id}', function ($id) {
-    try {
-        $sessionService = app(\App\Services\Session\SessionService::class);
-        $session = $sessionService->obterPorId($id);
-        $matters = $sessionService->obterMaterias($id);
-        $exports = $sessionService->obterHistoricoExportacoes($id);
-        return response()->json(['success' => true, 'session' => $session, 'matters' => $matters, 'exports' => $exports]);
-    } catch (Exception $e) {
-        return response()->json(['success' => false, 'error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
-    }
-})->middleware('auth');
 
 // User API routes (protected)
 Route::prefix('user-api')->name('user-api.')->group(function () {
