@@ -67,6 +67,21 @@
             color: #6b7280;
             font-size: 0.875rem;
         }
+
+        @media (max-width: 768px) {
+            .progress-header {
+                padding: 1.5rem 1rem;
+            }
+            .progress-header h1 {
+                font-size: 1.75rem;
+            }
+            .progress-header p {
+                font-size: 1rem;
+            }
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
 
@@ -77,11 +92,23 @@
             <div class="container">
                 <div class="row">
                     <div class="col-12 text-center">
-                        <h1 class="display-4 fw-bolder mb-2">Sistema de Tramitação Parlamentar 2.0</h1>
-                        <p class="fs-4 opacity-75">Acompanhamento do Desenvolvimento</p>
+                        <h1 class="display-4 fw-bolder mb-2">{{ $progressData['title'] ?? 'Sistema de Tramitação Parlamentar 2.0' }}</h1>
+                        <p class="fs-4 opacity-75">{{ $progressData['subtitle'] ?? 'Acompanhamento do Desenvolvimento' }}</p>
                         @if(isset($progressData['lastUpdate']))
                             <p class="fs-6 opacity-50">Última atualização: {{ $progressData['lastUpdate'] }}</p>
                         @endif
+
+                        <div class="mt-4">
+                            <a href="{{ route('api-docs.index') }}" class="btn btn-outline-light btn-sm me-2">
+                                <i class="fas fa-code"></i> Documentação da API
+                            </a>
+                            <a href="{{ route('documentation.index') }}" class="btn btn-outline-light btn-sm me-2">
+                                <i class="fas fa-book"></i> Documentação do Sistema
+                            </a>
+                            <a href="{{ route('login') }}" class="btn btn-outline-light btn-sm">
+                                <i class="fas fa-sign-in-alt"></i> Voltar para Login
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -216,17 +243,8 @@
                 </div>
             </div>
 
-            <!-- Navegação -->
-            <div class="row mt-5">
-                <div class="col-12 text-center">
-                    <a href="{{ route('api-docs.index') }}" class="btn btn-info btn-lg me-3">
-                        <i class="fas fa-code"></i> Documentação da API
-                    </a>
-                    <a href="{{ route('login') }}" class="btn btn-primary btn-lg">
-                        <i class="fas fa-sign-in-alt"></i> Voltar para Login
-                    </a>
-                </div>
-            </div>
+            <!-- Botões de Navegação -->
+            
         </div>
     </div>
 

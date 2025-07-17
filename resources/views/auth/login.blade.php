@@ -380,15 +380,7 @@
                                 </button>
                             </div>
                             <!--end::Submit button-->
-                            <!--begin::Sign up-->
-                            <div class="text-gray-500 text-center fw-semibold fs-6">
-                                Não possui acesso? 
-                                <a href="{{ route('auth.register') }}" class="link-primary fw-bold">
-                                    <i class="fas fa-user-plus me-1"></i>
-                                    Solicitar Cadastro
-                                </a>
-                            </div>
-                            <!--end::Sign up-->
+                            
                             
                             <!--begin::Progress Link-->
                             <div class="text-center mt-4">

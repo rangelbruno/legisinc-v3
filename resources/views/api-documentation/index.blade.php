@@ -38,42 +38,69 @@
         /* Header */
         .header {
             background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
-            padding: 20px 30px;
+            padding: 10px 20px;
             box-shadow: var(--shadow);
             position: sticky;
             top: 0;
             z-index: 1000;
             width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .back-button {
+            color: var(--text-primary);
+            text-decoration: none;
+            padding: 8px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.3s ease;
+        }
+
+        .back-button:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .back-button svg {
+            width: 28px;
+            height: 28px;
+        }
+
+        .header-content {
+            flex-grow: 1;
         }
 
         .header h1 {
-            font-size: 2.5rem;
+            font-size: 1.8rem;
             font-weight: 700;
             color: var(--text-primary);
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
             letter-spacing: -0.02em;
             display: flex;
             align-items: center;
-            gap: 15px;
+            gap: 10px;
         }
 
         .header h1 .emoji {
-            font-size: 2.2rem;
-            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+            font-size: 1.6rem;
+            filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
         }
 
         .header .subtitle {
-            font-size: 1.1rem;
+            font-size: 0.9rem;
             color: var(--text-secondary);
-            margin-top: 8px;
+            margin-top: 4px;
             font-weight: 400;
             opacity: 0.9;
         }
 
         .header .badges {
             display: flex;
-            gap: 12px;
-            margin-top: 15px;
+            gap: 10px;
+            margin-top: 10px;
         }
 
         .badge {
@@ -661,12 +688,52 @@
 
         /* Mobile responsivo */
         @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+                padding: 15px;
+            }
+
+            .back-button {
+                position: absolute;
+                top: 15px;
+                right: 15px;
+                padding: 6px;
+            }
+
+            .back-button svg {
+                width: 24px;
+                height: 24px;
+            }
+
+            .header-content {
+                width: 100%;
+                margin-top: 10px;
+            }
+            
             .header h1 {
-                font-size: 2rem;
+                font-size: 1.5rem;
+                gap: 8px;
+            }
+
+            .header h1 .emoji {
+                font-size: 1.4rem;
             }
 
             .header .subtitle {
-                font-size: 1rem;
+                font-size: 0.8rem;
+                margin-top: 2px;
+            }
+
+            .header .badges {
+                margin-top: 12px;
+                gap: 8px;
+                flex-wrap: wrap;
+            }
+
+            .badge {
+                padding: 5px 10px;
+                font-size: 0.75rem;
             }
 
             .main-layout {
@@ -715,45 +782,47 @@
 <body>
          <!-- Header -->
      <header class="header">
-         <h1>
-             <span class="emoji"># 🚀</span>
-             {{ $documentationData['title'] ?? 'Documentação da API - LegisInc' }}
-         </h1>
-         <div class="subtitle">Sistema de Gestão Parlamentar - API REST Completa</div>
-         <div class="badges">
-             @if(isset($documentationData['version']))
-                 <span class="badge version">Versão {{ $documentationData['version'] }}</span>
-             @endif
-             @if(isset($documentationData['overview']['baseUrl']))
-                 <span class="badge api">{{ $documentationData['overview']['baseUrl'] }}</span>
-             @endif
-             @if(isset($documentationData['lastUpdate']))
-                 <span class="badge date">{{ $documentationData['lastUpdate'] }}</span>
-             @endif
+         <a href="{{ url('/progress') }}" class="back-button" aria-label="Voltar para a página de progresso">
+             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+                 <path d="M0 0h24v24H0z" fill="none"/>
+                 <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+             </svg>
+         </a>
+         <div class="header-content">
+             <h1>
+                 <span class="emoji"># 🚀</span>
+                 {{ $documentationData['title'] ?? 'Documentação da API - LegisInc' }}
+             </h1>
+             <p class="subtitle">{{ $documentationData['subtitle'] ?? 'Sistema de Gestão Parlamentar - API REST Completa' }}</p>
+             <div class="badges">
+                 <span class="badge version">VERSÃO {{ $documentationData['version'] ?? '1.0.0' }}</span>
+                 <span class="badge api">`{{ $documentationData['api_version'] ?? '/API/V1' }}`</span>
+                 <span class="badge date">{{ $documentationData['date'] ?? '2025-07-12' }}</span>
+             </div>
          </div>
      </header>
 
-    <div class="main-layout">
-        <!-- Sidebar -->
-        <aside class="sidebar">
-            <div class="search-box">
-                <input type="text" id="searchInput" placeholder="Buscar na documentação...">
-            </div>
-            
-            <button class="mobile-menu-toggle" onclick="toggleMobileMenu()">☰ Menu</button>
-            
-            <nav>
+        <div class="main-layout">
+            <aside class="sidebar" id="sidebar">
+                <div class="search-box">
+                    <input type="text" id="searchInput" placeholder="Buscar endpoints...">
+                </div>
                 <ul class="nav-menu" id="navMenu">
-                    <!-- Navigation items will be populated by JavaScript -->
+                    @foreach($documentationData['sections'] as $section)
+                        <li>
+                            <a href="#{{ $section['id'] }}" class="nav-link">
+                                <i class="{{ $section['icon'] }} nav-icon"></i>
+                                <span>{{ $section['title'] }}</span>
+                            </a>
+                        </li>
+                    @endforeach
                 </ul>
-            </nav>
-        </aside>
+            </aside>
 
-        <!-- Conteúdo principal -->
-        <main class="content" id="content">
-            {!! $documentationData['content'] !!}
-        </main>
-    </div>
+            <main class="content" id="content">
+                {!! $documentationData['content'] !!}
+            </main>
+        </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
