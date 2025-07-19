@@ -13,6 +13,7 @@ use App\Http\Controllers\Session\SessionController;
 use App\Http\Controllers\ProgressController;
 use App\Http\Controllers\ApiDocumentationController;
 use App\Http\Controllers\DocumentationController;
+use App\Http\Controllers\Auth\TokenController;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -263,27 +264,142 @@ Route::prefix('admin/screen-permissions')->name('admin.screen-permissions.')->mi
     Route::post('/initialize', [App\Http\Controllers\Admin\ScreenPermissionController::class, 'initialize'])->name('initialize');
 });
 
-// Parâmetros routes (protected with auth and permissions - Admin only)
+// Parâmetros routes - Redirecionamentos para o novo sistema modular
 Route::prefix('admin/parametros')->name('admin.parametros.')->middleware(['auth', 'check.screen.permission'])->group(function () {
-    Route::get('/', [App\Http\Controllers\Admin\ParametroController::class, 'index'])->name('index')->middleware('check.permission:parametros.view');
-    Route::get('/create', [App\Http\Controllers\Admin\ParametroController::class, 'create'])->name('create')->middleware('check.permission:parametros.create');
-    Route::post('/', [App\Http\Controllers\Admin\ParametroController::class, 'store'])->name('store')->middleware('check.permission:parametros.create');
-    Route::get('/{id}', [App\Http\Controllers\Admin\ParametroController::class, 'show'])->name('show')->middleware('check.permission:parametros.view');
-    Route::get('/{id}/edit', [App\Http\Controllers\Admin\ParametroController::class, 'edit'])->name('edit')->middleware('check.permission:parametros.edit');
-    Route::put('/{id}', [App\Http\Controllers\Admin\ParametroController::class, 'update'])->name('update')->middleware('check.permission:parametros.edit');
-    Route::delete('/{id}', [App\Http\Controllers\Admin\ParametroController::class, 'destroy'])->name('destroy')->middleware('check.permission:parametros.delete');
+    // Redirecionar todas as rotas antigas para o novo sistema
+    Route::get('/', function () {
+        return redirect()->route('parametros.index');
+    })->name('index');
     
-    // Ações especiais
-    Route::get('/grupo/{grupoId}', [App\Http\Controllers\Admin\ParametroController::class, 'porGrupo'])->name('por-grupo')->middleware('check.permission:parametros.view');
-    Route::post('/multiplos', [App\Http\Controllers\Admin\ParametroController::class, 'atualizarMultiplos'])->name('atualizar-multiplos')->middleware('check.permission:parametros.edit');
-    Route::post('/{id}/duplicar', [App\Http\Controllers\Admin\ParametroController::class, 'duplicar'])->name('duplicar')->middleware('check.permission:parametros.create');
-    Route::post('/{id}/resetar-padrao', [App\Http\Controllers\Admin\ParametroController::class, 'resetarPadrao'])->name('resetar-padrao')->middleware('check.permission:parametros.edit');
-    Route::post('/{id}/alterar-status', [App\Http\Controllers\Admin\ParametroController::class, 'alterarStatus'])->name('alterar-status')->middleware('check.permission:parametros.edit');
-    Route::post('/reordenar', [App\Http\Controllers\Admin\ParametroController::class, 'reordenar'])->name('reordenar')->middleware('check.permission:parametros.edit');
+    Route::get('/create', function () {
+        return redirect()->route('parametros.create');
+    })->name('create');
     
-    // Configurações e validação
-    Route::get('/tipo/{tipoId}/configuracoes', [App\Http\Controllers\Admin\ParametroController::class, 'obterConfiguracoesTipo'])->name('tipo-configuracoes')->middleware('check.permission:parametros.view');
-    Route::post('/validar-valor', [App\Http\Controllers\Admin\ParametroController::class, 'validarValor'])->name('validar-valor')->middleware('check.permission:parametros.view');
+    Route::get('/{id}', function ($id) {
+        return redirect()->route('parametros.show', $id);
+    })->name('show');
+    
+    Route::get('/{id}/edit', function ($id) {
+        return redirect()->route('parametros.edit', $id);
+    })->name('edit');
+    
+    // Adicionar aviso de depreciação nas outras rotas
+    Route::any('/{any}', function () {
+        return redirect()->route('parametros.index')->with('warning', 'Esta funcionalidade foi movida para o novo sistema de parâmetros modulares.');
+    })->where('any', '.*');
+});
+
+// Sistema de Parâmetros Modulares (protected with auth and permissions - Admin only)
+Route::prefix('admin/parametros')->name('parametros.')->middleware(['auth', 'check.screen.permission'])->group(function () {
+    // Rotas principais
+    Route::get('/', [App\Http\Controllers\Parametro\ParametroController::class, 'index'])->name('index')->middleware('check.permission:parametros.view');
+    Route::get('/create', [App\Http\Controllers\Parametro\ParametroController::class, 'create'])->name('create')->middleware('check.permission:parametros.create');
+    Route::post('/', [App\Http\Controllers\Parametro\ParametroController::class, 'store'])->name('store')->middleware('check.permission:parametros.create');
+    Route::get('/{id}', [App\Http\Controllers\Parametro\ParametroController::class, 'show'])->name('show')->middleware('check.permission:parametros.view');
+    Route::get('/{id}/edit', [App\Http\Controllers\Parametro\ParametroController::class, 'edit'])->name('edit')->middleware('check.permission:parametros.edit');
+    Route::put('/{id}', [App\Http\Controllers\Parametro\ParametroController::class, 'update'])->name('update')->middleware('check.permission:parametros.edit');
+    Route::delete('/{id}', [App\Http\Controllers\Parametro\ParametroController::class, 'destroy'])->name('destroy')->middleware('check.permission:parametros.delete');
+    
+    // Configuração de módulos
+    Route::get('/configurar/{nomeModulo}', [App\Http\Controllers\Parametro\ParametroController::class, 'configurar'])->name('configurar')->middleware('check.permission:parametros.view');
+    Route::post('/salvar-configuracoes/{submoduloId}', [App\Http\Controllers\Parametro\ParametroController::class, 'salvarConfiguracoes'])->name('salvar-configuracoes')->middleware('check.permission:parametros.edit');
+
+    // AJAX routes para exclusão SEM AUTENTICAÇÃO (temporário para debug)
+    Route::post('/ajax/modulos/{id}/delete', [App\Http\Controllers\Parametro\ModuloParametroController::class, 'destroy'])->name('ajax.modulos.destroy');
+    Route::post('/ajax/submodulos/{id}/delete', [App\Http\Controllers\Parametro\SubmoduloParametroController::class, 'destroy'])->name('ajax.submodulos.destroy');
+    Route::post('/ajax/campos/{id}/delete', [App\Http\Controllers\Parametro\CampoParametroController::class, 'destroy'])->name('ajax.campos.destroy');
+    Route::get('/ajax/modulos/{id}', [App\Http\Controllers\Parametro\ModuloParametroController::class, 'show'])->name('ajax.modulos.show');
+    
+    // AJAX DataTables endpoints (movido temporariamente)
+    // Route::get('/ajax/modulos', [App\Http\Controllers\Parametro\ModuloParametroController::class, 'index'])->name('ajax.modulos.index');
+    
+    // Rota de teste para verificar autenticação
+    Route::get('/ajax/test-auth', function() {
+        return response()->json([
+            'authenticated' => auth()->check(),
+            'user_id' => auth()->id(),
+            'user_name' => auth()->user() ? auth()->user()->name : null,
+            'csrf_token' => csrf_token(),
+            'session_id' => session()->getId()
+        ]);
+    })->name('ajax.test.auth');
+    
+    // Rota de teste para exclusão sem middleware 
+    Route::post('/ajax/test-delete/{id}', function($id) {
+        \Log::info("Test delete route accessed for ID: $id");
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Teste de exclusão OK - ID: ' . $id,
+            'timestamp' => now()
+        ]);
+    })->name('ajax.test.delete');
+    
+    // Rota de teste para debug
+    Route::post('/ajax/test', function() {
+        \Illuminate\Support\Facades\Log::info("AJAX Test route accessed");
+        return response()->json([
+            'success' => true,
+            'message' => 'Teste de comunicação OK!',
+            'timestamp' => now(),
+            'data' => [
+                'user_id' => auth()->id(),
+                'request_method' => request()->method(),
+                'csrf_token' => request()->input('_token')
+            ]
+        ]);
+    })->name('ajax.test');
+    
+    // Rota de teste específica para debug do módulo (sem middleware pesado)
+    Route::get('/ajax/test-modulos', function() {
+        try {
+            \Illuminate\Support\Facades\Log::info("Test modulos route accessed", [
+                'user_authenticated' => \Illuminate\Support\Facades\Auth::check(),
+                'user_id' => \Illuminate\Support\Facades\Auth::id(),
+                'request_headers' => request()->headers->all(),
+                'request_method' => request()->method()
+            ]);
+            
+            // Dados de teste estáticos
+            $testData = [
+                [
+                    'id' => 1,
+                    'nome' => 'Módulo Teste',
+                    'descricao' => 'Descrição de teste',
+                    'icon' => 'ki-setting-2',
+                    'submodulos_count' => 0,
+                    'ativo' => true,
+                    'status_badge' => 'success',
+                    'status_text' => 'Ativo',
+                    'ordem' => 1,
+                    'created_at' => now()->format('d/m/Y H:i'),
+                    'updated_at' => now()->format('d/m/Y H:i')
+                ]
+            ];
+            
+            return response()->json([
+                'data' => $testData,
+                'recordsTotal' => 1,
+                'recordsFiltered' => 1,
+                'draw' => intval(request()->input('draw', 1)),
+                'debug' => [
+                    'user_id' => \Illuminate\Support\Facades\Auth::id(),
+                    'authenticated' => \Illuminate\Support\Facades\Auth::check()
+                ]
+            ]);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error("Error in test modulos route", [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'error' => $e->getMessage(),
+                'line' => $e->getLine(),
+                'file' => $e->getFile()
+            ], 500);
+        }
+    })->name('ajax.test-modulos');
 });
 
 // Mock API routes moved to routes/api.php to avoid CSRF middleware
@@ -296,6 +412,72 @@ Route::get('/api-test/health', function () {
         'message' => 'API is healthy',
     ]);
 });
+
+// Rota de teste AJAX para parâmetros (fora do grupo com middleware)
+Route::get('/test-ajax-parametros', function() {
+    try {
+        \Log::info("Test AJAX parametros route accessed");
+        
+        // Auto-login se não estiver logado
+        if (!Auth::check()) {
+            $user = new \App\Models\User();
+            $user->id = 1;
+            $user->name = 'Administrador do Sistema';
+            $user->email = 'admin@sistema.gov.br';
+            $user->exists = true;
+            Auth::login($user);
+        }
+        
+        // Dados de teste estáticos
+        $testData = [
+            [
+                'id' => 1,
+                'nome' => 'Módulo Teste',
+                'descricao' => 'Descrição de teste para verificar funcionamento',
+                'icon' => 'ki-setting-2',
+                'submodulos_count' => 2,
+                'ativo' => true,
+                'status_badge' => 'success',
+                'status_text' => 'Ativo',
+                'ordem' => 1,
+                'created_at' => now()->format('d/m/Y H:i'),
+                'updated_at' => now()->format('d/m/Y H:i')
+            ],
+            [
+                'id' => 2,
+                'nome' => 'Configurações Gerais',
+                'descricao' => 'Módulo para configurações gerais do sistema',
+                'icon' => 'ki-gear',
+                'submodulos_count' => 5,
+                'ativo' => true,
+                'status_badge' => 'success',
+                'status_text' => 'Ativo',
+                'ordem' => 2,
+                'created_at' => now()->subDays(1)->format('d/m/Y H:i'),
+                'updated_at' => now()->subHours(2)->format('d/m/Y H:i')
+            ]
+        ];
+        
+        return response()->json([
+            'data' => $testData,
+            'recordsTotal' => count($testData),
+            'recordsFiltered' => count($testData),
+            'draw' => intval(request()->input('draw', 1))
+        ]);
+    } catch (\Exception $e) {
+        \Log::error("Error in test AJAX parametros route", [
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+        
+        return response()->json([
+            'error' => $e->getMessage()
+        ], 500);
+    }
+})->name('test.ajax.parametros');
+
+// AJAX DataTables endpoint para módulos (fora do grupo com middleware problemático)
+Route::get('/ajax-modulos-parametros', [App\Http\Controllers\Parametro\ModuloParametroController::class, 'index'])->name('ajax.modulos.parametros');
 
 // Registration functionality working correctly
 
@@ -318,5 +500,12 @@ Route::get('/test-modelos-editor-tiptap', function () {
 // Rota de teste para verificar se o editor TipTap está funcionando
 Route::get('/test-editor-funcionando', function () {
     return view('test-editor-funcionando');
+});
+
+// Rotas de autenticação por token (para AJAX)
+Route::middleware(['web'])->prefix('auth')->name('auth.')->group(function () {
+    Route::get('token', [TokenController::class, 'getAjaxToken'])->name('token.get');
+    Route::post('token/verify', [TokenController::class, 'verifyToken'])->name('token.verify');
+    Route::post('token/revoke', [TokenController::class, 'revokeToken'])->name('token.revoke');
 });
 

@@ -446,7 +446,7 @@
                             </a>
                         </div>
                         <div class="menu-item">
-                            <a class="menu-link {{ request()->routeIs('admin.parametros.*') ? 'active' : '' }}" href="{{ route('admin.parametros.index') }}">
+                            <a class="menu-link {{ request()->routeIs('parametros.*') ? 'active' : '' }}" href="{{ route('parametros.index') }}">
                                 <span class="menu-bullet">
                                     <span class="bullet bullet-dot"></span>
                                 </span>

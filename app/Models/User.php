@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
+use Illuminate\Support\Facades\DB;
 
 class User extends Authenticatable
 {
@@ -159,7 +160,7 @@ class User extends Authenticatable
                 return $this->hasRoleFallback($roles);
             }
             
-            $userRoles = \DB::table('model_has_roles')
+            $userRoles = DB::table('model_has_roles')
                 ->join('roles', 'model_has_roles.role_id', '=', 'roles.id')
                 ->where('model_has_roles.model_type', 'App\\Models\\User')
                 ->where('model_has_roles.model_id', $this->id)
@@ -206,7 +207,7 @@ class User extends Authenticatable
                 return $this->hasPermissionFallback($permission);
             }
             
-            $userRoles = \DB::table('model_has_roles')
+            $userRoles = DB::table('model_has_roles')
                 ->where('model_type', 'App\\Models\\User')
                 ->where('model_id', $this->id)
                 ->pluck('role_id');
@@ -215,7 +216,7 @@ class User extends Authenticatable
                 return $this->hasPermissionFallback($permission);
             }
 
-            $hasPermission = \DB::table('role_has_permissions')
+            $hasPermission = DB::table('role_has_permissions')
                 ->join('permissions', 'role_has_permissions.permission_id', '=', 'permissions.id')
                 ->whereIn('role_has_permissions.role_id', $userRoles)
                 ->where('permissions.name', $permission)
@@ -271,7 +272,7 @@ class User extends Authenticatable
                 return $this->getRoleNamesFallback();
             }
             
-            $roleNames = \DB::table('model_has_roles')
+            $roleNames = DB::table('model_has_roles')
                 ->join('roles', 'model_has_roles.role_id', '=', 'roles.id')
                 ->where('model_has_roles.model_type', 'App\\Models\\User')
                 ->where('model_has_roles.model_id', $this->id)

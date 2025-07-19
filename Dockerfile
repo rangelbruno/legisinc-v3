@@ -102,4 +102,4 @@ USER root
 EXPOSE 80 443
 
 # Comando padrão
-CMD ["sh", "-c", "cp .env.docker .env 2>/dev/null || true && php artisan key:generate --ansi && nginx -g 'daemon off;' & php-fpm"]
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]

@@ -1,0 +1,287 @@
+<?php
+
+namespace App\Http\Controllers\Parametro;
+
+use App\Http\Controllers\Controller;
+use App\Services\Parametro\ParametroService;
+use App\Services\Parametro\ValidacaoParametroService;
+use App\DTOs\Parametro\ModuloParametroDTO;
+use App\DTOs\Parametro\SubmoduloParametroDTO;
+use App\DTOs\Parametro\CampoParametroDTO;
+use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
+use Illuminate\View\View;
+use Illuminate\Http\RedirectResponse;
+
+class ParametroController extends Controller
+{
+    protected ParametroService $parametroService;
+    protected ValidacaoParametroService $validacaoService;
+
+    public function __construct(
+        ParametroService $parametroService,
+        ValidacaoParametroService $validacaoService
+    ) {
+        $this->parametroService = $parametroService;
+        $this->validacaoService = $validacaoService;
+    }
+
+    /**
+     * Display a listing of the resource.
+     */
+    public function index(Request $request): View
+    {
+        $modulos = $this->parametroService->obterModulos();
+        
+        return view('modules.parametros.index', compact('modulos'));
+    }
+
+    /**
+     * Show the form for creating a new resource.
+     */
+    public function create(): View
+    {
+        return view('modules.parametros.create');
+    }
+
+    /**
+     * Store a newly created resource in storage.
+     */
+    public function store(Request $request): RedirectResponse
+    {
+        try {
+            $dados = $request->validate([
+                'nome' => 'required|string|max:255',
+                'descricao' => 'nullable|string',
+                'icon' => 'nullable|string|max:100',
+                'ordem' => 'nullable|integer|min:0',
+                'ativo' => 'boolean',
+            ]);
+
+            $validacao = $this->validacaoService->validarCriacaoModulo($dados);
+            
+            if (!$validacao['valido']) {
+                return back()
+                    ->withErrors($validacao['erros'])
+                    ->withInput();
+            }
+
+            $modulo = $this->parametroService->criarModulo($dados);
+
+            return redirect()
+                ->route('parametros.index')
+                ->with('success', 'Módulo criado com sucesso!');
+                
+        } catch (\Exception $e) {
+            return back()
+                ->withError('Erro ao criar módulo: ' . $e->getMessage())
+                ->withInput();
+        }
+    }
+
+    /**
+     * Display the specified resource.
+     */
+    public function show(int $id): View
+    {
+        $modulo = $this->parametroService->obterModulos()->find($id);
+        
+        if (!$modulo) {
+            abort(404, 'Módulo não encontrado');
+        }
+
+        $submodulos = $this->parametroService->obterSubmodulos($id);
+
+        return view('modules.parametros.show', compact('modulo', 'submodulos'));
+    }
+
+    /**
+     * Show the form for editing the specified resource.
+     */
+    public function edit(int $id): View
+    {
+        $modulo = $this->parametroService->obterModulos()->find($id);
+        
+        if (!$modulo) {
+            abort(404, 'Módulo não encontrado');
+        }
+
+        return view('modules.parametros.edit', compact('modulo'));
+    }
+
+    /**
+     * Update the specified resource in storage.
+     */
+    public function update(Request $request, int $id): RedirectResponse
+    {
+        try {
+            $dados = $request->validate([
+                'nome' => 'required|string|max:255',
+                'descricao' => 'nullable|string',
+                'icon' => 'nullable|string|max:100',
+                'ordem' => 'nullable|integer|min:0',
+                'ativo' => 'boolean',
+            ]);
+
+            // Lógica de atualização seria implementada no service
+            
+            return redirect()
+                ->route('parametros.index')
+                ->with('success', 'Módulo atualizado com sucesso!');
+                
+        } catch (\Exception $e) {
+            return back()
+                ->withError('Erro ao atualizar módulo: ' . $e->getMessage())
+                ->withInput();
+        }
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     */
+    public function destroy(int $id): RedirectResponse
+    {
+        try {
+            // Verificar se pode excluir
+            $verificacao = $this->parametroService->podeExcluirModulo($id);
+            
+            if (!$verificacao['pode']) {
+                return back()
+                    ->withError('Não é possível excluir o módulo: ' . $verificacao['motivo']);
+            }
+
+            // Executar exclusão
+            $this->parametroService->excluirModulo($id);
+            
+            return redirect()
+                ->route('parametros.index')
+                ->with('success', 'Módulo excluído com sucesso!');
+                
+        } catch (\Exception $e) {
+            return back()
+                ->withError('Erro ao excluir módulo: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Página de configuração de um módulo específico
+     */
+    public function configurar(string $nomeModulo): View
+    {
+        $modulo = $this->parametroService->obterModulos()
+            ->where('nome', $nomeModulo)
+            ->first();
+            
+        if (!$modulo) {
+            abort(404, 'Módulo não encontrado');
+        }
+
+        $submodulos = $this->parametroService->obterSubmodulos($modulo->id);
+        
+        return view('modules.parametros.configurar', compact('modulo', 'submodulos'));
+    }
+
+    /**
+     * Salva configurações de um submódulo
+     */
+    public function salvarConfiguracoes(Request $request, int $submoduloId): RedirectResponse
+    {
+        try {
+            $valores = $request->except(['_token', '_method']);
+            $userId = auth()->id();
+            
+            $sucesso = $this->parametroService->salvarValores($submoduloId, $valores, $userId);
+            
+            if ($sucesso) {
+                return back()->with('success', 'Configurações salvas com sucesso!');
+            } else {
+                return back()->withError('Erro ao salvar configurações');
+            }
+            
+        } catch (\Exception $e) {
+            return back()
+                ->withError('Erro ao salvar configurações: ' . $e->getMessage())
+                ->withInput();
+        }
+    }
+
+    /**
+     * API: Validar parâmetro
+     */
+    public function validar(Request $request, string $modulo, string $submodulo): JsonResponse
+    {
+        try {
+            $valor = $request->input('valor');
+            
+            $valido = $this->parametroService->validar($modulo, $submodulo, $valor);
+            
+            return response()->json([
+                'valido' => $valido,
+                'mensagem' => $valido ? 'Parâmetro válido' : 'Parâmetro inválido'
+            ]);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'valido' => false,
+                'mensagem' => 'Erro na validação: ' . $e->getMessage()
+            ], 400);
+        }
+    }
+
+    /**
+     * API: Obter configurações
+     */
+    public function obterConfiguracoes(string $modulo, string $submodulo): JsonResponse
+    {
+        try {
+            $configuracoes = $this->parametroService->obterConfiguracoes($modulo, $submodulo);
+            
+            return response()->json($configuracoes);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'erro' => 'Erro ao obter configurações: ' . $e->getMessage()
+            ], 400);
+        }
+    }
+
+    /**
+     * API: Obter valor específico
+     */
+    public function obterValor(string $modulo, string $submodulo, string $campo): JsonResponse
+    {
+        try {
+            $valor = $this->parametroService->obterValor($modulo, $submodulo, $campo);
+            
+            return response()->json([
+                'valor' => $valor
+            ]);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'erro' => 'Erro ao obter valor: ' . $e->getMessage()
+            ], 400);
+        }
+    }
+
+    /**
+     * API: Limpar cache
+     */
+    public function limparCache(): JsonResponse
+    {
+        try {
+            $this->parametroService->limparTodoCache();
+            
+            return response()->json([
+                'sucesso' => true,
+                'mensagem' => 'Cache limpo com sucesso'
+            ]);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'sucesso' => false,
+                'mensagem' => 'Erro ao limpar cache: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+}

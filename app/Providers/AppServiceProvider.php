@@ -19,6 +19,15 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        // Registrar comandos Artisan do sistema de parâmetros
+        if ($this->app->runningInConsole()) {
+            $this->commands([
+                \App\Console\Commands\ParametrosCriar::class,
+                \App\Console\Commands\ParametrosMigrarExistentes::class,
+                \App\Console\Commands\ParametrosLimparCache::class,
+                \App\Console\Commands\ParametrosValidarTodos::class,
+                \App\Console\Commands\ParametrosSeed::class,
+            ]);
+        }
     }
 }

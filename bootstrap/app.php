@@ -15,6 +15,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'check.permission' => \App\Http\Middleware\CheckPermission::class,
             'check.screen.permission' => \App\Http\Middleware\CheckScreenPermission::class,
+            'auth.token' => \App\Http\Middleware\AuthenticateToken::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

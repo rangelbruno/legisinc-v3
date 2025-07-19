@@ -23,7 +23,7 @@
                         <span class="bullet bg-gray-500 w-5px h-2px"></span>
                     </li>
                     <li class="breadcrumb-item text-muted">
-                        <a href="{{ route('admin.parametros.index') }}" class="text-muted text-hover-primary">Parâmetros</a>
+                        <a href="{{ route('parametros.index') }}" class="text-muted text-hover-primary">Parâmetros</a>
                     </li>
                     <li class="breadcrumb-item">
                         <span class="bullet bg-gray-500 w-5px h-2px"></span>
@@ -43,6 +43,22 @@
         <!--begin::Content container-->
         <div id="kt_app_content_container" class="app-container container-xxl">
             
+            <!--begin::Migration Alert-->
+            <div class="alert alert-warning d-flex align-items-center p-5 mb-10">
+                <i class="ki-duotone ki-information fs-2hx text-warning me-4">
+                    <span class="path1"></span>
+                    <span class="path2"></span>
+                    <span class="path3"></span>
+                </i>
+                <div class="d-flex flex-column">
+                    <h5 class="mb-1">Sistema Migrado</h5>
+                    <span>Este sistema foi migrado para o novo Sistema de Parâmetros Modulares. 
+                        <a href="{{ route('parametros.create') }}" class="fw-bold text-warning text-hover-primary">Acesse o novo sistema aqui</a>.
+                    </span>
+                </div>
+            </div>
+            <!--end::Migration Alert-->
+
             <!--begin::Alert-->
             @if ($errors->any())
                 <div class="alert alert-danger d-flex align-items-center p-5 mb-10">
@@ -63,7 +79,7 @@
             <!--end::Alert-->
 
             <!--begin::Form-->
-            <form id="kt_parametros_form" class="form d-flex flex-column flex-lg-row" action="{{ route('admin.parametros.store') }}" method="POST">
+            <form id="kt_parametros_form" class="form d-flex flex-column flex-lg-row" action="{{ route('parametros.store') }}" method="POST">
                 @csrf
                 
                 <!--begin::Main column-->
@@ -303,7 +319,7 @@
                     
                     <div class="d-flex justify-content-end">
                         <!--begin::Button-->
-                        <a href="{{ route('admin.parametros.index') }}" class="btn btn-light me-5">Cancelar</a>
+                        <a href="{{ route('parametros.index') }}" class="btn btn-light me-5">Cancelar</a>
                         <!--end::Button-->
                         <!--begin::Button-->
                         <button type="submit" id="kt_parametros_submit" class="btn btn-primary">

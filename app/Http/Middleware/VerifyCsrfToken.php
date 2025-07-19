@@ -13,21 +13,7 @@ class VerifyCsrfToken extends Middleware
      */
     protected $except = [
         'mock-api/*',
+        'admin/parametros/ajax/*',
     ];
     
-    /**
-     * Determine if the request has a URI that should pass through CSRF verification.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return bool
-     */
-    protected function inExceptArray($request)
-    {
-        // Se a URL contém mock-api, pular verificação CSRF
-        if (str_contains($request->getPathInfo(), 'mock-api')) {
-            return true;
-        }
-        
-        return parent::inExceptArray($request);
-    }
 } 

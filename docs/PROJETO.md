@@ -54,6 +54,8 @@ legisinc/
 │   │   ├── User/                # Controladores de Usuários
 │   │   ├── Comissao/            # Controladores de Comissões
 │   │   ├── Parlamentar/         # Controladores de Parlamentares
+│   │   ├── Parametro/           # Sistema de Parâmetros Modulares
+│   │   ├── Admin/               # Controladores Administrativos
 │   │   ├── MockApiController.php # Mock API para desenvolvimento
 │   │   └── ApiTestController.php # Testes de API
 │   ├── Models/                   # Modelos Eloquent
@@ -62,17 +64,32 @@ legisinc/
 │   │   ├── ProjetoAnexo.php     # Anexos de Projetos
 │   │   ├── ProjetoVersion.php   # Versões de Projetos
 │   │   ├── ModeloProjeto.php    # Modelos de Projeto
+│   │   ├── Parametro/           # Models do Sistema de Parâmetros
+│   │   │   ├── ParametroModulo.php    # Módulos de Parâmetros
+│   │   │   ├── ParametroSubmodulo.php # Submódulos
+│   │   │   ├── ParametroCampo.php     # Campos
+│   │   │   └── ParametroValor.php     # Valores
 │   │   └── User.php             # Modelo de Usuário
 │   ├── Services/                 # Serviços de negócio
 │   │   ├── Projeto/             # Serviços de Projetos
 │   │   ├── User/                # Serviços de Usuários
 │   │   ├── Comissao/            # Serviços de Comissões
 │   │   ├── Parlamentar/         # Serviços de Parlamentares
+│   │   ├── Parametro/           # Serviços de Parâmetros
+│   │   │   ├── ParametroService.php         # Service principal
+│   │   │   ├── CacheParametroService.php    # Cache inteligente
+│   │   │   ├── ValidacaoParametroService.php # Validações
+│   │   │   └── AuditoriaParametroService.php # Auditoria
 │   │   └── ApiClient/           # Cliente de API
 │   ├── DTOs/                     # Data Transfer Objects
 │   │   ├── Projeto/             # DTOs de Projetos
 │   │   ├── User/                # DTOs de Usuários
-│   │   └── Parlamentar/         # DTOs de Parlamentares
+│   │   ├── Parlamentar/         # DTOs de Parlamentares
+│   │   └── Parametro/           # DTOs de Parâmetros
+│   │       ├── ModuloParametroDTO.php     # DTO para módulos
+│   │       ├── SubmoduloParametroDTO.php  # DTO para submódulos
+│   │       ├── CampoParametroDTO.php      # DTO para campos
+│   │       └── ValorParametroDTO.php      # DTO para valores
 │   ├── Policies/                 # Políticas de autorização
 │   └── Providers/                # Provedores de serviços
 ├── resources/                    # Recursos frontend
@@ -86,8 +103,10 @@ legisinc/
 │       │   ├── projetos/        # Views de Projetos
 │       │   ├── usuarios/        # Views de Usuários
 │       │   ├── comissoes/       # Views de Comissões
-│       │   └── parlamentares/   # Views de Parlamentares
+│       │   ├── parlamentares/   # Views de Parlamentares
+│       │   └── parametros/      # Views de Parâmetros Modulares
 │       ├── admin/               # Views administrativas
+│       │   └── parametros/      # Interface administrativa de parâmetros
 │       ├── auth/                # Views de autenticação
 │       ├── user/                # Views de usuários
 │       └── api-test/            # Views de testes de API
@@ -227,6 +246,32 @@ Configuração de serviços externos incluindo:
   - Resolução (ki-verify)
   - Indicação (ki-arrow-up-right)
   - Requerimento (ki-questionnaire-tablet)
+
+### 7. Sistema de Parâmetros Modulares
+- **Localização**: `app/Models/Parametro/`, `resources/views/admin/parametros/`
+- **Funcionalidades**:
+  - Sistema hierárquico de configuração (Módulos → Submódulos → Campos → Valores)
+  - CRUD completo para todos os níveis da hierarquia
+  - Interface administrativa responsiva com DataTables
+  - Sistema de cache inteligente (compatível com file storage e Redis)
+  - Validação de integridade referencial
+  - Exclusão com validação e opção de força (cascade deletion)
+  - Sistema de auditoria completo
+  - API funcional com endpoints reais
+  - Ordenação dinâmica e controle de status ativo/inativo
+  - Importação/exportação de configurações
+- **Arquitetura**:
+  - Controllers especializados para cada nível da hierarquia
+  - Service Layer robusto com separação de responsabilidades
+  - DTOs para transferência de dados estruturada
+  - Cache service com detecção automática de capabilities
+  - Sistema de middlewares para autenticação híbrida
+- **APIs Funcionais**:
+  - `/api/parametros-modular/modulos/*` - Gestão de módulos
+  - `/api/parametros-modular/submodulos/*` - Gestão de submódulos  
+  - `/api/parametros-modular/campos/*` - Gestão de campos
+  - `/api/parametros-modular/valores/*` - Gestão de valores
+  - Endpoints especiais para validação, configuração e cache
 
 ## Configuração do Desenvolvimento
 
@@ -470,6 +515,15 @@ Este documento será atualizado conforme o desenvolvimento do projeto progride. 
 3. **Documentação Técnica**: Documentação detalhada das melhorias implementadas
 4. **Interface Responsiva**: Design otimizado para todos os dispositivos
 5. **Documentação da API**: Documentação completa e checklist de implementação
+6. **Sistema de Parâmetros Modulares**: Sistema completo de configuração hierárquica com APIs funcionais
+   - Arquitetura modular com 4 níveis hierárquicos
+   - Sistema de cache inteligente com fallback automático
+   - Interface administrativa completa com validações
+   - API real funcionando (não mock) com autenticação
+   - Sistema de exclusão inteligente com validação e força
+   - Auditoria completa de todas as operações
+   - Correção de problemas de CSRF token em operações AJAX
+   - JavaScript robusto com tratamento de erros diferenciado
 
 ### Próximas Implementações 🔄
 1. **Sessões Plenárias**: Controle de sessões, atas, presenças, pauta
@@ -520,6 +574,40 @@ make logs                  # Ver logs
 
 ---
 
-**Última atualização**: 2025-01-16
+**Última atualização**: 2025-07-19
 **Versão do Laravel**: 12.0
-**Status**: 5 módulos core implementados (25% do total), estrutura base completa, documentação da API finalizada, pronto para implementação de módulos de negócio avançados
+**Status**: 6 módulos core implementados (30% do total), estrutura base completa, sistema de parâmetros modulares funcional, APIs reais funcionando, documentação completa, pronto para implementação de módulos de negócio avançados
+
+---
+
+## 🆕 Changelog Recente (2025-07-19)
+
+### Sistema de Parâmetros Modulares - Implementação Completa
+
+**Funcionalidades Adicionadas:**
+- ✅ **Sistema Hierárquico Completo**: 4 níveis (Módulos → Submódulos → Campos → Valores)
+- ✅ **Controllers Especializados**: `ParametroController`, `ModuloParametroController`, etc.
+- ✅ **Service Layer Robusto**: `ParametroService`, `CacheParametroService`, `ValidacaoParametroService`, `AuditoriaParametroService`
+- ✅ **Models com Relacionamentos**: Eloquent relationships bem definidos
+- ✅ **Cache Inteligente**: Funciona com file storage e Redis automaticamente
+- ✅ **API Funcional**: Endpoints reais `/api/parametros-modular/*` (não mock)
+- ✅ **Interface Administrativa**: Views Metronic com DataTables
+- ✅ **Sistema de Exclusão Avançado**: Validação + confirmação + exclusão forçada
+- ✅ **Auditoria Completa**: Log de todas as operações
+- ✅ **Tratamento de Erros**: JavaScript robusto com diferenciação de tipos de erro
+
+**Problemas Resolvidos:**
+- 🔧 **Cache Tagging**: Sistema compatível com drivers sem suporte a tagging
+- 🔧 **CSRF Token Issues**: Endpoints API sem proteção CSRF para AJAX
+- 🔧 **Cascade Deletion**: Exclusão inteligente com validação de dependências
+- 🔧 **Error Handling**: Tratamento diferenciado entre erros de rede, validação e autenticação
+- 🔧 **Database Relationships**: Estrutura hierárquica com integridade referencial
+
+**Qualidade Técnica:**
+- 📋 **Service Layer Pattern** implementado corretamente
+- 📋 **DTO Pattern** para transferência de dados
+- 📋 **Repository Pattern** com Eloquent
+- 📋 **Error Handling** padronizado em toda a aplicação
+- 📋 **Logging Completo** para debugging e auditoria
+- 📋 **Testes de API** validados com curl
+- 📋 **Documentação Inline** completa em todos os métodos

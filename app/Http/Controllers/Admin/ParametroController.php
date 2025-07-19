@@ -13,6 +13,10 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 use Illuminate\Support\Facades\Log;
 
+/**
+ * @deprecated Este controller foi substituído pelo novo sistema de parâmetros modulares
+ * @see App\Http\Controllers\Parametro\ParametroController
+ */
 class ParametroController extends Controller
 {
     public function __construct(
