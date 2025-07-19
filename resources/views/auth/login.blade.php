@@ -310,19 +310,7 @@
                             </div>
                             <!--begin::Heading-->
                             
-                            @if (session('success'))
-                                <div class="alert alert-success mb-8 rounded-3">
-                                    <i class="fas fa-check-circle me-2"></i>
-                                    {{ session('success') }}
-                                </div>
-                            @endif
-                            
-                            @if ($errors->has('email'))
-                                <div class="alert alert-danger mb-8 rounded-3">
-                                    <i class="fas fa-exclamation-circle me-2"></i>
-                                    {{ $errors->first('email') }}
-                                </div>
-                            @endif
+                            <x-alerts.flash />
                             <!--begin::Input group=-->
                             <div class="fv-row mb-8">
                                 <!--begin::Email-->

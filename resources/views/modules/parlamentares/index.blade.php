@@ -118,25 +118,7 @@
                 </div>
             @endif
 
-            @if(session('success'))
-                <div class="alert alert-success">
-                    <i class="ki-duotone ki-check-circle fs-2">
-                        <span class="path1"></span>
-                        <span class="path2"></span>
-                    </i>
-                    {{ session('success') }}
-                </div>
-            @endif
-
-            @if(session('error'))
-                <div class="alert alert-danger">
-                    <i class="ki-duotone ki-cross-circle fs-2">
-                        <span class="path1"></span>
-                        <span class="path2"></span>
-                    </i>
-                    {{ session('error') }}
-                </div>
-            @endif
+            <x-alerts.flash />
             
             <!--begin::Row-->
             <div class="row gy-5 gx-xl-8">

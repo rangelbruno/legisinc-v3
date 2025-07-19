@@ -6,29 +6,58 @@
 class AlertManager {
     constructor() {
         this.alerts = [];
+        this.bootstrapAlerts = [];
         this.defaultTimeout = 5000; // 5 seconds
         this.init();
     }
 
     init() {
-        // Create toast container if it doesn't exist
+        // Setup CSS styles first
+        this.injectStyles();
+        
+        // Create containers
         if (!document.getElementById('toast-container')) {
             this.createToastContainer();
         }
 
-        // Initialize existing Bootstrap alerts
+        if (!document.getElementById('alert-container')) {
+            this.createAlertContainer();
+        }
+
+        // Initialize existing Bootstrap alerts immediately
         this.enhanceBootstrapAlerts();
         
-        // Setup CSS styles
-        this.injectStyles();
+        // Also check again after small delays to catch any timing issues
+        setTimeout(() => {
+            this.enhanceBootstrapAlerts();
+        }, 10);
+        
+        setTimeout(() => {
+            this.enhanceBootstrapAlerts();
+        }, 100);
     }
 
     createToastContainer() {
         const container = document.createElement('div');
         container.id = 'toast-container';
         container.className = 'toast-container position-fixed top-0 end-0 p-3';
-        container.style.zIndex = '9999';
+        container.style.zIndex = '1080'; // Below Bootstrap modals (1055) but above most content
+        container.style.maxWidth = '100vw';
+        container.style.overflow = 'hidden';
         document.body.appendChild(container);
+    }
+
+    createAlertContainer() {
+        const container = document.createElement('div');
+        container.id = 'alert-container';
+        container.className = 'alert-container position-fixed top-0 end-0 p-3';
+        container.style.zIndex = '1081'; // Above toasts
+        container.style.maxWidth = '100vw';
+        container.style.overflow = 'hidden';
+        container.style.pointerEvents = 'none'; // Allow clicks through container
+        document.body.appendChild(container);
+        
+        console.log('Container de alerts criado:', container);
     }
 
     injectStyles() {
@@ -37,10 +66,32 @@ class AlertManager {
         const style = document.createElement('style');
         style.id = 'alert-enhanced-styles';
         style.textContent = `
+            /* Alert Container */
+            #alert-container {
+                pointer-events: none; /* Allows clicks to pass through container */
+            }
+
+            #alert-container .alert {
+                pointer-events: all; /* Re-enable pointer events for alerts */
+            }
+
             /* Enhanced Alert Styles */
-            .alert-dismissible {
-                position: relative;
+            #alert-container .alert {
+                position: relative !important;
+                min-width: 350px;
+                max-width: 500px;
                 padding-right: 4rem;
+                margin-bottom: 0.5rem !important;
+                transform: translateX(-100%);
+                transition: all 0.3s ease-in-out;
+                opacity: 0;
+                box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+                border: 1px solid rgba(0, 0, 0, 0.1);
+            }
+
+            #alert-container .alert.show {
+                transform: translateX(0);
+                opacity: 1;
             }
 
             .alert .btn-close {
@@ -73,6 +124,15 @@ class AlertManager {
                 transition: all 0.3s ease-in-out;
             }
 
+            /* Toast Container */
+            #toast-container {
+                pointer-events: none; /* Allows clicks to pass through container */
+            }
+
+            #toast-container .toast-notification {
+                pointer-events: all; /* Re-enable pointer events for toasts */
+            }
+
             /* Toast Notifications */
             .toast-notification {
                 min-width: 350px;
@@ -84,6 +144,7 @@ class AlertManager {
                 transform: translateX(100%);
                 transition: all 0.3s ease-in-out;
                 opacity: 0;
+                border: 1px solid rgba(0, 0, 0, 0.1);
             }
 
             .toast-notification.show {
@@ -160,6 +221,35 @@ class AlertManager {
                 animation: alertSlideOut 0.5s ease-in-out forwards;
                 overflow: hidden;
             }
+
+            /* Responsive adjustments */
+            @media (max-width: 576px) {
+                .toast-notification {
+                    min-width: 280px;
+                    max-width: calc(100vw - 2rem);
+                }
+                
+                #alert-container .alert {
+                    min-width: 280px !important;
+                    max-width: calc(100vw - 2rem) !important;
+                }
+                
+                #toast-container, #alert-container {
+                    padding: 1rem !important;
+                }
+            }
+
+            @media (max-width: 768px) {
+                .toast-notification {
+                    min-width: 320px;
+                    max-width: calc(100vw - 2rem);
+                }
+                
+                #alert-container .alert {
+                    min-width: 320px !important;
+                    max-width: calc(100vw - 2rem) !important;
+                }
+            }
         `;
         document.head.appendChild(style);
     }
@@ -167,6 +257,8 @@ class AlertManager {
     enhanceBootstrapAlerts() {
         // Find all existing Bootstrap alerts
         const alerts = document.querySelectorAll('.alert:not(.alert-enhanced)');
+        
+        console.log('AlertManager: Processando', alerts.length, 'alerts encontrados');
         
         alerts.forEach(alert => {
             this.makeAlertDismissible(alert);
@@ -176,26 +268,68 @@ class AlertManager {
     }
 
     makeAlertDismissible(alert) {
-        // Skip if already dismissible
-        if (alert.querySelector('.btn-close')) return;
+        // Move alert to dedicated container and get the moved alert
+        const movedAlert = this.moveAlertToContainer(alert);
 
-        // Add dismissible class
-        alert.classList.add('alert-dismissible');
+        // Always ensure alert-dismissible class
+        movedAlert.classList.add('alert-dismissible');
 
-        // Create close button
-        const closeBtn = document.createElement('button');
-        closeBtn.type = 'button';
-        closeBtn.className = 'btn-close';
-        closeBtn.setAttribute('aria-label', 'Close');
-        closeBtn.innerHTML = '<i class="ki-duotone ki-cross fs-2"><span class="path1"></span><span class="path2"></span></i>';
+        // Skip if already has close button
+        if (!movedAlert.querySelector('.btn-close')) {
+            // Create close button
+            const closeBtn = document.createElement('button');
+            closeBtn.type = 'button';
+            closeBtn.className = 'btn-close';
+            closeBtn.setAttribute('aria-label', 'Close');
+            closeBtn.innerHTML = '<i class="ki-duotone ki-cross fs-2"><span class="path1"></span><span class="path2"></span></i>';
 
-        // Add click event
-        closeBtn.addEventListener('click', () => {
-            this.dismissAlert(alert);
-        });
+            // Add click event
+            closeBtn.addEventListener('click', () => {
+                this.dismissAlert(movedAlert);
+            });
 
-        alert.appendChild(closeBtn);
+            movedAlert.appendChild(closeBtn);
+        }
+
+        // Trigger show animation
+        setTimeout(() => {
+            movedAlert.classList.add('show');
+        }, 10);
     }
+
+    moveAlertToContainer(alert) {
+        // Get the alert container
+        const alertContainer = document.getElementById('alert-container');
+        
+        console.log('moveAlertToContainer chamado para:', alert);
+        console.log('Container encontrado:', alertContainer);
+        
+        if (!alertContainer) {
+            console.error('Container de alerts não encontrado!');
+            return alert; // Return original if container not found
+        }
+        
+        // Clone the alert to preserve all properties
+        const clonedAlert = alert.cloneNode(true);
+        
+        console.log('Alert clonado:', clonedAlert);
+        
+        // Remove the original alert from its current position
+        alert.remove();
+        
+        console.log('Alert original removido');
+        
+        // Add to container
+        alertContainer.appendChild(clonedAlert);
+        
+        console.log('Alert adicionado ao container');
+        
+        // Add to tracking
+        this.bootstrapAlerts.push(clonedAlert);
+        
+        return clonedAlert;
+    }
+
 
     addAutoHide(alert, timeout = this.defaultTimeout) {
         // Skip if alert is in a form (error messages should stay visible)
@@ -212,7 +346,15 @@ class AlertManager {
     }
 
     dismissAlert(alert) {
+        // Remove show class and add removing animation
+        alert.classList.remove('show');
         alert.classList.add('alert-removing');
+        
+        // Remove from tracking array
+        const index = this.bootstrapAlerts.indexOf(alert);
+        if (index > -1) {
+            this.bootstrapAlerts.splice(index, 1);
+        }
         
         setTimeout(() => {
             if (alert.parentNode) {
@@ -350,44 +492,70 @@ class AlertManager {
     }
 }
 
-// Initialize when DOM is ready
+// Initialize as soon as possible
+function initializeAlertManager() {
+    if (document.body) {
+        console.log('AlertManager: Inicializando...');
+        // Create global instance
+        window.AlertManager = new AlertManager();
+        console.log('AlertManager: Inicializado com sucesso!');
+        
+        // Create convenient global functions
+        window.showAlert = {
+            success: (message, options) => window.AlertManager.success(message, options),
+            error: (message, options) => window.AlertManager.error(message, options),
+            warning: (message, options) => window.AlertManager.warning(message, options),
+            info: (message, options) => window.AlertManager.info(message, options),
+            primary: (message, options) => window.AlertManager.primary(message, options)
+        };
+        
+        return true;
+    }
+    return false;
+}
+
+// Try to initialize immediately
+if (!initializeAlertManager()) {
+    // If body not ready, wait for DOM
+    document.addEventListener('DOMContentLoaded', function() {
+        initializeAlertManager();
+    });
+}
+
+// Setup mutation observer when DOM is ready
 document.addEventListener('DOMContentLoaded', function() {
-    // Create global instance
-    window.AlertManager = new AlertManager();
-
-    // Create convenient global functions
-    window.showAlert = {
-        success: (message, options) => window.AlertManager.success(message, options),
-        error: (message, options) => window.AlertManager.error(message, options),
-        warning: (message, options) => window.AlertManager.warning(message, options),
-        info: (message, options) => window.AlertManager.info(message, options),
-        primary: (message, options) => window.AlertManager.primary(message, options)
-    };
-
-    // Enhance any alerts that were added after page load
-    const observer = new MutationObserver(function(mutations) {
-        mutations.forEach(function(mutation) {
-            mutation.addedNodes.forEach(function(node) {
-                if (node.nodeType === 1) { // Element node
-                    // Check if the added node is an alert
-                    if (node.classList && node.classList.contains('alert') && !node.classList.contains('alert-enhanced')) {
-                        window.AlertManager.enhanceNewAlert(node);
+    if (window.AlertManager) {
+        // Enhance any alerts that were added after page load
+        const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                mutation.addedNodes.forEach(function(node) {
+                    if (node.nodeType === 1) { // Element node
+                        // Check if the added node is an alert
+                        if (node.classList && node.classList.contains('alert') && !node.classList.contains('alert-enhanced')) {
+                            window.AlertManager.makeAlertDismissible(node);
+                            window.AlertManager.addAutoHide(node);
+                            node.classList.add('alert-enhanced');
+                        }
+                        
+                        // Check for alerts within the added node
+                        const alerts = node.querySelectorAll && node.querySelectorAll('.alert:not(.alert-enhanced)');
+                        if (alerts) {
+                            alerts.forEach(alert => {
+                                window.AlertManager.makeAlertDismissible(alert);
+                                window.AlertManager.addAutoHide(alert);
+                                alert.classList.add('alert-enhanced');
+                            });
+                        }
                     }
-                    
-                    // Check for alerts within the added node
-                    const alerts = node.querySelectorAll && node.querySelectorAll('.alert:not(.alert-enhanced)');
-                    if (alerts) {
-                        alerts.forEach(alert => window.AlertManager.enhanceNewAlert(alert));
-                    }
-                }
+                });
             });
         });
-    });
 
-    observer.observe(document.body, {
-        childList: true,
-        subtree: true
-    });
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+    }
 });
 
 // Export for module systems

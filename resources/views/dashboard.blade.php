@@ -64,15 +64,7 @@
     <div id="kt_app_content" class="app-content flex-column-fluid">
         <div id="kt_app_content_container" class="app-container container-xxl">
             
-            @if(session('success'))
-                <div class="alert alert-success">
-                    <i class="ki-duotone ki-check-circle fs-2">
-                        <span class="path1"></span>
-                        <span class="path2"></span>
-                    </i>
-                    {{ session('success') }}
-                </div>
-            @endif
+            <x-alerts.flash />
 
             <!--begin::Row-->
             <div class="row gy-5 gx-xl-8">
