@@ -59,6 +59,27 @@ Route::get('/dashboard', function () {
     
     return view('dashboard');
 })->name('dashboard');
+
+// Dashboard de Administração route (protected)
+Route::get('/admin/dashboard', function () {
+    // Auto-login as admin if no user is authenticated (for demo purposes)
+    if (!Auth::check()) {
+        $user = new \App\Models\User();
+        $user->id = 1;
+        $user->name = 'Administrador do Sistema';
+        $user->email = 'admin@sistema.gov.br';
+        $user->documento = '000.000.000-00';
+        $user->telefone = '(11) 0000-0000';
+        $user->profissao = 'Administrador de Sistema';
+        $user->cargo_atual = 'Administrador';
+        $user->ativo = true;
+        $user->exists = true;
+        
+        Auth::login($user);
+    }
+    
+    return view('admin.dashboard');
+})->name('admin.dashboard')->middleware('auth');
 Route::get('/home', function () {
     return view('welcome');
 })->name('home');
