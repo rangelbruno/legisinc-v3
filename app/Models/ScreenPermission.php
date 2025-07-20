@@ -79,15 +79,6 @@ class ScreenPermission extends Model
                     'comissoes.edit' => ['name' => 'Editar Comissão', 'route' => 'comissoes.edit'],
                 ]
             ],
-            'projetos' => [
-                'name' => 'Projetos',
-                'module' => 'projetos',
-                'children' => [
-                    'projetos.index' => ['name' => 'Lista de Projetos', 'route' => 'projetos.index'],
-                    'projetos.create' => ['name' => 'Novo Projeto', 'route' => 'projetos.create'],
-                    'projetos.edit' => ['name' => 'Editar Projeto', 'route' => 'projetos.edit'],
-                ]
-            ],
             'sessoes' => [
                 'name' => 'Sessões',
                 'module' => 'sessoes',
@@ -106,13 +97,20 @@ class ScreenPermission extends Model
                     'usuarios.edit' => ['name' => 'Editar Usuário', 'route' => 'usuarios.edit'],
                 ]
             ],
-            'modelos' => [
-                'name' => 'Modelos de Projeto',
-                'module' => 'modelos',
+            'proposicoes' => [
+                'name' => 'Proposições',
+                'module' => 'proposicoes',
                 'children' => [
-                    'modelos.index' => ['name' => 'Lista de Modelos', 'route' => 'modelos.index'],
-                    'modelos.create' => ['name' => 'Novo Modelo', 'route' => 'modelos.create'],
-                    'modelos.edit' => ['name' => 'Editar Modelo', 'route' => 'modelos.edit'],
+                    'proposicoes.criar' => ['name' => 'Criar Proposição', 'route' => 'proposicoes.criar'],
+                    'proposicoes.minhas-proposicoes' => ['name' => 'Minhas Proposições', 'route' => 'proposicoes.minhas-proposicoes'],
+                    'proposicoes.assinatura' => ['name' => 'Assinatura', 'route' => 'proposicoes.assinatura'],
+                    'proposicoes.historico-assinaturas' => ['name' => 'Histórico de Assinaturas', 'route' => 'proposicoes.historico-assinaturas'],
+                    'proposicoes.revisar' => ['name' => 'Revisar Proposições', 'route' => 'proposicoes.revisar'],
+                    'proposicoes.relatorio-legislativo' => ['name' => 'Relatório Legislativo', 'route' => 'proposicoes.relatorio-legislativo'],
+                    'proposicoes.aguardando-protocolo' => ['name' => 'Aguardando Protocolo', 'route' => 'proposicoes.aguardando-protocolo'],
+                    'proposicoes.protocolar' => ['name' => 'Protocolar', 'route' => 'proposicoes.protocolar'],
+                    'proposicoes.protocolos-hoje' => ['name' => 'Protocolos Hoje', 'route' => 'proposicoes.protocolos-hoje'],
+                    'proposicoes.estatisticas-protocolo' => ['name' => 'Estatísticas Protocolo', 'route' => 'proposicoes.estatisticas-protocolo'],
                 ]
             ],
         ];
@@ -198,8 +196,6 @@ class ScreenPermission extends Model
                     'parlamentares.index',
                     'parlamentares.mesa-diretora',
                     'parlamentares.create',
-                    'projetos.index',
-                    'projetos.create',
                     'admin.sessions.index',
                     'admin.sessions.create',
                     'comissoes.index',
@@ -211,7 +207,6 @@ class ScreenPermission extends Model
                     'dashboard',
                     'parlamentares.index',
                     'parlamentares.mesa-diretora',
-                    'projetos.index',
                     'admin.sessions.index',
                     'comissoes.index',
                 ];
@@ -220,8 +215,6 @@ class ScreenPermission extends Model
             case 'PROTOCOLO':
                 $protocoloRoutes = [
                     'dashboard',
-                    'projetos.index',
-                    'projetos.create',
                     'admin.sessions.index',
                 ];
                 return in_array($route, $protocoloRoutes);
@@ -230,7 +223,6 @@ class ScreenPermission extends Model
                 $assessorRoutes = [
                     'dashboard',
                     'parlamentares.index',
-                    'projetos.index',
                     'admin.sessions.index',
                 ];
                 return in_array($route, $assessorRoutes);
@@ -301,10 +293,8 @@ class ScreenPermission extends Model
             'dashboard' => ['dashboard'],
             'parlamentares' => ['parlamentares.index', 'parlamentares.mesa-diretora'],
             'comissoes' => ['comissoes.index'],
-            'projetos' => ['projetos.index'],
             'sessoes' => ['admin.sessions.index'],
             'usuarios' => ['usuarios.index', 'admin.usuarios.index'],
-            'modelos' => ['modelos.index'],
         ];
 
         return $routes[$module] ?? [];

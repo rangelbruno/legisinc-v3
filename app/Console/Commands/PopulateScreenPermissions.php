@@ -84,28 +84,6 @@ class PopulateScreenPermissions extends Command
                 'can_access' => true,
             ],
             
-            // Projetos - pode visualizar, criar e editar seus próprios
-            [
-                'role_name' => 'PARLAMENTAR',
-                'screen_route' => 'projetos.index',
-                'screen_name' => 'Listar Projetos',
-                'screen_module' => 'projetos',
-                'can_access' => true,
-            ],
-            [
-                'role_name' => 'PARLAMENTAR',
-                'screen_route' => 'projetos.create',
-                'screen_name' => 'Criar Projeto',
-                'screen_module' => 'projetos',
-                'can_access' => true,
-            ],
-            [
-                'role_name' => 'PARLAMENTAR',
-                'screen_route' => 'projetos.edit',
-                'screen_name' => 'Editar Projeto',
-                'screen_module' => 'projetos',
-                'can_access' => true,
-            ],
             
             // Comissões - pode visualizar
             [
@@ -175,28 +153,6 @@ class PopulateScreenPermissions extends Command
                 'can_access' => true,
             ],
             
-            // Projetos - pode visualizar, criar e editar (como relator)
-            [
-                'role_name' => 'RELATOR',
-                'screen_route' => 'projetos.index',
-                'screen_name' => 'Listar Projetos',
-                'screen_module' => 'projetos',
-                'can_access' => true,
-            ],
-            [
-                'role_name' => 'RELATOR',
-                'screen_route' => 'projetos.create',
-                'screen_name' => 'Criar Projeto',
-                'screen_module' => 'projetos',
-                'can_access' => true,
-            ],
-            [
-                'role_name' => 'RELATOR',
-                'screen_route' => 'projetos.edit',
-                'screen_name' => 'Editar Projeto',
-                'screen_module' => 'projetos',
-                'can_access' => true,
-            ],
             
             // Comissões - pode visualizar
             [
@@ -243,21 +199,6 @@ class PopulateScreenPermissions extends Command
                 'can_access' => true,
             ],
             
-            // Projetos - pode visualizar e criar
-            [
-                'role_name' => 'PROTOCOLO',
-                'screen_route' => 'projetos.index',
-                'screen_name' => 'Listar Projetos',
-                'screen_module' => 'projetos',
-                'can_access' => true,
-            ],
-            [
-                'role_name' => 'PROTOCOLO',
-                'screen_route' => 'projetos.create',
-                'screen_name' => 'Criar Projeto',
-                'screen_module' => 'projetos',
-                'can_access' => true,
-            ],
             
             // Sessões - pode visualizar
             [
@@ -304,14 +245,6 @@ class PopulateScreenPermissions extends Command
                 'can_access' => true,
             ],
             
-            // Projetos - pode apenas visualizar
-            [
-                'role_name' => 'ASSESSOR',
-                'screen_route' => 'projetos.index',
-                'screen_name' => 'Listar Projetos',
-                'screen_module' => 'projetos',
-                'can_access' => true,
-            ],
             
             // Sessões - pode visualizar
             [

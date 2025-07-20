@@ -2,7 +2,7 @@
 
 ## Visão Geral
 
-O **LegisInc** é um sistema de gestão legislativa desenvolvido com Laravel 12 que integra funcionalidades modernas de administração parlamentar, tramitação de projetos, gestão de usuários e API inteligente. O projeto utiliza uma arquitetura modular com suporte a múltiplos provedores de API e interface administrativa baseada no template Metronic.
+O **LegisInc** é um sistema de gestão legislativa desenvolvido com Laravel 12 que integra funcionalidades modernas de administração parlamentar, tramitação de **proposições**, gestão de usuários e API inteligente. O projeto utiliza uma arquitetura modular com suporte a múltiplos provedores de API e interface administrativa baseada no template Metronic. **Sistema migrado de Projetos para Proposições** seguindo processo legislativo correto.
 
 ## Estrutura do Projeto
 
@@ -218,34 +218,29 @@ Configuração de serviços externos incluindo:
   - Classificação por tipo
   - Gestão de membros
 
-### 5. Gestão de Projetos
-- **Localização**: `app/Models/Projeto.php`, `resources/views/modules/projetos/`
+### 5. Sistema de Proposições (NOVO)
+- **Localização**: `app/Http/Controllers/Proposicao*.php`, `resources/views/proposicoes/`
 - **Funcionalidades**:
-  - CRUD completo de projetos
-  - Sistema de tramitação
-  - Anexos de projetos
-  - Controle de versões
-  - Editor de texto integrado
+  - Workflow parlamentar completo (4 etapas especializadas)
+  - Criação com modelos e rascunhos
+  - Revisão legislativa com aprovação/devolução
+  - Sistema de assinatura digital
+  - Protocolo automatizado
+  - Tramitação completa
+  - Editor de texto avançado
+  - Histórico e relatórios por etapa
 
-### 6. Gestão de Modelos de Projeto
-- **Localização**: `app/Models/ModeloProjeto.php`, `resources/views/admin/modelos/`
+### 6. Sistema de Middleware e Permissões (NOVO)
+- **Localização**: `app/Http/Middleware/CheckProposicaoPermission.php`, `app/Services/DynamicPermissionService.php`
 - **Funcionalidades**:
-  - CRUD completo de modelos de projeto
-  - Interface Grid View e List View
-  - Sistema de cards interativos com tipos específicos
-  - Filtros dinâmicos e busca em tempo real
-  - Ícones ki-duotone específicos para cada tipo de projeto
-  - Editor de texto integrado com variáveis dinâmicas
-  - Confirmações modais para exclusão
-  - Design responsivo seguindo padrão Metronic
-- **Tipos de Projeto Suportados**:
-  - Projeto de Lei Ordinária (ki-document)
-  - Projeto de Lei Complementar (ki-file-added)  
-  - Emenda Constitucional (ki-security-user)
-  - Decreto Legislativo (ki-notepad)
-  - Resolução (ki-verify)
-  - Indicação (ki-arrow-up-right)
-  - Requerimento (ki-questionnaire-tablet)
+  - Middleware especializado para controle de acesso a proposições
+  - Sistema de permissões dinâmicas por etapa do workflow
+  - Descoberta automática de rotas para configuração de permissões
+  - Estrutura hierárquica de permissões por módulo
+  - Interface administrativa para gestão de permissões
+  - Suporte a múltiplos perfis de usuário (PARLAMENTAR, RELATOR, PROTOCOLO, ASSESSOR)
+  - Validação de acesso baseada em roles e permissões granulares
+  - Sistema de fallback para permissões não configuradas
 
 ### 7. Sistema de Parâmetros Modulares
 - **Localização**: `app/Models/Parametro/`, `resources/views/admin/parametros/`
@@ -574,9 +569,9 @@ make logs                  # Ver logs
 
 ---
 
-**Última atualização**: 2025-07-19
+**Última atualização**: 2025-07-20
 **Versão do Laravel**: 12.0
-**Status**: 6 módulos core implementados (30% do total), estrutura base completa, sistema de parâmetros modulares funcional, APIs reais funcionando, documentação completa, pronto para implementação de módulos de negócio avançados
+**Status**: 6 módulos core implementados (30% do total), **migração completa de Projetos para Proposições**, estrutura base completa, sistema de parâmetros modulares funcional, APIs reais funcionando, documentação completa, workflow legislativo correto implementado, pronto para implementação de módulos de negócio avançados
 
 ---
 
@@ -611,3 +606,119 @@ make logs                  # Ver logs
 - 📋 **Logging Completo** para debugging e auditoria
 - 📋 **Testes de API** validados com curl
 - 📋 **Documentação Inline** completa em todos os métodos
+
+---
+
+## 🔄 Migração Recente: Projetos → Proposições (2025-07-20)
+
+### Motivação da Migração
+
+O sistema antigo de "Projetos" não seguia corretamente o processo legislativo parlamentar brasileiro. Foi necessário uma migração completa para um sistema de "Proposições" que implementa o workflow correto.
+
+### Arquivos Removidos
+
+**Models e Estrutura de Dados:**
+- ❌ `app/Models/Projeto.php`
+- ❌ `app/Models/TipoProjeto.php`
+- ❌ `app/Models/ModeloProjeto.php`
+- ❌ `app/Models/ProjetoTramitacao.php`
+- ❌ `app/Models/ProjetoAnexo.php`
+- ❌ `app/Models/ProjetoVersion.php`
+
+**Controllers e Lógica de Negócio:**
+- ❌ `app/Http/Controllers/Projeto/` (diretório completo)
+- ❌ `app/Http/Controllers/ModeloProjetoController.php`
+- ❌ `app/Http/Controllers/TramitacaoController.php`
+
+**Services e DTOs:**
+- ❌ `app/Services/Projeto/` (diretório completo)
+- ❌ `app/DTOs/Projeto/` (diretório completo)
+
+**Views e Interface:**
+- ❌ `resources/views/modules/projetos/` (diretório completo)
+
+**Policies e Autorizações:**
+- ❌ `app/Policies/ProjetoPolicy.php`
+- ❌ `app/Policies/ModeloProjetoPolicy.php`
+
+**Database:**
+- ❌ Todas as migrations relacionadas a projetos
+- ❌ `database/seeders/TipoProjetoSeeder.php`
+
+**Testes:**
+- ❌ `tests/Feature/ProjetoAccessControlTest.php`
+
+### Sistema de Proposições Implementado
+
+**Controllers Especializados:**
+- ✅ `ProposicaoController.php` - Criação e gestão geral
+- ✅ `ProposicaoLegislativoController.php` - Revisão legislativa
+- ✅ `ProposicaoAssinaturaController.php` - Processo de assinatura
+- ✅ `ProposicaoProtocoloController.php` - Protocolo e tramitação
+
+**Middleware e Services:**
+- ✅ `CheckProposicaoPermission.php` - Middleware de controle de acesso
+- ✅ `DynamicPermissionService.php` - Gestão de permissões dinâmicas
+- ✅ `RouteDiscoveryService.php` - Descoberta automática de rotas
+
+**Views Especializadas:**
+- ✅ `resources/views/proposicoes/` - Interface completa do workflow
+- ✅ Views para cada etapa: criar, revisar, assinar, protocolar
+
+**Database Schema:**
+- ✅ Migrations atualizadas para proposições
+- ✅ Campos específicos para cada etapa do processo
+- ✅ Sistema de status e tramitação
+
+### Workflow Parlamentar Implementado
+
+1. **📝 Criação** (`proposicoes.criar`)
+   - Escolha de modelos
+   - Editor de texto avançado
+   - Sistema de rascunhos
+   - Envio para revisão legislativa
+
+2. **🔍 Revisão Legislativa** (`proposicoes.revisar`)
+   - Análise técnica
+   - Aprovação ou devolução
+   - Observações e correções
+   - Envio para assinatura
+
+3. **✍️ Assinatura** (`proposicoes.assinatura`)
+   - Confirmação de leitura
+   - Assinatura digital
+   - Correções finais
+   - Envio para protocolo
+
+4. **📋 Protocolo** (`proposicoes.protocolar`)
+   - Numeração automática
+   - Efetivação do protocolo
+   - Início da tramitação
+   - Relatórios e estatísticas
+
+### Limpeza do Sistema
+
+**Navegação e Menus:**
+- 🧹 Remoção de todas as referências a "Projetos" nos menus
+- 🧹 Atualização da navegação para "Proposições"
+- 🧹 Limpeza de links e rotas obsoletas
+
+**Permissões e Roles:**
+- 🧹 Remoção de permissões de projeto em todos os roles
+- 🧹 Implementação de permissões específicas para proposições
+- 🧹 Atualização do sistema de screen permissions
+
+**Enums e Configurações:**
+- 🧹 Remoção de `PROJETOS` do `SystemModule`
+- 🧹 Limpeza do `AuthServiceProvider`
+- 🧹 Atualização de configurações de sistema
+
+### Benefícios da Migração
+
+1. **Processo Correto:** Workflow que segue o processo legislativo real
+2. **Controle Granular:** Permissões específicas para cada etapa
+3. **Interface Especializada:** Views otimizadas para cada fase
+4. **Rastreabilidade:** Histórico completo de toda a tramitação
+5. **Flexibilidade:** Sistema extensível para novas funcionalidades
+6. **Performance:** Código otimizado sem legacy code
+7. **Manutenibilidade:** Arquitetura limpa e bem organizada

@@ -3,10 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Services\PermissionManagementService;
-use App\Services\PermissionCacheService;
-use App\Enums\UserRole;
-use App\Enums\SystemModule;
+use App\Services\DynamicPermissionService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\View\View;
@@ -14,11 +11,11 @@ use Illuminate\Support\Facades\Log;
 
 class ScreenPermissionController extends Controller
 {
-    public function __construct(
-        private PermissionManagementService $permissionService,
-        private PermissionCacheService $cacheService
-    ) {
-        // Middleware será aplicado nas rotas, não no construtor
+    private DynamicPermissionService $permissionService;
+    
+    public function __construct(DynamicPermissionService $permissionService)
+    {
+        $this->permissionService = $permissionService;
     }
 
     /**
@@ -26,123 +23,162 @@ class ScreenPermissionController extends Controller
      */
     public function index(): View
     {
-        $roles = UserRole::getAllCases();
-        $modules = SystemModule::getAllWithRoutes();
-        
         try {
-            // Garantir que o Dashboard esteja habilitado para todos os perfis
-            $this->ensureDashboardForAllRoles();
+            Log::info('ScreenPermissionController::index called');
             
-            $permissionMatrix = $this->permissionService->getPermissionMatrix();
-            $statistics = $this->permissionService->getPermissionStatistics();
-            $cacheStats = $this->cacheService->getCacheStatistics();
-        } catch (\Exception $e) {
-            Log::error('Erro ao carregar dados da tela de permissões', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+            $data = $this->permissionService->getPermissionStructure();
+            
+            Log::info('Permission structure loaded:');
+            Log::info('Modules count: ' . $data['modules']->count());
+            Log::info('Roles count: ' . $data['roles']->count());
+            Log::info('Current permissions: ' . json_encode($data['current']));
+            
+            return view('admin.screen-permissions.dynamic', [
+                'modules' => $data['modules'],
+                'roles' => $data['roles'],
+                'defaults' => $data['defaults'],
+                'current' => $data['current'],
+                'statistics' => $data['statistics']
             ]);
             
-            // Dados padrão em caso de erro
-            $permissionMatrix = [];
-            $statistics = [
-                'total_permissions' => 0,
-                'active_permissions' => 0,
-                'coverage_percentage' => 0
-            ];
-            $cacheStats = [
-                'hits' => 0,
-                'misses' => 0,
-                'hit_ratio' => 0,
-                'total' => 0
-            ];
-        }
-        
-        return view('admin.screen-permissions.index', compact(
-            'roles',
-            'modules',
-            'permissionMatrix',
-            'statistics',
-            'cacheStats'
-        ));
-    }
-
-    /**
-     * Garantir que o Dashboard esteja habilitado para todos os perfis
-     */
-    private function ensureDashboardForAllRoles(): void
-    {
-        foreach (UserRole::cases() as $role) {
-            \App\Models\ScreenPermission::updateOrCreate(
-                [
-                    'role_name' => $role->value,
-                    'screen_route' => 'dashboard.index',
-                ],
-                [
-                    'screen_name' => 'Painel Principal',
-                    'screen_module' => 'dashboard',
-                    'can_access' => true,
+        } catch (\Exception $e) {
+            Log::error('Erro ao carregar permissões: ' . $e->getMessage());
+            Log::error('Stack trace: ' . $e->getTraceAsString());
+            
+            // Fallback para dados vazios
+            return view('admin.screen-permissions.dynamic', [
+                'modules' => collect(),
+                'roles' => collect(),
+                'defaults' => [],
+                'current' => [],
+                'statistics' => [
+                    'total_routes' => 0,
+                    'total_permissions' => 0,
+                    'active_permissions' => 0,
+                    'role_count' => 0,
+                    'coverage_percentage' => 0
                 ]
-            );
+            ]);
         }
     }
 
     /**
-     * Atualizar permissões de um perfil
+     * Salvar permissões de um role
      */
-    public function update(Request $request): JsonResponse
+    public function saveRolePermissions(Request $request): JsonResponse
     {
+        $startTime = microtime(true);
+        Log::info('ScreenPermissionController::saveRolePermissions iniciado');
+        
         $request->validate([
             'role' => 'required|string',
-            'permissions' => 'required|array',
-            'permissions.*.screen_route' => 'required|string',
-            'permissions.*.can_access' => 'boolean',
-            'permissions.*.can_create' => 'boolean',
-            'permissions.*.can_edit' => 'boolean',
-            'permissions.*.can_delete' => 'boolean',
+            'permissions' => 'required|array'
         ]);
 
         try {
-            $roleName = $request->input('role');
-            $permissions = $request->input('permissions');
-
-            // Atualizar usando o serviço existente
-            $this->permissionService->updateRolePermissions($roleName, $permissions);
-
-            // Também atualizar na tabela ScreenPermission para compatibilidade
-            $this->updateScreenPermissions($roleName, $permissions);
-
-            // Limpar cache após alterações
-            $this->cacheService->clearAllPermissionCaches();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Permissões atualizadas com sucesso! As telas selecionadas agora aparecerão no menu lateral do usuário.'
+            Log::info('Dados recebidos:', [
+                'role' => $request->input('role'),
+                'permissions_count' => count($request->input('permissions'))
             ]);
             
+            $success = $this->permissionService->saveRolePermissions(
+                $request->input('role'),
+                $request->input('permissions')
+            );
+
+            $endTime = microtime(true);
+            $duration = ($endTime - $startTime) * 1000; // em millisegundos
+            
+            Log::info('Processo de salvamento concluído em ' . round($duration, 2) . 'ms');
+
+            if ($success) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Permissões salvas com sucesso! As telas selecionadas agora aparecerão no menu dos usuários.'
+                ]);
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Erro ao salvar permissões. Verifique os logs.'
+                ], 500);
+            }
+
         } catch (\Exception $e) {
+            Log::error('Erro ao salvar permissões: ' . $e->getMessage());
+            Log::error('Stack trace: ' . $e->getTraceAsString());
+            
             return response()->json([
                 'success' => false,
-                'message' => 'Erro ao atualizar permissões: ' . $e->getMessage()
+                'message' => 'Erro interno: ' . $e->getMessage()
             ], 500);
         }
     }
 
     /**
-     * Atualizar permissões na tabela ScreenPermission
+     * Aplicar permissões padrão para um role
      */
-    private function updateScreenPermissions(string $roleName, array $permissions): void
+    public function applyDefaults(Request $request): JsonResponse
     {
-        foreach ($permissions as $permission) {
-            // Dashboard sempre habilitado para todos os perfis (exceto se for ADMIN que já tem tudo)
-            $canAccess = $permission['screen_route'] === 'dashboard.index' ? true : ($permission['can_access'] ?? false);
-            
-            \App\Models\ScreenPermission::setScreenAccess(
-                $roleName,
-                $permission['screen_route'],
-                $permission['screen_name'] ?? '',
-                $permission['screen_module'] ?? '',
-                $canAccess
+        $request->validate([
+            'role' => 'required|string'
+        ]);
+
+        try {
+            $success = $this->permissionService->applyDefaultPermissions(
+                $request->input('role')
             );
+
+            if ($success) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Permissões padrão aplicadas com sucesso!'
+                ]);
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Role não encontrado ou erro ao aplicar permissões padrão.'
+                ], 400);
+            }
+
+        } catch (\Exception $e) {
+            Log::error('Erro ao aplicar permissões padrão: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Erro interno: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Inicializar sistema com permissões padrão para todos os roles
+     */
+    public function initializeSystem(): JsonResponse
+    {
+        try {
+            $results = $this->permissionService->initializeDefaultPermissions();
+            
+            $successful = array_filter($results);
+            $failed = array_diff_key($results, $successful);
+            
+            $message = count($successful) . ' roles configurados com sucesso.';
+            if (count($failed) > 0) {
+                $message .= ' ' . count($failed) . ' roles falharam: ' . implode(', ', array_keys($failed));
+            }
+
+            return response()->json([
+                'success' => count($successful) > 0,
+                'message' => $message,
+                'results' => $results
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Erro ao inicializar sistema: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Erro interno: ' . $e->getMessage()
+            ], 500);
         }
     }
 
@@ -152,214 +188,61 @@ class ScreenPermissionController extends Controller
     public function getRolePermissions(string $role): JsonResponse
     {
         try {
+            Log::info('ScreenPermissionController::getRolePermissions called for role: ' . $role);
+            
             $permissions = $this->permissionService->getRolePermissions($role);
             
-            // Garantir que Dashboard sempre esteja presente e habilitado
-            $this->ensureDashboardForRole($role);
+            Log::info('Permissions retrieved: ' . $permissions->count() . ' items');
             
-            // Recarregar permissões após garantir Dashboard
-            $permissions = $this->permissionService->getRolePermissions($role);
+            $permissionRoutes = $permissions->pluck('screen_route')->toArray();
+            
+            Log::info('Permission routes: ' . json_encode($permissionRoutes));
             
             return response()->json([
                 'success' => true,
-                'permissions' => $permissions->toArray()
+                'permissions' => $permissionRoutes
             ]);
+
         } catch (\Exception $e) {
-            Log::error('Erro ao carregar permissões', [
-                'role' => $role,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
+            Log::error('Erro ao buscar permissões do role: ' . $e->getMessage());
+            Log::error('Stack trace: ' . $e->getTraceAsString());
             
             return response()->json([
                 'success' => false,
-                'message' => 'Erro ao carregar permissões: ' . $e->getMessage()
+                'message' => 'Erro ao buscar permissões: ' . $e->getMessage()
             ], 500);
         }
     }
 
     /**
-     * Garantir que o Dashboard esteja habilitado para um perfil específico
+     * Testar permissões de um usuário
      */
-    private function ensureDashboardForRole(string $roleName): void
-    {
-        \App\Models\ScreenPermission::updateOrCreate(
-            [
-                'role_name' => $roleName,
-                'screen_route' => 'dashboard.index',
-            ],
-            [
-                'screen_name' => 'Painel Principal',
-                'screen_module' => 'dashboard',
-                'can_access' => true,
-            ]
-        );
-    }
-
-    /**
-     * Resetar permissões de um perfil para o padrão
-     */
-    public function reset(Request $request): JsonResponse
-    {
-        $request->validate(['role' => 'required|string']);
-        
-        try {
-            $role = UserRole::from($request->input('role'));
-            $this->permissionService->resetRoleToDefaults($role);
-            $this->cacheService->clearAllPermissionCaches();
-            
-            return response()->json([
-                'success' => true,
-                'message' => 'Permissões resetadas para o padrão com sucesso!'
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erro ao resetar permissões: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Sincronizar permissões com rotas disponíveis
-     */
-    public function sync(): JsonResponse
-    {
-        try {
-            $result = $this->permissionService->syncPermissionsWithRoutes();
-            $this->cacheService->clearAllPermissionCaches();
-            
-            return response()->json([
-                'success' => true,
-                'message' => 'Sincronização concluída com sucesso!',
-                'created' => $result['created'],
-                'updated' => $result['updated']
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erro na sincronização: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Exportar permissões para backup
-     */
-    public function export(): JsonResponse
-    {
-        try {
-            $backup = $this->permissionService->exportPermissions();
-            
-            return response()->json([
-                'success' => true,
-                'data' => $backup,
-                'filename' => 'permissions_backup_' . now()->format('Y_m_d_H_i_s') . '.json'
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erro ao exportar permissões: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Importar permissões de backup
-     */
-    public function import(Request $request): JsonResponse
+    public function testUserPermissions(Request $request): JsonResponse
     {
         $request->validate([
-            'backup_data' => 'required|array'
+            'user_id' => 'required|integer|exists:users,id'
         ]);
 
         try {
-            $this->permissionService->importPermissions($request->input('backup_data'));
-            $this->cacheService->clearAllPermissionCaches();
+            $user = \App\Models\User::findOrFail($request->input('user_id'));
+            $menu = $this->permissionService->getUserMenu($user);
             
             return response()->json([
                 'success' => true,
-                'message' => 'Permissões importadas com sucesso!'
+                'user' => [
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'roles' => $user->getRoleNames()
+                ],
+                'menu' => $menu
             ]);
+
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erro ao importar permissões: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Obter estatísticas do cache
-     */
-    public function cacheStats(): JsonResponse
-    {
-        return response()->json([
-            'success' => true,
-            'stats' => $this->cacheService->getCacheStatistics()
-        ]);
-    }
-
-    /**
-     * Limpar cache de permissões
-     */
-    public function clearCache(): JsonResponse
-    {
-        try {
-            $this->cacheService->clearAllPermissionCaches();
-            $this->cacheService->resetCacheStatistics();
+            Log::error('Erro ao testar permissões: ' . $e->getMessage());
             
             return response()->json([
-                'success' => true,
-                'message' => 'Cache limpo com sucesso!'
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
                 'success' => false,
-                'message' => 'Erro ao limpar cache: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Pré-carregar cache para usuários ativos
-     */
-    public function warmCache(): JsonResponse
-    {
-        try {
-            $count = $this->cacheService->preloadActiveUserPermissions();
-            
-            return response()->json([
-                'success' => true,
-                'message' => "Cache pré-carregado para {$count} usuários ativos!"
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erro ao pré-carregar cache: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Inicializar sistema de permissões
-     */
-    public function initialize(): JsonResponse
-    {
-        try {
-            $this->ensureDashboardForAllRoles();
-            
-            // Executar comando de inicialização
-            \Artisan::call('permissions:initialize');
-            
-            return response()->json([
-                'success' => true,
-                'message' => 'Sistema de permissões inicializado com sucesso! Dashboard habilitado para todos os perfis.'
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erro ao inicializar sistema: ' . $e->getMessage()
+                'message' => 'Erro ao testar permissões: ' . $e->getMessage()
             ], 500);
         }
     }

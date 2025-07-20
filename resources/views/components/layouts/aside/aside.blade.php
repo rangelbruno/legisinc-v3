@@ -91,106 +91,49 @@
                 @endif
                 <!--end:Menu item-->
                 
-                <!--begin:Menu item - Projetos (futuro)-->
-                @if(auth()->check() && auth()->user()->isAdmin())
-                <div data-kt-menu-trigger="click" class="menu-item menu-accordion {{ request()->routeIs('modelos.*') ? 'here show' : '' }}">
-                    <span class="menu-link">
-                        <span class="menu-icon">
-                            <i class="ki-duotone ki-document fs-2">
-                                <span class="path1"></span>
-                                <span class="path2"></span>
-                            </i>
-                        </span>
-                        <span class="menu-title">Projetos</span>
-                        <span class="menu-arrow"></span>
-                    </span>
-                    <div class="menu-sub menu-sub-accordion">
-                        <div class="menu-item">
-                            <a class="menu-link" href="#" onclick="showComingSoon('Configurações Gerais')">
-                                <span class="menu-bullet">
-                                    <span class="bullet bullet-dot"></span>
-                                </span>
-                                <span class="menu-title">Configurações Gerais</span>
-                            </a>
-                        </div>
-                        <div class="menu-item">
-                            <a class="menu-link" href="#" onclick="showComingSoon('Tipos de Projeto')">
-                                <span class="menu-bullet">
-                                    <span class="bullet bullet-dot"></span>
-                                </span>
-                                <span class="menu-title">Tipos de Projeto</span>
-                            </a>
-                        </div>
-                        <div class="menu-item">
-                            <a class="menu-link" href="#" onclick="showComingSoon('Workflows')">
-                                <span class="menu-bullet">
-                                    <span class="bullet bullet-dot"></span>
-                                </span>
-                                <span class="menu-title">Workflows</span>
-                            </a>
-                        </div>
-                    </div>
-                </div>
-                @endif
-                <!--end:Menu item-->
                 
-                <!--begin:Menu item - Projetos de Lei-->
-                @if(\App\Models\ScreenPermission::userCanAccessModule('projetos'))
-                <div data-kt-menu-trigger="click" class="menu-item menu-accordion {{ request()->routeIs('projetos.*') ? 'here show' : '' }}">
+                
+                <!--begin:Menu item - Proposições-->
+                @if(\App\Models\ScreenPermission::userCanAccessModule('proposicoes'))
+                <div data-kt-menu-trigger="click" class="menu-item menu-accordion {{ request()->routeIs('proposicoes.*') ? 'here show' : '' }}">
                     <span class="menu-link">
                         <span class="menu-icon">
-                            <i class="ki-duotone ki-document fs-2">
+                            <i class="ki-duotone ki-file-up fs-2">
                                 <span class="path1"></span>
                                 <span class="path2"></span>
                             </i>
                         </span>
-                        <span class="menu-title">Projetos de Lei</span>
+                        <span class="menu-title">Proposições</span>
                         <span class="menu-arrow"></span>
                     </span>
                     <div class="menu-sub menu-sub-accordion">
-                        @if(\App\Models\ScreenPermission::userCanAccessRoute('projetos.index'))
+                        @if(\App\Models\ScreenPermission::userCanAccessRoute('proposicoes.criar'))
                         <div class="menu-item">
-                            <a class="menu-link {{ request()->routeIs('projetos.index') ? 'active' : '' }}" href="{{ route('projetos.index') }}">
+                            <a class="menu-link {{ request()->routeIs('proposicoes.criar') ? 'active' : '' }}" href="{{ route('proposicoes.criar') }}">
                                 <span class="menu-bullet">
                                     <span class="bullet bullet-dot"></span>
                                 </span>
-                                <span class="menu-title">Todos os Projetos</span>
+                                <span class="menu-title">Criar Proposição</span>
                             </a>
                         </div>
                         @endif
-                        @if(\App\Models\ScreenPermission::userCanAccessRoute('projetos.create'))
+                        @if(\App\Models\ScreenPermission::userCanAccessRoute('proposicoes.minhas-proposicoes'))
                         <div class="menu-item">
-                            <a class="menu-link {{ request()->routeIs('projetos.create') ? 'active' : '' }}" href="{{ route('projetos.create') }}">
+                            <a class="menu-link {{ request()->routeIs('proposicoes.minhas-proposicoes') ? 'active' : '' }}" href="{{ route('proposicoes.minhas-proposicoes') }}">
                                 <span class="menu-bullet">
                                     <span class="bullet bullet-dot"></span>
                                 </span>
-                                <span class="menu-title">Novo Projeto</span>
+                                <span class="menu-title">Minhas Proposições</span>
                             </a>
                         </div>
                         @endif
-                        @if(\App\Models\ScreenPermission::userCanAccessRoute('projetos.index'))
+                        @if(\App\Models\ScreenPermission::userCanAccessRoute('proposicoes.assinatura'))
                         <div class="menu-item">
-                            <a class="menu-link" href="{{ route('projetos.index', ['status' => 'rascunho']) }}">
+                            <a class="menu-link {{ request()->routeIs('proposicoes.assinatura') ? 'active' : '' }}" href="{{ route('proposicoes.assinatura') }}">
                                 <span class="menu-bullet">
                                     <span class="bullet bullet-dot"></span>
                                 </span>
-                                <span class="menu-title">Rascunhos</span>
-                            </a>
-                        </div>
-                        <div class="menu-item">
-                            <a class="menu-link" href="{{ route('projetos.index', ['status' => 'em_tramitacao']) }}">
-                                <span class="menu-bullet">
-                                    <span class="bullet bullet-dot"></span>
-                                </span>
-                                <span class="menu-title">Em Tramitação</span>
-                            </a>
-                        </div>
-                        <div class="menu-item">
-                            <a class="menu-link" href="{{ route('projetos.index', ['urgentes' => '1']) }}">
-                                <span class="menu-bullet">
-                                    <span class="bullet bullet-dot"></span>
-                                </span>
-                                <span class="menu-title">Urgentes</span>
+                                <span class="menu-title">Assinatura</span>
                             </a>
                         </div>
                         @endif
@@ -408,7 +351,7 @@
                 
                 <!--begin:Menu item - Administração-->
                 @if(\App\Models\ScreenPermission::userCanAccessModule('usuarios') || (auth()->check() && auth()->user()->isAdmin()))
-                <div data-kt-menu-trigger="click" class="menu-item menu-accordion {{ request()->routeIs('admin.*') || request()->routeIs('modelos.*') || request()->routeIs('usuarios.*') || request()->routeIs('parametros.*') ? 'here show' : '' }}">
+                <div data-kt-menu-trigger="click" class="menu-item menu-accordion {{ request()->routeIs('admin.*') || request()->routeIs('usuarios.*') || request()->routeIs('parametros.*') ? 'here show' : '' }}">
                     <span class="menu-link">
                         <span class="menu-icon">
                             <i class="ki-duotone ki-shield-tick fs-2">
@@ -420,7 +363,7 @@
                         <span class="menu-title">Administração</span>
                         <span class="menu-arrow"></span>
                     </span>
-                    <div class="menu-sub menu-sub-accordion {{ request()->routeIs('admin.*') || request()->routeIs('modelos.*') || request()->routeIs('usuarios.*') || request()->routeIs('parametros.*') ? 'show' : '' }}">
+                    <div class="menu-sub menu-sub-accordion {{ request()->routeIs('admin.*') || request()->routeIs('usuarios.*') || request()->routeIs('parametros.*') ? 'show' : '' }}">
                         @if(auth()->user()->isAdmin())
                         <div class="menu-item">
                             <a class="menu-link {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}" href="{{ route('admin.dashboard') }}">
@@ -450,14 +393,6 @@
                         </div>
                         @endif
                         @if(auth()->user()->isAdmin())
-                        <div class="menu-item">
-                            <a class="menu-link {{ request()->routeIs('modelos.*') ? 'active' : '' }}" href="{{ route('modelos.index') }}">
-                                <span class="menu-bullet">
-                                    <span class="bullet bullet-dot"></span>
-                                </span>
-                                <span class="menu-title">Modelos de Projeto</span>
-                            </a>
-                        </div>
                         <div class="menu-item">
                             <a class="menu-link {{ request()->routeIs('admin.screen-permissions.*') ? 'active' : '' }}" href="{{ route('admin.screen-permissions.index') }}">
                                 <span class="menu-bullet">

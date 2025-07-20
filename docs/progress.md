@@ -8,7 +8,7 @@ Este documento detalha o status de desenvolvimento do Sistema de Tramitação Pa
 
 ## Status Atual: **6 Módulos Core Implementados** (30% dos 20 módulos totais)
 
-A estrutura base está 100% completa e os primeiros 6 módulos core do sistema foram implementados com sucesso, incluindo interfaces completas, APIs funcionais e funcionalidades avançadas com sistema de parâmetros modulares.
+A estrutura base está 100% completa e os primeiros 6 módulos core do sistema foram implementados com sucesso, incluindo interfaces completas, APIs funcionais e funcionalidades avançadas com sistema de parâmetros modulares. **Sistema migrado de Projetos para Proposições** com processo legislativo completo.
 
 ### Estrutura Base (100% Concluída ✅)
 
@@ -49,17 +49,20 @@ A estrutura base está 100% completa e os primeiros 6 módulos core do sistema f
 - **Mock APIs:** `/mock-api/comissoes/*`, estatísticas, busca, filtros
 - **Funcionalidades Avançadas:** Gestão de membros, histórico de reuniões, estatísticas
 
-#### 5. Projetos e Documentos ✅
+#### 5. Proposições e Tramitação Legislativa ✅
 - **Status:** COMPLETO
-- **Funcionalidades:** CRUD completo, tramitação, editor de conteúdo, versões, anexos
-- **Estrutura:** ProjetoController, ProjetoService, views modulares avançadas
+- **Funcionalidades:** Sistema completo de proposições com workflow parlamentar, criação, revisão legislativa, assinatura e protocolo
+- **Estrutura:** ProposicaoController, ProposicaoLegislativoController, ProposicaoAssinaturaController, ProposicaoProtocoloController
 - **Funcionalidades Avançadas:** 
-  - Editor de conteúdo integrado
-  - Sistema de versões
-  - Controle de tramitação
-  - Gestão de anexos
-  - Workflow de protocolação
-  - Encaminhamento para comissões
+  - Workflow completo parlamentar (Criação → Revisão Legislativa → Assinatura → Protocolo → Tramitação)
+  - Sistema de modelos de proposições
+  - Editor de texto avançado
+  - Gestão de rascunhos
+  - Sistema de correções e devoluções
+  - Confirmação de leitura e assinatura digital
+  - Protocolo automatizado com numeração sequencial
+  - Histórico completo de tramitação
+  - Relatórios por etapa do processo
 
 #### 6. Sistema de Parâmetros Modulares ✅
 - **Status:** COMPLETO
@@ -283,12 +286,34 @@ A estrutura base está 100% completa e os primeiros 6 módulos core do sistema f
 
 ---
 
-**Última Atualização:** 2025-07-19  
+**Última Atualização:** 2025-07-20  
 **Próxima Revisão:** Após implementação do módulo 7 (Sessões Plenárias)
 
 ---
 
-## 🎯 Conquistas Recentes (2025-07-19)
+## 🎯 Conquistas Recentes (2025-07-20)
+
+### Migração Completa de Projetos para Proposições ✅
+
+**Problema:** Sistema antigo de Projetos não seguia o processo legislativo correto
+
+**Solução Implementada:**
+- ✅ **Remoção Completa do Sistema de Projetos:** 58+ arquivos removidos (models, controllers, views, migrations, policies)
+- ✅ **Implementação do Sistema de Proposições:** Workflow legislativo completo e correto
+- ✅ **4 Controllers Especializados:** ProposicaoController, ProposicaoLegislativoController, ProposicaoAssinaturaController, ProposicaoProtocoloController
+- ✅ **Workflow Parlamentar Completo:** Criação → Revisão Legislativa → Assinatura → Protocolo → Tramitação
+- ✅ **Limpeza do Sistema:** Rotas, navegação, permissões e enums atualizados
+- ✅ **Views Especializadas:** Interface completa para cada etapa do processo
+- ✅ **Middleware de Permissões:** Sistema de controle de acesso por etapa
+
+**Funcionalidades do Sistema de Proposições:**
+- 📝 **Criação:** Modelos, rascunhos, editor de texto, envio para revisão
+- 🔍 **Revisão Legislativa:** Análise técnica, aprovação, devolução com observações
+- ✍️ **Assinatura:** Confirmação de leitura, assinatura digital, correções
+- 📋 **Protocolo:** Numeração automática, efetivação, início de tramitação
+- 📊 **Relatórios:** Estatísticas por etapa, histórico completo
+
+### Sistema de Parâmetros Modulares - Implementação Completa ✅
 
 ### Sistema de Parâmetros Modulares - Implementação Completa ✅
 
@@ -329,3 +354,33 @@ A estrutura base está 100% completa e os primeiros 6 módulos core do sistema f
 - ✅ **Logging Completo** para debugging
 - ✅ **Testes de API** com curl validation
 - ✅ **Documentação Inline** em todos os métodos 
+
+---
+
+## 🆕 Changelog Recente (2025-07-20)
+
+### Migração Completa: Projetos → Proposições
+
+**Arquivos Removidos (58+ files):**
+- ❌ `app/Models/Projeto.php` e todos os models relacionados
+- ❌ `app/Http/Controllers/Projeto/` (diretório completo)
+- ❌ `app/Services/Projeto/` (diretório completo) 
+- ❌ `app/DTOs/Projeto/` (diretório completo)
+- ❌ `app/Policies/ProjetoPolicy.php` e `ModeloProjetoPolicy.php`
+- ❌ `resources/views/modules/projetos/` (diretório completo)
+- ❌ `database/migrations/*projeto*` (todas as migrations)
+- ❌ `tests/Feature/ProjetoAccessControlTest.php`
+
+**Sistema de Proposições Implementado:**
+- ✅ **Controllers Especializados:** 4 controllers para cada etapa do workflow
+- ✅ **Views Completas:** Interface responsiva para todo o processo legislativo
+- ✅ **Middleware Personalizado:** `CheckProposicaoPermission` para controle de acesso
+- ✅ **Services Dedicados:** `DynamicPermissionService` para gerenciamento de permissões
+- ✅ **Migrations Atualizadas:** Schema completo para proposições com campos específicos
+- ✅ **Rotas Organizadas:** 30+ rotas organizadas por funcionalidade
+
+**Limpeza do Sistema:**
+- 🧹 **Navegação Atualizada:** Menus limpos, sem referências ao sistema antigo
+- 🧹 **Permissões Atualizadas:** Screen permissions sem projeto, focadas em proposições
+- 🧹 **Enums Limpos:** SystemModule sem PROJETOS, mantendo apenas módulos ativos
+- 🧹 **Providers Atualizados:** AuthServiceProvider sem políticas obsoletas

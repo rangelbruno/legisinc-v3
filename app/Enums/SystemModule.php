@@ -7,7 +7,6 @@ enum SystemModule: string
     case DASHBOARD = 'dashboard';
     case PARLAMENTARES = 'parlamentares';
     case COMISSOES = 'comissoes';
-    case PROJETOS = 'projetos';
     case SESSOES = 'sessoes';
     case USUARIOS = 'usuarios';
     case MODELOS = 'modelos';
@@ -28,11 +27,6 @@ enum SystemModule: string
                 'comissoes.index' => 'Listar Comissões',
                 'comissoes.create' => 'Criar Comissão',
                 'comissoes.edit' => 'Editar Comissão'
-            ],
-            self::PROJETOS => [
-                'projetos.index' => 'Listar Projetos',
-                'projetos.create' => 'Criar Projeto',
-                'projetos.edit' => 'Editar Projeto'
             ],
             self::SESSOES => [
                 'sessoes.index' => 'Listar Sessões',
@@ -58,7 +52,6 @@ enum SystemModule: string
             self::DASHBOARD => 'Dashboard',
             self::PARLAMENTARES => 'Parlamentares',
             self::COMISSOES => 'Comissões',
-            self::PROJETOS => 'Projetos',
             self::SESSOES => 'Sessões',
             self::USUARIOS => 'Usuários',
             self::MODELOS => 'Modelos',
@@ -71,7 +64,6 @@ enum SystemModule: string
             self::DASHBOARD => 'home',
             self::PARLAMENTARES => 'users',
             self::COMISSOES => 'user-group',
-            self::PROJETOS => 'document-text',
             self::SESSOES => 'calendar',
             self::USUARIOS => 'user-circle',
             self::MODELOS => 'template',
@@ -84,7 +76,6 @@ enum SystemModule: string
             self::DASHBOARD => 'fas fa-tachometer-alt',
             self::PARLAMENTARES => 'fas fa-user-tie',
             self::COMISSOES => 'fas fa-users',
-            self::PROJETOS => 'fas fa-file-alt',
             self::SESSOES => 'fas fa-calendar-alt',
             self::USUARIOS => 'fas fa-user-cog',
             self::MODELOS => 'fas fa-copy',
@@ -97,7 +88,6 @@ enum SystemModule: string
             self::DASHBOARD => 'blue',
             self::PARLAMENTARES => 'purple',
             self::COMISSOES => 'green',
-            self::PROJETOS => 'yellow',
             self::SESSOES => 'red',
             self::USUARIOS => 'indigo',
             self::MODELOS => 'gray',
@@ -110,10 +100,9 @@ enum SystemModule: string
             self::DASHBOARD => 'Painel principal com métricas e visão geral',
             self::PARLAMENTARES => 'Gestão de parlamentares e mesa diretora',
             self::COMISSOES => 'Administração das comissões parlamentares',
-            self::PROJETOS => 'Controle de projetos de lei e tramitação',
             self::SESSOES => 'Gerenciamento de sessões plenárias',
             self::USUARIOS => 'Administração de usuários do sistema',
-            self::MODELOS => 'Modelos de documentos e projetos',
+            self::MODELOS => 'Modelos de documentos',
         };
     }
 

@@ -16,6 +16,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'check.permission' => \App\Http\Middleware\CheckPermission::class,
             'check.screen.permission' => \App\Http\Middleware\CheckScreenPermission::class,
             'auth.token' => \App\Http\Middleware\AuthenticateToken::class,
+            'check.proposicao.permission' => \App\Http\Middleware\CheckProposicaoPermission::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

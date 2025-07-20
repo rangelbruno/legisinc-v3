@@ -207,82 +207,79 @@
                             @endif
                             <!--end:Menu item-->
 
-                            <!--begin:Menu item - Projetos-->
-                            @if(\App\Models\ScreenPermission::userCanAccessModule('projetos'))
-                            <div data-kt-menu-trigger="click" class="menu-item menu-accordion {{ request()->routeIs('projetos.*') ? 'here show' : '' }}">
+
+                            <!--begin:Menu item - Proposições-->
+                            @if(\App\Models\ScreenPermission::userCanAccessModule('proposicoes'))
+                            <div data-kt-menu-trigger="click" class="menu-item menu-accordion {{ request()->routeIs('proposicoes.*') ? 'here show' : '' }}">
                                 <!--begin:Menu link-->
                                 <span class="menu-link">
                                     <span class="menu-icon">
-                                        <i class="ki-duotone ki-document fs-2">
+                                        <i class="ki-duotone ki-file-up fs-2">
                                             <span class="path1"></span>
                                             <span class="path2"></span>
                                         </i>
                                     </span>
-                                    <span class="menu-title">Projetos</span>
+                                    <span class="menu-title">Proposições</span>
                                     <span class="menu-arrow"></span>
                                 </span>
                                 <!--end:Menu link-->
                                 <!--begin:Menu sub-->
-                                <div class="menu-sub menu-sub-accordion {{ request()->routeIs('projetos.*') ? 'show' : '' }}">
-                                    <!--begin:Menu item-->
+                                <div class="menu-sub menu-sub-accordion {{ request()->routeIs('proposicoes.*') ? 'show' : '' }}">
+                                    <!--begin:Menu item - Criar Proposição-->
+                                    @if(\App\Models\ScreenPermission::userCanAccessRoute('proposicoes.criar'))
                                     <div class="menu-item">
                                         <!--begin:Menu link-->
-                                        <a class="menu-link {{ request()->routeIs('projetos.index') ? 'active' : '' }}" href="{{ route('projetos.index') }}">
+                                        <a class="menu-link {{ request()->routeIs('proposicoes.criar') ? 'active' : '' }}" href="{{ route('proposicoes.criar') }}">
                                             <span class="menu-bullet">
                                                 <span class="bullet bullet-dot"></span>
                                             </span>
-                                            <span class="menu-title">Lista de Projetos</span>
+                                            <span class="menu-title">Criar Proposição</span>
                                         </a>
                                         <!--end:Menu link-->
                                     </div>
+                                    @endif
                                     <!--end:Menu item-->
-                                    <!--begin:Menu item-->
+                                    <!--begin:Menu item - Minhas Proposições-->
+                                    @if(\App\Models\ScreenPermission::userCanAccessRoute('proposicoes.minhas-proposicoes'))
                                     <div class="menu-item">
                                         <!--begin:Menu link-->
-                                        <a class="menu-link {{ request()->routeIs('projetos.create') ? 'active' : '' }}" href="{{ route('projetos.create') }}">
+                                        <a class="menu-link {{ request()->routeIs('proposicoes.minhas-proposicoes') ? 'active' : '' }}" href="{{ route('proposicoes.minhas-proposicoes') }}">
                                             <span class="menu-bullet">
                                                 <span class="bullet bullet-dot"></span>
                                             </span>
-                                            <span class="menu-title">Novo Projeto</span>
+                                            <span class="menu-title">Minhas Proposições</span>
                                         </a>
                                         <!--end:Menu link-->
                                     </div>
+                                    @endif
                                     <!--end:Menu item-->
-                                    <!--begin:Menu item-->
+                                    <!--begin:Menu item - Assinatura-->
+                                    @if(\App\Models\ScreenPermission::userCanAccessRoute('proposicoes.assinatura'))
                                     <div class="menu-item">
                                         <!--begin:Menu link-->
-                                        <a class="menu-link {{ request()->routeIs('projetos.em-tramitacao') ? 'active' : '' }}" href="{{ route('projetos.em-tramitacao') }}">
+                                        <a class="menu-link {{ request()->routeIs('proposicoes.assinatura') ? 'active' : '' }}" href="{{ route('proposicoes.assinatura') }}">
                                             <span class="menu-bullet">
                                                 <span class="bullet bullet-dot"></span>
                                             </span>
-                                            <span class="menu-title">Em Tramitação</span>
+                                            <span class="menu-title">Assinatura</span>
                                         </a>
                                         <!--end:Menu link-->
                                     </div>
+                                    @endif
                                     <!--end:Menu item-->
-                                    <!--begin:Menu item-->
+                                    <!--begin:Menu item - Histórico de Assinaturas-->
+                                    @if(\App\Models\ScreenPermission::userCanAccessRoute('proposicoes.historico-assinaturas'))
                                     <div class="menu-item">
                                         <!--begin:Menu link-->
-                                        <a class="menu-link {{ request()->routeIs('projetos.aprovados') ? 'active' : '' }}" href="{{ route('projetos.aprovados') }}">
+                                        <a class="menu-link {{ request()->routeIs('proposicoes.historico-assinaturas') ? 'active' : '' }}" href="{{ route('proposicoes.historico-assinaturas') }}">
                                             <span class="menu-bullet">
                                                 <span class="bullet bullet-dot"></span>
                                             </span>
-                                            <span class="menu-title">Aprovados</span>
+                                            <span class="menu-title">Histórico de Assinaturas</span>
                                         </a>
                                         <!--end:Menu link-->
                                     </div>
-                                    <!--end:Menu item-->
-                                    <!--begin:Menu item-->
-                                    <div class="menu-item">
-                                        <!--begin:Menu link-->
-                                        <a class="menu-link {{ request()->routeIs('projetos.por-tipo') ? 'active' : '' }}" href="{{ route('projetos.por-tipo', 'lei') }}">
-                                            <span class="menu-bullet">
-                                                <span class="bullet bullet-dot"></span>
-                                            </span>
-                                            <span class="menu-title">Por Tipo</span>
-                                        </a>
-                                        <!--end:Menu link-->
-                                    </div>
+                                    @endif
                                     <!--end:Menu item-->
                                 </div>
                                 <!--end:Menu sub-->

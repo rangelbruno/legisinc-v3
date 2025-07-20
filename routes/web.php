@@ -7,8 +7,6 @@ use App\Http\Controllers\UserApiController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\Parlamentar\ParlamentarController;
 use App\Http\Controllers\User\UserController as UserManagementController;
-use App\Http\Controllers\Projeto\ProjetoController;
-use App\Http\Controllers\ModeloProjetoController;
 use App\Http\Controllers\Session\SessionController;
 use App\Http\Controllers\ProgressController;
 use App\Http\Controllers\ApiDocumentationController;
@@ -40,25 +38,7 @@ Route::get('/docs/api/documents', [DocumentationController::class, 'documents'])
 Route::get('/docs/api/stats', [DocumentationController::class, 'stats'])->name('documentation.stats');
 
 // Dashboard route (protected)
-Route::get('/dashboard', function () {
-    // Auto-login as admin if no user is authenticated (for demo purposes)
-    if (!Auth::check()) {
-        $user = new \App\Models\User();
-        $user->id = 1;
-        $user->name = 'Administrador do Sistema';
-        $user->email = 'admin@sistema.gov.br';
-        $user->documento = '000.000.000-00';
-        $user->telefone = '(11) 0000-0000';
-        $user->profissao = 'Administrador de Sistema';
-        $user->cargo_atual = 'Administrador';
-        $user->ativo = true;
-        $user->exists = true;
-        
-        Auth::login($user);
-    }
-    
-    return view('dashboard');
-})->name('dashboard');
+Route::get('/dashboard', [App\Http\Controllers\DashboardController::class, 'index'])->name('dashboard')->middleware('auth');
 
 // Dashboard de Administração route (protected)
 Route::get('/admin/dashboard', function () {
@@ -179,59 +159,7 @@ Route::prefix('usuarios')->name('usuarios.')->middleware('auth')->group(function
     Route::post('/importar', [UserManagementController::class, 'importar'])->name('importar');
 });
 
-// Projetos routes (protected with auth only - TODO: add permissions later)
-Route::prefix('projetos')->name('projetos.')->middleware(['auth', 'check.screen.permission'])->group(function () {
-    // CRUD básico
-    Route::get('/', [ProjetoController::class, 'index'])->name('index');
-    Route::get('/create', [ProjetoController::class, 'create'])->name('create');
-    Route::post('/', [ProjetoController::class, 'store'])->name('store');
-    Route::get('/{id}', [ProjetoController::class, 'show'])->name('show');
-    Route::get('/{id}/edit', [ProjetoController::class, 'edit'])->name('edit');
-    Route::put('/{id}', [ProjetoController::class, 'update'])->name('update');
-    Route::delete('/{id}', [ProjetoController::class, 'destroy'])->name('destroy');
-    
-    // Ações de workflow
-    Route::post('/{id}/protocolar', [ProjetoController::class, 'protocolar'])->name('protocolar');
-    Route::post('/{id}/encaminhar-comissao', [ProjetoController::class, 'encaminharComissao'])->name('encaminhar-comissao');
-    
-    // AJAX endpoints
-    Route::get('/buscar', [ProjetoController::class, 'buscar'])->name('buscar');
-    Route::get('/estatisticas', [ProjetoController::class, 'estatisticas'])->name('estatisticas');
-    
-    // Editor de conteúdo
-    Route::get('/{id}/editor', [ProjetoController::class, 'editor'])->name('editor');
-    Route::get('/{id}/editor-tiptap', [ProjetoController::class, 'editorTiptap'])->name('editor-tiptap');
-    Route::post('/{id}/salvar-conteudo', [ProjetoController::class, 'salvarConteudo'])->name('salvar-conteudo');
-    
-    // Sub-recursos
-    Route::get('/{id}/versoes', [ProjetoController::class, 'versoes'])->name('versoes');
-    Route::get('/{id}/tramitacao', [ProjetoController::class, 'tramitacao'])->name('tramitacao');
-    Route::get('/{id}/anexos', [ProjetoController::class, 'anexos'])->name('anexos');
-    
-    // Exportação e importação
-    Route::get('/{id}/export-word', [ProjetoController::class, 'exportarWord'])->name('export-word');
-    Route::post('/{id}/import-word', [ProjetoController::class, 'importarWord'])->name('import-word');
-});
 
-// Modelos de Projeto routes (protected with auth only - Admin only)
-Route::prefix('admin/modelos')->name('modelos.')->middleware(['auth', 'check.screen.permission'])->group(function () {
-    // Rotas específicas (devem vir antes das rotas com parâmetros)
-    Route::get('/', [ModeloProjetoController::class, 'index'])->name('index');
-    Route::get('/create', [ModeloProjetoController::class, 'create'])->name('create');
-    Route::get('/editor', [ModeloProjetoController::class, 'editor'])->name('editor');
-    Route::get('/editor-tiptap', [ModeloProjetoController::class, 'editorTiptap'])->name('editor-tiptap'); // Rota alternativa para compatibilidade
-    Route::get('/por-tipo', [ModeloProjetoController::class, 'porTipo'])->name('por-tipo');
-    Route::post('/upload-image', [ModeloProjetoController::class, 'uploadImage'])->name('upload-image');
-    Route::post('/', [ModeloProjetoController::class, 'store'])->name('store');
-    
-    // Rotas com parâmetros (devem vir após as rotas específicas)
-    Route::get('/{modelo}', [ModeloProjetoController::class, 'show'])->name('show');
-    Route::get('/{modelo}/edit', [ModeloProjetoController::class, 'edit'])->name('edit');
-    Route::get('/{modelo}/conteudo', [ModeloProjetoController::class, 'conteudo'])->name('conteudo');
-    Route::put('/{modelo}', [ModeloProjetoController::class, 'update'])->name('update');
-    Route::delete('/{modelo}', [ModeloProjetoController::class, 'destroy'])->name('destroy');
-    Route::post('/{modelo}/toggle-status', [ModeloProjetoController::class, 'toggleStatus'])->name('toggle-status');
-});
 
 // Sessões routes (protected with permissions)
 Route::prefix('admin/sessions')->name('admin.sessions.')->middleware(['auth', 'check.screen.permission'])->group(function () {
@@ -273,16 +201,24 @@ Route::prefix('admin/usuarios')->name('admin.usuarios.')->middleware(['auth', 'c
 // Screen Permissions routes (protected with auth - Admin only)
 Route::prefix('admin/screen-permissions')->name('admin.screen-permissions.')->middleware(['auth'])->group(function () {
     Route::get('/', [App\Http\Controllers\Admin\ScreenPermissionController::class, 'index'])->name('index');
-    Route::post('/', [App\Http\Controllers\Admin\ScreenPermissionController::class, 'update'])->name('update');
+    Route::get('/debug', function() {
+        $service = app(\App\Services\DynamicPermissionService::class);
+        $data = $service->getPermissionStructure();
+        return view('admin.screen-permissions.debug', $data);
+    })->name('debug');
+    
+    Route::get('/test', function() {
+        $service = app(\App\Services\DynamicPermissionService::class);
+        $data = $service->getPermissionStructure();
+        return view('admin.screen-permissions.test', $data);
+    })->name('test');
+    
+    // Novas rotas dinâmicas
+    Route::post('/save', [App\Http\Controllers\Admin\ScreenPermissionController::class, 'saveRolePermissions'])->name('save');
+    Route::post('/apply-defaults', [App\Http\Controllers\Admin\ScreenPermissionController::class, 'applyDefaults'])->name('apply-defaults');
+    Route::post('/initialize', [App\Http\Controllers\Admin\ScreenPermissionController::class, 'initializeSystem'])->name('initialize');
     Route::get('/role/{role}', [App\Http\Controllers\Admin\ScreenPermissionController::class, 'getRolePermissions'])->name('get-role-permissions');
-    Route::post('/reset', [App\Http\Controllers\Admin\ScreenPermissionController::class, 'reset'])->name('reset');
-    Route::post('/sync', [App\Http\Controllers\Admin\ScreenPermissionController::class, 'sync'])->name('sync');
-    Route::get('/export', [App\Http\Controllers\Admin\ScreenPermissionController::class, 'export'])->name('export');
-    Route::post('/import', [App\Http\Controllers\Admin\ScreenPermissionController::class, 'import'])->name('import');
-    Route::get('/cache/stats', [App\Http\Controllers\Admin\ScreenPermissionController::class, 'cacheStats'])->name('cache-stats');
-    Route::post('/cache/clear', [App\Http\Controllers\Admin\ScreenPermissionController::class, 'clearCache'])->name('cache-clear');
-    Route::post('/cache/warm', [App\Http\Controllers\Admin\ScreenPermissionController::class, 'warmCache'])->name('cache-warm');
-    Route::post('/initialize', [App\Http\Controllers\Admin\ScreenPermissionController::class, 'initialize'])->name('initialize');
+    Route::post('/test-user', [App\Http\Controllers\Admin\ScreenPermissionController::class, 'testUserPermissions'])->name('test-user');
 });
 
 // Parâmetros routes - Redirecionamentos para o novo sistema modular
@@ -502,25 +438,90 @@ Route::get('/ajax-modulos-parametros', [App\Http\Controllers\Parametro\ModuloPar
 
 // Registration functionality working correctly
 
-// Rota de teste temporária sem autenticação
-Route::get('/test-projeto/{id}/edit', [ProjetoController::class, 'edit'])->name('test.projetos.edit');
 
 // Demo do Editor Jurídico
 Route::get('/editor-demo', function () {
     return view('editor.demo');
 })->name('editor.demo');
 
-// Teste do editor de modelos Tiptap (sem auth para teste)
-Route::get('/test-modelos-editor-tiptap', function () {
-    $tipos = \App\Models\ModeloProjeto::TIPOS_PROJETO;
-    $tipoSelecionado = 'contrato';
-    $modelo = null;
-    return view('admin.modelos.editor-tiptap-minimal', compact('tipos', 'tipoSelecionado', 'modelo'));
-});
 
 // Rota de teste para verificar se o editor TipTap está funcionando
 Route::get('/test-editor-funcionando', function () {
     return view('test-editor-funcionando');
+});
+
+// Debug route - REMOVER DEPOIS
+Route::get('/debug-permissions', function() {
+    if (!auth()->check()) {
+        return 'Usuário não logado';
+    }
+    
+    $user = auth()->user();
+    $roleName = $user->getRoleNames()->first() ?? 'PUBLICO';
+    
+    $debug = [
+        'user_id' => $user->id,
+        'user_name' => $user->name,
+        'user_roles' => $user->getRoleNames()->toArray(),
+        'role_name' => $roleName,
+        'is_admin' => $user->isAdmin(),
+        'can_access_proposicoes_module' => \App\Models\ScreenPermission::userCanAccessModule('proposicoes'),
+        'can_access_proposicoes_criar' => \App\Models\ScreenPermission::userCanAccessRoute('proposicoes.criar'),
+        'has_configured_permissions' => \App\Models\ScreenPermission::hasConfiguredPermissions($roleName),
+        'permissions_count' => \App\Models\ScreenPermission::where('role_name', $roleName)->count(),
+        'proposicoes_permissions' => \App\Models\ScreenPermission::where('role_name', $roleName)
+            ->where('screen_module', 'proposicoes')
+            ->get(['screen_route', 'can_access'])
+            ->toArray()
+    ];
+    
+    return '<pre>' . json_encode($debug, JSON_PRETTY_PRINT) . '</pre>';
+})->middleware('auth');
+
+// ROTAS DE PROPOSIÇÕES - Sistema completo conforme documentação
+Route::prefix('proposicoes')->name('proposicoes.')->middleware(['auth', 'check.screen.permission'])->group(function () {
+    
+    // ===== PARLAMENTAR - CRIAÇÃO =====
+    Route::get('/criar', [App\Http\Controllers\ProposicaoController::class, 'create'])->name('criar');
+    Route::post('/salvar-rascunho', [App\Http\Controllers\ProposicaoController::class, 'salvarRascunho'])->name('salvar-rascunho');
+    Route::get('/modelos/{tipo}', [App\Http\Controllers\ProposicaoController::class, 'buscarModelos'])->name('buscar-modelos');
+    Route::get('/{proposicao}/preencher-modelo/{modeloId}', [App\Http\Controllers\ProposicaoController::class, 'preencherModelo'])->name('preencher-modelo');
+    Route::post('/{proposicao}/gerar-texto', [App\Http\Controllers\ProposicaoController::class, 'gerarTexto'])->name('gerar-texto');
+    Route::get('/{proposicao}/editar-texto', [App\Http\Controllers\ProposicaoController::class, 'editarTexto'])->name('editar-texto');
+    Route::post('/{proposicao}/salvar-texto', [App\Http\Controllers\ProposicaoController::class, 'salvarTexto'])->name('salvar-texto');
+    Route::put('/{proposicao}/enviar-legislativo', [App\Http\Controllers\ProposicaoController::class, 'enviarLegislativo'])->name('enviar-legislativo');
+    
+    // ===== LEGISLATIVO - REVISÃO =====
+    Route::get('/revisar', [App\Http\Controllers\ProposicaoLegislativoController::class, 'index'])->name('revisar');
+    Route::get('/{proposicao}/revisar', [App\Http\Controllers\ProposicaoLegislativoController::class, 'revisar'])->name('revisar.show');
+    Route::post('/{proposicao}/salvar-analise', [App\Http\Controllers\ProposicaoLegislativoController::class, 'salvarAnalise'])->name('salvar-analise');
+    Route::put('/{proposicao}/aprovar', [App\Http\Controllers\ProposicaoLegislativoController::class, 'aprovar'])->name('aprovar');
+    Route::put('/{proposicao}/devolver', [App\Http\Controllers\ProposicaoLegislativoController::class, 'devolver'])->name('devolver');
+    Route::get('/relatorio-legislativo', [App\Http\Controllers\ProposicaoLegislativoController::class, 'relatorio'])->name('relatorio-legislativo');
+    Route::get('/aguardando-protocolo', [App\Http\Controllers\ProposicaoLegislativoController::class, 'aguardandoProtocolo'])->name('aguardando-protocolo');
+    
+    // ===== PARLAMENTAR - ASSINATURA =====
+    Route::get('/assinatura', [App\Http\Controllers\ProposicaoAssinaturaController::class, 'index'])->name('assinatura');
+    Route::get('/{proposicao}/assinar', [App\Http\Controllers\ProposicaoAssinaturaController::class, 'assinar'])->name('assinar');
+    Route::get('/{proposicao}/corrigir', [App\Http\Controllers\ProposicaoAssinaturaController::class, 'corrigir'])->name('corrigir');
+    Route::post('/{proposicao}/confirmar-leitura', [App\Http\Controllers\ProposicaoAssinaturaController::class, 'confirmarLeitura'])->name('confirmar-leitura');
+    Route::post('/{proposicao}/processar-assinatura', [App\Http\Controllers\ProposicaoAssinaturaController::class, 'processarAssinatura'])->name('processar-assinatura');
+    Route::put('/{proposicao}/enviar-protocolo', [App\Http\Controllers\ProposicaoAssinaturaController::class, 'enviarProtocolo'])->name('enviar-protocolo');
+    Route::post('/{proposicao}/salvar-correcoes', [App\Http\Controllers\ProposicaoAssinaturaController::class, 'salvarCorrecoes'])->name('salvar-correcoes');
+    Route::put('/{proposicao}/reenviar-legislativo', [App\Http\Controllers\ProposicaoAssinaturaController::class, 'reenviarLegislativo'])->name('reenviar-legislativo');
+    Route::get('/historico-assinaturas', [App\Http\Controllers\ProposicaoAssinaturaController::class, 'historico'])->name('historico-assinaturas');
+    
+    // ===== PROTOCOLO =====
+    Route::get('/protocolar', [App\Http\Controllers\ProposicaoProtocoloController::class, 'index'])->name('protocolar');
+    Route::get('/{proposicao}/protocolar', [App\Http\Controllers\ProposicaoProtocoloController::class, 'protocolar'])->name('protocolar.show');
+    Route::post('/{proposicao}/efetivar-protocolo', [App\Http\Controllers\ProposicaoProtocoloController::class, 'efetivarProtocolo'])->name('efetivar-protocolo');
+    Route::get('/protocolos-hoje', [App\Http\Controllers\ProposicaoProtocoloController::class, 'protocolosHoje'])->name('protocolos-hoje');
+    Route::get('/estatisticas-protocolo', [App\Http\Controllers\ProposicaoProtocoloController::class, 'estatisticas'])->name('estatisticas-protocolo');
+    Route::put('/{proposicao}/iniciar-tramitacao', [App\Http\Controllers\ProposicaoProtocoloController::class, 'iniciarTramitacao'])->name('iniciar-tramitacao');
+    
+    // ===== GERAL =====
+    Route::get('/minhas-proposicoes', [App\Http\Controllers\ProposicaoController::class, 'minhasProposicoes'])->name('minhas-proposicoes');
+    Route::get('/{proposicao}', [App\Http\Controllers\ProposicaoController::class, 'show'])->name('show');
 });
 
 // Rotas de autenticação por token (para AJAX)
