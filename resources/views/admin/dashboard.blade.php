@@ -155,29 +155,33 @@
                                 <div class="d-flex align-items-center">
                                     <div class="symbol symbol-40px me-4">
                                         <div class="symbol-label bg-light-info">
-                                            <i class="ki-duotone ki-document text-info fs-2">
+                                            <i class="ki-duotone ki-file-added text-info fs-2">
                                                 <span class="path1"></span>
                                                 <span class="path2"></span>
                                             </i>
                                         </div>
                                     </div>
                                     <div class="flex-grow-1">
-                                        <div class="text-gray-900 fw-bold fs-6 mb-1">Modelos de Projeto</div>
-                                        <div class="text-gray-600 fs-7 mb-2">Templates disponíveis</div>
+                                        <div class="text-gray-900 fw-bold fs-6 mb-1">Tipos de Proposição</div>
+                                        <div class="text-gray-600 fs-7 mb-2">Tipos de documentos configurados</div>
                                         @php
                                             try {
-                                                $totalModelos = \App\Models\ModeloProjeto::count();
+                                                $totalTipos = \App\Models\TipoProposicao::count();
+                                                $tiposAtivos = \App\Models\TipoProposicao::ativos()->count();
+                                                $tiposPercentage = $totalTipos > 0 ? ($tiposAtivos / $totalTipos) * 100 : 0;
                                             } catch (\Exception $e) {
-                                                $totalModelos = 4;
+                                                $totalTipos = 8;
+                                                $tiposAtivos = 8;
+                                                $tiposPercentage = 100;
                                             }
                                         @endphp
                                         <div class="progress h-5px bg-light-info">
-                                            <div class="progress-bar bg-info" style="width: 80%"></div>
+                                            <div class="progress-bar bg-info" style="width: {{ $tiposPercentage }}%"></div>
                                         </div>
                                     </div>
                                     <div class="text-end ms-3">
-                                        <span class="badge badge-info fs-8 fw-bold mb-1">{{ $totalModelos }}</span>
-                                        <div class="text-gray-500 fs-8">Ativos</div>
+                                        <span class="badge badge-info fs-8 fw-bold mb-1">{{ $tiposAtivos }}</span>
+                                        <div class="text-gray-500 fs-8">de {{ $totalTipos }}</div>
                                     </div>
                                 </div>
                                 <!--end::Item-->
@@ -320,6 +324,35 @@
                             <!--end::Item-->
                             
                             <!--begin::Item-->
+                            <div class="d-flex align-items-sm-center mb-7">
+                                <!--begin::Symbol-->
+                                <div class="symbol symbol-50px me-5">
+                                    <span class="symbol-label bg-light-success">
+                                        <i class="ki-duotone ki-file-added fs-2x text-success">
+                                            <span class="path1"></span>
+                                            <span class="path2"></span>
+                                        </i>
+                                    </span>
+                                </div>
+                                <!--end::Symbol-->
+                                <!--begin::Section-->
+                                <div class="d-flex align-items-center flex-row-fluid flex-wrap">
+                                    <div class="flex-grow-1 me-2">
+                                        <a href="{{ route('admin.tipo-proposicoes.index') }}" class="text-gray-800 text-hover-primary fs-6 fw-bold">Tipos de Proposição</a>
+                                        <span class="text-muted fw-semibold d-block fs-7">Gerenciar tipos de documentos</span>
+                                    </div>
+                                    <a href="{{ route('admin.tipo-proposicoes.index') }}" class="btn btn-sm btn-icon btn-bg-light btn-active-color-primary">
+                                        <i class="ki-duotone ki-arrow-right fs-5">
+                                            <span class="path1"></span>
+                                            <span class="path2"></span>
+                                        </i>
+                                    </a>
+                                </div>
+                                <!--end::Section-->
+                            </div>
+                            <!--end::Item-->
+                            
+                            <!--begin::Item-->
                             <div class="d-flex align-items-sm-center">
                                 <!--begin::Symbol-->
                                 <div class="symbol symbol-50px me-5">
@@ -334,10 +367,10 @@
                                 <!--begin::Section-->
                                 <div class="d-flex align-items-center flex-row-fluid flex-wrap">
                                     <div class="flex-grow-1 me-2">
-                                        <a href="{{ route('modelos.index') }}" class="text-gray-800 text-hover-primary fs-6 fw-bold">Modelos</a>
+                                        <a href="#" onclick="showComingSoon('Modelos')" class="text-gray-800 text-hover-primary fs-6 fw-bold">Modelos</a>
                                         <span class="text-muted fw-semibold d-block fs-7">Templates de documentos</span>
                                     </div>
-                                    <a href="{{ route('modelos.index') }}" class="btn btn-sm btn-icon btn-bg-light btn-active-color-primary">
+                                    <a href="#" onclick="showComingSoon('Modelos')" class="btn btn-sm btn-icon btn-bg-light btn-active-color-primary">
                                         <i class="ki-duotone ki-arrow-right fs-5">
                                             <span class="path1"></span>
                                             <span class="path2"></span>
@@ -423,11 +456,11 @@
             @if(auth()->user()->isAdmin())
             <div class="col-xl-4 col-lg-6 col-md-6">
                 <!--begin::Statistics Widget 2-->
-                <div class="card card-xl-stretch mb-xl-8 card-hover cursor-pointer" onclick="window.location.href='{{ route('modelos.index') }}'">
+                <div class="card card-xl-stretch mb-xl-8 card-hover cursor-pointer" onclick="showComingSoon('Modelos de Documentos')">
                     <!--begin::Body-->
                     <div class="card-body d-flex align-items-center pt-3 pb-0">
                         <div class="d-flex flex-column flex-grow-1 py-2 py-lg-13 me-2">
-                            <a href="{{ route('modelos.index') }}" class="fw-bold text-gray-900 fs-4 mb-2 text-hover-primary d-flex align-items-center">
+                            <a href="#" onclick="showComingSoon('Modelos de Documentos')" class="fw-bold text-gray-900 fs-4 mb-2 text-hover-primary d-flex align-items-center">
                                 Gerenciar Modelos
                                 <i class="ki-duotone ki-arrow-right fs-5 ms-2">
                                     <span class="path1"></span>
@@ -490,6 +523,32 @@
                             <span class="fw-semibold text-muted fs-5">Configurações do sistema</span>
                         </div>
                         <i class="ki-duotone ki-setting-2 text-danger fs-4x align-self-end h-100px">
+                            <span class="path1"></span>
+                            <span class="path2"></span>
+                        </i>
+                    </div>
+                    <!--end::Body-->
+                </div>
+                <!--end::Statistics Widget 2-->
+            </div>
+
+            <!-- Tipos de Proposição -->
+            <div class="col-xl-4 col-lg-6 col-md-6">
+                <!--begin::Statistics Widget 2-->
+                <div class="card card-xl-stretch mb-xl-8 card-hover cursor-pointer" onclick="window.location.href='{{ route('admin.tipo-proposicoes.index') }}'">
+                    <!--begin::Body-->
+                    <div class="card-body d-flex align-items-center pt-3 pb-0">
+                        <div class="d-flex flex-column flex-grow-1 py-2 py-lg-13 me-2">
+                            <a href="{{ route('admin.tipo-proposicoes.index') }}" class="fw-bold text-gray-900 fs-4 mb-2 text-hover-primary d-flex align-items-center">
+                                Tipos de Proposição
+                                <i class="ki-duotone ki-arrow-right fs-5 ms-2">
+                                    <span class="path1"></span>
+                                    <span class="path2"></span>
+                                </i>
+                            </a>
+                            <span class="fw-semibold text-muted fs-5">Gerenciar tipos de documentos</span>
+                        </div>
+                        <i class="ki-duotone ki-file-added text-primary fs-4x align-self-end h-100px">
                             <span class="path1"></span>
                             <span class="path2"></span>
                         </i>

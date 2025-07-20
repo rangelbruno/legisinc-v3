@@ -524,6 +524,27 @@ Route::prefix('proposicoes')->name('proposicoes.')->middleware(['auth', 'check.s
     Route::get('/{proposicao}', [App\Http\Controllers\ProposicaoController::class, 'show'])->name('show');
 });
 
+// ROTAS DE ADMINISTRAÇÃO - TIPOS DE PROPOSIÇÃO
+Route::prefix('admin/tipo-proposicoes')->name('admin.tipo-proposicoes.')->middleware(['auth', 'check.screen.permission'])->group(function () {
+    // CRUD básico
+    Route::get('/', [App\Http\Controllers\Admin\TipoProposicaoController::class, 'index'])->name('index')->middleware('check.permission:tipo_proposicoes.view');
+    Route::get('/create', [App\Http\Controllers\Admin\TipoProposicaoController::class, 'create'])->name('create')->middleware('check.permission:tipo_proposicoes.create');
+    Route::post('/', [App\Http\Controllers\Admin\TipoProposicaoController::class, 'store'])->name('store')->middleware('check.permission:tipo_proposicoes.create');
+    Route::get('/{tipoProposicao}', [App\Http\Controllers\Admin\TipoProposicaoController::class, 'show'])->name('show')->middleware('check.permission:tipo_proposicoes.view');
+    Route::get('/{tipoProposicao}/edit', [App\Http\Controllers\Admin\TipoProposicaoController::class, 'edit'])->name('edit')->middleware('check.permission:tipo_proposicoes.edit');
+    Route::put('/{tipoProposicao}', [App\Http\Controllers\Admin\TipoProposicaoController::class, 'update'])->name('update')->middleware('check.permission:tipo_proposicoes.edit');
+    Route::delete('/{tipoProposicao}', [App\Http\Controllers\Admin\TipoProposicaoController::class, 'destroy'])->name('destroy')->middleware('check.permission:tipo_proposicoes.delete');
+    
+    // Ações especiais
+    Route::post('/{tipoProposicao}/toggle-status', [App\Http\Controllers\Admin\TipoProposicaoController::class, 'toggleStatus'])->name('toggle-status')->middleware('check.permission:tipo_proposicoes.edit');
+    Route::post('/reordenar', [App\Http\Controllers\Admin\TipoProposicaoController::class, 'reordenar'])->name('reordenar')->middleware('check.permission:tipo_proposicoes.edit');
+    Route::post('/acoes-bulk', [App\Http\Controllers\Admin\TipoProposicaoController::class, 'acoesBulk'])->name('acoes-bulk')->middleware('check.permission:tipo_proposicoes.delete');
+    
+    // AJAX endpoints
+    Route::get('/ajax/dropdown', [App\Http\Controllers\Admin\TipoProposicaoController::class, 'getParaDropdown'])->name('ajax.dropdown');
+    Route::get('/ajax/validar-codigo', [App\Http\Controllers\Admin\TipoProposicaoController::class, 'validarCodigo'])->name('ajax.validar-codigo');
+});
+
 // Rotas de autenticação por token (para AJAX)
 Route::middleware(['web'])->prefix('auth')->name('auth.')->group(function () {
     Route::get('token', [TokenController::class, 'getAjaxToken'])->name('token.get');

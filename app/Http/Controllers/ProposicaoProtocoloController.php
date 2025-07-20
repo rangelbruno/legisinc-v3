@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Projeto;
+// use App\Models\Projeto; // REMOVED - migrated to Proposições
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 

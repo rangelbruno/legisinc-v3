@@ -410,6 +410,14 @@
                             </a>
                         </div>
                         <div class="menu-item">
+                            <a class="menu-link {{ request()->routeIs('admin.tipo-proposicoes.*') ? 'active' : '' }}" href="{{ route('admin.tipo-proposicoes.index') }}">
+                                <span class="menu-bullet">
+                                    <span class="bullet bullet-dot"></span>
+                                </span>
+                                <span class="menu-title">Tipos de Proposição</span>
+                            </a>
+                        </div>
+                        <div class="menu-item">
                             <a class="menu-link" href="#" onclick="showComingSoon('Configurações do Sistema')">
                                 <span class="menu-bullet">
                                     <span class="bullet bullet-dot"></span>

@@ -625,6 +625,31 @@
                                     @endif
                                     <!--end:Menu item-->
                                     <!--begin:Menu item-->
+                                    @if(auth()->user()->isAdmin() || \App\Models\ScreenPermission::userCanAccessRoute('admin.tipo-proposicoes.index'))
+                                    <div class="menu-item">
+                                        <!--begin:Menu link-->
+                                        <a class="menu-link {{ request()->routeIs('admin.tipo-proposicoes.*') ? 'active' : '' }}" href="{{ route('admin.tipo-proposicoes.index') }}">
+                                            <span class="menu-bullet">
+                                                <span class="bullet bullet-dot"></span>
+                                            </span>
+                                            <span class="menu-title">Tipos de Proposição</span>
+                                        </a>
+                                        <!--end:Menu link-->
+                                    </div>
+                                    @else
+                                    <div class="menu-item">
+                                        <!--begin:Menu link-->
+                                        <a class="menu-link" href="#" onclick="showComingSoon('Tipos de Proposição')">
+                                            <span class="menu-bullet">
+                                                <span class="bullet bullet-dot"></span>
+                                            </span>
+                                            <span class="menu-title">Tipos de Proposição</span>
+                                        </a>
+                                        <!--end:Menu link-->
+                                    </div>
+                                    @endif
+                                    <!--end:Menu item-->
+                                    <!--begin:Menu item-->
                                     <div class="menu-item">
                                         <!--begin:Menu link-->
                                         <a class="menu-link" href="#" onclick="showComingSoon('Sistema')">
