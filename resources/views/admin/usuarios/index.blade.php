@@ -136,11 +136,11 @@
                                         <td>
                                             <div class="d-flex align-items-center">
                                                 <div class="symbol symbol-45px me-5">
-                                                    @if($usuario->avatar && !is_string($usuario->avatar))
-                                                        <img src="{{ $usuario->avatar }}" alt="{{ $usuario->name }}" />
+                                                    @if($usuario->temFotoValida())
+                                                        <img src="{{ asset('storage/' . $usuario->attributes['avatar']) }}" alt="{{ $usuario->name }}" />
                                                     @else
                                                         <div class="symbol-label fs-3 bg-light-{{ $usuario->getCorPerfil() }} text-{{ $usuario->getCorPerfil() }}">
-                                                            {{ $usuario->avatar ?: substr($usuario->name, 0, 2) }}
+                                                            {{ $usuario->avatar }}
                                                         </div>
                                                     @endif
                                                 </div>

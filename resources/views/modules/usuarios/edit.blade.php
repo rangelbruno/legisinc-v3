@@ -40,7 +40,13 @@
                             </div>
                             <div class="card-body text-center pt-0">
                                 <div class="image-input image-input-empty image-input-outline image-input-placeholder mb-3" data-kt-image-input="true">
-                                    <div class="image-input-wrapper w-150px h-150px" style="background-image: url({{ $usuario->avatar ? asset('storage/' . $usuario->avatar) : '' }})"></div>
+                                    @if($usuario->temFotoValida())
+                                        <div class="image-input-wrapper w-150px h-150px" style="background-image: url({{ asset('storage/' . $usuario->attributes['avatar']) }})"></div>
+                                    @else
+                                        <div class="image-input-wrapper w-150px h-150px d-flex align-items-center justify-content-center bg-light-{{ $usuario->getCorPerfil() }}">
+                                            <span class="fs-1 fw-bold text-{{ $usuario->getCorPerfil() }}">{{ $usuario->avatar }}</span>
+                                        </div>
+                                    @endif
                                     <label class="btn btn-icon btn-circle btn-active-color-primary w-25px h-25px bg-body shadow" data-kt-image-input-action="change" data-bs-toggle="tooltip" title="Alterar avatar">
                                         <i class="ki-duotone ki-pencil fs-7">
                                             <span class="path1"></span>

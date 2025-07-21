@@ -357,11 +357,12 @@ class User extends Authenticatable
      */
     public function getAvatarAttribute($value): string
     {
-        if ($value) {
+        // Se há um valor e é um arquivo que existe, retorna o nome do arquivo
+        if ($value && !ctype_alpha($value) && file_exists(public_path('storage/' . $value))) {
             return $value;
         }
         
-        // Retornar iniciais se não tiver avatar
+        // Retornar iniciais se não tiver avatar ou arquivo não existir
         $nomes = explode(' ', $this->name);
         $iniciais = '';
         foreach (array_slice($nomes, 0, 2) as $nome) {
@@ -369,6 +370,16 @@ class User extends Authenticatable
         }
         
         return $iniciais;
+    }
+    
+    /**
+     * Verifica se o usuário possui uma foto válida
+     */
+    public function temFotoValida(): bool
+    {
+        return $this->attributes['avatar'] && 
+               !ctype_alpha($this->attributes['avatar']) && 
+               file_exists(public_path('storage/' . $this->attributes['avatar']));
     }
     
     /**
