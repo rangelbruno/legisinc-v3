@@ -575,6 +575,33 @@
     animation: slideInRight 0.3s ease forwards;
 }
 
+/* SweetAlert Custom Styles */
+.swal-wide {
+    width: 600px !important;
+    max-width: 90vw !important;
+}
+
+.swal2-html-container .text-start {
+    text-align: left !important;
+}
+
+.swal2-html-container .alert {
+    border-radius: 8px;
+    padding: 12px 16px;
+}
+
+.swal2-html-container .alert-info {
+    background-color: rgba(13, 202, 240, 0.1);
+    border: 1px solid rgba(13, 202, 240, 0.2);
+    color: #055160;
+}
+
+.swal2-html-container .alert-warning {
+    background-color: rgba(255, 193, 7, 0.1);
+    border: 1px solid rgba(255, 193, 7, 0.2);
+    color: #664d03;
+}
+
 /* Responsive Adjustments */
 @media (max-width: 768px) {
     .editor-menu {
@@ -661,7 +688,7 @@
                                         </span>
                                     @endif
                                     <select id="formato_exportacao" class="form-select form-select-sm w-auto">
-                                        <option value="docx">Word (.docx)</option>
+                                        <option value="rtf">Word (.rtf)</option>
                                         <option value="pdf">PDF (.pdf)</option>
                                     </select>
                                 </div>
@@ -901,6 +928,10 @@
                                     <i class="ki-duotone ki-arrows-circle fs-2"></i>
                                     Atualizar Variáveis
                                 </button>
+                                <button type="button" id="btn_clear_draft" class="btn btn-sm btn-light-warning w-100">
+                                    <i class="ki-duotone ki-trash fs-2"></i>
+                                    Limpar Rascunho
+                                </button>
                             </div>
                             <!--end::Actions-->
                         </div>
@@ -933,7 +964,7 @@
                     <div class="mb-4">
                         <label class="form-label">Formato de Exportação</label>
                         <select id="export_format" class="form-select" required>
-                            <option value="docx">Microsoft Word (.docx)</option>
+                            <option value="rtf">Microsoft Word (.rtf)</option>
                             <option value="pdf">Adobe PDF (.pdf)</option>
                         </select>
                     </div>
@@ -1285,22 +1316,214 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Auto-save functionality for canvas
     let autoSaveTimeout;
+    let currentAutoSaveListener;
+    
     function setupAutoSave() {
         const canvas = document.getElementById('document-canvas');
-        canvas.addEventListener('input', function() {
+        
+        // Remove previous listener if it exists
+        if (currentAutoSaveListener) {
+            canvas.removeEventListener('input', currentAutoSaveListener);
+        }
+        
+        // Create unique key for this session
+        const modeloId = document.getElementById('modelo_select').value || 'blank';
+        const projetoId = document.getElementById('projeto_select').value || 'none';
+        const draftKey = `documento_draft_${modeloId}_${projetoId}`;
+        
+        // Create new listener
+        currentAutoSaveListener = function() {
             clearTimeout(autoSaveTimeout);
             autoSaveTimeout = setTimeout(() => {
                 const content = canvas.innerHTML;
-                localStorage.setItem('documento_draft', content);
-                showAutoSaveFeedback();
-            }, 2000);
-        });
+                // Only save if there's meaningful content
+                if (content.trim().length > 50) {
+                    const draftData = {
+                        content: content,
+                        timestamp: Date.now(),
+                        title: document.getElementById('document_title').value,
+                        modeloId: modeloId,
+                        projetoId: projetoId
+                    };
+                    localStorage.setItem(draftKey, JSON.stringify(draftData));
+                    showAutoSaveFeedback();
+                }
+            }, 3000); // 3 seconds delay
+        };
+        
+        canvas.addEventListener('input', currentAutoSaveListener);
 
-        // Load draft on page load
-        const draft = localStorage.getItem('documento_draft');
-        if (draft && confirm('Foi encontrado um rascunho salvo. Deseja carregá-lo?')) {
-            canvas.innerHTML = draft;
+        // Load draft on page load (only once, not on model/project changes)
+        if (!window.draftCheckDone) {
+            loadDraftIfExists(draftKey, canvas);
+            window.draftCheckDone = true;
         }
+    }
+    
+    function getTimeAgo(milliseconds) {
+        const seconds = Math.floor(milliseconds / 1000);
+        const minutes = Math.floor(seconds / 60);
+        const hours = Math.floor(minutes / 60);
+        const days = Math.floor(hours / 24);
+        
+        if (days > 0) {
+            return `há ${days} dia${days > 1 ? 's' : ''}`;
+        } else if (hours > 0) {
+            return `há ${hours} hora${hours > 1 ? 's' : ''}`;
+        } else if (minutes > 0) {
+            return `há ${minutes} minuto${minutes > 1 ? 's' : ''}`;
+        } else {
+            return 'há poucos segundos';
+        }
+    }
+
+    function loadDraftIfExists(draftKey, canvas) {
+        const draftString = localStorage.getItem(draftKey);
+        if (!draftString) return;
+        
+        try {
+            const draftData = JSON.parse(draftString);
+            const draftAge = Date.now() - draftData.timestamp;
+            const maxAge = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+            
+            // Only show draft if it's less than 24 hours old and has meaningful content
+            if (draftAge < maxAge && draftData.content && draftData.content.trim().length > 100) {
+                const draftDate = new Date(draftData.timestamp).toLocaleString('pt-BR');
+                const timeAgo = getTimeAgo(draftAge);
+                
+                Swal.fire({
+                    title: '📄 Rascunho Encontrado',
+                    html: `
+                        <div class="text-start">
+                            <div class="mb-3">
+                                <i class="fas fa-clock text-warning me-2"></i>
+                                <span class="fw-bold">Salvo em:</span> ${draftDate}
+                                <small class="text-muted d-block ms-4">${timeAgo}</small>
+                            </div>
+                            <div class="mb-3">
+                                <i class="fas fa-file-alt text-primary me-2"></i>
+                                <span class="fw-bold">Título:</span> 
+                                <span class="text-primary">${draftData.title || 'Sem título'}</span>
+                            </div>
+                            <div class="alert alert-info d-flex align-items-center mb-0">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <small>Seu rascunho será carregado automaticamente, preservando todo o conteúdo editado anteriormente.</small>
+                            </div>
+                        </div>
+                    `,
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: '<i class="fas fa-download me-1"></i> Carregar Rascunho',
+                    cancelButtonText: '<i class="fas fa-times me-1"></i> Ignorar',
+                    confirmButtonColor: '#009ef7',
+                    cancelButtonColor: '#6c757d',
+                    customClass: {
+                        popup: 'swal-wide',
+                        title: 'fw-bold',
+                        confirmButton: 'btn-lg',
+                        cancelButton: 'btn-lg'
+                    },
+                    showCloseButton: true,
+                    allowOutsideClick: false,
+                    allowEscapeKey: false
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        canvas.innerHTML = draftData.content;
+                        if (draftData.title) {
+                            document.getElementById('document_title').value = draftData.title;
+                        }
+                        showDraftLoadedFeedback();
+                    } else if (result.isDismissed) {
+                        // If user declines, ask if they want to clear the draft
+                        Swal.fire({
+                            title: '🗑️ Remover Rascunho?',
+                            html: `
+                                <div class="text-center">
+                                    <p class="mb-3">Deseja remover permanentemente este rascunho?</p>
+                                    <div class="alert alert-warning d-flex align-items-center">
+                                        <i class="fas fa-exclamation-triangle me-2"></i>
+                                        <small><strong>Atenção:</strong> Esta ação não pode ser desfeita.</small>
+                                    </div>
+                                </div>
+                            `,
+                            icon: 'warning',
+                            showCancelButton: true,
+                            confirmButtonText: '<i class="fas fa-trash me-1"></i> Sim, Remover',
+                            cancelButtonText: '<i class="fas fa-keep me-1"></i> Manter',
+                            confirmButtonColor: '#dc3545',
+                            cancelButtonColor: '#6c757d',
+                            customClass: {
+                                confirmButton: 'btn-lg',
+                                cancelButton: 'btn-lg'
+                            }
+                        }).then((deleteResult) => {
+                            if (deleteResult.isConfirmed) {
+                                localStorage.removeItem(draftKey);
+                                showDraftClearedFeedback();
+                            }
+                        });
+                    }
+                });
+            } else if (draftAge >= maxAge) {
+                // Auto-clean old drafts
+                localStorage.removeItem(draftKey);
+            }
+        } catch (error) {
+            console.error('Error loading draft:', error);
+            localStorage.removeItem(draftKey); // Remove corrupted draft
+        }
+    }
+    
+    function showDraftLoadedFeedback() {
+        const feedback = document.createElement('div');
+        feedback.innerHTML = '✅ Rascunho carregado com sucesso';
+        feedback.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #10b981;
+            color: white;
+            padding: 10px 16px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            z-index: 9999;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        `;
+        
+        document.body.appendChild(feedback);
+        setTimeout(() => feedback.style.opacity = '1', 10);
+        setTimeout(() => {
+            feedback.style.opacity = '0';
+            setTimeout(() => document.body.removeChild(feedback), 300);
+        }, 3000);
+    }
+    
+    function showDraftClearedFeedback() {
+        const feedback = document.createElement('div');
+        feedback.innerHTML = '🗑️ Rascunho removido';
+        feedback.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #ef4444;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 12px;
+            z-index: 9999;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        `;
+        
+        document.body.appendChild(feedback);
+        setTimeout(() => feedback.style.opacity = '1', 10);
+        setTimeout(() => {
+            feedback.style.opacity = '0';
+            setTimeout(() => document.body.removeChild(feedback), 300);
+        }, 2000);
     }
 
     function showAutoSaveFeedback() {
@@ -1970,16 +2193,77 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
             `;
         }
+        
+        // Reinitialize auto-save with new context
+        setupAutoSave();
     });
 
     // Project selection change
     document.getElementById('projeto_select').addEventListener('change', function() {
         refreshVariables();
+        
+        // Reinitialize auto-save with new context
+        setupAutoSave();
     });
 
     // Refresh variables
     document.getElementById('btn_refresh_variables').addEventListener('click', function() {
         refreshVariables();
+    });
+
+    // Clear draft button
+    document.getElementById('btn_clear_draft').addEventListener('click', function() {
+        const modeloId = document.getElementById('modelo_select').value || 'blank';
+        const projetoId = document.getElementById('projeto_select').value || 'none';
+        const draftKey = `documento_draft_${modeloId}_${projetoId}`;
+        
+        if (localStorage.getItem(draftKey)) {
+            Swal.fire({
+                title: '🗑️ Limpar Rascunho',
+                html: `
+                    <div class="text-center">
+                        <p class="mb-3">Tem certeza que deseja remover o rascunho salvo?</p>
+                        <div class="alert alert-warning d-flex align-items-center">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <small><strong>Atenção:</strong> Esta ação não pode ser desfeita e todo o conteúdo não salvo será perdido permanentemente.</small>
+                        </div>
+                    </div>
+                `,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: '<i class="fas fa-trash-alt me-1"></i> Sim, Limpar',
+                cancelButtonText: '<i class="fas fa-times me-1"></i> Cancelar',
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                customClass: {
+                    popup: 'swal-wide',
+                    confirmButton: 'btn-lg',
+                    cancelButton: 'btn-lg'
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    localStorage.removeItem(draftKey);
+                    showDraftClearedFeedback();
+                    
+                    Swal.fire({
+                        title: '✅ Rascunho Removido',
+                        text: 'O rascunho foi removido com sucesso.',
+                        icon: 'success',
+                        confirmButtonColor: '#009ef7',
+                        timer: 2000,
+                        timerProgressBar: true
+                    });
+                }
+            });
+        } else {
+            Swal.fire({
+                title: '📄 Nenhum Rascunho',
+                text: 'Não há rascunho salvo para este documento.',
+                icon: 'info',
+                confirmButtonColor: '#009ef7',
+                confirmButtonText: 'OK'
+            });
+        }
     });
 
     // Export button

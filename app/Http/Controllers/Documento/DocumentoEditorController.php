@@ -69,7 +69,7 @@ class DocumentoEditorController extends Controller
             'titulo' => 'required|string|max:255',
             'conteudo' => 'required|string',
             'variaveis' => 'nullable|array',
-            'formato_exportacao' => 'required|in:docx,pdf'
+            'formato_exportacao' => 'required|in:rtf,pdf'
         ]);
 
         try {
@@ -80,8 +80,8 @@ class DocumentoEditorController extends Controller
             
             // Criar instância do documento
             $instancia = DocumentoInstancia::create([
-                'projeto_id' => $request->projeto_id,
-                'modelo_id' => $request->modelo_id,
+                'projeto_id' => $request->projeto_id ?: null,
+                'modelo_id' => $request->modelo_id ?: null,
                 'titulo' => $request->titulo,
                 'conteudo_personalizado' => $request->conteudo,
                 'variaveis_personalizadas' => $request->variaveis ?? [],
