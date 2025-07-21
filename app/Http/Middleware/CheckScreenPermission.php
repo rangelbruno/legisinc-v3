@@ -4,8 +4,6 @@ namespace App\Http\Middleware;
 
 use App\Services\PermissionCacheService;
 use App\Models\ScreenPermission;
-use App\Models\User;
-use App\Enums\UserRole;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -21,7 +19,7 @@ class CheckScreenPermission
     /**
      * Handle an incoming request.
      */
-    public function handle(Request $request, Closure $next, string $screen = null, string $action = 'view'): Response
+    public function handle(Request $request, Closure $next, ?string $screen = null, string $action = 'view'): Response
     {
         $user = Auth::user();
         
@@ -30,8 +28,9 @@ class CheckScreenPermission
         }
 
         // Admin sempre tem acesso total
-        // Verificar se é admin via email ou configuração
-        if ($user->email === 'admin@sistema.gov.br' || str_contains($user->email, 'admin')) {
+        // Verificar se tem role de administrador
+        $userRoles = $user->getRoleNames();
+        if ($userRoles->contains('ADMIN') || $userRoles->contains('Administrador')) {
             return $next($request);
         }
 
