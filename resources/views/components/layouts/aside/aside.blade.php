@@ -417,6 +417,17 @@
                                 <span class="menu-title">Tipos de Proposição</span>
                             </a>
                         </div>
+                        @if(\App\Models\ScreenPermission::userCanAccessRoute('documentos.editor.index'))
+                        <div class="menu-item">
+                            <a class="menu-link {{ request()->routeIs('documentos.editor.*') ? 'active' : '' }}" href="{{ route('documentos.editor.index') }}">
+                                <span class="menu-bullet">
+                                    <span class="bullet bullet-dot"></span>
+                                </span>
+                                <span class="menu-title">Editor de Documentos</span>
+                                <span class="badge badge-success ms-auto">Novo</span>
+                            </a>
+                        </div>
+                        @endif
                         <div class="menu-item">
                             <a class="menu-link" href="#" onclick="showComingSoon('Configurações do Sistema')">
                                 <span class="menu-bullet">

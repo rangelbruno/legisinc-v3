@@ -31,7 +31,10 @@
             
             <nav>
                 @foreach($sidebarData as $category => $documents)
-                    <div class="category-header">{{ $category }}</div>
+                    <div class="category-header">
+                        {{ $category }}
+                        <span class="category-count">({{ count($documents) }})</span>
+                    </div>
                     <ul class="document-list">
                         @foreach($documents as $doc)
                             <li class="document-item">
@@ -41,7 +44,21 @@
                                     <span class="document-icon">{{ $doc['icon'] }}</span>
                                     <div class="document-info">
                                         <div class="document-title">{{ $doc['title'] }}</div>
-                                        <div class="document-meta">{{ $doc['last_modified'] }}</div>
+                                        <div class="document-meta">
+                                            <span class="meta-date">{{ $doc['last_modified'] }}</span>
+                                            @if(isset($doc['status']) && $doc['status'] !== 'Ativo')
+                                                <span class="meta-status status-{{ strtolower(str_replace(' ', '-', $doc['status'])) }}">{{ $doc['status'] }}</span>
+                                            @endif
+                                            @if(isset($doc['readingTime']) && $doc['readingTime'] > 0)
+                                                <span class="meta-reading-time">📖 {{ $doc['readingTime'] }}min</span>
+                                            @endif
+                                            @if(isset($doc['hasCode']) && $doc['hasCode'])
+                                                <span class="meta-code">💻</span>
+                                            @endif
+                                        </div>
+                                        @if(isset($doc['description']) && !empty($doc['description']))
+                                            <div class="document-description">{{ Str::limit($doc['description'], 80) }}</div>
+                                        @endif
                                     </div>
                                 </a>
                             </li>
@@ -101,7 +118,51 @@
             document.getElementById('sidebar').classList.toggle('active');
         }
 
+        // Enhanced search functionality
+        function setupSearch() {
+            const searchInput = document.getElementById('searchInput');
+            const allDocuments = document.querySelectorAll('.document-item');
+            const categories = document.querySelectorAll('.category-header');
+            
+            searchInput.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase();
+                let visibleCount = 0;
+                
+                allDocuments.forEach(item => {
+                    const title = item.querySelector('.document-title').textContent.toLowerCase();
+                    const description = item.querySelector('.document-description')?.textContent.toLowerCase() || '';
+                    const category = item.closest('.document-list').previousElementSibling.textContent.toLowerCase();
+                    
+                    if (searchTerm === '' || 
+                        title.includes(searchTerm) || 
+                        description.includes(searchTerm) || 
+                        category.includes(searchTerm)) {
+                        item.style.display = '';
+                        visibleCount++;
+                    } else {
+                        item.style.display = 'none';
+                    }
+                });
+                
+                // Show/hide category headers based on visible items
+                categories.forEach(header => {
+                    const list = header.nextElementSibling;
+                    const visibleItems = list.querySelectorAll('.document-item:not([style*="display: none"])');
+                    const count = header.querySelector('.category-count');
+                    
+                    if (visibleItems.length > 0) {
+                        header.style.display = '';
+                        if (count) count.textContent = `(${visibleItems.length})`;
+                    } else {
+                        header.style.display = 'none';
+                    }
+                });
+            });
+        }
+        
         document.addEventListener('DOMContentLoaded', function() {
+            setupSearch();
+            
             // Close sidebar when a link is clicked on mobile
             if (window.innerWidth <= 768) {
                 document.querySelectorAll('.document-link').forEach(link => {
@@ -110,6 +171,21 @@
                     });
                 });
             }
+            
+            // Add keyboard shortcuts
+            document.addEventListener('keydown', function(e) {
+                // Ctrl+K or Cmd+K to focus search
+                if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                    e.preventDefault();
+                    document.getElementById('searchInput').focus();
+                }
+                
+                // Escape to clear search
+                if (e.key === 'Escape' && document.getElementById('searchInput') === document.activeElement) {
+                    document.getElementById('searchInput').value = '';
+                    document.getElementById('searchInput').dispatchEvent(new Event('input'));
+                }
+            });
         });
     </script>
 </body>

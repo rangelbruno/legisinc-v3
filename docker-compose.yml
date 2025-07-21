@@ -26,8 +26,8 @@ services:
       - DB_HOST=db
       - DB_PORT=5432
       - DB_DATABASE=legisinc
-      - DB_USERNAME=legisinc_user
-      - DB_PASSWORD=legisinc_password
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=123456
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - REDIS_PASSWORD=null
@@ -43,8 +43,8 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_DB: legisinc
-      POSTGRES_USER: legisinc_user
-      POSTGRES_PASSWORD: legisinc_password
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 123456
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:

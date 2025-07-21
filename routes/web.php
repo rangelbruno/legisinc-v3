@@ -34,6 +34,12 @@ Route::get('/api-docs', [ApiDocumentationController::class, 'index'])->name('api
 Route::get('/docs', [DocumentationController::class, 'index'])->name('documentation.index');
 Route::get('/docs/{docId}', [DocumentationController::class, 'show'])->name('documentation.show');
 Route::get('/docs/search', [DocumentationController::class, 'search'])->name('documentation.search');
+Route::get('/docs/statistics', [DocumentationController::class, 'statistics'])->name('documentation.statistics');
+Route::get('/docs/test', function() {
+    $cssExists = file_exists(public_path('css/documentation.css'));
+    $cssSize = $cssExists ? filesize(public_path('css/documentation.css')) : 0;
+    return response('<html><head><title>CSS Test</title></head><body style="font-family: Arial; padding: 20px; background: #f8f9fa;"><div style="max-width: 800px; margin: 0 auto;"><h1 style="color: #28a745;">✅ CSS Fix Successful</h1><div style="background: #d4edda; color: #155724; padding: 15px; border-radius: 4px; margin: 20px 0;"><strong>Status:</strong><ul><li>CSS File exists: ' . ($cssExists ? '✅ Yes' : '❌ No') . '</li><li>File size: ' . $cssSize . ' bytes</li><li>Location: public/css/documentation.css</li><li>URL: <a href="/css/documentation.css" target="_blank">/css/documentation.css</a></li></ul></div><div style="margin: 20px 0;"><a href="/css/documentation.css" style="background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; margin-right: 10px;" target="_blank">🎨 Test CSS Direct</a><a href="/docs" style="background: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">📚 Go to Documentation</a></div></div></body></html>');
+})->name('documentation.test');
 Route::get('/docs/api/documents', [DocumentationController::class, 'documents'])->name('documentation.documents');
 Route::get('/docs/api/stats', [DocumentationController::class, 'stats'])->name('documentation.stats');
 
@@ -550,5 +556,56 @@ Route::middleware(['web'])->prefix('auth')->name('auth.')->group(function () {
     Route::get('token', [TokenController::class, 'getAjaxToken'])->name('token.get');
     Route::post('token/verify', [TokenController::class, 'verifyToken'])->name('token.verify');
     Route::post('token/revoke', [TokenController::class, 'revokeToken'])->name('token.revoke');
+});
+
+// ===== SISTEMA DE DOCUMENTOS - GESTÃO DE MODELOS =====
+Route::prefix('admin/documentos')->name('documentos.')->middleware(['auth', 'check.screen.permission'])->group(function () {
+    
+    // ===== GESTÃO DE MODELOS =====
+    Route::prefix('modelos')->name('modelos.')->group(function () {
+        Route::get('/', [App\Http\Controllers\Documento\DocumentoModeloController::class, 'index'])->name('index')->middleware('check.permission:documentos.view');
+        Route::get('/create', [App\Http\Controllers\Documento\DocumentoModeloController::class, 'create'])->name('create')->middleware('check.permission:documentos.create');
+        Route::post('/', [App\Http\Controllers\Documento\DocumentoModeloController::class, 'store'])->name('store')->middleware('check.permission:documentos.create');
+        Route::get('/{modelo}', [App\Http\Controllers\Documento\DocumentoModeloController::class, 'show'])->name('show')->middleware('check.permission:documentos.view');
+        Route::get('/{modelo}/edit', [App\Http\Controllers\Documento\DocumentoModeloController::class, 'edit'])->name('edit')->middleware('check.permission:documentos.edit');
+        Route::put('/{modelo}', [App\Http\Controllers\Documento\DocumentoModeloController::class, 'update'])->name('update')->middleware('check.permission:documentos.edit');
+        Route::delete('/{modelo}', [App\Http\Controllers\Documento\DocumentoModeloController::class, 'destroy'])->name('destroy')->middleware('check.permission:documentos.delete');
+        
+        // Downloads
+        Route::get('/{modelo}/download', [App\Http\Controllers\Documento\DocumentoModeloController::class, 'download'])->name('download')->middleware('check.permission:documentos.view');
+        Route::get('/{modelo}/download-personalizado/{projeto}', [App\Http\Controllers\Documento\DocumentoModeloController::class, 'downloadModelo'])->name('download-personalizado')->middleware('check.permission:documentos.view');
+    });
+    
+    // ===== GESTÃO DE INSTÂNCIAS =====
+    Route::prefix('instancias')->name('instancias.')->group(function () {
+        Route::get('/', [App\Http\Controllers\Documento\DocumentoInstanciaController::class, 'index'])->name('index')->middleware('check.permission:documentos.view');
+        Route::get('/{instancia}', [App\Http\Controllers\Documento\DocumentoInstanciaController::class, 'show'])->name('show')->middleware('check.permission:documentos.view');
+        Route::delete('/{instancia}', [App\Http\Controllers\Documento\DocumentoInstanciaController::class, 'destroy'])->name('destroy')->middleware('check.permission:documentos.delete');
+        
+        // Upload e download de versões
+        Route::post('/{instancia}/upload-versao', [App\Http\Controllers\Documento\DocumentoInstanciaController::class, 'uploadVersao'])->name('upload-versao')->middleware('check.permission:documentos.edit');
+        Route::get('/{instancia}/download', [App\Http\Controllers\Documento\DocumentoInstanciaController::class, 'download'])->name('download')->middleware('check.permission:documentos.view');
+        Route::get('/versoes/{versao}/download', [App\Http\Controllers\Documento\DocumentoInstanciaController::class, 'downloadVersao'])->name('versao.download')->middleware('check.permission:documentos.view');
+        
+        // Gestão de status e finalização
+        Route::post('/{instancia}/alterar-status', [App\Http\Controllers\Documento\DocumentoInstanciaController::class, 'alterarStatus'])->name('alterar-status')->middleware('check.permission:documentos.edit');
+        Route::post('/{instancia}/finalizar', [App\Http\Controllers\Documento\DocumentoInstanciaController::class, 'finalizar'])->name('finalizar')->middleware('check.permission:documentos.edit');
+        Route::get('/{instancia}/gerar-pdf', [App\Http\Controllers\Documento\DocumentoInstanciaController::class, 'gerarPDF'])->name('gerar-pdf')->middleware('check.permission:documentos.edit');
+        
+        // Histórico de versões
+        Route::get('/{instancia}/versoes', [App\Http\Controllers\Documento\DocumentoInstanciaController::class, 'versoes'])->name('versoes')->middleware('check.permission:documentos.view');
+        Route::get('/versoes/{versao1}/comparar/{versao2}', [App\Http\Controllers\Documento\DocumentoInstanciaController::class, 'compararVersoes'])->name('comparar-versoes')->middleware('check.permission:documentos.view');
+    });
+
+});
+
+// Editor de Documentos routes (separado do grupo admin/documentos)
+Route::prefix('admin/documentos/editor')->name('documentos.editor.')->middleware(['auth', 'check.screen.permission'])->group(function () {
+    Route::get('/', [App\Http\Controllers\Documento\DocumentoEditorController::class, 'index'])->name('index')->middleware('check.permission:documentos.view');
+    Route::get('/create', [App\Http\Controllers\Documento\DocumentoEditorController::class, 'create'])->name('create')->middleware('check.permission:documentos.create');
+    Route::post('/', [App\Http\Controllers\Documento\DocumentoEditorController::class, 'store'])->name('store')->middleware('check.permission:documentos.create');
+    Route::get('/{instancia}/download', [App\Http\Controllers\Documento\DocumentoEditorController::class, 'download'])->name('download')->middleware('check.permission:documentos.view');
+    Route::get('/variaveis/{modelo_id}', [App\Http\Controllers\Documento\DocumentoEditorController::class, 'getVariaveisModelo'])->name('variaveis')->middleware('check.permission:documentos.view');
+    Route::post('/preencher-variaveis', [App\Http\Controllers\Documento\DocumentoEditorController::class, 'preencherVariaveisProjeto'])->name('preencher-variaveis')->middleware('check.permission:documentos.view');
 });
 

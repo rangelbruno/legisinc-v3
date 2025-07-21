@@ -367,10 +367,10 @@
                                 <!--begin::Section-->
                                 <div class="d-flex align-items-center flex-row-fluid flex-wrap">
                                     <div class="flex-grow-1 me-2">
-                                        <a href="#" onclick="showComingSoon('Modelos')" class="text-gray-800 text-hover-primary fs-6 fw-bold">Modelos</a>
+                                        <a href="{{ route('documentos.modelos.index') }}" class="text-gray-800 text-hover-primary fs-6 fw-bold">Modelos</a>
                                         <span class="text-muted fw-semibold d-block fs-7">Templates de documentos</span>
                                     </div>
-                                    <a href="#" onclick="showComingSoon('Modelos')" class="btn btn-sm btn-icon btn-bg-light btn-active-color-primary">
+                                    <a href="{{ route('documentos.modelos.index') }}" class="btn btn-sm btn-icon btn-bg-light btn-active-color-primary">
                                         <i class="ki-duotone ki-arrow-right fs-5">
                                             <span class="path1"></span>
                                             <span class="path2"></span>
@@ -456,11 +456,11 @@
             @if(auth()->user()->isAdmin())
             <div class="col-xl-4 col-lg-6 col-md-6">
                 <!--begin::Statistics Widget 2-->
-                <div class="card card-xl-stretch mb-xl-8 card-hover cursor-pointer" onclick="showComingSoon('Modelos de Documentos')">
+                <div class="card card-xl-stretch mb-xl-8 card-hover cursor-pointer" onclick="window.location.href='{{ route('documentos.modelos.index') }}'">
                     <!--begin::Body-->
                     <div class="card-body d-flex align-items-center pt-3 pb-0">
                         <div class="d-flex flex-column flex-grow-1 py-2 py-lg-13 me-2">
-                            <a href="#" onclick="showComingSoon('Modelos de Documentos')" class="fw-bold text-gray-900 fs-4 mb-2 text-hover-primary d-flex align-items-center">
+                            <a href="{{ route('documentos.modelos.index') }}" class="fw-bold text-gray-900 fs-4 mb-2 text-hover-primary d-flex align-items-center">
                                 Gerenciar Modelos
                                 <i class="ki-duotone ki-arrow-right fs-5 ms-2">
                                     <span class="path1"></span>
@@ -470,6 +470,32 @@
                             <span class="fw-semibold text-muted fs-5">Templates de documentos</span>
                         </div>
                         <i class="ki-duotone ki-document text-info fs-4x align-self-end h-100px">
+                            <span class="path1"></span>
+                            <span class="path2"></span>
+                        </i>
+                    </div>
+                    <!--end::Body-->
+                </div>
+                <!--end::Statistics Widget 2-->
+            </div>
+
+            <!-- Documentos em Tramitação -->
+            <div class="col-xl-4 col-lg-6 col-md-6">
+                <!--begin::Statistics Widget 2-->
+                <div class="card card-xl-stretch mb-xl-8 card-hover cursor-pointer" onclick="window.location.href='{{ route('documentos.instancias.index') }}'">
+                    <!--begin::Body-->
+                    <div class="card-body d-flex align-items-center pt-3 pb-0">
+                        <div class="d-flex flex-column flex-grow-1 py-2 py-lg-13 me-2">
+                            <a href="{{ route('documentos.instancias.index') }}" class="fw-bold text-gray-900 fs-4 mb-2 text-hover-primary d-flex align-items-center">
+                                Documentos em Tramitação
+                                <i class="ki-duotone ki-arrow-right fs-5 ms-2">
+                                    <span class="path1"></span>
+                                    <span class="path2"></span>
+                                </i>
+                            </a>
+                            <span class="fw-semibold text-muted fs-5">Acompanhar workflow</span>
+                        </div>
+                        <i class="ki-duotone ki-file-text text-success fs-4x align-self-end h-100px">
                             <span class="path1"></span>
                             <span class="path2"></span>
                         </i>

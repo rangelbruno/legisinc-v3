@@ -3,6 +3,7 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
@@ -37,8 +38,12 @@ return new class extends Migration
             $table->foreign('user_id')->references('id')->on('users')->onDelete('set null');
         });
         
-        // Adicionar comentário na tabela
-        DB::statement("ALTER TABLE auditoria_parametros COMMENT = 'Tabela de auditoria para todas as operações do sistema de parâmetros'");
+        // Adicionar comentário na tabela (compatível com PostgreSQL)
+        if (config('database.default') === 'pgsql') {
+            DB::statement("COMMENT ON TABLE auditoria_parametros IS 'Tabela de auditoria para todas as operações do sistema de parâmetros'");
+        } elseif (config('database.default') === 'mysql') {
+            DB::statement("ALTER TABLE auditoria_parametros COMMENT = 'Tabela de auditoria para todas as operações do sistema de parâmetros'");
+        }
     }
 
     /**
