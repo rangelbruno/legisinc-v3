@@ -277,9 +277,108 @@ document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('kt_modelo_online_form');
     const submitButton = document.getElementById('kt_modelo_online_submit');
     
-    form.addEventListener('submit', function() {
+    form.addEventListener('submit', function(e) {
+        e.preventDefault(); // Prevenir submit normal
+        
+        // Ativar indicador de loading
         submitButton.setAttribute('data-kt-indicator', 'on');
         submitButton.disabled = true;
+        
+        // Coletar dados do formulário
+        const formData = new FormData(form);
+        
+        // Fazer request AJAX
+        fetch(form.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Sucesso - abrir editor em nova aba
+                window.open(data.editor_url, '_blank');
+                
+                // Escutar quando o OnlyOffice carregar
+                const checkEditorLoaded = setInterval(() => {
+                    const loadedTime = localStorage.getItem('onlyoffice_loaded');
+                    if (loadedTime && (Date.now() - parseInt(loadedTime)) < 5000) {
+                        // OnlyOffice carregou nos últimos 5 segundos
+                        clearInterval(checkEditorLoaded);
+                        localStorage.removeItem('onlyoffice_loaded');
+                        
+                        // Resetar botão
+                        submitButton.removeAttribute('data-kt-indicator');
+                        submitButton.disabled = false;
+                        
+                        // Mostrar mensagem de sucesso e redirecionar
+                        Swal.fire({
+                            title: 'Sucesso!',
+                            text: data.message,
+                            icon: 'success',
+                            timer: 2000,
+                            showConfirmButton: false
+                        }).then(() => {
+                            // Redirecionar para lista de modelos
+                            window.location.href = "{{ route('documentos.modelos.index') }}";
+                        });
+                    }
+                }, 500);
+                
+                // Fallback: resetar após 10 segundos se não receber notificação
+                setTimeout(() => {
+                    clearInterval(checkEditorLoaded);
+                    if (submitButton.hasAttribute('data-kt-indicator')) {
+                        submitButton.removeAttribute('data-kt-indicator');
+                        submitButton.disabled = false;
+                        
+                        Swal.fire({
+                            title: 'Editor Aberto',
+                            text: 'O editor foi aberto em nova aba',
+                            icon: 'info',
+                            timer: 2000,
+                            showConfirmButton: false
+                        }).then(() => {
+                            // Redirecionar para lista de modelos
+                            window.location.href = "{{ route('documentos.modelos.index') }}";
+                        });
+                    }
+                }, 10000);
+                
+            } else if (data.errors) {
+                // Mostrar erros de validação
+                let errorMessages = [];
+                for (let field in data.errors) {
+                    errorMessages.push(...data.errors[field]);
+                }
+                
+                Swal.fire({
+                    title: 'Erro de Validação',
+                    html: errorMessages.join('<br>'),
+                    icon: 'error'
+                });
+                
+                // Resetar botão
+                submitButton.removeAttribute('data-kt-indicator');
+                submitButton.disabled = false;
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            
+            Swal.fire({
+                title: 'Erro',
+                text: 'Ocorreu um erro ao criar o documento',
+                icon: 'error'
+            });
+            
+            // Resetar botão
+            submitButton.removeAttribute('data-kt-indicator');
+            submitButton.disabled = false;
+        });
     });
 });
 </script>

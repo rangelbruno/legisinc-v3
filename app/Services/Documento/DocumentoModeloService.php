@@ -20,6 +20,15 @@ class DocumentoModeloService
         // Criar arquivo inicial vazio
         $nomeArquivo = Str::slug($dados['nome']) . '.rtf';
         $documentKey = uniqid();
+        $pathArquivo = "documentos/modelos/{$nomeArquivo}";
+        
+        // Criar arquivo RTF vazio imediatamente
+        $this->criarArquivoVazio($pathArquivo);
+        
+        // Obter tamanho do arquivo após criação
+        $tamanhoArquivo = Storage::disk('public')->exists($pathArquivo) 
+            ? Storage::disk('public')->size($pathArquivo) 
+            : 0;
         
         $modelo = DocumentoModelo::create([
             'nome' => $dados['nome'],
@@ -27,8 +36,8 @@ class DocumentoModeloService
             'tipo_proposicao_id' => $dados['tipo_proposicao_id'] ?? null,
             'document_key' => $documentKey,
             'arquivo_nome' => $nomeArquivo,
-            'arquivo_path' => null, // Será definido na primeira edição
-            'arquivo_size' => 0,
+            'arquivo_path' => $pathArquivo,
+            'arquivo_size' => $tamanhoArquivo,
             'versao' => '1.0',
             'variaveis' => $dados['variaveis'] ?? [],
             'icon' => $dados['icon'] ?? null,
@@ -184,27 +193,17 @@ class DocumentoModeloService
     
     private function criarArquivoVazio(string $path): void
     {
-        // Criar um documento RTF básico
-        $conteudoBase = '{\rtf1\ansi\deff0 {\fonttbl {\f0 Times New Roman;}}
-{\colortbl;\red0\green0\blue0;}
-\f0\fs24
-
-{\qc\b\fs28 Novo Documento\par}
-\par
-Este é um documento base para começar a edição.\par
-\par
-Variáveis disponíveis:\par
-- ${numero_proposicao}\par
-- ${tipo_proposicao}\par
-- ${autor_nome}\par
-- ${autor_cargo}\par
-- ${data_atual}\par
-- ${ano_atual}\par
-- ${cidade}\par
-- ${orgao}\par
-\par
-Você pode usar essas variáveis no documento e elas serão substituídas automaticamente pelos valores do projeto.\par
-}';
+        // Criar um documento RTF com encoding correto para português
+        $conteudoBase = '{\rtf1\ansi\ansicpg1252\deff0\deflang1046 {\fonttbl {\f0 Times New Roman;}}' . "\n" .
+                       '{\colortbl;\red0\green0\blue0;}' . "\n" .
+                       '\f0\fs24' . "\n" .
+                       '' . "\n" .
+                       '{\qc\b\fs28 Novo Documento\par}' . "\n" .
+                       '\par' . "\n" .
+                       'Este \'e9 um documento base para come\'e7ar a edi\'e7\'e3o.\par' . "\n" .
+                       '\par' . "\n" .
+                       'Voc\'ea pode come\'e7ar a escrever aqui.\par' . "\n" .
+                       '}';
         
         Storage::disk('public')->put($path, $conteudoBase);
     }

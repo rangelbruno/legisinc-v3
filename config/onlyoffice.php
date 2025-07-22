@@ -29,5 +29,12 @@ return [
         'legislativo' => 'legislative',
         'parlamentar' => 'parliamentarians',
         'assessor' => 'assistants'
+    ],
+    
+    'locale' => [
+        'lang' => 'pt-BR',
+        'region' => 'pt-BR',
+        'spellcheck' => ['pt-BR'],
+        'timezone' => 'America/Sao_Paulo'
     ]
 ];

@@ -14,6 +14,15 @@
         'onAppReady': function() {
             console.log('OnlyOffice is ready');
             document.getElementById('loading').style.display = 'none';
+            
+            // Notificar aba pai que o editor carregou
+            if (window.opener) {
+                try {
+                    localStorage.setItem('onlyoffice_loaded', Date.now());
+                } catch (e) {
+                    console.log('Could not notify parent window');
+                }
+            }
         },
         'onError': function(event) {
             console.error('OnlyOffice error:', event.data);

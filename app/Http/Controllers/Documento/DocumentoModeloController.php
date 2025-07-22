@@ -275,19 +275,40 @@ class DocumentoModeloController extends Controller
     
     public function storeOnlyOffice(Request $request)
     {
-        $validated = $request->validate([
-            'nome' => 'required|string|max:255|unique:documento_modelos,nome',
-            'descricao' => 'nullable|string|max:1000',
-            'tipo_proposicao_id' => 'nullable|exists:tipos_proposicao,id',
-            'variaveis' => 'nullable|array',
-            'variaveis.*' => 'string',
-            'icon' => 'nullable|string|max:100'
-        ]);
+        try {
+            $validated = $request->validate([
+                'nome' => 'required|string|max:255|unique:documento_modelos,nome',
+                'descricao' => 'nullable|string|max:1000',
+                'tipo_proposicao_id' => 'nullable|exists:tipo_proposicoes,id',
+                'variaveis' => 'nullable|array',
+                'variaveis.*' => 'string',
+                'icon' => 'nullable|string|max:100'
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'errors' => $e->errors()
+                ], 422);
+            }
+            throw $e;
+        }
         
         $modelo = $this->documentoModeloService->criarModelo($validated);
         
+        // Se for request AJAX, retornar JSON com URL
+        if ($request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'modelo_id' => $modelo->id,
+                'editor_url' => route('onlyoffice.standalone.editor.modelo', ['modelo' => $modelo->id]),
+                'message' => 'Modelo criado com sucesso!'
+            ]);
+        }
+        
+        // Request normal, redirect
         return redirect()
-            ->route('onlyoffice.editor.modelo', $modelo)
+            ->route('onlyoffice.standalone.editor.modelo', ['modelo' => $modelo->id])
             ->with('success', 'Modelo criado com sucesso! Agora você pode editá-lo online.');
     }
     
@@ -308,7 +329,7 @@ class DocumentoModeloController extends Controller
         $validated = $request->validate([
             'nome' => 'required|string|max:255|unique:documento_modelos,nome',
             'descricao' => 'nullable|string|max:1000',
-            'tipo_proposicao_id' => 'nullable|exists:tipos_proposicao,id',
+            'tipo_proposicao_id' => 'nullable|exists:tipo_proposicoes,id',
             'variaveis' => 'nullable|array',
             'variaveis.*' => 'string',
             'icon' => 'nullable|string|max:100'

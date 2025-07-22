@@ -28,12 +28,14 @@ class OnlyOfficeService
                 'key' => $documentKey,
                 'title' => $fileName,
                 'url' => $fileUrl,
-                'permissions' => $this->obterPermissoes($mode)
+                'permissions' => $this->obterPermissoes($mode),
+                'lang' => config('onlyoffice.locale.lang')
             ],
             'documentType' => $this->determinarTipoDocumento($fileName),
             'editorConfig' => [
                 'mode' => $mode,
-                'lang' => 'pt',
+                'lang' => config('onlyoffice.locale.lang'),
+                'region' => config('onlyoffice.locale.region'),
                 'callbackUrl' => $this->callbackUrl . '/' . $documentKey,
                 'user' => [
                     'id' => (string) $user['id'],
@@ -49,7 +51,11 @@ class OnlyOfficeService
                     'compactToolbar' => false,
                     'toolbarNoTabs' => false,
                     'reviewDisplay' => 'markup',
-                    'trackChanges' => true
+                    'trackChanges' => true,
+                    'spellcheck' => [
+                        'mode' => true,
+                        'lang' => config('onlyoffice.locale.spellcheck')
+                    ]
                 ],
                 'plugins' => [
                     'autostart' => [
