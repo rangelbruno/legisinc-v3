@@ -18,7 +18,7 @@ class DocumentoModeloService
     public function criarModelo(array $dados): DocumentoModelo
     {
         // Criar arquivo inicial vazio
-        $nomeArquivo = Str::slug($dados['nome']) . '.docx';
+        $nomeArquivo = Str::slug($dados['nome']) . '.rtf';
         $documentKey = uniqid();
         
         $modelo = DocumentoModelo::create([
@@ -63,7 +63,7 @@ class DocumentoModeloService
         $documentKey = uniqid();
         
         // Copiar arquivo do modelo se existir
-        $nomeArquivo = "projeto_{$projetoId}_" . Str::slug($modelo->nome) . '.docx';
+        $nomeArquivo = "projeto_{$projetoId}_" . Str::slug($modelo->nome) . '.rtf';
         $pathDestino = "documentos/instancias/{$nomeArquivo}";
         
         if ($modelo->arquivo_path && Storage::exists($modelo->arquivo_path)) {
@@ -94,7 +94,7 @@ class DocumentoModeloService
     public function duplicarModelo(DocumentoModelo $modeloOriginal, array $dadosNovos): DocumentoModelo
     {
         $documentKey = uniqid();
-        $nomeArquivo = Str::slug($dadosNovos['nome']) . '.docx';
+        $nomeArquivo = Str::slug($dadosNovos['nome']) . '.rtf';
         
         $novoModelo = DocumentoModelo::create([
             'nome' => $dadosNovos['nome'],
@@ -184,47 +184,28 @@ class DocumentoModeloService
     
     private function criarArquivoVazio(string $path): void
     {
-        // Criar um documento Word básico
-        $conteudoBase = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-    <w:body>
-        <w:p>
-            <w:pPr>
-                <w:jc w:val="center"/>
-                <w:pStyle w:val="Title"/>
-            </w:pPr>
-            <w:r>
-                <w:t>Novo Documento</w:t>
-            </w:r>
-        </w:p>
-        <w:p>
-            <w:r>
-                <w:t>Este é um documento base para começar a edição.</w:t>
-            </w:r>
-        </w:p>
-        <w:p>
-            <w:r>
-                <w:t>Variáveis disponíveis:</w:t>
-            </w:r>
-        </w:p>
-        <w:p>
-            <w:r>
-                <w:t>- ${numero_proposicao}</w:t>
-            </w:r>
-        </w:p>
-        <w:p>
-            <w:r>
-                <w:t>- ${autor_nome}</w:t>
-            </w:r>
-        </w:p>
-        <w:p>
-            <w:r>
-                <w:t>- ${data_atual}</w:t>
-            </w:r>
-        </w:p>
-    </w:body>
-</w:document>';
+        // Criar um documento RTF básico
+        $conteudoBase = '{\rtf1\ansi\deff0 {\fonttbl {\f0 Times New Roman;}}
+{\colortbl;\red0\green0\blue0;}
+\f0\fs24
+
+{\qc\b\fs28 Novo Documento\par}
+\par
+Este é um documento base para começar a edição.\par
+\par
+Variáveis disponíveis:\par
+- ${numero_proposicao}\par
+- ${tipo_proposicao}\par
+- ${autor_nome}\par
+- ${autor_cargo}\par
+- ${data_atual}\par
+- ${ano_atual}\par
+- ${cidade}\par
+- ${orgao}\par
+\par
+Você pode usar essas variáveis no documento e elas serão substituídas automaticamente pelos valores do projeto.\par
+}';
         
-        Storage::put($path, $conteudoBase);
+        Storage::disk('public')->put($path, $conteudoBase);
     }
 }

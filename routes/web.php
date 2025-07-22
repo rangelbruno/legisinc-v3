@@ -628,6 +628,14 @@ Route::prefix('onlyoffice')->name('onlyoffice.')->middleware(['auth'])->group(fu
     Route::get('/history/instancia/{instancia}', [App\Http\Controllers\OnlyOffice\OnlyOfficeController::class, 'obterHistoricoVersoes'])->name('history.instancia');
 });
 
+// ===== ONLYOFFICE STANDALONE EDITOR ROUTES (opens in new tab without layout) =====
+Route::prefix('onlyoffice-standalone')->name('onlyoffice.standalone.')->middleware(['auth'])->group(function () {
+    // Standalone editor routes
+    Route::get('/editor/modelo/{modelo}', [App\Http\Controllers\OnlyOffice\OnlyOfficeController::class, 'editarModeloStandalone'])->name('editor.modelo');
+    Route::get('/editor/instancia/{instancia}', [App\Http\Controllers\OnlyOffice\OnlyOfficeController::class, 'editarDocumentoStandalone'])->name('editor.instancia');
+    Route::get('/viewer/instancia/{instancia}', [App\Http\Controllers\OnlyOffice\OnlyOfficeController::class, 'visualizarDocumentoStandalone'])->name('viewer.instancia');
+});
+
 // ONLYOFFICE Enhanced Documento Modelos routes
 Route::prefix('admin/documentos/modelos')->name('documentos.modelos.')->middleware(['auth', 'check.screen.permission'])->group(function () {
     

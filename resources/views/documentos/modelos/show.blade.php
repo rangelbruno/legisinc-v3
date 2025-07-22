@@ -150,11 +150,11 @@
                             
                             {{-- ONLYOFFICE Editor Button --}}
                             @if($modelo->document_key)
-                                <a href="{{ route('onlyoffice.editor.modelo', $modelo) }}" 
+                                <a href="{{ route('onlyoffice.standalone.editor.modelo', $modelo) }}" 
                                    class="btn btn-primary" 
-                                   title="Editar com ONLYOFFICE"
+                                   title="Editar com ONLYOFFICE em nova aba"
                                    target="_blank">
-                                    <i class="fas fa-edit"></i> Editar Online
+                                    <i class="fas fa-external-link-alt"></i> Editar Online
                                 </a>
                             @else
                                 <a href="{{ route('documentos.modelos.editor-onlyoffice', $modelo) }}" 

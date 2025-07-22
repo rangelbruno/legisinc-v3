@@ -134,13 +134,63 @@ class OnlyOfficeController extends Controller
     {
         $this->authorize('view', $modelo);
         
-        if (!$modelo->arquivo_path || !Storage::exists($modelo->arquivo_path)) {
-            // Criar arquivo vazio se não existir
-            $this->criarArquivoVazio($modelo);
+        \Log::info('Download modelo requested:', [
+            'modelo_id' => $modelo->id,
+            'modelo_nome' => $modelo->nome,
+            'arquivo_path' => $modelo->arquivo_path,
+            'arquivo_nome' => $modelo->arquivo_nome,
+            'document_key' => $modelo->document_key
+        ]);
+        
+        // List all files in the directory for debugging
+        $files = Storage::disk('public')->files('documentos/modelos');
+        \Log::info('Files in modelos directory:', $files);
+        
+        if (!$modelo->arquivo_path || !Storage::disk('public')->exists($modelo->arquivo_path)) {
+            \Log::warning('File not found, creating empty file:', [
+                'arquivo_path' => $modelo->arquivo_path,
+                'exists' => Storage::disk('public')->exists($modelo->arquivo_path ?? 'NULL')
+            ]);
+            
+            // Try to find existing files with similar names
+            $modeloSlug = \Illuminate\Support\Str::slug($modelo->nome);
+            $possibleFiles = [
+                "documentos/modelos/{$modeloSlug}.rtf",
+                "documentos/modelos/{$modeloSlug}.docx",
+                "documentos/modelos/modelo-teste.rtf",
+                "documentos/modelos/teste.rtf",
+                "documentos/modelos/teste.docx"
+            ];
+            
+            $foundFile = null;
+            foreach ($possibleFiles as $possibleFile) {
+                if (Storage::disk('public')->exists($possibleFile)) {
+                    $foundFile = $possibleFile;
+                    \Log::info('Found existing file:', ['file' => $foundFile]);
+                    break;
+                }
+            }
+            
+            if ($foundFile) {
+                // Update the modelo with the found file
+                $modelo->update([
+                    'arquivo_path' => $foundFile,
+                    'arquivo_nome' => basename($foundFile),
+                    'arquivo_size' => Storage::disk('public')->size($foundFile)
+                ]);
+                
+                \Log::info('Updated modelo with found file:', [
+                    'modelo_id' => $modelo->id,
+                    'new_path' => $foundFile
+                ]);
+            } else {
+                // Criar arquivo vazio se não existir
+                $this->criarArquivoVazio($modelo);
+            }
         }
         
-        return Storage::response($modelo->arquivo_path, $modelo->arquivo_nome, [
-            'Content-Type' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        return Storage::disk('public')->response($modelo->arquivo_path, $modelo->arquivo_nome, [
+            'Content-Type' => 'application/rtf'
         ]);
     }
     
@@ -148,12 +198,12 @@ class OnlyOfficeController extends Controller
     {
         $this->authorize('view', $instancia);
         
-        if (!$instancia->arquivo_path || !Storage::exists($instancia->arquivo_path)) {
+        if (!$instancia->arquivo_path || !Storage::disk('public')->exists($instancia->arquivo_path)) {
             abort(404, 'Arquivo não encontrado');
         }
         
-        return Storage::response($instancia->arquivo_path, $instancia->arquivo_nome, [
-            'Content-Type' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        return Storage::disk('public')->response($instancia->arquivo_path, $instancia->arquivo_nome, [
+            'Content-Type' => 'application/rtf'
         ]);
     }
     
@@ -215,26 +265,26 @@ class OnlyOfficeController extends Controller
         $destinoPath = "documentos/modelos/" . $modelo->arquivo_nome;
         
         if (file_exists($templatePath)) {
-            Storage::copy($templatePath, $destinoPath);
+            Storage::disk('public')->put($destinoPath, file_get_contents($templatePath));
         } else {
-            // Criar documento Word básico
-            $conteudoBase = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-    <w:body>
-        <w:p>
-            <w:r>
-                <w:t>Modelo: ' . $modelo->nome . '</w:t>
-            </w:r>
-        </w:p>
-    </w:body>
-</w:document>';
+            // Criar documento RTF básico
+            $conteudoBase = '{\rtf1\ansi\deff0 {\fonttbl {\f0 Times New Roman;}}
+{\colortbl;\red0\green0\blue0;}
+\f0\fs24
+
+{\qc\b\fs28 Modelo: ' . $modelo->nome . '\par}
+\par
+Este é um modelo base para começar a edição.\par
+\par
+Você pode editá-lo usando o OnlyOffice.\par
+}';
             
-            Storage::put($destinoPath, $conteudoBase);
+            Storage::disk('public')->put($destinoPath, $conteudoBase);
         }
         
         $modelo->update([
             'arquivo_path' => $destinoPath,
-            'arquivo_size' => Storage::size($destinoPath)
+            'arquivo_size' => Storage::disk('public')->size($destinoPath)
         ]);
     }
     
@@ -283,5 +333,90 @@ class OnlyOfficeController extends Controller
         
         // Replace localhost:8001 with container name for OnlyOffice access
         return str_replace('http://localhost:8001', 'http://legisinc-app:80', $url);
+    }
+    
+    /**
+     * Standalone methods - open in new tab without system layout
+     */
+    public function editarModeloStandalone(DocumentoModelo $modelo)
+    {
+        // Debug information
+        if (!auth()->check()) {
+            abort(401, 'User not authenticated');
+        }
+        
+        $user = auth()->user();
+        \Log::info('OnlyOffice editarModeloStandalone - User check:', [
+            'user_id' => $user->id,
+            'user_name' => $user->name,
+            'user_roles' => $user->getRoleNames()->toArray(),
+            'modelo_id' => $modelo->id,
+        ]);
+        
+        $this->authorize('update', $modelo);
+        
+        $config = $this->onlyOfficeService->criarConfiguracao(
+            $modelo->document_key,
+            $modelo->arquivo_nome,
+            $this->generateFileUrlForOnlyOffice('onlyoffice.file.modelo', $modelo),
+            [
+                'id' => auth()->id(),
+                'name' => auth()->user()->name,
+                'group' => $this->onlyOfficeService->obterGrupoUsuario(auth()->user())
+            ],
+            'edit'
+        );
+        
+        return view('onlyoffice.standalone-editor', [
+            'config' => $config,
+            'modelo' => $modelo,
+            'title' => 'Editando Modelo: ' . $modelo->nome
+        ]);
+    }
+    
+    public function editarDocumentoStandalone(DocumentoInstancia $instancia)
+    {
+        $this->authorize('update', $instancia);
+        
+        $config = $this->onlyOfficeService->criarConfiguracao(
+            $instancia->document_key,
+            $instancia->arquivo_nome,
+            $this->generateFileUrlForOnlyOffice('onlyoffice.file.instancia', $instancia),
+            [
+                'id' => auth()->id(),
+                'name' => auth()->user()->name,
+                'group' => $this->onlyOfficeService->obterGrupoUsuario(auth()->user())
+            ],
+            $this->determinarModoEdicao($instancia)
+        );
+        
+        return view('onlyoffice.standalone-editor', [
+            'config' => $config,
+            'instancia' => $instancia,
+            'title' => 'Editando: ' . $instancia->titulo
+        ]);
+    }
+    
+    public function visualizarDocumentoStandalone(DocumentoInstancia $instancia)
+    {
+        $this->authorize('view', $instancia);
+        
+        $config = $this->onlyOfficeService->criarConfiguracao(
+            $instancia->document_key,
+            $instancia->arquivo_nome,
+            $this->generateFileUrlForOnlyOffice('onlyoffice.file.instancia', $instancia),
+            [
+                'id' => auth()->id(),
+                'name' => auth()->user()->name,
+                'group' => $this->onlyOfficeService->obterGrupoUsuario(auth()->user())
+            ],
+            'view'
+        );
+        
+        return view('onlyoffice.standalone-editor', [
+            'config' => $config,
+            'instancia' => $instancia,
+            'title' => 'Visualizando: ' . $instancia->titulo
+        ]);
     }
 }

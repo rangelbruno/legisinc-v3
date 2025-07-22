@@ -85,12 +85,28 @@ class OnlyOfficeService
         $status = $data['status'];
         $resultado = ['error' => 0];
         
+        \Log::info('Processing OnlyOffice callback:', [
+            'document_key' => $documentKey,
+            'status' => $status,
+            'has_url' => isset($data['url']),
+            'url' => $data['url'] ?? 'N/A'
+        ]);
+        
         switch ($status) {
             case 1: // Editando
+                \Log::info('Document is being edited', ['document_key' => $documentKey]);
                 break;
                 
             case 2: // Pronto para salvar
+                \Log::info('Document ready to save', ['document_key' => $documentKey]);
+                if (isset($data['url'])) {
+                    $this->salvarDocumento($documentKey, $data['url']);
+                    $resultado['error'] = 0;
+                }
+                break;
+                
             case 3: // Erro ao salvar
+                \Log::warning('Error saving document', ['document_key' => $documentKey]);
                 if (isset($data['url'])) {
                     $this->salvarDocumento($documentKey, $data['url']);
                     $resultado['error'] = 0;
@@ -98,13 +114,25 @@ class OnlyOfficeService
                 break;
                 
             case 4: // Documento fechado sem alterações
+                \Log::info('Document closed without changes', ['document_key' => $documentKey]);
                 break;
                 
             case 6: // Editando, mas documento foi salvo
-            case 7: // Erro ao editar
+                \Log::info('Document being edited but saved', ['document_key' => $documentKey]);
                 if (isset($data['url'])) {
                     $this->salvarDocumento($documentKey, $data['url']);
                 }
+                break;
+                
+            case 7: // Erro ao editar
+                \Log::error('Error editing document', ['document_key' => $documentKey]);
+                if (isset($data['url'])) {
+                    $this->salvarDocumento($documentKey, $data['url']);
+                }
+                break;
+                
+            default:
+                \Log::warning('Unknown callback status', ['document_key' => $documentKey, 'status' => $status]);
                 break;
         }
         
@@ -127,15 +155,19 @@ class OnlyOfficeService
         }
         
         // Download do arquivo atualizado
-        $response = Http::get($url);
+        $internalUrl = $this->convertToInternalUrl($url);
+        \Log::info('Downloading instance file from OnlyOffice:', ['original_url' => $url, 'internal_url' => $internalUrl]);
+        
+        $response = Http::get($internalUrl);
         
         if ($response->successful()) {
             // Criar nova versão
             $versao = $instancia->versoes()->count() + 1;
-            $nomeArquivo = "documento_{$instancia->id}_v{$versao}.docx";
+            $nomeArquivo = "documento_{$instancia->id}_v{$versao}.rtf";
             $path = "documentos/versoes/{$nomeArquivo}";
             
-            Storage::put($path, $response->body());
+            // Use public disk to avoid private folder issues
+            Storage::disk('public')->put($path, $response->body());
             
             // Registrar nova versão
             \App\Models\Documento\DocumentoVersao::create([
@@ -160,18 +192,36 @@ class OnlyOfficeService
     
     private function salvarModelo(\App\Models\Documento\DocumentoModelo $modelo, string $url): void
     {
-        $response = Http::get($url);
+        // Convert URL for internal container access
+        $internalUrl = $this->convertToInternalUrl($url);
+        \Log::info('Downloading file from OnlyOffice:', ['original_url' => $url, 'internal_url' => $internalUrl]);
+        
+        $response = Http::get($internalUrl);
         
         if ($response->successful()) {
             $nomeArquivo = $modelo->arquivo_nome;
             $path = "documentos/modelos/{$nomeArquivo}";
             
-            Storage::put($path, $response->body());
+            // Use public disk to avoid private folder issues
+            Storage::disk('public')->put($path, $response->body());
             
             $modelo->update([
                 'arquivo_path' => $path,
                 'arquivo_size' => strlen($response->body())
             ]);
+            
+            \Log::info('Model file saved successfully:', [
+                'model_id' => $modelo->id,
+                'path' => $path,
+                'size' => strlen($response->body())
+            ]);
+        } else {
+            \Log::error('Failed to download model file from OnlyOffice:', [
+                'model_id' => $modelo->id,
+                'status' => $response->status(),
+                'body' => $response->body()
+            ]);
+            throw new \Exception('Failed to download file from OnlyOffice');
         }
     }
     
@@ -241,5 +291,14 @@ class OnlyOfficeService
         if ($user->hasRole('assessor')) return $grupos['assessor'];
         
         return 'default';
+    }
+    
+    /**
+     * Convert OnlyOffice URLs from external format to internal container format
+     */
+    private function convertToInternalUrl(string $url): string
+    {
+        // Replace external localhost:8080 with internal container name
+        return str_replace('http://localhost:8080', 'http://legisinc-onlyoffice:80', $url);
     }
 }

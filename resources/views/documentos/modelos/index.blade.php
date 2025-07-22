@@ -194,6 +194,15 @@
                                                 <div class="menu-item px-3">
                                                     <a href="{{ route('documentos.modelos.download', $modelo) }}" class="menu-link px-3">Download</a>
                                                 </div>
+                                                @if($modelo->document_key)
+                                                <div class="menu-item px-3">
+                                                    <a href="{{ route('onlyoffice.standalone.editor.modelo', $modelo) }}" 
+                                                       class="menu-link px-3" 
+                                                       target="_blank">
+                                                       <i class="fas fa-external-link-alt me-2"></i>Editar Online
+                                                    </a>
+                                                </div>
+                                                @endif
                                                 <div class="menu-item px-3">
                                                     <a href="{{ route('documentos.modelos.edit', $modelo) }}" class="menu-link px-3">Editar</a>
                                                 </div>

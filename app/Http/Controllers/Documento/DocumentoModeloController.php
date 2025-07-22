@@ -10,6 +10,7 @@ use App\Models\Projeto;
 use App\Services\Documento\DocumentoService;
 use App\Services\Documento\VariavelService;
 use App\Services\Documento\DocumentoModeloService;
+use Illuminate\Support\Facades\Storage;
 
 class DocumentoModeloController extends Controller
 {
@@ -185,16 +186,69 @@ class DocumentoModeloController extends Controller
     public function download(DocumentoModelo $modelo)
     {
         try {
-            $caminhoArquivo = storage_path('app/' . $modelo->arquivo_path);
+            // Log debug info
+            \Log::info('DocumentoModeloController download requested:', [
+                'modelo_id' => $modelo->id,
+                'arquivo_path' => $modelo->arquivo_path,
+                'arquivo_nome' => $modelo->arquivo_nome
+            ]);
             
-            if (!file_exists($caminhoArquivo)) {
-                return back()->withErrors(['Arquivo modelo não encontrado.']);
+            // List all files in the directory for debugging
+            $files = Storage::disk('public')->files('documentos/modelos');
+            \Log::info('Files in modelos directory:', $files);
+            
+            if (!$modelo->arquivo_path || !Storage::disk('public')->exists($modelo->arquivo_path)) {
+                \Log::warning('File not found, trying to fix path:', [
+                    'arquivo_path' => $modelo->arquivo_path,
+                    'exists' => Storage::disk('public')->exists($modelo->arquivo_path ?? 'NULL')
+                ]);
+                
+                // Try to find existing files with similar names
+                $modeloSlug = \Illuminate\Support\Str::slug($modelo->nome);
+                $possibleFiles = [
+                    "documentos/modelos/{$modeloSlug}.rtf",
+                    "documentos/modelos/{$modeloSlug}.docx", 
+                    "documentos/modelos/modelo-teste.rtf",
+                    "documentos/modelos/teste.rtf",
+                    "documentos/modelos/teste.docx"
+                ];
+                
+                $foundFile = null;
+                foreach ($possibleFiles as $possibleFile) {
+                    if (Storage::disk('public')->exists($possibleFile)) {
+                        $foundFile = $possibleFile;
+                        \Log::info('Found existing file:', ['file' => $foundFile]);
+                        break;
+                    }
+                }
+                
+                if ($foundFile) {
+                    // Update the modelo with the found file
+                    $modelo->update([
+                        'arquivo_path' => $foundFile,
+                        'arquivo_nome' => basename($foundFile),
+                        'arquivo_size' => Storage::disk('public')->size($foundFile)
+                    ]);
+                    
+                    \Log::info('Updated modelo with found file:', [
+                        'modelo_id' => $modelo->id,
+                        'new_path' => $foundFile
+                    ]);
+                } else {
+                    return back()->withErrors(['Arquivo modelo não encontrado.']);
+                }
             }
 
-            return response()->download($caminhoArquivo, $modelo->arquivo_nome);
+            // Use Storage facade for public disk
+            return Storage::disk('public')->response($modelo->arquivo_path, $modelo->arquivo_nome, [
+                'Content-Type' => 'application/rtf'
+            ]);
             
         } catch (\Exception $e) {
-            \Log::error('Erro ao baixar modelo: ' . $e->getMessage());
+            \Log::error('Erro ao baixar modelo: ' . $e->getMessage(), [
+                'modelo_id' => $modelo->id,
+                'trace' => $e->getTraceAsString()
+            ]);
             return back()->withErrors(['Erro ao baixar arquivo.']);
         }
     }
