@@ -172,7 +172,7 @@
                                         <div class="text-muted fs-7">{{ number_format($modelo->arquivo_size / 1024, 2) }} KB</div>
                                     </div>
                                     <div>
-                                        <a href="{{ route('documentos.modelos.download', $modelo) }}" class="btn btn-sm btn-light-success">
+                                        <a href="{{ route('documentos.modelos.download', $modelo) }}?v={{ $modelo->updated_at->timestamp }}" class="btn btn-sm btn-light-success">
                                             <i class="ki-duotone ki-down fs-4">
                                                 <span class="path1"></span>
                                                 <span class="path2"></span>

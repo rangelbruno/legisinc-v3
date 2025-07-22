@@ -57,9 +57,9 @@ class OnlyOfficeService
                 'customization' => [
                     'about' => false,
                     'feedback' => false,
-                    'forcesave' => false, // Disable forcesave to prevent editor closures
+                    'forcesave' => true,  // Enable forcesave for better synchronization
                     'submitForm' => false, // Disable submit form to prevent auto closure
-                    'autosave' => false,  // Disable autosave to prevent conflicts
+                    'autosave' => true,   // Enable autosave for continuous saving
                     'compactToolbar' => false,
                     'toolbarNoTabs' => false,
                     'reviewDisplay' => 'markup',
@@ -72,7 +72,8 @@ class OnlyOfficeService
                     'spellcheck' => [
                         'mode' => true,
                         'lang' => config('onlyoffice.locale.spellcheck')
-                    ]
+                    ],
+                    'close' => false      // Disable close button to prevent accidental closure
                 ]
             ],
             'height' => '100%',
@@ -391,11 +392,22 @@ class OnlyOfficeService
                     }
                 }
                 
-                // Update modelo to point to the new file
+                // Generate new document key to prevent version conflicts
+                $newDocumentKey = 'modelo_' . $modelo->id . '_' . time() . '_' . uniqid();
+                
+                // Update modelo to point to the new file with new document key
                 $modelo->update([
                     'arquivo_path' => $path,
                     'arquivo_nome' => $nomeArquivo,
-                    'arquivo_size' => strlen($response->body())
+                    'arquivo_size' => strlen($response->body()),
+                    'document_key' => $newDocumentKey
+                ]);
+                
+                \Log::info('Modelo updated after OnlyOffice save:', [
+                    'modelo_id' => $modelo->id,
+                    'new_document_key' => $newDocumentKey,
+                    'updated_at' => $modelo->fresh()->updated_at->toISOString(),
+                    'timestamp' => $modelo->fresh()->updated_at->timestamp
                 ]);
                 
                 \Log::info('Updated modelo database record:', [

@@ -239,9 +239,14 @@ class DocumentoModeloController extends Controller
                 }
             }
 
-            // Use Storage facade for public disk
+            // Use Storage facade for public disk with cache-busting headers
             return Storage::disk('public')->response($modelo->arquivo_path, $modelo->arquivo_nome, [
-                'Content-Type' => 'application/rtf'
+                'Content-Type' => 'application/rtf',
+                'Cache-Control' => 'no-cache, no-store, must-revalidate',
+                'Pragma' => 'no-cache',
+                'Expires' => '0',
+                'Last-Modified' => $modelo->updated_at->format('D, d M Y H:i:s T'),
+                'ETag' => '"' . md5($modelo->updated_at->timestamp . $modelo->id) . '"'
             ]);
             
         } catch (\Exception $e) {
@@ -251,6 +256,18 @@ class DocumentoModeloController extends Controller
             ]);
             return back()->withErrors(['Erro ao baixar arquivo.']);
         }
+    }
+    
+    public function getLastUpdate(DocumentoModelo $modelo)
+    {
+        return response()->json([
+            'id' => $modelo->id,
+            'updated_at' => $modelo->updated_at->toISOString(),
+            'timestamp' => $modelo->updated_at->timestamp,
+            'arquivo_size' => $modelo->arquivo_size,
+            'arquivo_nome' => $modelo->arquivo_nome,
+            'document_key' => $modelo->document_key
+        ]);
     }
 
     private function incrementarVersao(string $versaoAtual): string

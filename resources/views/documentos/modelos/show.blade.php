@@ -142,7 +142,7 @@
                         </div>
                         <div>
                             @if($modelo->arquivo_path)
-                                <a href="{{ route('documentos.modelos.download', $modelo) }}" 
+                                <a href="{{ route('documentos.modelos.download', $modelo) }}?v={{ $modelo->updated_at->timestamp }}" 
                                    class="btn btn-outline-success" title="Download do Modelo">
                                     <i class="fas fa-download"></i> Download
                                 </a>
@@ -154,13 +154,13 @@
                                    class="btn btn-primary" 
                                    title="Editar com ONLYOFFICE em nova aba"
                                    target="_blank">
-                                    <i class="fas fa-external-link-alt"></i> Editar Online
+                                    <i class="fas fa-external-link-alt"></i> Editar documento
                                 </a>
                             @else
                                 <a href="{{ route('documentos.modelos.editor-onlyoffice', $modelo) }}" 
                                    class="btn btn-primary" 
                                    title="Criar com ONLYOFFICE">
-                                    <i class="fas fa-plus"></i> Criar Online
+                                    <i class="fas fa-plus"></i> Criar documento
                                 </a>
                             @endif
                             
@@ -175,3 +175,91 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Listener para detectar eventos do editor OnlyOffice
+    window.addEventListener('message', function(event) {
+        if (event.data) {
+            switch(event.data.type) {
+                case 'onlyoffice_editor_closed':
+                    console.log('Editor OnlyOffice foi fechado, atualizando página...');
+                    setTimeout(() => location.reload(), 1000);
+                    break;
+                case 'onlyoffice_version_changed':
+                    console.log('Versão do documento alterada, preparando para atualizar...');
+                    setTimeout(() => location.reload(), 3000);
+                    break;
+                case 'onlyoffice_document_saved':
+                    console.log('Documento salvo no OnlyOffice, atualizando página imediatamente...');
+                    setTimeout(() => location.reload(), 500);
+                    break;
+                case 'onlyoffice_document_updated':
+                    console.log('Documento atualizado no OnlyOffice...');
+                    setTimeout(() => location.reload(), 1500);
+                    break;
+            }
+        }
+    });
+
+    // Fallback: verificar localStorage periodicamente
+    let lastChecks = {
+        closed: localStorage.getItem('onlyoffice_editor_closed'),
+        versionChanged: localStorage.getItem('onlyoffice_version_changed'),
+        updated: localStorage.getItem('onlyoffice_document_updated'),
+        saved: localStorage.getItem('onlyoffice_document_saved')
+    };
+    
+    setInterval(function() {
+        // Verificar fechamento do editor
+        const currentClosed = localStorage.getItem('onlyoffice_editor_closed');
+        if (currentClosed && currentClosed !== lastChecks.closed) {
+            const timestamp = parseInt(currentClosed);
+            if (Date.now() - timestamp < 5000) {
+                console.log('Editor OnlyOffice foi fechado (localStorage), atualizando página...');
+                lastChecks.closed = currentClosed;
+                setTimeout(() => location.reload(), 1000);
+                return;
+            }
+        }
+        
+        // Verificar mudança de versão
+        const currentVersion = localStorage.getItem('onlyoffice_version_changed');
+        if (currentVersion && currentVersion !== lastChecks.versionChanged) {
+            const timestamp = parseInt(currentVersion);
+            if (Date.now() - timestamp < 10000) {
+                console.log('Versão alterada (localStorage), atualizando página...');
+                lastChecks.versionChanged = currentVersion;
+                setTimeout(() => location.reload(), 2000);
+                return;
+            }
+        }
+        
+        // Verificar salvamento de documento (prioridade alta)
+        const currentSaved = localStorage.getItem('onlyoffice_document_saved');
+        if (currentSaved && currentSaved !== lastChecks.saved) {
+            const timestamp = parseInt(currentSaved);
+            if (Date.now() - timestamp < 5000) {
+                console.log('Documento salvo (localStorage), atualizando página imediatamente...');
+                lastChecks.saved = currentSaved;
+                setTimeout(() => location.reload(), 500);
+                return;
+            }
+        }
+        
+        // Verificar atualização de documento
+        const currentUpdate = localStorage.getItem('onlyoffice_document_updated');
+        if (currentUpdate && currentUpdate !== lastChecks.updated) {
+            const timestamp = parseInt(currentUpdate);
+            if (Date.now() - timestamp < 8000) {
+                console.log('Documento atualizado (localStorage), atualizando página...');
+                lastChecks.updated = currentUpdate;
+                setTimeout(() => location.reload(), 1500);
+                return;
+            }
+        }
+    }, 1000);
+});
+</script>
+@endpush

@@ -581,6 +581,12 @@ Route::prefix('admin/documentos')->name('documentos.')->middleware(['auth', 'che
         Route::get('/{modelo}/download', [App\Http\Controllers\Documento\DocumentoModeloController::class, 'download'])->name('download')->middleware('check.permission:documentos.view');
         Route::get('/{modelo}/download-personalizado/{projeto}', [App\Http\Controllers\Documento\DocumentoModeloController::class, 'downloadModelo'])->name('download-personalizado')->middleware('check.permission:documentos.view');
         
+        // API endpoint para verificar último update
+        Route::get('/{modelo}/last-update', [App\Http\Controllers\Documento\DocumentoModeloController::class, 'getLastUpdate'])->name('last-update')->middleware('check.permission:documentos.view');
+        
+        // API endpoint para verificar atividade recente de callbacks
+        Route::get('/callback-activity', [App\Http\Controllers\Documento\DocumentoModeloController::class, 'getCallbackActivity'])->name('callback-activity')->middleware('check.permission:documentos.view');
+        
         // ONLYOFFICE editing and duplication
         Route::get('/{modelo}/editor-onlyoffice', [App\Http\Controllers\Documento\DocumentoModeloController::class, 'editorOnlyOffice'])->name('editor-onlyoffice')->middleware('check.permission:documentos.edit');
         Route::get('/{modelo}/duplicate-onlyoffice', [App\Http\Controllers\Documento\DocumentoModeloController::class, 'duplicateOnlyOffice'])->name('duplicate-onlyoffice')->middleware('check.permission:documentos.create');

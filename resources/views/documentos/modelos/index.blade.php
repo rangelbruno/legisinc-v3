@@ -33,7 +33,7 @@
                 </a>
                 <a href="{{ route('documentos.modelos.create-onlyoffice') }}" class="btn btn-sm fw-bold btn-success">
                     <i class="ki-duotone ki-document-edit fs-2"></i>
-                    Criar Online
+                    Criar documento
                 </a>
             </div>
         </div>
@@ -142,7 +142,7 @@
                             </thead>
                             <tbody class="text-gray-600 fw-semibold">
                                 @forelse($modelos as $modelo)
-                                    <tr>
+                                    <tr data-modelo-id="{{ $modelo->id }}">
                                         <td>
                                             <div class="d-flex align-items-center">
                                                 <div class="symbol symbol-45px me-5">
@@ -192,14 +192,14 @@
                                                     <a href="{{ route('documentos.modelos.show', $modelo) }}" class="menu-link px-3">Visualizar</a>
                                                 </div>
                                                 <div class="menu-item px-3">
-                                                    <a href="{{ route('documentos.modelos.download', $modelo) }}" class="menu-link px-3">Download</a>
+                                                    <a href="{{ route('documentos.modelos.download', $modelo) }}?v={{ $modelo->updated_at->timestamp }}" class="menu-link px-3">Download</a>
                                                 </div>
                                                 @if($modelo->document_key)
                                                 <div class="menu-item px-3">
                                                     <a href="{{ route('onlyoffice.standalone.editor.modelo', $modelo) }}" 
                                                        class="menu-link px-3" 
                                                        target="_blank">
-                                                       <i class="fas fa-external-link-alt me-2"></i>Editar Online
+                                                       <i class="fas fa-external-link-alt me-2"></i>Editar documento
                                                     </a>
                                                 </div>
                                                 @endif
@@ -317,6 +317,193 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     }
+
+    // Criar indicador visual para debug
+    const debugIndicator = document.createElement('div');
+    debugIndicator.id = 'onlyoffice-debug';
+    debugIndicator.style.cssText = 'position: fixed; top: 10px; left: 10px; background: #007bff; color: white; padding: 5px 10px; border-radius: 4px; font-size: 12px; z-index: 9999; display: none;';
+    document.body.appendChild(debugIndicator);
+    
+    function showDebugMessage(message) {
+        debugIndicator.textContent = message;
+        debugIndicator.style.display = 'block';
+        setTimeout(() => {
+            debugIndicator.style.display = 'none';
+        }, 3000);
+    }
+
+    // Listener para detectar eventos do editor OnlyOffice
+    window.addEventListener('message', function(event) {
+        if (event.data && event.data.type && !event.data.source && !event.data.type.includes('content-script')) {
+            console.log('📨 Evento OnlyOffice:', event.data.type);
+            showDebugMessage('Evento: ' + event.data.type);
+            
+            switch(event.data.type) {
+                case 'onlyoffice_editor_closed':
+                    console.log('Editor OnlyOffice foi fechado, atualizando página...');
+                    showDebugMessage('Editor fechado - Atualizando...');
+                    setTimeout(function() {
+                        location.reload();
+                    }, 1000);
+                    break;
+                case 'onlyoffice_version_changed':
+                    console.log('Versão do documento alterada, preparando para atualizar...');
+                    showDebugMessage('Versão alterada - Aguardando...');
+                    // Aguardar mais tempo para mudanças de versão
+                    setTimeout(function() {
+                        location.reload();
+                    }, 5000); // Aumentado para 5 segundos
+                    break;
+                case 'onlyoffice_document_saved':
+                    console.log('Documento salvo no OnlyOffice, atualizando página imediatamente...');
+                    showDebugMessage('Documento salvo - Atualizando!');
+                    // Documento foi realmente salvo, atualizar imediatamente
+                    setTimeout(function() {
+                        location.reload();
+                    }, 1000); // Aumentado para 1 segundo
+                    break;
+                case 'onlyoffice_document_ready':
+                    console.log('Editor OnlyOffice está pronto para edição...');
+                    showDebugMessage('Editor pronto!');
+                    break;
+                case 'onlyoffice_document_updated':
+                    console.log('Documento atualizado no OnlyOffice...');
+                    showDebugMessage('Documento atualizado');
+                    // Atualização menor, aguardar menos tempo
+                    setTimeout(function() {
+                        location.reload();
+                    }, 2000);
+                    break;
+            }
+        }
+    });
+
+    // Sistema de detecção automática de mudanças no modelo via polling (simplificado)
+    let lastKnownData = new Map();
+    let isCheckingUpdates = false;
+    
+    // Função para verificar se algum modelo foi atualizado
+    function checkModelUpdates() {
+        if (isCheckingUpdates) return;
+        isCheckingUpdates = true;
+        
+        const modelRows = document.querySelectorAll('[data-modelo-id]');
+        if (modelRows.length === 0) {
+            isCheckingUpdates = false;
+            return;
+        }
+        
+        // Verificar apenas o primeiro modelo
+        const modelId = modelRows[0].getAttribute('data-modelo-id');
+        const baseUrl = window.location.origin + '/admin/documentos/modelos';
+        const url = `${baseUrl}/${modelId}/last-update`;
+        
+        fetch(url, {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Cache-Control': 'no-cache',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            }
+        })
+        .then(response => response.ok ? response.json() : Promise.reject('HTTP ' + response.status))
+        .then(data => {
+            const currentData = {
+                timestamp: data.timestamp,
+                size: data.arquivo_size,
+                name: data.arquivo_nome
+            };
+            const lastData = lastKnownData.get(modelId);
+            
+            if (!lastData) {
+                lastKnownData.set(modelId, currentData);
+            } else {
+                // Check for changes
+                const changed = currentData.timestamp !== lastData.timestamp || 
+                               currentData.size !== lastData.size ||
+                               currentData.name !== lastData.name;
+                
+                if (changed) {
+                    console.log('🚀 Model', modelId, 'changed! Reloading page...');
+                    showDebugMessage('Model ' + modelId + ' changed!');
+                    clearInterval(modelCheckInterval);
+                    setTimeout(() => location.reload(), 1000);
+                    return;
+                }
+            }
+            isCheckingUpdates = false;
+        })
+        .catch(error => {
+            console.log('Error checking model', modelId + ':', error);
+            isCheckingUpdates = false;
+        });
+    }
+
+    // Check for model updates every 3 seconds
+    let modelCheckInterval = setInterval(checkModelUpdates, 3000);
+    
+    // Stop checking when leaving the page
+    window.addEventListener('beforeunload', () => {
+        if (modelCheckInterval) clearInterval(modelCheckInterval);
+    });
+
+    // Fallback: verificar localStorage periodicamente
+    let lastChecks = {
+        closed: localStorage.getItem('onlyoffice_editor_closed'),
+        versionChanged: localStorage.getItem('onlyoffice_version_changed'),
+        updated: localStorage.getItem('onlyoffice_document_updated'),
+        saved: localStorage.getItem('onlyoffice_document_saved')
+    };
+    
+    setInterval(function() {
+        // Verificar fechamento do editor
+        const currentClosed = localStorage.getItem('onlyoffice_editor_closed');
+        if (currentClosed && currentClosed !== lastChecks.closed) {
+            const timestamp = parseInt(currentClosed);
+            if (Date.now() - timestamp < 5000) {
+                console.log('Editor OnlyOffice foi fechado (localStorage), atualizando página...');
+                lastChecks.closed = currentClosed;
+                setTimeout(() => location.reload(), 1000);
+                return;
+            }
+        }
+        
+        // Verificar mudança de versão
+        const currentVersion = localStorage.getItem('onlyoffice_version_changed');
+        if (currentVersion && currentVersion !== lastChecks.versionChanged) {
+            const timestamp = parseInt(currentVersion);
+            if (Date.now() - timestamp < 10000) { // 10 segundos para versão
+                console.log('Versão alterada (localStorage), atualizando página...');
+                lastChecks.versionChanged = currentVersion;
+                setTimeout(() => location.reload(), 2000);
+                return;
+            }
+        }
+        
+        // Verificar salvamento de documento (prioridade alta)
+        const currentSaved = localStorage.getItem('onlyoffice_document_saved');
+        if (currentSaved && currentSaved !== lastChecks.saved) {
+            const timestamp = parseInt(currentSaved);
+            if (Date.now() - timestamp < 5000) { // 5 segundos para save
+                console.log('Documento salvo (localStorage), atualizando página imediatamente...');
+                lastChecks.saved = currentSaved;
+                setTimeout(() => location.reload(), 500);
+                return;
+            }
+        }
+        
+        // Verificar atualização de documento
+        const currentUpdate = localStorage.getItem('onlyoffice_document_updated');
+        if (currentUpdate && currentUpdate !== lastChecks.updated) {
+            const timestamp = parseInt(currentUpdate);
+            if (Date.now() - timestamp < 8000) { // 8 segundos para update
+                console.log('Documento atualizado (localStorage), atualizando página...');
+                lastChecks.updated = currentUpdate;
+                setTimeout(() => location.reload(), 1500);
+                return;
+            }
+        }
+    }, 1000);
 });
 </script>
 @endpush
