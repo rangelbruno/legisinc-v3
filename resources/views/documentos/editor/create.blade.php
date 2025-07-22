@@ -59,6 +59,39 @@
     background: #f8f9fa;
     transform: translateX(5px);
 }
+
+.layout-section {
+    border: 1px solid #e1e5e9;
+    border-radius: 0.475rem;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    background: #fafafa;
+}
+
+.layout-section.active {
+    background: #f8f9fa;
+    border-color: #1976d2;
+}
+
+.form-range::-webkit-slider-thumb {
+    background: #1976d2;
+}
+
+.form-range::-moz-range-thumb {
+    background: #1976d2;
+    border: none;
+}
+
+.layout-preview {
+    border: 1px dashed #d1d5db;
+    padding: 1rem;
+    border-radius: 0.375rem;
+    background: #f9fafb;
+    font-size: 0.75rem;
+    color: #6b7280;
+    text-align: center;
+    margin-top: 0.5rem;
+}
 </style>
 @endpush
 
@@ -300,6 +333,150 @@
                         </div>
                     </div>
                     <!--end::Options Card-->
+
+                    <!--begin::Layout Card-->
+                    <div class="card mt-5">
+                        <div class="card-header">
+                            <h3 class="card-title">Layout do Documento</h3>
+                        </div>
+                        <div class="card-body">
+                            <!--begin::Header Configuration-->
+                            <div class="mb-5">
+                                <label class="form-label fw-semibold">Cabeçalho Personalizado</label>
+                                <div class="form-check form-switch form-check-custom form-check-solid mb-3">
+                                    <input class="form-check-input" type="checkbox" id="enable_header" checked>
+                                    <label class="form-check-label" for="enable_header">
+                                        Incluir cabeçalho oficial
+                                    </label>
+                                </div>
+                                <div id="header_options">
+                                    <div class="mb-4">
+                                        <label class="form-label fw-semibold">Logo da Câmara</label>
+                                        <div class="row align-items-center">
+                                            <div class="col-md-8">
+                                                <div class="form-check form-check-custom form-check-solid mb-2">
+                                                    <input class="form-check-input" type="checkbox" id="include_logo" checked>
+                                                    <label class="form-check-label" for="include_logo">
+                                                        Incluir logo personalizada
+                                                    </label>
+                                                </div>
+                                                <input type="file" class="form-control" id="logo_upload" accept="image/*" style="display: none;">
+                                                <button type="button" class="btn btn-sm btn-light-primary" id="btn_upload_logo">
+                                                    <i class="ki-duotone ki-cloud-upload fs-2"></i>
+                                                    Upload da Logo
+                                                </button>
+                                                <div class="text-muted fs-7 mt-1">Formatos: PNG, JPG, SVG (máx. 2MB)</div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div id="logo_preview" class="border border-dashed border-gray-300 rounded p-3 text-center" style="min-height: 80px;">
+                                                    <div class="text-muted fs-7">Preview da logo</div>
+                                                    <img id="logo_image" src="" alt="Logo" style="display: none; max-width: 100%; max-height: 60px;">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="mb-4">
+                                        <label class="form-label fw-semibold">Configuração do Cabeçalho</label>
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <label class="form-label">Posição da Logo</label>
+                                                <select class="form-select" id="logo_position">
+                                                    <option value="left">Esquerda</option>
+                                                    <option value="center" selected>Centro</option>
+                                                    <option value="right">Direita</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label">Tamanho da Logo</label>
+                                                <select class="form-select" id="logo_size">
+                                                    <option value="small">Pequena</option>
+                                                    <option value="medium" selected>Média</option>
+                                                    <option value="large">Grande</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="mt-3">
+                                            <label class="form-label">Texto do Cabeçalho</label>
+                                            <textarea class="form-control" id="header_text" rows="3" placeholder="CÂMARA MUNICIPAL DE [CIDADE]\nEstado de [ESTADO]\nRua [ENDEREÇO]">
+CÂMARA MUNICIPAL DE EXEMPLO
+Estado de São Paulo
+Rua das Flores, 123</textarea>
+                                            <div class="text-muted fs-7 mt-1">O texto aparecerá ao lado ou abaixo da logo conforme configuração</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <!--end::Header Configuration-->
+
+                            <!--begin::Footer Configuration-->
+                            <div class="mb-5">
+                                <label class="form-label fw-semibold">Rodapé Personalizado</label>
+                                <div class="form-check form-switch form-check-custom form-check-solid mb-3">
+                                    <input class="form-check-input" type="checkbox" id="enable_footer" checked>
+                                    <label class="form-check-label" for="enable_footer">
+                                        Incluir rodapé oficial
+                                    </label>
+                                </div>
+                                <div id="footer_options">
+                                    <div class="mb-3">
+                                        <label class="form-label">Texto do Rodapé</label>
+                                        <textarea class="form-control" id="footer_text" rows="2" placeholder="Telefone: (11) 1234-5678 | E-mail: contato@camara.gov.br">
+Telefone: (11) 1234-5678 | E-mail: contato@camara.gov.br
+www.camara.gov.br</textarea>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Numeração de Páginas</label>
+                                        <select class="form-select" id="page_numbering">
+                                            <option value="none">Sem numeração</option>
+                                            <option value="bottom-center" selected>Centro inferior</option>
+                                            <option value="bottom-right">Direita inferior</option>
+                                            <option value="top-right">Direita superior</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <!--end::Footer Configuration-->
+
+                            <!--begin::Watermark Configuration-->
+                            <div class="mb-5">
+                                <label class="form-label fw-semibold">Marca d'Água</label>
+                                <div class="form-check form-switch form-check-custom form-check-solid mb-3">
+                                    <input class="form-check-input" type="checkbox" id="enable_watermark">
+                                    <label class="form-check-label" for="enable_watermark">
+                                        Incluir marca d'água
+                                    </label>
+                                </div>
+                                <div id="watermark_options" style="display: none;">
+                                    <div class="mb-3">
+                                        <label class="form-label">Texto da Marca d'Água</label>
+                                        <input type="text" class="form-control" id="watermark_text" placeholder="CÂMARA MUNICIPAL" value="CÂMARA MUNICIPAL">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Opacidade</label>
+                                        <input type="range" class="form-range" id="watermark_opacity" min="10" max="50" value="20">
+                                        <div class="text-muted fs-7">Opacidade: <span id="opacity_value">20</span>%</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <!--end::Watermark Configuration-->
+
+                            <!--begin::Preview Section-->
+                            <div class="separator separator-dashed my-5"></div>
+                            <div class="mb-4">
+                                <label class="form-label fw-semibold">Preview do Layout</label>
+                                <div id="layout_preview" class="border border-gray-300 rounded p-4 bg-light">
+                                    <div class="text-center">
+                                        <button type="button" class="btn btn-sm btn-light-info" id="btn_preview_layout">
+                                            <i class="ki-duotone ki-eye fs-2"></i>
+                                            Visualizar Layout
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <!--end::Preview Section-->
+                        </div>
+                    </div>
+                    <!--end::Layout Card-->
                 </div>
                 <!--end::Sidebar-->
             </div>
@@ -330,6 +507,14 @@
                             <option value="docx">Microsoft Word (.docx)</option>
                             <option value="pdf">Adobe PDF (.pdf)</option>
                         </select>
+                    </div>
+                    <div class="mb-4">
+                        <div class="form-check form-check-custom form-check-solid">
+                            <input class="form-check-input" type="checkbox" id="export_with_layout" checked>
+                            <label class="form-check-label" for="export_with_layout">
+                                Incluir cabeçalho, rodapé e marca d'água configurados
+                            </label>
+                        </div>
                     </div>
                     <div class="notice d-flex bg-light-warning rounded border-warning border border-dashed p-4">
                         <div class="d-flex flex-stack flex-grow-1">
@@ -558,7 +743,26 @@ document.addEventListener('DOMContentLoaded', function() {
                 titulo: title,
                 conteudo: content,
                 variaveis: variaveis,
-                formato_exportacao: format
+                formato_exportacao: format,
+                layout_config: {
+                    header: {
+                        enabled: document.getElementById('enable_header').checked,
+                        include_logo: document.getElementById('include_logo').checked,
+                        text: document.getElementById('header_text').value
+                    },
+                    footer: {
+                        enabled: document.getElementById('enable_footer').checked,
+                        text: document.getElementById('footer_text').value,
+                        page_numbering: document.getElementById('page_numbering').value
+                    },
+                    watermark: {
+                        enabled: document.getElementById('enable_watermark').checked,
+                        text: document.getElementById('watermark_text').value,
+                        opacity: document.getElementById('watermark_opacity').value
+                    },
+                    include_layout: document.getElementById('export_with_layout').checked,
+                    logo_file: window.logoFile || null
+                }
             })
         })
         .then(response => response.json())
@@ -659,6 +863,131 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         
         container.innerHTML = html;
+    }
+
+    // Layout configuration handlers
+    document.getElementById('enable_header').addEventListener('change', function() {
+        document.getElementById('header_options').style.display = this.checked ? 'block' : 'none';
+    });
+
+    document.getElementById('enable_footer').addEventListener('change', function() {
+        document.getElementById('footer_options').style.display = this.checked ? 'block' : 'none';
+    });
+
+    document.getElementById('enable_watermark').addEventListener('change', function() {
+        document.getElementById('watermark_options').style.display = this.checked ? 'block' : 'none';
+    });
+
+    document.getElementById('watermark_opacity').addEventListener('input', function() {
+        document.getElementById('opacity_value').textContent = this.value;
+    });
+
+    // Logo upload functionality
+    document.getElementById('btn_upload_logo').addEventListener('click', function() {
+        document.getElementById('logo_upload').click();
+    });
+
+    document.getElementById('logo_upload').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            // Validate file type
+            const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/svg+xml'];
+            if (!validTypes.includes(file.type)) {
+                Swal.fire('Erro', 'Por favor, selecione um arquivo de imagem válido (PNG, JPG, SVG).', 'error');
+                return;
+            }
+
+            // Validate file size (2MB max)
+            if (file.size > 2 * 1024 * 1024) {
+                Swal.fire('Erro', 'O arquivo deve ter no máximo 2MB.', 'error');
+                return;
+            }
+
+            // Show preview
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const logoImage = document.getElementById('logo_image');
+                logoImage.src = e.target.result;
+                logoImage.style.display = 'block';
+                document.getElementById('logo_preview').querySelector('.text-muted').style.display = 'none';
+            };
+            reader.readAsDataURL(file);
+
+            // Store file data for later use
+            window.logoFile = file;
+        }
+    });
+
+    // Preview layout functionality
+    document.getElementById('btn_preview_layout').addEventListener('click', function() {
+        generateLayoutPreview();
+    });
+
+    function generateLayoutPreview() {
+        const includeHeader = document.getElementById('enable_header').checked;
+        const includeLogo = document.getElementById('include_logo').checked;
+        const headerText = document.getElementById('header_text').value;
+        const logoPosition = document.getElementById('logo_position').value;
+        const logoSize = document.getElementById('logo_size').value;
+        const includeFooter = document.getElementById('enable_footer').checked;
+        const footerText = document.getElementById('footer_text').value;
+        const pageNumbering = document.getElementById('page_numbering').value;
+        const includeWatermark = document.getElementById('enable_watermark').checked;
+        const watermarkText = document.getElementById('watermark_text').value;
+        const watermarkOpacity = document.getElementById('watermark_opacity').value;
+
+        let previewHtml = '<div style="background: white; border: 1px solid #ddd; min-height: 200px; position: relative; font-family: Arial, sans-serif;">';
+
+        // Header
+        if (includeHeader) {
+            previewHtml += '<div style="padding: 15px; border-bottom: 1px solid #eee; text-align: ' + logoPosition + ';">';
+            
+            if (includeLogo && window.logoFile) {
+                const logoSizeMap = { small: '40px', medium: '60px', large: '80px' };
+                previewHtml += '<img src="' + document.getElementById('logo_image').src + '" style="height: ' + logoSizeMap[logoSize] + '; margin-bottom: 10px;"><br>';
+            }
+            
+            if (headerText.trim()) {
+                previewHtml += '<div style="font-size: 12px; line-height: 1.4; color: #333;">' + headerText.replace(/\n/g, '<br>') + '</div>';
+            }
+            
+            previewHtml += '</div>';
+        }
+
+        // Document content area
+        previewHtml += '<div style="padding: 20px; min-height: 100px; position: relative;">';
+        
+        // Watermark
+        if (includeWatermark && watermarkText.trim()) {
+            previewHtml += '<div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); font-size: 24px; color: #ccc; opacity: ' + (watermarkOpacity / 100) + '; z-index: 1; pointer-events: none;">' + watermarkText + '</div>';
+        }
+        
+        previewHtml += '<div style="position: relative; z-index: 2;">Conteúdo do documento aparecerá aqui...</div>';
+        previewHtml += '</div>';
+
+        // Footer
+        if (includeFooter) {
+            previewHtml += '<div style="padding: 15px; border-top: 1px solid #eee; font-size: 10px; color: #666;">';
+            
+            if (footerText.trim()) {
+                previewHtml += '<div>' + footerText.replace(/\n/g, '<br>') + '</div>';
+            }
+            
+            if (pageNumbering !== 'none') {
+                const alignMap = {
+                    'bottom-center': 'center',
+                    'bottom-right': 'right', 
+                    'top-right': 'right'
+                };
+                previewHtml += '<div style="text-align: ' + alignMap[pageNumbering] + '; margin-top: 5px;">Página 1</div>';
+            }
+            
+            previewHtml += '</div>';
+        }
+
+        previewHtml += '</div>';
+
+        document.getElementById('layout_preview').innerHTML = previewHtml;
     }
 });
 </script>
