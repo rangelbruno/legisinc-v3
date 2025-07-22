@@ -17,11 +17,13 @@ class DocumentoModelo extends Model
         'nome',
         'descricao',
         'tipo_proposicao_id',
+        'document_key',
         'arquivo_path',
         'arquivo_nome',
         'arquivo_size',
         'variaveis',
         'versao',
+        'icon',
         'ativo',
         'created_by'
     ];
@@ -43,6 +45,11 @@ class DocumentoModelo extends Model
     }
 
     public function creator()
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+    
+    public function criador()
     {
         return $this->belongsTo(User::class, 'created_by');
     }

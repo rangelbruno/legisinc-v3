@@ -64,9 +64,46 @@ services:
     networks:
       - legisinc_network
 
+  onlyoffice-documentserver:
+    image: onlyoffice/documentserver:8.0
+    container_name: legisinc-onlyoffice
+    restart: unless-stopped
+    environment:
+      - JWT_ENABLED=true
+      - JWT_SECRET=${ONLYOFFICE_JWT_SECRET:-MySecretKey123}
+      - JWT_HEADER=Authorization
+      - JWT_IN_BODY=true
+      - WOPI_ENABLED=false
+      - USE_UNAUTHORIZED_STORAGE=false
+      - DB_TYPE=postgres
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=legisinc
+      - DB_USER=postgres
+      - DB_PWD=123456
+      - REDIS_SERVER_HOST=redis
+      - REDIS_SERVER_PORT=6379
+    ports:
+      - "8080:80"
+    volumes:
+      - onlyoffice_data:/var/www/onlyoffice/Data
+      - onlyoffice_logs:/var/log/onlyoffice
+      - onlyoffice_cache:/var/lib/onlyoffice/documentserver/App_Data/cache/files
+      - onlyoffice_forgotten:/var/lib/onlyoffice/documentserver/App_Data/cache/forgotten
+      - ./storage/app/public:/var/www/onlyoffice/Data/public
+    networks:
+      - legisinc_network
+    depends_on:
+      - db
+      - redis
+
 volumes:
   postgres_data:
   redis_data:
+  onlyoffice_data:
+  onlyoffice_logs:
+  onlyoffice_cache:
+  onlyoffice_forgotten:
 
 networks:
   legisinc_network:

@@ -29,7 +29,11 @@
             <div class="d-flex align-items-center gap-2 gap-lg-3">
                 <a href="{{ route('documentos.modelos.create') }}" class="btn btn-sm fw-bold btn-primary">
                     <i class="ki-duotone ki-plus fs-2"></i>
-                    Novo Modelo
+                    Novo Modelo (Upload)
+                </a>
+                <a href="{{ route('documentos.modelos.create-onlyoffice') }}" class="btn btn-sm fw-bold btn-success">
+                    <i class="ki-duotone ki-document-edit fs-2"></i>
+                    Criar Online
                 </a>
             </div>
         </div>

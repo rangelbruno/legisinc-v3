@@ -83,4 +83,50 @@ Route::prefix('parametros-modular')->name('api.parametros-modular.')->group(func
         Route::get('/regras-validacao', [App\Http\Controllers\Parametro\CampoParametroController::class, 'regrasValidacao'])->name('regras-validacao');
         Route::post('/validar-configuracao', [App\Http\Controllers\Parametro\CampoParametroController::class, 'validarConfiguracao'])->name('validar-configuracao');
     });
+});
+
+// ===== ONLYOFFICE API ROUTES =====
+Route::prefix('onlyoffice')->name('api.onlyoffice.')->group(function () {
+    
+    // Callback route (without CSRF protection for ONLYOFFICE server)
+    Route::post('/callback/{documentKey}', [App\Http\Controllers\OnlyOffice\OnlyOfficeController::class, 'callback'])->name('callback');
+    
+    // Document models API
+    Route::get('/modelos', [App\Http\Controllers\Documento\DocumentoModeloController::class, 'apiList'])->name('modelos.list');
+    Route::get('/modelos/{tipo_proposicao_id}', [App\Http\Controllers\Documento\DocumentoModeloController::class, 'apiList'])->name('modelos.by-tipo');
+});
+
+// Mock API routes for testing (kept from original, no CSRF protection needed)
+Route::prefix('mock-api')->name('mock-api.')->group(function () {
+    Route::get('/health', function () {
+        return response()->json([
+            'status' => 'ok',
+            'service' => 'Mock API',
+            'timestamp' => now()->toISOString()
+        ]);
+    })->name('health');
+    
+    Route::get('/parlamentares', function () {
+        return response()->json([
+            'data' => [
+                ['id' => 1, 'nome' => 'João Silva', 'partido' => 'PDT'],
+                ['id' => 2, 'nome' => 'Maria Santos', 'partido' => 'PSDB'],
+                ['id' => 3, 'nome' => 'Pedro Oliveira', 'partido' => 'PT']
+            ],
+            'total' => 3
+        ]);
+    })->name('parlamentares');
+    
+    Route::post('/parametros/validar', function () {
+        return response()->json(['valid' => true]);
+    })->name('parametros.validar');
+    
+    Route::get('/status', function () {
+        return response()->json([
+            'api_status' => 'operational',
+            'database' => 'connected',
+            'cache' => 'active',
+            'timestamp' => now()->toISOString()
+        ]);
+    })->name('status');
 }); 

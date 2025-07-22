@@ -9,12 +9,14 @@ use App\Models\TipoProposicao;
 use App\Models\Projeto;
 use App\Services\Documento\DocumentoService;
 use App\Services\Documento\VariavelService;
+use App\Services\Documento\DocumentoModeloService;
 
 class DocumentoModeloController extends Controller
 {
     public function __construct(
         private DocumentoService $documentoService,
-        private VariavelService $variavelService
+        private VariavelService $variavelService,
+        private DocumentoModeloService $documentoModeloService
     ) {}
 
     public function index()
@@ -206,5 +208,81 @@ class DocumentoModeloController extends Controller
         $minor++;
         
         return $major . '.' . $minor;
+    }
+    
+    // Métodos para integração ONLYOFFICE
+    
+    public function createOnlyOffice()
+    {
+        $tiposProposicao = TipoProposicao::ativos()->ordenados()->get();
+        
+        return view('documentos.modelos.create-onlyoffice', compact('tiposProposicao'));
+    }
+    
+    public function storeOnlyOffice(Request $request)
+    {
+        $validated = $request->validate([
+            'nome' => 'required|string|max:255|unique:documento_modelos,nome',
+            'descricao' => 'nullable|string|max:1000',
+            'tipo_proposicao_id' => 'nullable|exists:tipos_proposicao,id',
+            'variaveis' => 'nullable|array',
+            'variaveis.*' => 'string',
+            'icon' => 'nullable|string|max:100'
+        ]);
+        
+        $modelo = $this->documentoModeloService->criarModelo($validated);
+        
+        return redirect()
+            ->route('onlyoffice.editor.modelo', $modelo)
+            ->with('success', 'Modelo criado com sucesso! Agora você pode editá-lo online.');
+    }
+    
+    public function editorOnlyOffice(DocumentoModelo $modelo)
+    {
+        return redirect()->route('onlyoffice.editor.modelo', $modelo);
+    }
+    
+    public function duplicateOnlyOffice(DocumentoModelo $modelo)
+    {
+        $tiposProposicao = TipoProposicao::ativos()->ordenados()->get();
+        
+        return view('documentos.modelos.duplicate-onlyoffice', compact('modelo', 'tiposProposicao'));
+    }
+    
+    public function storeDuplicateOnlyOffice(Request $request, DocumentoModelo $modelo)
+    {
+        $validated = $request->validate([
+            'nome' => 'required|string|max:255|unique:documento_modelos,nome',
+            'descricao' => 'nullable|string|max:1000',
+            'tipo_proposicao_id' => 'nullable|exists:tipos_proposicao,id',
+            'variaveis' => 'nullable|array',
+            'variaveis.*' => 'string',
+            'icon' => 'nullable|string|max:100'
+        ]);
+        
+        $novoModelo = $this->documentoModeloService->duplicarModelo($modelo, $validated);
+        
+        return redirect()
+            ->route('onlyoffice.editor.modelo', $novoModelo)
+            ->with('success', 'Modelo duplicado com sucesso! Agora você pode editá-lo online.');
+    }
+    
+    public function apiList(Request $request)
+    {
+        $tipoProposicaoId = $request->get('tipo_proposicao_id');
+        
+        $modelos = $this->documentoModeloService->obterModelosDisponiveis($tipoProposicaoId);
+        
+        return response()->json([
+            'modelos' => $modelos->map(function($modelo) {
+                return [
+                    'id' => $modelo->id,
+                    'nome' => $modelo->nome,
+                    'descricao' => $modelo->descricao,
+                    'icon' => $modelo->icon,
+                    'variaveis' => $modelo->variaveis ?? []
+                ];
+            })
+        ]);
     }
 }

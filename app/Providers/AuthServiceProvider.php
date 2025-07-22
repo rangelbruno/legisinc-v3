@@ -3,6 +3,10 @@
 namespace App\Providers;
 
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
+use App\Models\Documento\DocumentoModelo;
+use App\Models\Documento\DocumentoInstancia;
+use App\Policies\DocumentoModeloPolicy;
+use App\Policies\DocumentoInstanciaPolicy;
 
 class AuthServiceProvider extends ServiceProvider
 {
@@ -12,7 +16,8 @@ class AuthServiceProvider extends ServiceProvider
      * @var array<class-string, class-string>
      */
     protected $policies = [
-        //
+        DocumentoModelo::class => DocumentoModeloPolicy::class,
+        DocumentoInstancia::class => DocumentoInstanciaPolicy::class,
     ];
 
     /**

@@ -609,3 +609,53 @@ Route::prefix('admin/documentos/editor')->name('documentos.editor.')->middleware
     Route::post('/preencher-variaveis', [App\Http\Controllers\Documento\DocumentoEditorController::class, 'preencherVariaveisProjeto'])->name('preencher-variaveis')->middleware('check.permission:documentos.view');
 });
 
+// ===== ONLYOFFICE INTEGRATION ROUTES =====
+Route::prefix('onlyoffice')->name('onlyoffice.')->middleware(['auth'])->group(function () {
+    
+    // Editor routes
+    Route::get('/editor/modelo/{modelo}', [App\Http\Controllers\OnlyOffice\OnlyOfficeController::class, 'editarModelo'])->name('editor.modelo');
+    Route::get('/editor/instancia/{instancia}', [App\Http\Controllers\OnlyOffice\OnlyOfficeController::class, 'editarDocumento'])->name('editor.instancia');
+    Route::get('/viewer/instancia/{instancia}', [App\Http\Controllers\OnlyOffice\OnlyOfficeController::class, 'visualizarDocumento'])->name('viewer.instancia');
+    
+    // File serving routes
+    Route::get('/file/modelo/{modelo}', [App\Http\Controllers\OnlyOffice\OnlyOfficeController::class, 'downloadModelo'])->name('file.modelo');
+    Route::get('/file/instancia/{instancia}', [App\Http\Controllers\OnlyOffice\OnlyOfficeController::class, 'downloadInstancia'])->name('file.instancia');
+    
+    // Conversion routes
+    Route::get('/pdf/instancia/{instancia}', [App\Http\Controllers\OnlyOffice\OnlyOfficeController::class, 'converterParaPDF'])->name('pdf.instancia');
+    
+    // History routes
+    Route::get('/history/instancia/{instancia}', [App\Http\Controllers\OnlyOffice\OnlyOfficeController::class, 'obterHistoricoVersoes'])->name('history.instancia');
+});
+
+// ONLYOFFICE Enhanced Documento Modelos routes
+Route::prefix('admin/documentos/modelos')->name('documentos.modelos.')->middleware(['auth', 'check.screen.permission'])->group(function () {
+    
+    // ONLYOFFICE creation workflow
+    Route::get('/create-onlyoffice', [App\Http\Controllers\Documento\DocumentoModeloController::class, 'createOnlyOffice'])->name('create-onlyoffice')->middleware('check.permission:documentos.create');
+    Route::post('/store-onlyoffice', [App\Http\Controllers\Documento\DocumentoModeloController::class, 'storeOnlyOffice'])->name('store-onlyoffice')->middleware('check.permission:documentos.create');
+    
+    // ONLYOFFICE editing
+    Route::get('/{modelo}/editor-onlyoffice', [App\Http\Controllers\Documento\DocumentoModeloController::class, 'editorOnlyOffice'])->name('editor-onlyoffice')->middleware('check.permission:documentos.edit');
+    
+    // ONLYOFFICE duplication workflow
+    Route::get('/{modelo}/duplicate-onlyoffice', [App\Http\Controllers\Documento\DocumentoModeloController::class, 'duplicateOnlyOffice'])->name('duplicate-onlyoffice')->middleware('check.permission:documentos.create');
+    Route::post('/{modelo}/store-duplicate-onlyoffice', [App\Http\Controllers\Documento\DocumentoModeloController::class, 'storeDuplicateOnlyOffice'])->name('store-duplicate-onlyoffice')->middleware('check.permission:documentos.create');
+});
+
+// Debug route - remove after testing
+Route::get('/debug-user', function () {
+    if (!auth()->check()) {
+        return response()->json(['error' => 'User not authenticated']);
+    }
+    
+    $user = auth()->user();
+    return response()->json([
+        'user_id' => $user->id,
+        'user_name' => $user->name,
+        'user_email' => $user->email,
+        'roles' => $user->getRoleNames(),
+        'permissions' => $user->getPermissionNames(),
+    ]);
+})->middleware('auth');
+

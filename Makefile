@@ -1,6 +1,6 @@
 # Makefile para gerenciar o ambiente Docker do Laravel
 
-.PHONY: help build up down restart logs shell composer artisan npm test
+.PHONY: help build up down restart logs shell composer artisan npm test onlyoffice-up onlyoffice-down onlyoffice-logs onlyoffice-restart onlyoffice-test
 
 # Variáveis
 COMPOSE_FILE = docker-compose.yml
@@ -117,3 +117,35 @@ fresh-start: ## Reinicia o ambiente completamente
 	make build
 	make up
 	make artisan cmd="key:generate"
+
+# Comandos ONLYOFFICE
+onlyoffice-up: ## Inicia o ONLYOFFICE Document Server
+	docker-compose up -d onlyoffice-documentserver redis
+	@echo "Aguardando ONLYOFFICE inicializar..."
+	@sleep 30
+	@echo "ONLYOFFICE Document Server disponível em http://localhost:8080"
+	@echo "Testando conexão..."
+	@make onlyoffice-test
+
+onlyoffice-down: ## Para o ONLYOFFICE Document Server
+	docker-compose stop onlyoffice-documentserver
+
+onlyoffice-logs: ## Exibe logs do ONLYOFFICE
+	docker-compose logs -f onlyoffice-documentserver
+
+onlyoffice-restart: ## Reinicia o ONLYOFFICE Document Server
+	docker-compose restart onlyoffice-documentserver
+	@sleep 20
+	@make onlyoffice-test
+
+onlyoffice-test: ## Testa a conexão com ONLYOFFICE
+	@echo "Testando ONLYOFFICE..."
+	@curl -s http://localhost:8080/healthcheck && echo "✅ ONLYOFFICE está funcionando" || echo "❌ ONLYOFFICE não está respondendo"
+
+dev-with-onlyoffice: dev-setup onlyoffice-up ## Ambiente completo com ONLYOFFICE
+	@echo "🚀 Ambiente completo iniciado com ONLYOFFICE"
+	@echo "📝 Editor: http://localhost:8080"
+	@echo "🌐 LegisInc: http://localhost:8001"
+
+logs-all: ## Logs combinados da aplicação e ONLYOFFICE
+	docker-compose logs -f app onlyoffice-documentserver

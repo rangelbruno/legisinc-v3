@@ -16,6 +16,7 @@ class DocumentoInstancia extends Model
     protected $fillable = [
         'projeto_id',
         'modelo_id',
+        'document_key',
         'titulo',
         'arquivo_path',
         'arquivo_nome',
@@ -26,6 +27,8 @@ class DocumentoInstancia extends Model
         'status',
         'versao',
         'metadados',
+        'colaboradores',
+        'editado_em',
         'created_by',
         'updated_by'
     ];
@@ -33,6 +36,8 @@ class DocumentoInstancia extends Model
     protected $casts = [
         'metadados' => 'array',
         'variaveis_personalizadas' => 'array',
+        'colaboradores' => 'array',
+        'editado_em' => 'datetime',
         'versao' => 'integer'
     ];
 
@@ -85,5 +90,10 @@ class DocumentoInstancia extends Model
     public function proximaVersao()
     {
         return $this->versoes()->count() + 1;
+    }
+    
+    public function colaboradores()
+    {
+        return $this->hasMany(\App\Models\Documento\DocumentoColaborador::class, 'instancia_id');
     }
 }
