@@ -649,6 +649,9 @@ Route::prefix('onlyoffice-standalone')->name('onlyoffice.standalone.')->middlewa
     Route::get('/editor/modelo/{modelo}', [App\Http\Controllers\OnlyOffice\OnlyOfficeController::class, 'editarModeloStandalone'])->name('editor.modelo');
     Route::get('/editor/instancia/{instancia}', [App\Http\Controllers\OnlyOffice\OnlyOfficeController::class, 'editarDocumentoStandalone'])->name('editor.instancia');
     Route::get('/viewer/instancia/{instancia}', [App\Http\Controllers\OnlyOffice\OnlyOfficeController::class, 'visualizarDocumentoStandalone'])->name('viewer.instancia');
+    
+    // Force save routes
+    Route::post('/force-save/modelo/{modelo}', [App\Http\Controllers\OnlyOffice\OnlyOfficeController::class, 'forceSaveModelo'])->name('force-save.modelo');
 });
 
 

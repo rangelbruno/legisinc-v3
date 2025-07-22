@@ -36,6 +36,31 @@ class OnlyOfficeController extends Controller
         
         $this->authorize('update', $modelo);
         
+        // Only regenerate document_key if the file was recently modified (to avoid callback conflicts)
+        // This prevents cache issues while avoiding orphaned callbacks
+        $fileLastModified = $modelo->updated_at;
+        $keyAge = now()->diffInMinutes($fileLastModified);
+        
+        if (empty($modelo->document_key) || $keyAge > 5) { // Regenerate if key is empty or file was modified >5min ago
+            $oldKey = $modelo->document_key;
+            $novoDocumentKey = 'modelo_' . time() . '_' . uniqid() . '_' . rand(1000, 9999);
+            $modelo->update(['document_key' => $novoDocumentKey]);
+            
+            \Log::info('Document key regenerated for modelo:', [
+                'modelo_id' => $modelo->id,
+                'old_key' => $oldKey,
+                'new_key' => $novoDocumentKey,
+                'reason' => 'empty key or file modified >5min ago',
+                'key_age_minutes' => $keyAge
+            ]);
+        } else {
+            \Log::info('Using existing document key for modelo (recently modified):', [
+                'modelo_id' => $modelo->id,
+                'existing_key' => $modelo->document_key,
+                'key_age_minutes' => $keyAge
+            ]);
+        }
+        
         $config = $this->onlyOfficeService->criarConfiguracao(
             $modelo->document_key,
             $modelo->arquivo_nome,
@@ -357,6 +382,31 @@ Você pode editá-lo usando o OnlyOffice.\par
         
         $this->authorize('update', $modelo);
         
+        // Only regenerate document_key if the file was recently modified (to avoid callback conflicts)
+        // This prevents cache issues while avoiding orphaned callbacks
+        $fileLastModified = $modelo->updated_at;
+        $keyAge = now()->diffInMinutes($fileLastModified);
+        
+        if (empty($modelo->document_key) || $keyAge > 5) { // Regenerate if key is empty or file was modified >5min ago
+            $oldKey = $modelo->document_key;
+            $novoDocumentKey = 'modelo_' . time() . '_' . uniqid() . '_' . rand(1000, 9999);
+            $modelo->update(['document_key' => $novoDocumentKey]);
+            
+            \Log::info('Document key regenerated for modelo:', [
+                'modelo_id' => $modelo->id,
+                'old_key' => $oldKey,
+                'new_key' => $novoDocumentKey,
+                'reason' => 'empty key or file modified >5min ago',
+                'key_age_minutes' => $keyAge
+            ]);
+        } else {
+            \Log::info('Using existing document key for modelo (recently modified):', [
+                'modelo_id' => $modelo->id,
+                'existing_key' => $modelo->document_key,
+                'key_age_minutes' => $keyAge
+            ]);
+        }
+        
         $config = $this->onlyOfficeService->criarConfiguracao(
             $modelo->document_key,
             $modelo->arquivo_nome,
@@ -420,5 +470,86 @@ Você pode editá-lo usando o OnlyOffice.\par
             'instancia' => $instancia,
             'title' => 'Visualizando: ' . $instancia->titulo
         ]);
+    }
+    
+    /**
+     * Force save modelo by requesting latest version from OnlyOffice
+     */
+    public function forceSaveModelo(DocumentoModelo $modelo, Request $request)
+    {
+        $this->authorize('update', $modelo);
+        
+        try {
+            // Get current content from OnlyOffice
+            $documentKey = $modelo->document_key;
+            
+            if (!$documentKey) {
+                return response()->json(['error' => 'Document key not found'], 400);
+            }
+            
+            // Find the most recent file in the modelos directory
+            $files = Storage::disk('public')->files('documentos/modelos');
+            $mostRecent = null;
+            $mostRecentTime = 0;
+            
+            foreach ($files as $file) {
+                if (pathinfo($file, PATHINFO_EXTENSION) === 'rtf') {
+                    $time = Storage::disk('public')->lastModified($file);
+                    if ($time > $mostRecentTime) {
+                        $mostRecentTime = $time;
+                        $mostRecent = $file;
+                    }
+                }
+            }
+            
+            if ($mostRecent && $mostRecent !== $modelo->arquivo_path) {
+                // Update the model to point to the most recent file
+                $modelo->update([
+                    'arquivo_path' => $mostRecent,
+                    'arquivo_nome' => basename($mostRecent),
+                    'arquivo_size' => Storage::disk('public')->size($mostRecent)
+                ]);
+                
+                \Log::info('Updated modelo to point to most recent file:', [
+                    'modelo_id' => $modelo->id,
+                    'old_path' => $modelo->arquivo_path,
+                    'new_path' => $mostRecent,
+                    'new_size' => Storage::disk('public')->size($mostRecent)
+                ]);
+                
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Modelo updated to use most recent file',
+                    'modelo_id' => $modelo->id,
+                    'new_file' => $mostRecent
+                ]);
+            }
+            
+            // Log the manual save attempt
+            \Log::info('Manual save requested for modelo:', [
+                'modelo_id' => $modelo->id,
+                'document_key' => $documentKey,
+                'user_id' => auth()->id(),
+                'current_file' => $modelo->arquivo_path,
+                'files_found' => $files
+            ]);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'No newer files found, current file is up to date',
+                'modelo_id' => $modelo->id,
+                'current_file' => $modelo->arquivo_path
+            ]);
+            
+        } catch (\Exception $e) {
+            \Log::error('Error in manual save:', [
+                'modelo_id' => $modelo->id,
+                'error' => $e->getMessage()
+            ]);
+            
+            return response()->json([
+                'error' => 'Failed to save: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }

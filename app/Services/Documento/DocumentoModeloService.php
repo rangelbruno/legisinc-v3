@@ -19,7 +19,7 @@ class DocumentoModeloService
     {
         // Criar arquivo inicial vazio
         $nomeArquivo = Str::slug($dados['nome']) . '.rtf';
-        $documentKey = uniqid();
+        $documentKey = 'modelo_' . time() . '_' . uniqid() . '_' . rand(1000, 9999);
         $pathArquivo = "documentos/modelos/{$nomeArquivo}";
         
         // Criar arquivo RTF vazio imediatamente

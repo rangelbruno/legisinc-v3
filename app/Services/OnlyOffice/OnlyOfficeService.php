@@ -22,6 +22,10 @@ class OnlyOfficeService
     
     public function criarConfiguracao(string $documentKey, string $fileName, string $fileUrl, array $user, string $mode = 'edit'): array
     {
+        // Adicionar timestamp e document key para evitar cache
+        $separator = strpos($fileUrl, '?') !== false ? '&' : '?';
+        $fileUrl .= $separator . 't=' . time() . '&key=' . $documentKey;
+        
         $config = [
             'document' => [
                 'fileType' => pathinfo($fileName, PATHINFO_EXTENSION),
@@ -37,6 +41,14 @@ class OnlyOfficeService
                 'lang' => config('onlyoffice.locale.lang'),
                 'region' => config('onlyoffice.locale.region'),
                 'callbackUrl' => $this->callbackUrl . '/' . $documentKey,
+                'coEditing' => [
+                    'mode' => 'fast',   // Use fast mode for better performance
+                    'change' => false   // Disable change notifications
+                ],
+                'embedded' => [
+                    'saveUrl' => $this->callbackUrl . '/' . $documentKey,
+                    'toolbarDocked' => 'top'
+                ],
                 'user' => [
                     'id' => (string) $user['id'],
                     'name' => $user['name'],
@@ -45,21 +57,21 @@ class OnlyOfficeService
                 'customization' => [
                     'about' => false,
                     'feedback' => false,
-                    'forcesave' => true,
-                    'submitForm' => true,
-                    'autosave' => true,
+                    'forcesave' => false, // Disable forcesave to prevent editor closures
+                    'submitForm' => false, // Disable submit form to prevent auto closure
+                    'autosave' => false,  // Disable autosave to prevent conflicts
                     'compactToolbar' => false,
                     'toolbarNoTabs' => false,
                     'reviewDisplay' => 'markup',
-                    'trackChanges' => true,
+                    'trackChanges' => false,
+                    'goback' => false,    // Disable go back button
+                    'chat' => false,      // Disable chat
+                    'comments' => true,   // Keep comments enabled
+                    'help' => false,      // Disable help
+                    'plugins' => false,   // Disable plugins
                     'spellcheck' => [
                         'mode' => true,
                         'lang' => config('onlyoffice.locale.spellcheck')
-                    ]
-                ],
-                'plugins' => [
-                    'autostart' => [
-                        'url' => 'https://example.com/plugin/'
                     ]
                 ]
             ],
@@ -125,7 +137,12 @@ class OnlyOfficeService
                 
             case 6: // Editando, mas documento foi salvo
                 \Log::info('Document being edited but saved', ['document_key' => $documentKey]);
-                if (isset($data['url'])) {
+                if (isset($data['url']) && $data['url'] === 'force_save_request') {
+                    // For force save requests, just acknowledge - no actual save needed
+                    // The content is still being edited in the browser
+                    \Log::info('Force save request acknowledged (no action needed)', ['document_key' => $documentKey]);
+                } else if (isset($data['url'])) {
+                    // Only save if there's a real URL from OnlyOffice
                     $this->salvarDocumento($documentKey, $data['url']);
                 }
                 break;
@@ -157,6 +174,20 @@ class OnlyOfficeService
                 $this->salvarModelo($modelo, $url);
                 return;
             }
+            
+            // Document key not found - likely an orphaned callback from an old session
+            // Try to find the most recently updated model and save there
+            $modeloRecente = \App\Models\Documento\DocumentoModelo::orderBy('updated_at', 'desc')->first();
+            if ($modeloRecente) {
+                \Log::warning('Orphaned callback - using most recent model:', [
+                    'orphaned_key' => $documentKey,
+                    'using_model_id' => $modeloRecente->id,
+                    'current_key' => $modeloRecente->document_key
+                ]);
+                $this->salvarModelo($modeloRecente, $url);
+                return;
+            }
+            
             throw new \Exception('Documento não encontrado');
         }
         
@@ -205,16 +236,184 @@ class OnlyOfficeService
         $response = Http::get($internalUrl);
         
         if ($response->successful()) {
-            $nomeArquivo = $modelo->arquivo_nome;
-            $path = "documentos/modelos/{$nomeArquivo}";
+            // Use existing file name to maintain consistency, or create new one if doesn't exist
+            if ($modelo->arquivo_nome && $modelo->arquivo_path) {
+                $nomeArquivo = $modelo->arquivo_nome;
+                $path = $modelo->arquivo_path;
+                \Log::info('Using existing file path:', ['arquivo_nome' => $nomeArquivo, 'arquivo_path' => $path]);
+            } else {
+                // Generate new file name only if no existing file
+                $timestamp = time();
+                $nomeArquivo = "modelo_{$modelo->id}_{$timestamp}.rtf";
+                $path = "documentos/modelos/{$nomeArquivo}";
+                \Log::info('Creating new file path:', ['arquivo_nome' => $nomeArquivo, 'arquivo_path' => $path]);
+            }
             
-            // Use public disk to avoid private folder issues
-            Storage::disk('public')->put($path, $response->body());
-            
-            $modelo->update([
-                'arquivo_path' => $path,
-                'arquivo_size' => strlen($response->body())
+            \Log::info('About to save file:', [
+                'model_id' => $modelo->id,
+                'path' => $path,
+                'file_size' => strlen($response->body()),
+                'arquivo_nome' => $nomeArquivo,
+                'old_arquivo_nome' => $modelo->arquivo_nome
             ]);
+            
+            // Get full paths for debugging
+            $fullPath = Storage::disk('public')->path($path);
+            $directory = dirname($fullPath);
+            
+            \Log::info('File save paths:', [
+                'path' => $path,
+                'full_path' => $fullPath,
+                'directory' => $directory,
+                'directory_exists' => is_dir($directory),
+                'directory_writable' => is_writable($directory),
+                'response_body_size' => strlen($response->body())
+            ]);
+            
+            // Ensure directory exists
+            if (!is_dir($directory)) {
+                mkdir($directory, 0755, true);
+                \Log::info('Created directory:', ['directory' => $directory]);
+            }
+            
+            // Try Laravel Storage put method first
+            try {
+                $saved = Storage::disk('public')->put($path, $response->body());
+                
+                // Verify the file was actually saved correctly
+                if ($saved && Storage::disk('public')->exists($path)) {
+                    $savedSize = Storage::disk('public')->size($path);
+                    $expectedSize = strlen($response->body());
+                    
+                    if ($savedSize === $expectedSize) {
+                        \Log::info('File saved via Storage facade:', [
+                            'path' => $path,
+                            'full_path' => $fullPath,
+                            'file_exists' => true,
+                            'file_size' => $savedSize,
+                            'expected_size' => $expectedSize
+                        ]);
+                    } else {
+                        // File saved but with wrong size - try fallback
+                        \Log::warning('File saved with incorrect size, trying fallback:', [
+                            'path' => $path,
+                            'saved_size' => $savedSize,
+                            'expected_size' => $expectedSize
+                        ]);
+                        $saved = false;
+                    }
+                } else {
+                    \Log::warning('Storage put returned success but file not found/created');
+                    $saved = false;
+                }
+            } catch (\Exception $e) {
+                \Log::warning('Storage put failed with exception:', [
+                    'error' => $e->getMessage()
+                ]);
+                $saved = false;
+            }
+            
+            // If Laravel Storage failed, try direct file_put_contents
+            if (!$saved) {
+                \Log::info('Trying direct file_put_contents as fallback');
+                
+                // For RTF files, make sure we handle binary content correctly
+                $content = $response->body();
+                \Log::info('Content analysis before save:', [
+                    'content_length' => strlen($content),
+                    'is_binary' => !mb_check_encoding($content, 'UTF-8'),
+                    'first_100_chars' => substr($content, 0, 100),
+                    'last_100_chars' => substr($content, -100)
+                ]);
+                
+                $bytesWritten = file_put_contents($fullPath, $content, LOCK_EX);
+                
+                if ($bytesWritten !== false && $bytesWritten > 0) {
+                    $actualSize = file_exists($fullPath) ? filesize($fullPath) : 0;
+                    
+                    \Log::info('File saved via file_put_contents:', [
+                        'full_path' => $fullPath,
+                        'bytes_written' => $bytesWritten,
+                        'file_exists' => file_exists($fullPath),
+                        'file_size' => $actualSize,
+                        'expected_size' => strlen($content)
+                    ]);
+                    
+                    if ($actualSize === strlen($content)) {
+                        $saved = true;
+                        // Verify content integrity by reading back
+                        $savedContent = file_get_contents($fullPath);
+                        if (strlen($savedContent) !== strlen($content)) {
+                            \Log::error('Content verification failed:', [
+                                'original_size' => strlen($content),
+                                'saved_size' => strlen($savedContent)
+                            ]);
+                            $saved = false;
+                        } else {
+                            \Log::info('Content verification passed');
+                        }
+                    } else {
+                        \Log::error('File saved but with incorrect size via file_put_contents:', [
+                            'expected' => strlen($content),
+                            'actual' => $actualSize
+                        ]);
+                        $saved = false;
+                    }
+                } else {
+                    \Log::error('file_put_contents failed:', [
+                        'full_path' => $fullPath,
+                        'bytes_written' => $bytesWritten,
+                        'directory_writable' => is_writable($directory),
+                        'directory_permissions' => substr(sprintf('%o', fileperms($directory)), -4),
+                        'disk_space' => disk_free_space($directory),
+                        'current_user' => posix_getpwuid(posix_geteuid())['name'] ?? 'unknown'
+                    ]);
+                    $saved = false;
+                }
+            }
+            
+            \Log::info('File save result:', [
+                'model_id' => $modelo->id,
+                'path' => $path,
+                'saved' => $saved,
+                'exists_after_save' => Storage::disk('public')->exists($path),
+                'size_after_save' => Storage::disk('public')->exists($path) ? Storage::disk('public')->size($path) : 0
+            ]);
+            
+            if ($saved) {
+                // Delete old file if it exists and is different
+                if ($modelo->arquivo_path && $modelo->arquivo_path !== $path && Storage::disk('public')->exists($modelo->arquivo_path)) {
+                    try {
+                        Storage::disk('public')->delete($modelo->arquivo_path);
+                        \Log::info('Old file deleted:', ['old_path' => $modelo->arquivo_path]);
+                    } catch (\Exception $e) {
+                        \Log::warning('Could not delete old file:', ['old_path' => $modelo->arquivo_path, 'error' => $e->getMessage()]);
+                    }
+                }
+                
+                // Update modelo to point to the new file
+                $modelo->update([
+                    'arquivo_path' => $path,
+                    'arquivo_nome' => $nomeArquivo,
+                    'arquivo_size' => strlen($response->body())
+                ]);
+                
+                \Log::info('Updated modelo database record:', [
+                    'model_id' => $modelo->id,
+                    'new_arquivo_path' => $path,
+                    'new_arquivo_nome' => $nomeArquivo
+                ]);
+            } else {
+                \Log::error('Failed to save file to storage', [
+                    'model_id' => $modelo->id,
+                    'path' => $path,
+                    'disk_info' => [
+                        'disk' => 'public',
+                        'root' => Storage::disk('public')->path('')
+                    ]
+                ]);
+                throw new \Exception('Failed to save file to storage');
+            }
             
             \Log::info('Model file saved successfully:', [
                 'model_id' => $modelo->id,
@@ -307,4 +506,5 @@ class OnlyOfficeService
         // Replace external localhost:8080 with internal container name
         return str_replace('http://localhost:8080', 'http://legisinc-onlyoffice:80', $url);
     }
+    
 }
