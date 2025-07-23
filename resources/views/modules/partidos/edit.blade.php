@@ -82,7 +82,7 @@
                                         <!--begin::Col-->
                                         <div class="col-lg-6 fv-row">
                                             <input type="text" name="sigla" class="form-control form-control-lg form-control-solid @error('sigla') is-invalid @enderror" 
-                                                   placeholder="Ex: PT" value="{{ old('sigla', $partido->sigla) }}" maxlength="10" style="text-transform: uppercase;" />
+                                                   placeholder="Ex: PT" value="{{ old('sigla', $partido->sigla) }}" maxlength="15" style="text-transform: uppercase;" />
                                             @error('sigla')
                                                 <div class="invalid-feedback">{{ $message }}</div>
                                             @enderror
