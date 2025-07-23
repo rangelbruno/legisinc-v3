@@ -373,14 +373,6 @@
                                 <span class="menu-title">Dashboard Admin</span>
                             </a>
                         </div>
-                        <div class="menu-item">
-                            <a class="menu-link {{ request()->routeIs('admin.usuarios.*') ? 'active' : '' }}" href="{{ route('admin.usuarios.index') }}">
-                                <span class="menu-bullet">
-                                    <span class="bullet bullet-dot"></span>
-                                </span>
-                                <span class="menu-title">Usuários Admin</span>
-                            </a>
-                        </div>
                         @endif
                         @if(\App\Models\ScreenPermission::userCanAccessRoute('usuarios.index'))
                         <div class="menu-item">
