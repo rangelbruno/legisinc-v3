@@ -76,9 +76,9 @@
                             </a>
                         </div>
                         @endif
-                        @if(\App\Models\ScreenPermission::userCanAccessRoute('parlamentares.mesa-diretora'))
+                        @if(\App\Models\ScreenPermission::userCanAccessRoute('mesa-diretora.atual'))
                         <div class="menu-item">
-                            <a class="menu-link {{ request()->routeIs('parlamentares.mesa-diretora') ? 'active' : '' }}" href="{{ route('parlamentares.mesa-diretora') }}">
+                            <a class="menu-link {{ request()->routeIs('mesa-diretora.atual') ? 'active' : '' }}" href="{{ route('mesa-diretora.atual') }}">
                                 <span class="menu-bullet">
                                     <span class="bullet bullet-dot"></span>
                                 </span>
@@ -142,6 +142,65 @@
                                     <span class="bullet bullet-dot"></span>
                                 </span>
                                 <span class="menu-title">Partidos Brasileiros</span>
+                            </a>
+                        </div>
+                        @endif
+                    </div>
+                </div>
+                @endif
+                <!--end:Menu item-->
+                
+                <!--begin:Menu item - Mesa Diretora-->
+                @if(\App\Models\ScreenPermission::userCanAccessModule('mesa-diretora'))
+                <div data-kt-menu-trigger="click" class="menu-item menu-accordion {{ request()->routeIs('mesa-diretora.*') ? 'here show' : '' }}">
+                    <span class="menu-link">
+                        <span class="menu-icon">
+                            <i class="ki-duotone ki-bank fs-2">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                            </i>
+                        </span>
+                        <span class="menu-title">Mesa Diretora</span>
+                        <span class="menu-arrow"></span>
+                    </span>
+                    <div class="menu-sub menu-sub-accordion">
+                        @if(\App\Models\ScreenPermission::userCanAccessRoute('mesa-diretora.atual'))
+                        <div class="menu-item">
+                            <a class="menu-link {{ request()->routeIs('mesa-diretora.atual') ? 'active' : '' }}" href="{{ route('mesa-diretora.atual') }}">
+                                <span class="menu-bullet">
+                                    <span class="bullet bullet-dot"></span>
+                                </span>
+                                <span class="menu-title">Composição Atual</span>
+                            </a>
+                        </div>
+                        @endif
+                        @if(\App\Models\ScreenPermission::userCanAccessRoute('mesa-diretora.index'))
+                        <div class="menu-item">
+                            <a class="menu-link {{ request()->routeIs('mesa-diretora.index') ? 'active' : '' }}" href="{{ route('mesa-diretora.index') }}">
+                                <span class="menu-bullet">
+                                    <span class="bullet bullet-dot"></span>
+                                </span>
+                                <span class="menu-title">Gerenciar Mesa</span>
+                            </a>
+                        </div>
+                        @endif
+                        @if(\App\Models\ScreenPermission::userCanAccessRoute('mesa-diretora.historico'))
+                        <div class="menu-item">
+                            <a class="menu-link {{ request()->routeIs('mesa-diretora.historico') ? 'active' : '' }}" href="{{ route('mesa-diretora.historico') }}">
+                                <span class="menu-bullet">
+                                    <span class="bullet bullet-dot"></span>
+                                </span>
+                                <span class="menu-title">Histórico</span>
+                            </a>
+                        </div>
+                        @endif
+                        @if(\App\Models\ScreenPermission::userCanAccessRoute('mesa-diretora.create'))
+                        <div class="menu-item">
+                            <a class="menu-link {{ request()->routeIs('mesa-diretora.create') ? 'active' : '' }}" href="{{ route('mesa-diretora.create') }}">
+                                <span class="menu-bullet">
+                                    <span class="bullet bullet-dot"></span>
+                                </span>
+                                <span class="menu-title">Novo Membro</span>
                             </a>
                         </div>
                         @endif

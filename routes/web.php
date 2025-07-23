@@ -148,6 +148,22 @@ Route::prefix('partidos')->name('partidos.')->middleware(['auth', 'check.screen.
     Route::delete('/{id}', [App\Http\Controllers\Partido\PartidoController::class, 'destroy'])->name('destroy')->middleware('check.permission:partidos.delete');
 });
 
+// Mesa Diretora routes (protected with permissions)
+Route::prefix('mesa-diretora')->name('mesa-diretora.')->middleware(['auth', 'check.screen.permission'])->group(function () {
+    Route::get('/', [App\Http\Controllers\MesaDiretora\MesaDiretoraController::class, 'index'])->name('index')->middleware('check.permission:mesa-diretora.view');
+    Route::get('/atual', [App\Http\Controllers\MesaDiretora\MesaDiretoraController::class, 'composicaoAtual'])->name('atual')->middleware('check.permission:mesa-diretora.view');
+    Route::get('/historico', [App\Http\Controllers\MesaDiretora\MesaDiretoraController::class, 'historico'])->name('historico')->middleware('check.permission:mesa-diretora.view');
+    Route::get('/create', [App\Http\Controllers\MesaDiretora\MesaDiretoraController::class, 'create'])->name('create')->middleware('check.permission:mesa-diretora.create');
+    Route::post('/', [App\Http\Controllers\MesaDiretora\MesaDiretoraController::class, 'store'])->name('store')->middleware('check.permission:mesa-diretora.create');
+    Route::get('/search', [App\Http\Controllers\MesaDiretora\MesaDiretoraController::class, 'search'])->name('search')->middleware('check.permission:mesa-diretora.view');
+    Route::get('/estatisticas', [App\Http\Controllers\MesaDiretora\MesaDiretoraController::class, 'estatisticas'])->name('estatisticas')->middleware('check.permission:mesa-diretora.view');
+    Route::get('/{id}', [App\Http\Controllers\MesaDiretora\MesaDiretoraController::class, 'show'])->name('show')->middleware('check.permission:mesa-diretora.view');
+    Route::get('/{id}/edit', [App\Http\Controllers\MesaDiretora\MesaDiretoraController::class, 'edit'])->name('edit')->middleware('check.permission:mesa-diretora.edit');
+    Route::put('/{id}', [App\Http\Controllers\MesaDiretora\MesaDiretoraController::class, 'update'])->name('update')->middleware('check.permission:mesa-diretora.edit');
+    Route::delete('/{id}', [App\Http\Controllers\MesaDiretora\MesaDiretoraController::class, 'destroy'])->name('destroy')->middleware('check.permission:mesa-diretora.delete');
+    Route::post('/{id}/finalizar', [App\Http\Controllers\MesaDiretora\MesaDiretoraController::class, 'finalizarMandato'])->name('finalizar')->middleware('check.permission:mesa-diretora.edit');
+});
+
 // Comissões routes (protected with permissions)
 Route::prefix('comissoes')->name('comissoes.')->middleware(['auth', 'check.screen.permission'])->group(function () {
     Route::get('/', [App\Http\Controllers\Comissao\ComissaoController::class, 'index'])->name('index')->middleware('check.permission:comissoes.view');
