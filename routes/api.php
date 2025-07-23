@@ -129,4 +129,22 @@ Route::prefix('mock-api')->name('mock-api.')->group(function () {
             'timestamp' => now()->toISOString()
         ]);
     })->name('status');
-}); 
+});
+
+// ===== PARTIDOS API ROUTES =====
+Route::prefix('partidos')->name('api.partidos.')->group(function () {
+    
+    // Lista e busca de partidos
+    Route::get('/', [App\Http\Controllers\Api\PartidoApiController::class, 'index'])->name('index');
+    Route::get('/brasileiros', [App\Http\Controllers\Api\PartidoApiController::class, 'partidosBrasileiros'])->name('brasileiros');
+    Route::get('/buscar-sigla', [App\Http\Controllers\Api\PartidoApiController::class, 'buscarPorSigla'])->name('buscar-sigla');
+    Route::get('/buscar-externos', [App\Http\Controllers\Api\PartidoApiController::class, 'buscarDadosExternos'])->name('buscar-externos');
+    Route::get('/estatisticas', [App\Http\Controllers\Api\PartidoApiController::class, 'estatisticas'])->name('estatisticas');
+    
+    // Validações
+    Route::get('/validar-sigla', [App\Http\Controllers\Api\PartidoApiController::class, 'validarSigla'])->name('validar-sigla');
+    Route::get('/validar-numero', [App\Http\Controllers\Api\PartidoApiController::class, 'validarNumero'])->name('validar-numero');
+    
+    // Partido específico
+    Route::get('/{id}', [App\Http\Controllers\Api\PartidoApiController::class, 'show'])->name('show');
+});

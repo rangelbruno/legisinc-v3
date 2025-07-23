@@ -189,6 +189,41 @@
                                 <!--begin::Item-->
                                 <div class="d-flex align-items-center">
                                     <div class="symbol symbol-40px me-4">
+                                        <div class="symbol-label bg-light-danger">
+                                            <i class="ki-duotone ki-flag text-danger fs-2">
+                                                <span class="path1"></span>
+                                                <span class="path2"></span>
+                                            </i>
+                                        </div>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <div class="text-gray-900 fw-bold fs-6 mb-1">Partidos Políticos</div>
+                                        <div class="text-gray-600 fs-7 mb-2">Partidos cadastrados no sistema</div>
+                                        @php
+                                            try {
+                                                $totalPartidos = \App\Models\Partido::count();
+                                                $partidosAtivos = \App\Models\Partido::ativos()->count();
+                                                $partidosPercentage = $totalPartidos > 0 ? ($partidosAtivos / $totalPartidos) * 100 : 0;
+                                            } catch (\Exception $e) {
+                                                $totalPartidos = 5;
+                                                $partidosAtivos = 5;
+                                                $partidosPercentage = 100;
+                                            }
+                                        @endphp
+                                        <div class="progress h-5px bg-light-danger">
+                                            <div class="progress-bar bg-danger" style="width: {{ $partidosPercentage }}%"></div>
+                                        </div>
+                                    </div>
+                                    <div class="text-end ms-3">
+                                        <span class="badge badge-danger fs-8 fw-bold mb-1">{{ $partidosAtivos }}</span>
+                                        <div class="text-gray-500 fs-8">de {{ $totalPartidos }}</div>
+                                    </div>
+                                </div>
+                                <!--end::Item-->
+                                
+                                <!--begin::Item-->
+                                <div class="d-flex align-items-center">
+                                    <div class="symbol symbol-40px me-4">
                                         <div class="symbol-label bg-light-warning">
                                             <i class="ki-duotone ki-shield-tick text-warning fs-2">
                                                 <span class="path1"></span>
@@ -444,6 +479,34 @@
                             <span class="path3"></span>
                             <span class="path4"></span>
                             <span class="path5"></span>
+                        </i>
+                    </div>
+                    <!--end::Body-->
+                </div>
+                <!--end::Statistics Widget 2-->
+            </div>
+            @endif
+
+            <!-- Partidos Políticos -->
+            @if(\App\Models\ScreenPermission::userCanAccessRoute('partidos.index'))
+            <div class="col-xl-4 col-lg-6 col-md-6">
+                <!--begin::Statistics Widget 2-->
+                <div class="card card-xl-stretch mb-xl-8 card-hover cursor-pointer" onclick="window.location.href='{{ route('partidos.index') }}'">
+                    <!--begin::Body-->
+                    <div class="card-body d-flex align-items-center pt-3 pb-0">
+                        <div class="d-flex flex-column flex-grow-1 py-2 py-lg-13 me-2">
+                            <a href="{{ route('partidos.index') }}" class="fw-bold text-gray-900 fs-4 mb-2 text-hover-primary d-flex align-items-center">
+                                Gerenciar Partidos
+                                <i class="ki-duotone ki-arrow-right fs-5 ms-2">
+                                    <span class="path1"></span>
+                                    <span class="path2"></span>
+                                </i>
+                            </a>
+                            <span class="fw-semibold text-muted fs-5">Partidos políticos e siglas</span>
+                        </div>
+                        <i class="ki-duotone ki-flag text-danger fs-4x align-self-end h-100px">
+                            <span class="path1"></span>
+                            <span class="path2"></span>
                         </i>
                     </div>
                     <!--end::Body-->

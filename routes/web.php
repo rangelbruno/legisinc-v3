@@ -6,6 +6,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\UserApiController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\Parlamentar\ParlamentarController;
+use App\Http\Controllers\Partido\PartidoController;
 use App\Http\Controllers\User\UserController as UserManagementController;
 use App\Http\Controllers\Session\SessionController;
 use App\Http\Controllers\ProgressController;
@@ -130,6 +131,21 @@ Route::prefix('parlamentares')->name('parlamentares.')->middleware(['auth', 'che
     Route::get('/{id}/edit', [ParlamentarController::class, 'edit'])->name('edit')->middleware('check.permission:parlamentares.edit');
     Route::put('/{id}', [ParlamentarController::class, 'update'])->name('update')->middleware('check.permission:parlamentares.edit');
     Route::delete('/{id}', [ParlamentarController::class, 'destroy'])->name('destroy')->middleware('check.permission:parlamentares.delete');
+});
+
+// Partidos routes (protected with permissions)
+Route::prefix('partidos')->name('partidos.')->middleware(['auth', 'check.screen.permission'])->group(function () {
+    Route::get('/', [App\Http\Controllers\Partido\PartidoController::class, 'index'])->name('index')->middleware('check.permission:partidos.view');
+    Route::get('/create', [App\Http\Controllers\Partido\PartidoController::class, 'create'])->name('create')->middleware('check.permission:partidos.create');
+    Route::post('/', [App\Http\Controllers\Partido\PartidoController::class, 'store'])->name('store')->middleware('check.permission:partidos.create');
+    Route::get('/search', [App\Http\Controllers\Partido\PartidoController::class, 'search'])->name('search')->middleware('check.permission:partidos.view');
+    Route::get('/brasileiros', function () { return view('modules.partidos.brasileiros', ['title' => 'Partidos Brasileiros']); })->name('brasileiros')->middleware('check.permission:partidos.view');
+    Route::get('/export/csv', [App\Http\Controllers\Partido\PartidoController::class, 'exportCsv'])->name('export.csv')->middleware('check.permission:partidos.view');
+    Route::get('/estatisticas', [App\Http\Controllers\Partido\PartidoController::class, 'estatisticas'])->name('estatisticas')->middleware('check.permission:partidos.view');
+    Route::get('/{id}', [App\Http\Controllers\Partido\PartidoController::class, 'show'])->name('show')->middleware('check.permission:partidos.view');
+    Route::get('/{id}/edit', [App\Http\Controllers\Partido\PartidoController::class, 'edit'])->name('edit')->middleware('check.permission:partidos.edit');
+    Route::put('/{id}', [App\Http\Controllers\Partido\PartidoController::class, 'update'])->name('update')->middleware('check.permission:partidos.edit');
+    Route::delete('/{id}', [App\Http\Controllers\Partido\PartidoController::class, 'destroy'])->name('destroy')->middleware('check.permission:partidos.delete');
 });
 
 // Comissões routes (protected with permissions)

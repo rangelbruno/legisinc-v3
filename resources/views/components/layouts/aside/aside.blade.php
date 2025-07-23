@@ -91,7 +91,64 @@
                 @endif
                 <!--end:Menu item-->
                 
-                
+                <!--begin:Menu item - Partidos-->
+                @if(\App\Models\ScreenPermission::userCanAccessModule('partidos'))
+                <div data-kt-menu-trigger="click" class="menu-item menu-accordion {{ request()->routeIs('partidos.*') ? 'here show' : '' }}">
+                    <span class="menu-link">
+                        <span class="menu-icon">
+                            <i class="ki-duotone ki-flag fs-2">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                            </i>
+                        </span>
+                        <span class="menu-title">Partidos</span>
+                        <span class="menu-arrow"></span>
+                    </span>
+                    <div class="menu-sub menu-sub-accordion">
+                        @if(\App\Models\ScreenPermission::userCanAccessRoute('partidos.index'))
+                        <div class="menu-item">
+                            <a class="menu-link {{ request()->routeIs('partidos.index') ? 'active' : '' }}" href="{{ route('partidos.index') }}">
+                                <span class="menu-bullet">
+                                    <span class="bullet bullet-dot"></span>
+                                </span>
+                                <span class="menu-title">Lista de Partidos</span>
+                            </a>
+                        </div>
+                        @endif
+                        @if(\App\Models\ScreenPermission::userCanAccessRoute('partidos.create'))
+                        <div class="menu-item">
+                            <a class="menu-link {{ request()->routeIs('partidos.create') ? 'active' : '' }}" href="{{ route('partidos.create') }}">
+                                <span class="menu-bullet">
+                                    <span class="bullet bullet-dot"></span>
+                                </span>
+                                <span class="menu-title">Novo Partido</span>
+                            </a>
+                        </div>
+                        @endif
+                        @if(\App\Models\ScreenPermission::userCanAccessRoute('partidos.estatisticas'))
+                        <div class="menu-item">
+                            <a class="menu-link {{ request()->routeIs('partidos.estatisticas') ? 'active' : '' }}" href="{{ route('partidos.estatisticas') }}">
+                                <span class="menu-bullet">
+                                    <span class="bullet bullet-dot"></span>
+                                </span>
+                                <span class="menu-title">Estatísticas</span>
+                            </a>
+                        </div>
+                        @endif
+                        @if(\App\Models\ScreenPermission::userCanAccessRoute('partidos.brasileiros'))
+                        <div class="menu-item">
+                            <a class="menu-link {{ request()->routeIs('partidos.brasileiros') ? 'active' : '' }}" href="{{ route('partidos.brasileiros') }}">
+                                <span class="menu-bullet">
+                                    <span class="bullet bullet-dot"></span>
+                                </span>
+                                <span class="menu-title">Partidos Brasileiros</span>
+                            </a>
+                        </div>
+                        @endif
+                    </div>
+                </div>
+                @endif
+                <!--end:Menu item-->
                 
                 <!--begin:Menu item - Proposições-->
                 @if(\App\Models\ScreenPermission::userCanAccessModule('proposicoes'))
