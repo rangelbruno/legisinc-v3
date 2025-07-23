@@ -330,102 +330,8 @@
 </div>
 <!--end::Content wrapper-->
 
-<!-- Modal para confirmar exclusão -->
-<div class="modal fade" id="kt_modal_delete_member" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered mw-650px">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 class="fw-bold">Confirmar Exclusão</h2>
-                <div class="btn btn-icon btn-sm btn-active-icon-primary" data-kt-members-modal-action="close">
-                    <i class="ki-duotone ki-cross fs-1">
-                        <span class="path1"></span>
-                        <span class="path2"></span>
-                    </i>
-                </div>
-            </div>
-            
-            <div class="modal-body scroll-y mx-5 mx-xl-15 my-7">
-                <form id="kt_modal_delete_member_form" class="form" action="#" method="POST">
-                    @csrf
-                    @method('DELETE')
-                    
-                    <div class="fv-row mb-7">
-                        <div class="notice d-flex bg-light-warning rounded border-warning border border-dashed p-6">
-                            <i class="ki-duotone ki-warning fs-2tx text-warning me-4">
-                                <span class="path1"></span>
-                                <span class="path2"></span>
-                                <span class="path3"></span>
-                            </i>
-                            <div class="d-flex flex-stack flex-grow-1">
-                                <div class="fw-semibold">
-                                    <h4 class="text-gray-900 fw-bold">Atenção!</h4>
-                                    <div class="fs-6 text-gray-700">Tem certeza que deseja excluir este membro da mesa diretora? Esta ação não pode ser desfeita.</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="text-center pt-15">
-                        <button type="reset" class="btn btn-light me-3" data-kt-members-modal-action="cancel">Cancelar</button>
-                        <button type="submit" class="btn btn-danger" data-kt-indicator="off">
-                            <span class="indicator-label">Excluir</span>
-                            <span class="indicator-progress">Por favor aguarde...
-                            <span class="spinner-border spinner-border-sm align-middle ms-2"></span></span>
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Modal para finalizar mandato -->
-<div class="modal fade" id="kt_modal_finalizar_mandato" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered mw-650px">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 class="fw-bold">Finalizar Mandato</h2>
-                <div class="btn btn-icon btn-sm btn-active-icon-primary" data-kt-members-modal-action="close">
-                    <i class="ki-duotone ki-cross fs-1">
-                        <span class="path1"></span>
-                        <span class="path2"></span>
-                    </i>
-                </div>
-            </div>
-            
-            <div class="modal-body scroll-y mx-5 mx-xl-15 my-7">
-                <form id="kt_modal_finalizar_mandato_form" class="form" action="#" method="POST">
-                    @csrf
-                    
-                    <div class="fv-row mb-7">
-                        <div class="notice d-flex bg-light-info rounded border-info border border-dashed p-6">
-                            <i class="ki-duotone ki-information fs-2tx text-info me-4">
-                                <span class="path1"></span>
-                                <span class="path2"></span>
-                                <span class="path3"></span>
-                            </i>
-                            <div class="d-flex flex-stack flex-grow-1">
-                                <div class="fw-semibold">
-                                    <h4 class="text-gray-900 fw-bold">Finalizar Mandato</h4>
-                                    <div class="fs-6 text-gray-700">Tem certeza que deseja finalizar este mandato? O status será alterado para "finalizado" e a data de fim será ajustada para hoje.</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="text-center pt-15">
-                        <button type="reset" class="btn btn-light me-3" data-kt-members-modal-action="cancel">Cancelar</button>
-                        <button type="submit" class="btn btn-warning" data-kt-indicator="off">
-                            <span class="indicator-label">Finalizar Mandato</span>
-                            <span class="indicator-progress">Por favor aguarde...
-                            <span class="spinner-border spinner-border-sm align-middle ms-2"></span></span>
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
+@include('modules.mesa-diretora.components.modal-delete')
+@include('modules.mesa-diretora.components.modal-finalizar')
 
 @endsection
 
@@ -435,116 +341,82 @@
 
 var KTMembersList = function () {
     var table = document.getElementById('kt_members_table');
-    var datatable;
-    var toolbarBase;
-    var toolbarSelected;
-    var selectedCount;
     
-    var initMemberTable = function () {
-        if (!table) {
-            return;
-        }
-
-        datatable = $(table).DataTable({
-            'columnDefs': [
-                { orderable: false, targets: 4 }
-            ]
-        });
-    }
-
-    var handleSearchDatatable = function () {
+    var handleSimpleSearch = function () {
         const filterSearch = document.querySelector('[data-kt-member-table-filter="search"]');
+        if (!filterSearch) return;
+        
         filterSearch.addEventListener('keyup', function (e) {
-            datatable.search(e.target.value).draw();
+            const searchTerm = e.target.value.toLowerCase();
+            const rows = table.querySelectorAll('tbody tr');
+            
+            rows.forEach(function(row) {
+                const text = row.textContent.toLowerCase();
+                if (text.includes(searchTerm)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
         });
     }
 
-    var handleFilterDatatable = function () {
+    var handleSimpleFilter = function () {
         const filterStatus = document.querySelector('[data-kt-member-table-filter="status"]');
         const filterCargo = document.querySelector('[data-kt-member-table-filter="cargo"]');
         
-        filterStatus.addEventListener('change', function (e) {
-            datatable.column(3).search(e.target.value).draw();
-        });
+        if (filterStatus) {
+            filterStatus.addEventListener('change', function (e) {
+                const filterValue = e.target.value.toLowerCase();
+                const rows = table.querySelectorAll('tbody tr');
+                
+                rows.forEach(function(row) {
+                    if (!filterValue) {
+                        row.style.display = '';
+                        return;
+                    }
+                    
+                    const statusCell = row.querySelector('td:nth-child(4)');
+                    const statusText = statusCell ? statusCell.textContent.toLowerCase() : '';
+                    
+                    if (statusText.includes(filterValue)) {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+            });
+        }
         
-        filterCargo.addEventListener('change', function (e) {
-            datatable.column(1).search(e.target.value).draw();
-        });
-    }
-
-    var handleDeleteRows = function () {
-        const deleteButtons = table.querySelectorAll('[data-kt-action="delete_row"]');
-
-        deleteButtons.forEach(d => {
-            d.addEventListener('click', function (e) {
-                e.preventDefault();
-
-                const parent = e.target.closest('tr');
-                const memberName = parent.querySelectorAll('td')[0].innerText;
-                const memberId = d.getAttribute('data-kt-member-id');
-
-                const modal = document.querySelector('#kt_modal_delete_member');
-                const form = modal.querySelector('#kt_modal_delete_member_form');
+        if (filterCargo) {
+            filterCargo.addEventListener('change', function (e) {
+                const filterValue = e.target.value.toLowerCase();
+                const rows = table.querySelectorAll('tbody tr');
                 
-                form.setAttribute('action', '{{ route("mesa-diretora.destroy", ":id") }}'.replace(':id', memberId));
-                
-                $(modal).modal('show');
-            })
-        });
-    }
-
-    var handleFinalizarMandato = function () {
-        const finalizarButtons = table.querySelectorAll('[data-kt-action="finalizar_mandato"]');
-
-        finalizarButtons.forEach(d => {
-            d.addEventListener('click', function (e) {
-                e.preventDefault();
-
-                const parent = e.target.closest('tr');
-                const memberName = parent.querySelectorAll('td')[0].innerText;
-                const memberId = d.getAttribute('data-kt-member-id');
-
-                const modal = document.querySelector('#kt_modal_finalizar_mandato');
-                const form = modal.querySelector('#kt_modal_finalizar_mandato_form');
-                
-                form.setAttribute('action', '{{ route("mesa-diretora.finalizar", ":id") }}'.replace(':id', memberId));
-                
-                $(modal).modal('show');
-            })
-        });
-    }
-
-    var handleModalCancel = function () {
-        const cancelButtons = document.querySelectorAll('[data-kt-members-modal-action="cancel"]');
-        const closeButtons = document.querySelectorAll('[data-kt-members-modal-action="close"]');
-
-        cancelButtons.forEach(c => {
-            c.addEventListener('click', function (e) {
-                e.preventDefault();
-                const modal = c.closest('.modal');
-                $(modal).modal('hide');
-            })
-        });
-
-        closeButtons.forEach(c => {
-            c.addEventListener('click', function (e) {
-                e.preventDefault();
-                const modal = c.closest('.modal');
-                $(modal).modal('hide');
-            })
-        });
+                rows.forEach(function(row) {
+                    if (!filterValue) {
+                        row.style.display = '';
+                        return;
+                    }
+                    
+                    const cargoCell = row.querySelector('td:nth-child(2)');
+                    const cargoText = cargoCell ? cargoCell.textContent.toLowerCase() : '';
+                    
+                    if (cargoText.includes(filterValue)) {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+            });
+        }
     }
 
     return {
         init: function () {
-            initMemberTable();
-            
-            if (datatable) {
-                handleSearchDatatable();
-                handleFilterDatatable();
-                handleDeleteRows();
-                handleFinalizarMandato();
-                handleModalCancel();
+            if (table) {
+                handleSimpleSearch();
+                handleSimpleFilter();
             }
         }
     };
@@ -554,4 +426,5 @@ KTUtil.onDOMContentLoaded(function () {
     KTMembersList.init();
 });
 </script>
+@include('modules.mesa-diretora.components.modal-scripts')
 @endpush

@@ -310,18 +310,40 @@ class MesaDiretoraController extends Controller
     /**
      * Finalizar mandato de um membro
      */
-    public function finalizarMandato(int $id): RedirectResponse
+    public function finalizarMandato(Request $request, int $id): RedirectResponse|JsonResponse
     {
         try {
             $this->mesaDiretoraService->finalizarMandato($id);
+            
+            // Se for requisição AJAX, retornar JSON
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Mandato finalizado com sucesso!'
+                ]);
+            }
             
             return redirect()->route('mesa-diretora.index')
                 ->with('success', 'Mandato finalizado com sucesso!');
                 
         } catch (ModelNotFoundException $e) {
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Membro da mesa diretora não encontrado.'
+                ], 404);
+            }
+            
             return redirect()->route('mesa-diretora.index')
                 ->with('error', 'Membro da mesa diretora não encontrado.');
         } catch (\Exception $e) {
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Erro ao finalizar mandato: ' . $e->getMessage()
+                ], 500);
+            }
+            
             return redirect()->route('mesa-diretora.index')
                 ->with('error', 'Erro ao finalizar mandato: ' . $e->getMessage());
         }
