@@ -367,18 +367,10 @@ class ParlamentarController extends Controller
      */
     private function getPartidosOptions(): array
     {
-        return [
-            'PT' => 'Partido dos Trabalhadores',
-            'PSDB' => 'Partido da Social Democracia Brasileira',
-            'MDB' => 'Movimento Democrático Brasileiro',
-            'PSL' => 'Partido Social Liberal',
-            'PDT' => 'Partido Democrático Trabalhista',
-            'PP' => 'Progressistas',
-            'PSOL' => 'Partido Socialismo e Liberdade',
-            'DEM' => 'Democratas',
-            'PL' => 'Partido Liberal',
-            'PCdoB' => 'Partido Comunista do Brasil'
-        ];
+        return \App\Models\Partido::ativos()
+            ->orderBy('sigla')
+            ->pluck('nome', 'sigla')
+            ->toArray();
     }
     
     /**
