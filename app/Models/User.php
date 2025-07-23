@@ -391,6 +391,14 @@ class User extends Authenticatable
     }
     
     /**
+     * Relacionamento com Parlamentar
+     */
+    public function parlamentar()
+    {
+        return $this->hasOne(Parlamentar::class);
+    }
+
+    /**
      * Scope para parlamentares
      */
     public function scopeParlamentares($query)

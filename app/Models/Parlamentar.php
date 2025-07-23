@@ -11,6 +11,7 @@ class Parlamentar extends Model
     use HasFactory;
 
     protected $fillable = [
+        'user_id',
         'nome',
         'nome_politico',
         'partido',
@@ -32,6 +33,14 @@ class Parlamentar extends Model
         'comissoes' => 'array',
         'mandatos' => 'array',
     ];
+
+    /**
+     * Relacionamento com User
+     */
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 
     /**
      * Scope para parlamentares ativos

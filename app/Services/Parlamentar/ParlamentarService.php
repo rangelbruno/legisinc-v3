@@ -194,12 +194,50 @@ class ParlamentarService
                     return $date;
                 }
                 
+                // Se tem espaço (datetime), remover a parte de tempo
+                if (strpos($date, ' ') !== false) {
+                    $date = explode(' ', $date)[0];
+                }
+                
                 // Tentar fazer parse da data
                 return \Carbon\Carbon::parse($date)->format('d/m/Y');
             }
             
             return '';
         } catch (\Exception $e) {
+            \Log::error('Erro ao formatar data: ' . $e->getMessage(), ['date' => $date]);
+            return '';
+        }
+    }
+
+    /**
+     * Formatar datetime para exibição
+     */
+    private function formatDatetime($datetime): string
+    {
+        if (!$datetime) {
+            return '';
+        }
+
+        try {
+            // Se já é uma string formatada (dd/mm/yyyy hh:mm), retornar como está
+            if (is_string($datetime) && preg_match('/^\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}$/', $datetime)) {
+                return $datetime;
+            }
+
+            // Se é uma instância Carbon
+            if ($datetime instanceof \Carbon\Carbon) {
+                return $datetime->format('d/m/Y H:i');
+            }
+            
+            // Se é uma string ISO, fazer parse
+            if (is_string($datetime)) {
+                return \Carbon\Carbon::parse($datetime)->format('d/m/Y H:i');
+            }
+            
+            return '';
+        } catch (\Exception $e) {
+            \Log::error('Erro ao formatar datetime: ' . $e->getMessage(), ['datetime' => $datetime]);
             return '';
         }
     }
@@ -255,17 +293,15 @@ class ParlamentarService
             'email' => $parlamentar['email'],
             'cpf' => $parlamentar['cpf'] ?? '',
             'telefone' => $parlamentar['telefone'],
-            'data_nascimento' => $this->formatDate($parlamentar['data_nascimento']),
+            'data_nascimento' => $this->formatDate($parlamentar['data_nascimento'] ?? null),
             'profissao' => $parlamentar['profissao'] ?? '',
             'escolaridade' => $parlamentar['escolaridade'] ?? '',
             'foto' => $parlamentar['foto'] ?? '',
             'comissoes' => $parlamentar['comissoes'] ?? [],
             'total_comissoes' => count($parlamentar['comissoes'] ?? []),
             'mandatos' => $parlamentar['mandatos'] ?? [],
-            'created_at' => $parlamentar['created_at'] ? 
-                \Carbon\Carbon::parse($parlamentar['created_at'])->format('d/m/Y H:i') : '',
-            'updated_at' => $parlamentar['updated_at'] ? 
-                \Carbon\Carbon::parse($parlamentar['updated_at'])->format('d/m/Y H:i') : '',
+            'created_at' => $this->formatDatetime($parlamentar['created_at']),
+            'updated_at' => $this->formatDatetime($parlamentar['updated_at']),
         ];
     }
 

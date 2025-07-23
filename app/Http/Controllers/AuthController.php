@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Models\Parlamentar;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -102,6 +103,27 @@ class AuthController extends Controller
             // Atribuir role selecionada
             $tipoUsuario = $request->input('tipo_usuario');
             $user->assignRole($tipoUsuario);
+            
+            // Se o usuário for parlamentar, criar registro na tabela parlamentars
+            if ($tipoUsuario === User::PERFIL_PARLAMENTAR) {
+                Parlamentar::create([
+                    'user_id' => $user->id,
+                    'nome' => $user->name,
+                    'email' => $user->email,
+                    'cpf' => $user->documento,
+                    'telefone' => $user->telefone,
+                    'data_nascimento' => $user->data_nascimento,
+                    'profissao' => $user->profissao,
+                    'cargo' => $user->cargo_atual ?? 'Parlamentar',
+                    'partido' => $user->partido,
+                    'status' => 'ativo',
+                ]);
+                
+                Log::info('Registro de parlamentar criado automaticamente', [
+                    'usuario_id' => $user->id,
+                    'nome' => $user->name
+                ]);
+            }
             
             Log::info('Usuário registrado com sucesso', [
                 'usuario_id' => $user->id,

@@ -128,7 +128,20 @@
                         <label class="form-label">Data de Nascimento</label>
                         <!--end::Label-->
                         <!--begin::Input-->
-                        <input type="date" name="data_nascimento" class="form-control mb-2" value="{{ old('data_nascimento', isset($parlamentar['data_nascimento']) ? (strpos($parlamentar['data_nascimento'], '/') !== false ? \Carbon\Carbon::createFromFormat('d/m/Y', $parlamentar['data_nascimento'])->format('Y-m-d') : $parlamentar['data_nascimento']) : '') }}" />
+                        <input type="date" name="data_nascimento" class="form-control mb-2" 
+                            value="{{ old('data_nascimento', isset($parlamentar['data_nascimento']) && !empty($parlamentar['data_nascimento']) ? 
+                                (function() use ($parlamentar) {
+                                    try {
+                                        $date = $parlamentar['data_nascimento'];
+                                        if (strpos($date, '/') !== false) {
+                                            // Data no formato brasileiro, converter para Y-m-d
+                                            return \Carbon\Carbon::parse(str_replace(' ', '', $date))->format('Y-m-d');
+                                        }
+                                        return $date;
+                                    } catch (\Exception $e) {
+                                        return '';
+                                    }
+                                })() : '') }}" />
                         <!--end::Input-->
                         @error('data_nascimento')
                             <div class="text-danger fs-7">{{ $message }}</div>
