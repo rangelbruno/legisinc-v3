@@ -142,10 +142,21 @@
                         </div>
                         <div>
                             @if($modelo->arquivo_path)
-                                <a href="{{ route('documentos.modelos.download', $modelo) }}?v={{ $modelo->updated_at->timestamp }}" 
-                                   class="btn btn-outline-success" title="Download do Modelo">
-                                    <i class="fas fa-download"></i> Download
-                                </a>
+                                <div class="btn-group" role="group">
+                                    <a href="{{ route('documentos.modelos.download', $modelo) }}?v={{ $modelo->updated_at->timestamp }}" 
+                                       class="btn btn-outline-success download-btn" 
+                                       title="Download do Modelo"
+                                       data-modelo-id="{{ $modelo->id }}">
+                                        <i class="fas fa-download"></i> Download
+                                    </a>
+                                    <button type="button" 
+                                            class="btn btn-outline-success btn-sm update-download-btn" 
+                                            title="Atualizar link de download"
+                                            onclick="updateDownloadLink()"
+                                            data-modelo-id="{{ $modelo->id }}">
+                                        <i class="fas fa-sync-alt"></i>
+                                    </button>
+                                </div>
                             @endif
                             
                             {{-- ONLYOFFICE Editor Button --}}
@@ -192,16 +203,100 @@ document.addEventListener('DOMContentLoaded', function() {
                     setTimeout(() => location.reload(), 3000);
                     break;
                 case 'onlyoffice_document_saved':
-                    console.log('Documento salvo no OnlyOffice, atualizando página imediatamente...');
+                    console.log('Documento salvo no OnlyOffice, atualizando link de download...');
+                    updateDownloadLink();
                     setTimeout(() => location.reload(), 500);
                     break;
                 case 'onlyoffice_document_updated':
-                    console.log('Documento atualizado no OnlyOffice...');
+                    console.log('Documento atualizado no OnlyOffice, atualizando link de download...');
+                    updateDownloadLink();
                     setTimeout(() => location.reload(), 1500);
                     break;
             }
         }
     });
+
+    // Funcionalidade de atualização automática do download
+    function updateDownloadLink() {
+        const downloadBtn = document.querySelector('.download-btn');
+        const updateBtn = document.querySelector('.update-download-btn');
+        if (!downloadBtn) return;
+        
+        const modeloId = downloadBtn.getAttribute('data-modelo-id');
+        if (!modeloId) return;
+        
+        // Adicionar indicador visual de atualização
+        const originalIcon = downloadBtn.querySelector('i');
+        const originalText = downloadBtn.innerHTML;
+        const updateOriginalIcon = updateBtn ? updateBtn.innerHTML : '';
+        
+        downloadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Atualizando...';
+        downloadBtn.disabled = true;
+        
+        if (updateBtn) {
+            updateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            updateBtn.disabled = true;
+        }
+        
+        fetch(`/admin/documentos/modelos/${modeloId}/last-update`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.timestamp) {
+                    const currentUrl = new URL(downloadBtn.href);
+                    const currentTimestamp = currentUrl.searchParams.get('v');
+                    
+                    // Só atualizar se o timestamp realmente mudou
+                    if (currentTimestamp !== data.timestamp.toString()) {
+                        currentUrl.searchParams.set('v', data.timestamp);
+                        downloadBtn.href = currentUrl.toString();
+                        
+                        console.log('Download link updated with new timestamp:', data.timestamp);
+                        
+                        // Mostrar feedback visual rápido
+                        downloadBtn.innerHTML = '<i class="fas fa-check text-success"></i> Atualizado!';
+                        if (updateBtn) {
+                            updateBtn.innerHTML = '<i class="fas fa-check text-success"></i>';
+                        }
+                        setTimeout(() => {
+                            downloadBtn.innerHTML = originalText;
+                            downloadBtn.disabled = false;
+                            if (updateBtn) {
+                                updateBtn.innerHTML = updateOriginalIcon;
+                                updateBtn.disabled = false;
+                            }
+                        }, 1000);
+                    } else {
+                        downloadBtn.innerHTML = originalText;
+                        downloadBtn.disabled = false;
+                        if (updateBtn) {
+                            updateBtn.innerHTML = updateOriginalIcon;
+                            updateBtn.disabled = false;
+                        }
+                    }
+                } else {
+                    downloadBtn.innerHTML = originalText;
+                    downloadBtn.disabled = false;
+                    if (updateBtn) {
+                        updateBtn.innerHTML = updateOriginalIcon;
+                        updateBtn.disabled = false;
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error updating download link:', error);
+                downloadBtn.innerHTML = originalText;
+                downloadBtn.disabled = false;
+                if (updateBtn) {
+                    updateBtn.innerHTML = updateOriginalIcon;
+                    updateBtn.disabled = false;
+                }
+            });
+    }
 
     // Fallback: verificar localStorage periodicamente
     let lastChecks = {
@@ -241,7 +336,8 @@ document.addEventListener('DOMContentLoaded', function() {
         if (currentSaved && currentSaved !== lastChecks.saved) {
             const timestamp = parseInt(currentSaved);
             if (Date.now() - timestamp < 5000) {
-                console.log('Documento salvo (localStorage), atualizando página imediatamente...');
+                console.log('Documento salvo (localStorage), atualizando link de download e página...');
+                updateDownloadLink();
                 lastChecks.saved = currentSaved;
                 setTimeout(() => location.reload(), 500);
                 return;
@@ -253,7 +349,8 @@ document.addEventListener('DOMContentLoaded', function() {
         if (currentUpdate && currentUpdate !== lastChecks.updated) {
             const timestamp = parseInt(currentUpdate);
             if (Date.now() - timestamp < 8000) {
-                console.log('Documento atualizado (localStorage), atualizando página...');
+                console.log('Documento atualizado (localStorage), atualizando link de download e página...');
+                updateDownloadLink();
                 lastChecks.updated = currentUpdate;
                 setTimeout(() => location.reload(), 1500);
                 return;
