@@ -526,8 +526,18 @@ Route::prefix('proposicoes')->name('proposicoes.')->middleware(['auth', 'check.s
     Route::get('/{proposicao}/preencher-modelo/{modeloId}', [App\Http\Controllers\ProposicaoController::class, 'preencherModelo'])->name('preencher-modelo');
     Route::post('/{proposicao}/gerar-texto', [App\Http\Controllers\ProposicaoController::class, 'gerarTexto'])->name('gerar-texto');
     Route::get('/{proposicao}/editar-texto', [App\Http\Controllers\ProposicaoController::class, 'editarTexto'])->name('editar-texto');
+    Route::get('/{proposicao}/editar-onlyoffice/{template}', [App\Http\Controllers\ProposicaoController::class, 'editarOnlyOffice'])->name('editar-onlyoffice');
+    Route::get('/{proposicao}/preparar-edicao/{template}', [App\Http\Controllers\ProposicaoController::class, 'prepararEdicao'])->name('preparar-edicao');
+    Route::get('/{proposicao}/editor-completo/{template}', [App\Http\Controllers\ProposicaoController::class, 'editorCompleto'])->name('editor-completo');
+    Route::post('/{proposicao}/salvar-dados-temporarios', [App\Http\Controllers\ProposicaoController::class, 'salvarDadosTemporarios'])->name('salvar-dados-temporarios');
     Route::post('/{proposicao}/salvar-texto', [App\Http\Controllers\ProposicaoController::class, 'salvarTexto'])->name('salvar-texto');
+    Route::post('/{proposicao}/upload-anexo', [App\Http\Controllers\ProposicaoController::class, 'uploadAnexo'])->name('upload-anexo');
+    Route::delete('/{proposicao}/remover-anexo/{anexo}', [App\Http\Controllers\ProposicaoController::class, 'removerAnexo'])->name('remover-anexo');
+    Route::post('/{proposicao}/atualizar-status', [App\Http\Controllers\ProposicaoController::class, 'atualizarStatus'])->name('atualizar-status');
     Route::put('/{proposicao}/enviar-legislativo', [App\Http\Controllers\ProposicaoController::class, 'enviarLegislativo'])->name('enviar-legislativo');
+    Route::post('/{proposicao}/retorno-legislativo', [App\Http\Controllers\ProposicaoController::class, 'retornoLegislativo'])->name('retorno-legislativo');
+    Route::post('/{proposicao}/assinar-documento', [App\Http\Controllers\ProposicaoController::class, 'assinarDocumento'])->name('assinar-documento');
+    Route::post('/{proposicao}/enviar-protocolo', [App\Http\Controllers\ProposicaoController::class, 'enviarProtocolo'])->name('enviar-protocolo');
     
     // ===== LEGISLATIVO - REVISÃO =====
     Route::get('/revisar', [App\Http\Controllers\ProposicaoLegislativoController::class, 'index'])->name('revisar');
@@ -559,7 +569,19 @@ Route::prefix('proposicoes')->name('proposicoes.')->middleware(['auth', 'check.s
     
     // ===== GERAL =====
     Route::get('/minhas-proposicoes', [App\Http\Controllers\ProposicaoController::class, 'minhasProposicoes'])->name('minhas-proposicoes');
+    Route::get('/limpar-sessao-teste', [App\Http\Controllers\ProposicaoController::class, 'limparSessaoTeste'])->name('limpar-sessao-teste'); // Temporário para desenvolvimento
+    Route::get('/{proposicao}/status', [App\Http\Controllers\ProposicaoController::class, 'statusTramitacao'])->name('status-tramitacao');
     Route::get('/{proposicao}', [App\Http\Controllers\ProposicaoController::class, 'show'])->name('show');
+    Route::delete('/{proposicao}', [App\Http\Controllers\ProposicaoController::class, 'destroy'])->name('destroy');
+});
+
+// ONLYOFFICE ROUTES FOR PROPOSIÇÕES
+Route::prefix('onlyoffice')->name('onlyoffice.')->group(function () {
+    // File serving routes (no auth middleware since OnlyOffice server needs direct access)
+    Route::get('/file/proposicao/{proposicao}/{arquivo}', [App\Http\Controllers\ProposicaoController::class, 'serveFile'])->name('file.proposicao');
+    
+    // Callback routes for document updates
+    Route::post('/callback/proposicao/{proposicao}', [App\Http\Controllers\ProposicaoController::class, 'onlyOfficeCallback'])->name('callback.proposicao');
 });
 
 // ROTAS DE ADMINISTRAÇÃO - TIPOS DE PROPOSIÇÃO
@@ -708,4 +730,18 @@ Route::get('/debug-user', function () {
         'permissions' => $user->getPermissionNames(),
     ]);
 })->middleware('auth');
+
+// Templates routes (protected with auth and permissions)
+Route::prefix('admin')->middleware(['auth', 'check.screen.permission'])->group(function () {
+    Route::get('templates', [App\Http\Controllers\TemplateController::class, 'index'])
+         ->name('templates.index');
+    Route::get('templates/create', [App\Http\Controllers\TemplateController::class, 'create'])
+         ->name('templates.create');
+    Route::post('templates', [App\Http\Controllers\TemplateController::class, 'store'])
+         ->name('templates.store');
+    Route::delete('templates/{template}', [App\Http\Controllers\TemplateController::class, 'destroy'])
+         ->name('templates.destroy');
+    Route::get('templates/{tipo}/editor', [App\Http\Controllers\TemplateController::class, 'editor'])
+         ->name('templates.editor');
+});
 

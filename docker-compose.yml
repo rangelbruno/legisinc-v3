@@ -69,7 +69,7 @@ services:
     container_name: legisinc-onlyoffice
     restart: unless-stopped
     environment:
-      - JWT_ENABLED=true
+      - JWT_ENABLED=false
       - JWT_SECRET=${ONLYOFFICE_JWT_SECRET:-MySecretKey123}
       - JWT_HEADER=Authorization
       - JWT_IN_BODY=true

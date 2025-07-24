@@ -147,19 +147,51 @@ class DocumentoModeloService
         return $modelo->fresh();
     }
     
-    public function obterModelosDisponiveis(?int $tipoProposicaoId = null): \Illuminate\Database\Eloquent\Collection
+    public function obterModelosDisponiveis(?int $tipoProposicaoId = null)
     {
-        $query = DocumentoModelo::where('ativo', true)
+        // Buscar modelos antigos (documento_modelos)
+        $queryModelos = DocumentoModelo::where('ativo', true)
             ->orderBy('nome');
             
         if ($tipoProposicaoId) {
-            $query->where(function($q) use ($tipoProposicaoId) {
+            $queryModelos->where(function($q) use ($tipoProposicaoId) {
                 $q->where('tipo_proposicao_id', $tipoProposicaoId)
                   ->orWhereNull('tipo_proposicao_id');
             });
         }
         
-        return $query->get();
+        $modelosAntigos = $queryModelos->get();
+        
+        // Buscar novos templates (tipo_proposicao_templates)
+        $templatesNovos = collect();
+        if ($tipoProposicaoId) {
+            $template = \App\Models\TipoProposicaoTemplate::where('tipo_proposicao_id', $tipoProposicaoId)
+                ->where('ativo', true)
+                ->with('tipoProposicao')
+                ->first();
+                
+            if ($template) {
+                // Converter template para formato compatível com modelo
+                $templateAsModelo = (object) [
+                    'id' => 'template_' . $template->id, // Prefixo para distinguir
+                    'nome' => 'Template: ' . $template->tipoProposicao->nome,
+                    'descricao' => 'Template oficial para ' . $template->tipoProposicao->nome,
+                    'tipo_proposicao_id' => $template->tipo_proposicao_id,
+                    'icon' => 'ki-duotone ki-document',
+                    'variaveis' => $template->variaveis ?? [],
+                    'is_template' => true, // Flag para identificar
+                    'template_id' => $template->id,
+                    'arquivo_path' => $template->arquivo_path,
+                    'created_at' => $template->created_at,
+                    'updated_at' => $template->updated_at
+                ];
+                
+                $templatesNovos->push($templateAsModelo);
+            }
+        }
+        
+        // Combinar ambos e retornar
+        return $templatesNovos->concat($modelosAntigos)->sortBy('nome');
     }
     
     private function extrairMetadadosProjeto(Projeto $projeto): array

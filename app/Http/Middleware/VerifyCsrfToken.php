@@ -14,6 +14,7 @@ class VerifyCsrfToken extends Middleware
     protected $except = [
         'mock-api/*',
         'admin/parametros/ajax/*',
+        'onlyoffice/*',
     ];
     
 } 

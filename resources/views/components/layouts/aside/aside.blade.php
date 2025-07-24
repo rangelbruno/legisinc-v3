@@ -536,6 +536,17 @@
                             </a>
                         </div>
                         @endif
+                        @if(\App\Models\ScreenPermission::userCanAccessRoute('templates.index'))
+                        <div class="menu-item">
+                            <a class="menu-link {{ request()->routeIs('templates.*') ? 'active' : '' }}" href="{{ route('templates.index') }}">
+                                <span class="menu-bullet">
+                                    <span class="bullet bullet-dot"></span>
+                                </span>
+                                <span class="menu-title">Templates de Documentos</span>
+                                <span class="badge badge-primary ms-auto">Novo</span>
+                            </a>
+                        </div>
+                        @endif
                         <div class="menu-item">
                             <a class="menu-link" href="#" onclick="showComingSoon('Configurações do Sistema')">
                                 <span class="menu-bullet">

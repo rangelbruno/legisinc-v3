@@ -93,22 +93,6 @@
                             </div>
                         </div>
 
-                        <!-- Ementa -->
-                        <div class="mb-4">
-                            <label for="ementa" class="form-label required">Ementa</label>
-                            <textarea name="ementa" id="ementa" class="form-control" rows="4" 
-                                      placeholder="Digite um resumo claro e objetivo do que trata a proposição..."
-                                      maxlength="1000" required></textarea>
-                            <div class="d-flex justify-content-between">
-                                <div class="form-text">
-                                    Resumo claro e objetivo da proposição (máximo 1000 caracteres).
-                                </div>
-                                <small class="text-muted">
-                                    <span id="ementa-count">0</span>/1000
-                                </small>
-                            </div>
-                        </div>
-
                         <!-- Modelo -->
                         <div class="mb-4" id="modelo-container" style="display: none;">
                             <label for="modelo" class="form-label required">Selecionar Modelo</label>
@@ -183,18 +167,6 @@
 $(document).ready(function() {
     let proposicaoId = null;
 
-    // Contador de caracteres da ementa
-    $('#ementa').on('input', function() {
-        const count = $(this).val().length;
-        $('#ementa-count').text(count);
-        
-        if (count > 950) {
-            $('#ementa-count').addClass('text-warning');
-        } else {
-            $('#ementa-count').removeClass('text-warning');
-        }
-    });
-
     // Carregar modelos quando tipo for selecionado
     $('#tipo').on('change', function() {
         const tipo = $(this).val();
@@ -204,8 +176,12 @@ $(document).ready(function() {
             $('#modelo-container').show();
         } else {
             $('#modelo-container').hide();
+            $('#modelo').val(''); // Limpar seleção de modelo
             $('#btn-continuar').prop('disabled', true);
         }
+        
+        // Validar formulário quando tipo for alterado
+        validarFormulario();
     });
 
     // Validar se pode continuar
@@ -222,13 +198,39 @@ $(document).ready(function() {
     $('#form-criar-proposicao').on('submit', function(e) {
         e.preventDefault();
         
+        const modeloId = $('#modelo').val();
+        if (!modeloId) {
+            alert('Selecione um modelo para continuar.');
+            return;
+        }
+        
         if (proposicaoId) {
-            const modeloId = $('#modelo').val();
-            if (modeloId) {
-                window.location.href = `/proposicoes/${proposicaoId}/preencher-modelo/${modeloId}`;
-            }
+            // Já tem proposição salva, continuar direto
+            window.location.href = `/proposicoes/${proposicaoId}/preencher-modelo/${modeloId}`;
         } else {
-            alert('Erro: Proposição não foi salva. Tente salvar como rascunho primeiro.');
+            // Salvar rascunho primeiro, depois continuar
+            $('#btn-continuar').prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i>Salvando...');
+            
+            const dados = {
+                tipo: $('#tipo').val(),
+                ementa: 'Proposição em elaboração', // Ementa padrão temporária
+                _token: $('meta[name="csrf-token"]').attr('content')
+            };
+
+            $.post('/proposicoes/salvar-rascunho', dados)
+                .done(function(response) {
+                    if (response.success) {
+                        proposicaoId = response.proposicao_id;
+                        window.location.href = `/proposicoes/${proposicaoId}/preencher-modelo/${modeloId}`;
+                    }
+                })
+                .fail(function(xhr) {
+                    alert('Erro ao salvar rascunho. Tente novamente.');
+                    console.error(xhr.responseText);
+                })
+                .always(function() {
+                    $('#btn-continuar').prop('disabled', false).html('<i class="fas fa-arrow-right me-2"></i>Continuar');
+                });
         }
     });
 
@@ -237,27 +239,48 @@ $(document).ready(function() {
         
         $.get(`/proposicoes/modelos/${tipo}`)
             .done(function(modelos) {
+                console.log('Dados recebidos:', modelos);
+                console.log('Tipo dos dados:', typeof modelos);
+                console.log('É array?', Array.isArray(modelos));
+                
                 let options = '<option value="">Selecione um modelo</option>';
-                modelos.forEach(function(modelo) {
-                    options += `<option value="${modelo.id}">${modelo.nome}</option>`;
-                });
+                
+                // Verificar se é um array
+                if (Array.isArray(modelos)) {
+                    modelos.forEach(function(modelo) {
+                        options += `<option value="${modelo.id}">${modelo.nome}</option>`;
+                    });
+                } else {
+                    console.error('Dados recebidos não são um array:', modelos);
+                    options = '<option value="">Erro: formato de dados inválido</option>';
+                }
+                
                 $('#modelo').html(options);
             })
-            .fail(function() {
+            .fail(function(xhr, status, error) {
+                console.error('Erro ao carregar modelos:', xhr, status, error);
                 $('#modelo').html('<option value="">Erro ao carregar modelos</option>');
-                toastr.error('Erro ao carregar modelos');
+                
+                let errorMessage = 'Erro ao carregar modelos';
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    errorMessage += ': ' + xhr.responseJSON.message;
+                } else if (xhr.status) {
+                    errorMessage += ' (Status: ' + xhr.status + ')';
+                }
+                
+                toastr.error(errorMessage);
             });
     }
 
     function salvarRascunho() {
         const dados = {
             tipo: $('#tipo').val(),
-            ementa: $('#ementa').val(),
+            ementa: 'Proposição em elaboração', // Ementa padrão temporária
             _token: $('meta[name="csrf-token"]').attr('content')
         };
 
-        if (!dados.tipo || !dados.ementa) {
-            toastr.warning('Preencha pelo menos o tipo e a ementa');
+        if (!dados.tipo) {
+            toastr.warning('Selecione o tipo de proposição');
             return;
         }
 
@@ -282,10 +305,10 @@ $(document).ready(function() {
 
     function validarFormulario() {
         const tipo = $('#tipo').val();
-        const ementa = $('#ementa').val();
         const modelo = $('#modelo').val();
 
-        const valido = tipo && ementa && modelo && proposicaoId;
+        // Permitir continuar se tipo e modelo estão selecionados
+        const valido = tipo && modelo;
         $('#btn-continuar').prop('disabled', !valido);
     }
 });

@@ -229,4 +229,20 @@ class TipoProposicao extends Model
     {
         $this->attributes['ordem'] = max(0, (int) $value);
     }
+
+    /**
+     * Relacionamento com template
+     */
+    public function template()
+    {
+        return $this->hasOne(TipoProposicaoTemplate::class);
+    }
+
+    /**
+     * Verificar se tipo possui template ativo
+     */
+    public function hasTemplate(): bool
+    {
+        return $this->template && $this->template->ativo;
+    }
 }

@@ -148,3 +148,19 @@ Route::prefix('partidos')->name('api.partidos.')->group(function () {
     // Partido específico
     Route::get('/{id}', [App\Http\Controllers\Api\PartidoApiController::class, 'show'])->name('show');
 });
+
+// Templates API routes  
+Route::prefix('templates')->group(function () {
+    Route::get('{template}/download', [App\Http\Controllers\TemplateController::class, 'download'])
+         ->name('api.templates.download')
+         ->withoutMiddleware(['auth']);
+    Route::post('{tipo}/gerar', [App\Http\Controllers\TemplateController::class, 'gerar'])
+         ->name('api.templates.gerar');
+});
+
+Route::post('onlyoffice/callback/{documentKey}', [App\Http\Controllers\OnlyOfficeController::class, 'callback'])
+     ->name('api.onlyoffice.callback');
+
+// Callback específico para proposições
+Route::post('onlyoffice/callback/proposicao/{proposicaoId}', [App\Http\Controllers\ProposicaoController::class, 'onlyOfficeCallback'])
+     ->name('api.onlyoffice.callback.proposicao');

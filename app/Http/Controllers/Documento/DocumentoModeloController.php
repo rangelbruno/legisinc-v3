@@ -370,9 +370,11 @@ class DocumentoModeloController extends Controller
                 return [
                     'id' => $modelo->id,
                     'nome' => $modelo->nome,
-                    'descricao' => $modelo->descricao,
-                    'icon' => $modelo->icon,
-                    'variaveis' => $modelo->variaveis ?? []
+                    'descricao' => $modelo->descricao ?? '',
+                    'icon' => $modelo->icon ?? 'ki-duotone ki-document',
+                    'variaveis' => $modelo->variaveis ?? [],
+                    'is_template' => $modelo->is_template ?? false,
+                    'template_id' => $modelo->template_id ?? null
                 ];
             })
         ]);
