@@ -627,6 +627,22 @@ Route::prefix('admin/documentos')->name('documentos.')->middleware(['auth', 'che
         Route::post('/resetar-padrao', [App\Http\Controllers\Admin\DocumentoTemplateController::class, 'resetarPadrao'])->name('resetar-padrao')->middleware('check.permission:documentos.create');
     });
     
+    // ===== GESTÃO DE MODELOS =====
+    Route::prefix('modelos')->name('modelos.')->group(function () {
+        Route::get('/', [App\Http\Controllers\Documento\DocumentoModeloController::class, 'index'])->name('index')->middleware('check.permission:documentos.view');
+        Route::get('/create', [App\Http\Controllers\Documento\DocumentoModeloController::class, 'create'])->name('create')->middleware('check.permission:documentos.create');
+        Route::post('/', [App\Http\Controllers\Documento\DocumentoModeloController::class, 'store'])->name('store')->middleware('check.permission:documentos.create');
+        Route::get('/create-onlyoffice', [App\Http\Controllers\Documento\DocumentoModeloController::class, 'createOnlyOffice'])->name('create-onlyoffice')->middleware('check.permission:documentos.create');
+        Route::post('/store-onlyoffice', [App\Http\Controllers\Documento\DocumentoModeloController::class, 'storeOnlyOffice'])->name('store-onlyoffice')->middleware('check.permission:documentos.create');
+        Route::get('/{modelo}', [App\Http\Controllers\Documento\DocumentoModeloController::class, 'show'])->name('show')->middleware('check.permission:documentos.view');
+        Route::get('/{modelo}/edit', [App\Http\Controllers\Documento\DocumentoModeloController::class, 'edit'])->name('edit')->middleware('check.permission:documentos.edit');
+        Route::put('/{modelo}', [App\Http\Controllers\Documento\DocumentoModeloController::class, 'update'])->name('update')->middleware('check.permission:documentos.edit');
+        Route::delete('/{modelo}', [App\Http\Controllers\Documento\DocumentoModeloController::class, 'destroy'])->name('destroy')->middleware('check.permission:documentos.delete');
+        Route::get('/{modelo}/download', [App\Http\Controllers\Documento\DocumentoModeloController::class, 'download'])->name('download')->middleware('check.permission:documentos.view');
+        Route::get('/{modelo}/editor-onlyoffice', [App\Http\Controllers\Documento\DocumentoModeloController::class, 'editorOnlyOffice'])->name('editor-onlyoffice')->middleware('check.permission:documentos.edit');
+        Route::get('/{modelo}/last-update', [App\Http\Controllers\Documento\DocumentoModeloController::class, 'lastUpdate'])->name('last-update')->middleware('check.permission:documentos.view');
+    });
+    
     // ===== GESTÃO DE INSTÂNCIAS =====
     Route::prefix('instancias')->name('instancias.')->group(function () {
         Route::get('/', [App\Http\Controllers\Documento\DocumentoInstanciaController::class, 'index'])->name('index')->middleware('check.permission:documentos.view');

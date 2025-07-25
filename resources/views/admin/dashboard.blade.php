@@ -519,12 +519,12 @@
             @if(auth()->user()->isAdmin())
             <div class="col-xl-4 col-lg-6 col-md-6">
                 <!--begin::Statistics Widget 2-->
-                <div class="card card-xl-stretch mb-xl-8 card-hover cursor-pointer" onclick="window.location.href='{{ route('documentos.modelos.index') }}'">
+                <div class="card card-xl-stretch mb-xl-8 card-hover cursor-pointer" onclick="window.location.href='{{ route('templates.index') }}'">
                     <!--begin::Body-->
                     <div class="card-body d-flex align-items-center pt-3 pb-0">
                         <div class="d-flex flex-column flex-grow-1 py-2 py-lg-13 me-2">
-                            <a href="{{ route('documentos.modelos.index') }}" class="fw-bold text-gray-900 fs-4 mb-2 text-hover-primary d-flex align-items-center">
-                                Gerenciar Modelos
+                            <a href="{{ route('templates.index') }}" class="fw-bold text-gray-900 fs-4 mb-2 text-hover-primary d-flex align-items-center">
+                                Templates
                                 <i class="ki-duotone ki-arrow-right fs-5 ms-2">
                                     <span class="path1"></span>
                                     <span class="path2"></span>
