@@ -59,12 +59,12 @@ class ProposicaoPermissionsSeeder extends Seeder
 
         // Atribuir permissões aos roles
 
-        // PARLAMENTAR - Pode criar, editar próprias e assinar
+        // PARLAMENTAR - Permissões padrão: Criar Proposição, Minhas Proposições e Assinatura
         $parlamentar->syncPermissions([
-            'proposicoes.create',
+            'proposicoes.create',           // Criar Proposição
             'proposicoes.edit_own',
-            'proposicoes.sign',
-            'proposicoes.view_own',
+            'proposicoes.sign',             // Assinatura
+            'proposicoes.view_own',         // Minhas Proposições  
             'proposicoes.send_legislative',
             'proposicoes.correct',
         ]);

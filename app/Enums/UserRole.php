@@ -50,7 +50,10 @@ enum UserRole: string
                 'comissoes.view',
                 'projetos.view',
                 'projetos.create',
-                'sessoes.view'
+                'sessoes.view',
+                'proposicoes.create',       // Criar Proposição
+                'proposicoes.view_own',     // Minhas Proposições
+                'proposicoes.sign'          // Assinatura
             ],
             self::RELATOR => [
                 'dashboard.view',
