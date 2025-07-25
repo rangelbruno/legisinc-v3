@@ -731,5 +731,15 @@ Route::prefix('admin')->middleware(['auth', 'check.screen.permission'])->group(f
          ->name('templates.destroy');
     Route::get('templates/{tipo}/editor', [App\Http\Controllers\TemplateController::class, 'editor'])
          ->name('templates.editor');
+    
+    // System Diagnostic routes
+    Route::get('system-diagnostic', [App\Http\Controllers\Admin\SystemDiagnosticController::class, 'index'])
+         ->name('admin.system-diagnostic.index');
+    Route::get('system-diagnostic/database', [App\Http\Controllers\Admin\SystemDiagnosticController::class, 'database'])
+         ->name('admin.system-diagnostic.database');
+    Route::get('system-diagnostic/database/table/{table}', [App\Http\Controllers\Admin\SystemDiagnosticController::class, 'tableRecords'])
+         ->name('admin.system-diagnostic.table');
+    Route::post('system-diagnostic/fix-permissions', [App\Http\Controllers\Admin\SystemDiagnosticController::class, 'fixPermissions'])
+         ->name('admin.system-diagnostic.fix-permissions');
 });
 

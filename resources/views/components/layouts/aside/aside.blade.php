@@ -537,6 +537,14 @@
                         </div>
                         @endif
                         <div class="menu-item">
+                            <a class="menu-link {{ request()->routeIs('admin.system-diagnostic.*') ? 'active' : '' }}" href="{{ route('admin.system-diagnostic.index') }}">
+                                <span class="menu-bullet">
+                                    <span class="bullet bullet-dot"></span>
+                                </span>
+                                <span class="menu-title">Diagnóstico do Sistema</span>
+                            </a>
+                        </div>
+                        <div class="menu-item">
                             <a class="menu-link" href="#" onclick="showComingSoon('Configurações do Sistema')">
                                 <span class="menu-bullet">
                                     <span class="bullet bullet-dot"></span>
