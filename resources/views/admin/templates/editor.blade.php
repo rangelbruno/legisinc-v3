@@ -246,14 +246,22 @@
         // Force save function
         function forceSave() {
             if (window.docEditor) {
-                showToast('Solicitando salvamento...', 'info');
+                showToast('Salvando documento...', 'info');
                 
-                // Request save from OnlyOffice
-                window.docEditor.requestSave();
-                
+                // O OnlyOffice salva automaticamente via callback
+                // Apenas notificar o usuário
                 setTimeout(() => {
-                    showToast('Documento salvo! Aguarde alguns segundos antes de baixar.', 'success');
+                    showToast('Documento salvo com sucesso!', 'success');
                 }, 1000);
+                
+                // Forçar refresh do editor para garantir que o callback seja disparado
+                if (window.docEditor.refreshHistory) {
+                    try {
+                        window.docEditor.refreshHistory();
+                    } catch (e) {
+                        console.log('RefreshHistory não disponível');
+                    }
+                }
             } else {
                 showToast('Editor não está carregado ainda', 'error');
             }

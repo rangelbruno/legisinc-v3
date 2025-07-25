@@ -90,10 +90,18 @@ class TemplateController extends Controller
             ]
         );
 
-        // Sempre gerar novo document_key para nova sessão de edição
-        $template->update([
-            'document_key' => 'template_' . $tipo->id . '_' . time() . '_' . auth()->id()
-        ]);
+        // Só gerar novo document_key se não houver um ou se foi modificado há mais de 1 minuto
+        // Isso evita conflitos com callbacks em processamento
+        $tempoDesdeUltimaModificacao = $template->updated_at->diffInSeconds(now());
+        
+        if (empty($template->document_key) || $tempoDesdeUltimaModificacao > 60) {
+            $template->update([
+                'document_key' => 'template_' . $tipo->id . '_' . time() . '_' . auth()->id()
+            ]);
+            
+            // Limpar cache do OnlyOffice se existir
+            \Cache::forget('onlyoffice_template_' . $template->id);
+        }
 
         // Configuração do ONLYOFFICE
         $config = $this->onlyOfficeService->criarConfiguracaoTemplate($template);
@@ -110,6 +118,9 @@ class TemplateController extends Controller
      */
     public function download(TipoProposicaoTemplate $template)
     {
+        // Forçar refresh do modelo para pegar dados mais recentes
+        $template->refresh();
+        
         \Log::info('Template download requested', [
             'template_id' => $template->id,
             'ativo' => $template->ativo,
@@ -127,6 +138,9 @@ class TemplateController extends Controller
             abort(404, 'Template não possui arquivo');
         }
 
+        // Limpar cache de arquivo antes de verificar
+        clearstatcache();
+        
         if (!Storage::exists($template->arquivo_path)) {
             \Log::error('Arquivo do template não encontrado', [
                 'template_id' => $template->id,
@@ -138,7 +152,12 @@ class TemplateController extends Controller
         // Gerar nome do arquivo baseado no tipo de proposição
         $nomeArquivo = \Illuminate\Support\Str::slug($template->tipoProposicao->nome) . '.rtf';
         
-        return Storage::download($template->arquivo_path, $nomeArquivo);
+        // Retornar arquivo sem cache
+        return response()->download(
+            Storage::path($template->arquivo_path), 
+            $nomeArquivo,
+            ['Cache-Control' => 'no-cache, no-store, must-revalidate']
+        );
     }
 
     /**

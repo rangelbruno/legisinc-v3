@@ -56,7 +56,12 @@ class OnlyOfficeService
                 'mode' => 'edit',
                 'callbackUrl' => str_replace('http://localhost:8001', 'http://host.docker.internal:8001', route('api.onlyoffice.callback', $template->document_key)),
                 'lang' => 'pt-BR',
-                'autosave' => true,
+                'customization' => [
+                    'autosave' => true,
+                    'forcesave' => true,
+                    'compactHeader' => true,
+                    'toolbarNoTabs' => false
+                ],
                 'coEditing' => [
                     'mode' => 'fast',
                     'change' => true
@@ -88,10 +93,23 @@ class OnlyOfficeService
         }
 
         $status = $data['status'];
+        
+        // Marcar status do callback em cache para controle
+        \Cache::put('onlyoffice_callback_' . $documentKey, $status, 300); // 5 minutos
 
-        // Status 2 = Pronto para salvar
-        if ($status === 2 && isset($data['url'])) {
+        // Status 2 = Pronto para salvar (save)
+        // Status 6 = Force save (salvamento forçado pelo usuário)
+        if (in_array($status, [2, 6]) && isset($data['url'])) {
+            \Log::info('Processando salvamento do template', [
+                'document_key' => $documentKey,
+                'status' => $status,
+                'status_type' => $status === 2 ? 'auto_save' : 'force_save'
+            ]);
+            
             $this->salvarTemplate($template, $data['url']);
+            
+            // Remover marca de callback após salvar
+            \Cache::forget('onlyoffice_callback_' . $documentKey);
         }
 
         return ['error' => 0];
@@ -103,46 +121,21 @@ class OnlyOfficeService
     private function salvarTemplate(TipoProposicaoTemplate $template, string $url): void
     {
         try {
-            // Múltiplas opções de URL para tentar acesso ao container OnlyOffice
-            $urlsParaTentar = [
-                str_replace('http://localhost:8080', 'http://legisinc-onlyoffice:80', $url),
-                str_replace('http://localhost:8080', 'http://host.docker.internal:8080', $url),
-                str_replace('http://localhost:8080', 'http://onlyoffice-documentserver:80', $url),
-                $url // URL original como último recurso
-            ];
+            // Usar URL direta entre containers Docker (mais rápido)
+            $urlOtimizada = str_replace('http://localhost:8080', 'http://legisinc-onlyoffice:80', $url);
             
-            \Log::info('OnlyOffice salvando template', [
-                'template_id' => $template->id,
-                'url_original' => $url,
-                'urls_para_tentar' => $urlsParaTentar
-            ]);
+            // Download direto com timeout reduzido
+            $response = Http::timeout(5)->get($urlOtimizada);
             
-            $response = null;
-            $urlUtilizada = null;
-            
-            // Tentar cada URL até conseguir fazer download
-            foreach ($urlsParaTentar as $urlTentativa) {
-                try {
-                    \Log::info('Tentando URL', ['url' => $urlTentativa]);
-                    $response = Http::timeout(30)->get($urlTentativa);
-                    
-                    if ($response->successful()) {
-                        $urlUtilizada = $urlTentativa;
-                        \Log::info('URL funcionou', ['url' => $urlUtilizada, 'size' => strlen($response->body())]);
-                        break;
-                    } else {
-                        \Log::warning('URL falhou', ['url' => $urlTentativa, 'status' => $response->status()]);
-                    }
-                } catch (\Exception $e) {
-                    \Log::warning('Erro ao tentar URL', ['url' => $urlTentativa, 'error' => $e->getMessage()]);
-                    continue;
-                }
+            if (!$response->successful()) {
+                // Fallback rápido apenas se necessário
+                $response = Http::timeout(5)->get($url);
             }
             
             if (!$response || !$response->successful()) {
-                \Log::error('OnlyOffice callback - falha no download de todas as URLs', [
+                \Log::error('OnlyOffice callback - falha no download', [
                     'template_id' => $template->id,
-                    'url_original' => $url
+                    'url' => $url
                 ]);
                 return;
             }
@@ -151,23 +144,46 @@ class OnlyOfficeService
             $nomeArquivo = "template_{$template->tipo_proposicao_id}.rtf";
             $path = "templates/{$nomeArquivo}";
             
-            // Salvar no storage padrão (público)
-            Storage::put($path, $response->body());
-
-            // Atualizar template
-            $template->update([
-                'arquivo_path' => $path,
-                'updated_by' => auth()->id()
-            ]);
-
-            // Extrair variáveis automaticamente
-            $this->extrairVariaveis($template);
+            // Usar transação para garantir atomicidade e performance
+            \DB::transaction(function() use ($template, $path, $response) {
+                // Salvar no storage padrão (público)
+                $saved = Storage::put($path, $response->body());
+                
+                \Log::info('Arquivo salvo no storage', [
+                    'path' => $path,
+                    'saved' => $saved,
+                    'size' => strlen($response->body())
+                ]);
+                
+                // Forçar refresh do modelo para evitar cache
+                $template->refresh();
+                
+                // Atualizar template
+                $updated = $template->update([
+                    'arquivo_path' => $path,
+                    'updated_by' => auth()->id(),
+                    'updated_at' => now() // Forçar atualização do timestamp
+                ]);
+                
+                \Log::info('Template atualizado no banco', [
+                    'template_id' => $template->id,
+                    'updated' => $updated,
+                    'arquivo_path' => $template->arquivo_path,
+                    'updated_at' => $template->updated_at
+                ]);
+                
+                // Limpar cache
+                \Cache::forget('onlyoffice_template_' . $template->id);
+                \Cache::forget('template_content_' . $template->id);
+                
+                // Extrair variáveis automaticamente
+                $this->extrairVariaveis($template);
+            });
             
-            \Log::info('OnlyOffice template salvo com sucesso', [
-                'template_id' => $template->id,
-                'arquivo_path' => $path,
-                'url_utilizada' => $urlUtilizada,
-                'tamanho_arquivo' => strlen($response->body())
+            \Log::info('Template salvo com sucesso', [
+                'id' => $template->id,
+                'path' => $path,
+                'size' => strlen($response->body())
             ]);
             
         } catch (\Exception $e) {
