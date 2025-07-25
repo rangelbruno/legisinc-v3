@@ -85,26 +85,60 @@ class TemplateController extends Controller
         $template = TipoProposicaoTemplate::firstOrCreate(
             ['tipo_proposicao_id' => $tipo->id],
             [
-                'document_key' => 'template_' . $tipo->id . '_' . time(),
+                'document_key' => 'template_' . $tipo->id . '_' . time() . '_' . uniqid(),
                 'updated_by' => auth()->id()
             ]
         );
 
-        // Só gerar novo document_key se não houver um ou se foi modificado há mais de 1 minuto
-        // Isso evita conflitos com callbacks em processamento
-        $tempoDesdeUltimaModificacao = $template->updated_at->diffInSeconds(now());
+        // Verificar se há callback em processamento
+        $callbackEmProcessamento = \Cache::has('onlyoffice_callback_' . $template->document_key) ||
+                                   \Cache::has('onlyoffice_save_lock_' . $template->document_key);
         
-        if (empty($template->document_key) || $tempoDesdeUltimaModificacao > 60) {
-            $template->update([
-                'document_key' => 'template_' . $tipo->id . '_' . time() . '_' . auth()->id()
+        // Só gerar novo document_key se:
+        // 1. Não houver um key
+        // 2. Passou mais de 5 minutos desde a última modificação
+        // 3. Não há callback em processamento
+        $tempoDesdeUltimaModificacao = $template->updated_at->diffInMinutes(now());
+        
+        if (empty($template->document_key) || 
+            ($tempoDesdeUltimaModificacao > 5 && !$callbackEmProcessamento)) {
+            
+            $novoDocumentKey = 'template_' . $tipo->id . '_' . time() . '_' . uniqid();
+            
+            \Log::info('Gerando novo document_key para template', [
+                'template_id' => $template->id,
+                'tipo_id' => $tipo->id,
+                'old_key' => $template->document_key,
+                'new_key' => $novoDocumentKey,
+                'tempo_desde_modificacao' => $tempoDesdeUltimaModificacao,
+                'callback_em_processamento' => $callbackEmProcessamento
             ]);
             
-            // Limpar cache do OnlyOffice se existir
+            $template->update([
+                'document_key' => $novoDocumentKey,
+                'updated_by' => auth()->id()
+            ]);
+            
+            // Limpar caches relacionados
             \Cache::forget('onlyoffice_template_' . $template->id);
+            \Cache::forget('onlyoffice_callback_' . $template->document_key);
+            \Cache::forget('onlyoffice_save_lock_' . $template->document_key);
+        } else {
+            \Log::info('Mantendo document_key existente', [
+                'template_id' => $template->id,
+                'document_key' => $template->document_key,
+                'tempo_desde_modificacao' => $tempoDesdeUltimaModificacao,
+                'callback_em_processamento' => $callbackEmProcessamento
+            ]);
         }
 
         // Configuração do ONLYOFFICE
         $config = $this->onlyOfficeService->criarConfiguracaoTemplate($template);
+
+        // Adicionar informação de sessão para evitar refresh desnecessário
+        $config['editorConfig']['customization'] = $config['editorConfig']['customization'] ?? [];
+        $config['editorConfig']['customization']['forcesave'] = true;
+        $config['editorConfig']['customization']['autosave'] = false;
 
         return view('admin.templates.editor', [
             'tipo' => $tipo,

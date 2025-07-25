@@ -461,9 +461,21 @@ function confirmarExclusaoProposicao(proposicaoId) {
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
                     'Accept': 'application/json'
-                }
+                },
+                body: JSON.stringify({
+                    _token: document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                })
             })
-            .then(response => response.json())
+            .then(response => {
+                console.log('Response status:', response.status);
+                console.log('Response headers:', response.headers);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                return response.json();
+            })
             .then(data => {
                 if (data.success) {
                     Swal.fire({
@@ -494,12 +506,34 @@ function confirmarExclusaoProposicao(proposicaoId) {
             })
             .catch(error => {
                 console.error('Erro na requisição:', error);
-                Swal.fire({
-                    title: 'Erro',
-                    text: 'Erro de conexão. Tente novamente.',
-                    icon: 'error',
-                    confirmButtonText: 'Ok'
-                });
+                
+                // Tentar extrair mensagem de erro se for uma resposta HTTP
+                if (error.message.includes('HTTP error')) {
+                    const status = error.message.match(/status: (\d+)/)?.[1];
+                    
+                    let errorMessage = 'Erro interno do servidor.';
+                    if (status === '400') {
+                        errorMessage = 'Requisição inválida. Verifique se a proposição pode ser excluída.';
+                    } else if (status === '403') {
+                        errorMessage = 'Você não tem permissão para excluir esta proposição.';
+                    } else if (status === '404') {
+                        errorMessage = 'Proposição não encontrada.';
+                    }
+                    
+                    Swal.fire({
+                        title: 'Erro!',
+                        text: errorMessage,
+                        icon: 'error',
+                        confirmButtonText: 'Ok'
+                    });
+                } else {
+                    Swal.fire({
+                        title: 'Erro',
+                        text: 'Erro de conexão. Tente novamente.',
+                        icon: 'error',
+                        confirmButtonText: 'Ok'
+                    });
+                }
             });
         }
     });

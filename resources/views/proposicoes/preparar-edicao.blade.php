@@ -79,7 +79,7 @@
                                                     <span class="path1"></span>
                                                     <span class="path2"></span>
                                                 </i>
-                                                {{ $template->nome }}
+                                                {{ $template ? $template->nome : 'Template em Branco' }}
                                             </span>
                                         </div>
                                     </div>
@@ -327,7 +327,7 @@
 <script>
 $(document).ready(function() {
     const proposicaoId = {{ $proposicao->id }};
-    const templateId = {{ $template->id }};
+    const templateId = '{{ $template ? $template->id : "blank" }}';
     
     // Abrir editor OnlyOffice em nova aba
     $('#btn-abrir-editor').on('click', function() {

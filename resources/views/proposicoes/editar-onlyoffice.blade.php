@@ -120,7 +120,7 @@
 <body>
     <div class="editor-header">
         <h1 class="editor-title">
-            Editando Proposição {{ $proposicao->id ?? '' }} - {{ $template->tipoProposicao->nome ?? 'Template' }}
+            Editando Proposição {{ $proposicao->id ?? '' }} - {{ $template ? ($template->tipoProposicao->nome ?? $template->nome) : 'Template em Branco' }}
         </h1>
         <div class="editor-actions">
             <a href="{{ route('proposicoes.minhas-proposicoes') }}" class="btn btn-secondary">
@@ -180,8 +180,8 @@
                 "document": {
                     "fileType": "docx",
                     "key": "{{ $documentKey }}",
-                    "title": "Proposição {{ $proposicao->id ?? '' }} - {{ $template->tipoProposicao->nome ?? 'Template' }}",
-                    "url": "http://172.24.0.2:80/onlyoffice/file/proposicao/{{ $proposicao->id ?? 1 }}/{{ $arquivoProposicao }}",
+                    "title": "Proposição {{ $proposicao->id ?? '' }} - {{ $template ? ($template->tipoProposicao->nome ?? $template->nome) : 'Template em Branco' }}",
+                    "url": "http://host.docker.internal:8001/onlyoffice/file/proposicao/{{ $proposicao->id ?? 1 }}/{{ $arquivoProposicao }}",
                     "permissions": {
                         "comment": true,
                         "download": true,
@@ -198,7 +198,7 @@
                 "editorConfig": {
                     "mode": "edit",
                     "lang": "pt-BR",
-                    "callbackUrl": "http://172.24.0.2:80/api/onlyoffice/callback/proposicao/{{ $proposicao->id ?? 1 }}",
+                    "callbackUrl": "http://host.docker.internal:8001/api/onlyoffice/callback/proposicao/{{ $proposicao->id ?? 1 }}",
                     "user": {
                         "id": "{{ auth()->id() }}",
                         "name": "{{ auth()->user()->name }}",
@@ -295,8 +295,8 @@
                                 <details style="margin-top: 20px; text-align: left;">
                                     <summary>Informações de Debug</summary>
                                     <pre style="background: #f8f9fa; padding: 10px; border-radius: 4px; font-size: 12px;">
-Document URL: http://172.24.0.2:80/onlyoffice/file/proposicao/{{ $proposicao->id ?? 1 }}/{{ $arquivoProposicao }}
-Callback URL: http://172.24.0.2:80/api/onlyoffice/callback/proposicao/{{ $proposicao->id ?? 1 }}
+Document URL: http://host.docker.internal:8001/onlyoffice/file/proposicao/{{ $proposicao->id ?? 1 }}/{{ $arquivoProposicao }}
+Callback URL: http://host.docker.internal:8001/api/onlyoffice/callback/proposicao/{{ $proposicao->id ?? 1 }}
 Document Key: {{ $documentKey }}
 OnlyOffice Server: http://localhost:8080
                                     </pre>

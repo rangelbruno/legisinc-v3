@@ -4,6 +4,10 @@ use Illuminate\Support\Facades\Route;
 
 // Arquivo de rotas API - aplicação migrada para PostgreSQL
 
+// OnlyOffice callback routes (no CSRF protection needed)
+Route::post('/onlyoffice/callback/proposicao/{proposicao}', [App\Http\Controllers\ProposicaoController::class, 'onlyOfficeCallback'])->name('api.onlyoffice.callback.proposicao');
+
+
 // Parâmetros API routes - Mantido para compatibilidade, mas deprecado
 Route::prefix('parametros')->name('api.parametros.')->middleware(['web'])->group(function () {
     // Redirecionar para o novo sistema quando possível
@@ -156,6 +160,20 @@ Route::prefix('templates')->group(function () {
          ->withoutMiddleware(['auth']);
     Route::post('{tipo}/gerar', [App\Http\Controllers\TemplateController::class, 'gerar'])
          ->name('api.templates.gerar');
+         
+    // Template validation routes
+    Route::post('validar-conteudo', [App\Http\Controllers\Template\TemplateValidationController::class, 'validarConteudo'])
+         ->name('api.templates.validar-conteudo');
+    Route::get('{template}/preview', [App\Http\Controllers\Template\TemplateValidationController::class, 'gerarPreview'])
+         ->name('api.templates.preview');
+    Route::get('variaveis-disponiveis', [App\Http\Controllers\Template\TemplateValidationController::class, 'variaveisDisponiveis'])
+         ->name('api.templates.variaveis');
+    Route::get('{template}/validar', [App\Http\Controllers\Template\TemplateValidationController::class, 'validarTemplate'])
+         ->name('api.templates.validar');
+    Route::post('testar-processamento', [App\Http\Controllers\Template\TemplateValidationController::class, 'testarProcessamento'])
+         ->name('api.templates.testar');
+    Route::post('extrair-variaveis', [App\Http\Controllers\Template\TemplateValidationController::class, 'extrairVariaveis'])
+         ->name('api.templates.extrair-variaveis');
 });
 
 Route::post('onlyoffice/callback/{documentKey}', [App\Http\Controllers\OnlyOfficeController::class, 'callback'])

@@ -57,18 +57,23 @@ class OnlyOfficeService
                 'callbackUrl' => str_replace('http://localhost:8001', 'http://host.docker.internal:8001', route('api.onlyoffice.callback', $template->document_key)),
                 'lang' => 'pt-BR',
                 'customization' => [
-                    'autosave' => true,
-                    'forcesave' => true,
+                    'autosave' => false, // Desabilitar autosave para evitar múltiplos callbacks
+                    'forcesave' => true, // Permitir salvamento manual
                     'compactHeader' => true,
-                    'toolbarNoTabs' => false
+                    'toolbarNoTabs' => false,
+                    'hideRightMenu' => false,
+                    'feedback' => [
+                        'visible' => false
+                    ]
                 ],
                 'coEditing' => [
-                    'mode' => 'fast',
-                    'change' => true
+                    'mode' => 'strict', // Modo strict para evitar conflitos
+                    'change' => false // Desabilitar coediting para templates
                 ],
                 'user' => [
                     'id' => (string)(auth()->id() ?? 'user-' . time()),
-                    'name' => auth()->user()->name ?? 'Usuário'
+                    'name' => auth()->user()->name ?? 'Usuário',
+                    'group' => 'admin_' . auth()->id() // Grupo único por usuário
                 ]
             ]
         ];
@@ -92,24 +97,66 @@ class OnlyOfficeService
             return ['error' => 1];
         }
 
-        $status = $data['status'];
+        $status = $data['status'] ?? 0;
         
-        // Marcar status do callback em cache para controle
-        \Cache::put('onlyoffice_callback_' . $documentKey, $status, 300); // 5 minutos
-
-        // Status 2 = Pronto para salvar (save)
-        // Status 6 = Force save (salvamento forçado pelo usuário)
-        if (in_array($status, [2, 6]) && isset($data['url'])) {
-            \Log::info('Processando salvamento do template', [
+        // Log detalhado do callback
+        \Log::info('OnlyOffice callback status', [
+            'document_key' => $documentKey,
+            'status' => $status,
+            'has_url' => isset($data['url']),
+            'users' => $data['users'] ?? [],
+            'actions' => $data['actions'] ?? []
+        ]);
+        
+        // Implementar lock para evitar processamento concorrente
+        $lockKey = "onlyoffice_save_lock_{$documentKey}";
+        $lock = \Cache::lock($lockKey, 10); // Lock por 10 segundos
+        
+        try {
+            // Status 2 = Pronto para salvar (save)
+            // Status 6 = Force save (salvamento forçado pelo usuário)
+            if (in_array($status, [2, 6]) && isset($data['url'])) {
+                
+                // Verificar se não está processando outro callback
+                if ($lock->get()) {
+                    \Log::info('Processando salvamento do template', [
+                        'document_key' => $documentKey,
+                        'status' => $status,
+                        'status_type' => $status === 2 ? 'auto_save' : 'force_save'
+                    ]);
+                    
+                    $this->salvarTemplate($template, $data['url']);
+                    
+                    // Liberar lock após processar
+                    $lock->release();
+                } else {
+                    \Log::warning('Callback ignorado - outro processamento em andamento', [
+                        'document_key' => $documentKey,
+                        'status' => $status
+                    ]);
+                }
+            }
+            
+            // Status 1 = Documento sendo editado
+            // Status 4 = Documento fechado sem mudanças
+            if (in_array($status, [1, 4])) {
+                \Log::info('Status de edição recebido', [
+                    'document_key' => $documentKey,
+                    'status' => $status,
+                    'description' => $status === 1 ? 'Documento sendo editado' : 'Documento fechado sem mudanças'
+                ]);
+            }
+            
+        } catch (\Exception $e) {
+            \Log::error('Erro no processamento do callback', [
                 'document_key' => $documentKey,
-                'status' => $status,
-                'status_type' => $status === 2 ? 'auto_save' : 'force_save'
+                'error' => $e->getMessage()
             ]);
             
-            $this->salvarTemplate($template, $data['url']);
+            // Garantir liberação do lock em caso de erro
+            optional($lock)->release();
             
-            // Remover marca de callback após salvar
-            \Cache::forget('onlyoffice_callback_' . $documentKey);
+            return ['error' => 1];
         }
 
         return ['error' => 0];

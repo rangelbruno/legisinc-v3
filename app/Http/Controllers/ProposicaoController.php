@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\TipoProposicao;
 use App\Models\Proposicao;
+use App\Services\Template\TemplateProcessorService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -93,17 +94,29 @@ class ProposicaoController extends Controller
             
             \Log::info('Modelos encontrados: ' . $modelos->count());
             
-            // Converter para formato esperado pelo frontend
+            // Converter para formato esperado pelo frontend - apenas templates OnlyOffice
             $modelosArray = [];
             foreach ($modelos as $modelo) {
-                $modelosArray[] = [
-                    'id' => $modelo->id,
-                    'nome' => $modelo->nome,
-                    'descricao' => $modelo->descricao ?? '',
-                    'is_template' => $modelo->is_template ?? false,
-                    'template_id' => $modelo->template_id ?? null
-                ];
+                // Incluir apenas modelos que sejam templates (usam OnlyOffice)
+                if ($modelo->is_template ?? false) {
+                    $modelosArray[] = [
+                        'id' => 'template_' . $modelo->template_id,
+                        'nome' => $modelo->nome,
+                        'descricao' => $modelo->descricao ?? '',
+                        'is_template' => true,
+                        'template_id' => $modelo->template_id
+                    ];
+                }
             }
+            
+            // Sempre adicionar template em branco como primeira opção
+            array_unshift($modelosArray, [
+                'id' => 'template_blank',
+                'nome' => 'Documento em Branco',
+                'descricao' => 'Criar proposição com template em branco usando OnlyOffice',
+                'is_template' => true,
+                'template_id' => 'blank'
+            ]);
 
             \Log::info('Modelos formatados para retorno:', [
                 'count' => count($modelosArray),
@@ -221,55 +234,90 @@ class ProposicaoController extends Controller
      */
     public function gerarTexto(Request $request, $proposicaoId)
     {
-        // TODO: Implement proper authorization
-        // $this->authorize('update', $proposicao);
-        
         $request->validate([
             'conteudo_modelo' => 'required|array',
-            'modelo_id' => 'required' // Aceitar tanto integer quanto string (para templates)
+            'modelo_id' => 'required'
         ]);
 
-        // TODO: Implement proper template processing
+        $proposicao = Proposicao::findOrFail($proposicaoId);
+        
+        // Verificar autorização
+        if ($proposicao->autor_id !== Auth::id()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Você não tem permissão para editar esta proposição.'
+            ], 403);
+        }
+
         $modeloId = $request->modelo_id;
         $isTemplate = str_starts_with($modeloId, 'template_');
         
-        // Extrair campos principais
-        $ementa = $request->conteudo_modelo['ementa'] ?? '';
-        $conteudo = $request->conteudo_modelo['conteudo'] ?? '';
-        
         if ($isTemplate) {
+            // Processar com novo sistema de templates
             $templateId = str_replace('template_', '', $modeloId);
-            // Para templates, o texto gerado será o conteúdo principal formatado
-            $textoGerado = "EMENTA: {$ementa}\n\n";
-            $textoGerado .= $conteudo;
-        } else {
-            // Para modelos normais, formatar o texto de forma estruturada
-            $textoGerado = "PROPOSIÇÃO LEGISLATIVA\n\n";
-            $textoGerado .= "EMENTA: {$ementa}\n\n";
-            $textoGerado .= "CONTEÚDO:\n\n";
-            $textoGerado .= $conteudo;
-        }
+            
+            // Lidar com template em branco especial
+            if ($templateId === 'blank') {
+                $template = null; // Template em branco não precisa de template específico
+            } else {
+                $template = \App\Models\TipoProposicaoTemplate::find($templateId);
+                
+                if (!$template) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Template não encontrado.'
+                    ], 404);
+                }
+            }
 
-        // Atualizar proposição no banco de dados
-        $proposicao = Proposicao::find($proposicaoId);
-        if ($proposicao) {
+            // Mapear campos do formulário para variáveis do template
+            $variaveisTemplate = $request->conteudo_modelo;
+            $variaveisTemplate['texto'] = $variaveisTemplate['conteudo'] ?? '';
+            
+            // Salvar variáveis na sessão temporariamente
+            $sessionKey = 'proposicao_' . $proposicaoId . '_variaveis_template';
+            session([$sessionKey => $variaveisTemplate]);
+            
+            // Atualizar proposição apenas com campos existentes
             $proposicao->update([
-                'ementa' => $ementa,
-                'conteudo' => $conteudo,
+                'ementa' => $request->conteudo_modelo['ementa'] ?? $proposicao->ementa,
+                'conteudo' => $request->conteudo_modelo['conteudo'] ?? $proposicao->conteudo,
                 'modelo_id' => $modeloId,
-                'template_id' => $isTemplate ? $templateId : null,
+                'template_id' => $templateId,
                 'ultima_modificacao' => now()
             ]);
+            
+            // Processar template
+            if ($template) {
+                // Template específico existe - usar processamento normal
+                $templateProcessor = app(TemplateProcessorService::class);
+                $textoGerado = $templateProcessor->processarTemplate(
+                    $template,
+                    $proposicao,
+                    $variaveisTemplate
+                );
+            } else {
+                // Template em branco - criar conteúdo básico
+                $textoGerado = $this->criarTextoBasico($proposicao, $variaveisTemplate);
+            }
+            
+            // Salvar texto processado na sessão
+            session(['proposicao_' . $proposicaoId . '_conteudo_processado' => $textoGerado]);
+            
+        } else {
+            // Fallback - tratar qualquer modelo não-template como template em branco
+            return response()->json([
+                'success' => false,
+                'message' => 'Tipo de modelo não suportado. Use apenas templates OnlyOffice.'
+            ], 400);
         }
-        
-        // Armazenar informações da proposição na sessão para uso posterior (backup)
+
+        // Armazenar informações adicionais na sessão (backup)
         session([
             'proposicao_' . $proposicaoId . '_modelo_id' => $modeloId,
             'proposicao_' . $proposicaoId . '_template_id' => $isTemplate ? $templateId : null,
             'proposicao_' . $proposicaoId . '_tipo' => session('proposicao_' . $proposicaoId . '_tipo', 'projeto_lei'),
-            'proposicao_' . $proposicaoId . '_texto_gerado' => $textoGerado,
-            'proposicao_' . $proposicaoId . '_ementa' => $ementa,
-            'proposicao_' . $proposicaoId . '_conteudo' => $conteudo
+            'proposicao_' . $proposicaoId . '_texto_gerado' => $textoGerado
         ]);
 
         \Log::info('Texto gerado para proposição', [
@@ -343,18 +391,23 @@ class ProposicaoController extends Controller
         }
         
         try {
-            // Buscar o template
-            $template = \App\Models\TipoProposicaoTemplate::find($templateId);
-            
-            if (!$template) {
-                return redirect()->route('proposicoes.editar-texto', $proposicaoId)
-                                ->with('error', 'Template não encontrado. Usando editor de texto.');
+            // Lidar com template em branco especial
+            if ($templateId === 'blank') {
+                $template = null; // Template em branco
+            } else {
+                // Buscar o template específico
+                $template = \App\Models\TipoProposicaoTemplate::find($templateId);
+                
+                if (!$template) {
+                    return redirect()->route('proposicoes.minhas-proposicoes')
+                                    ->with('error', 'Template não encontrado.');
+                }
             }
             
             // Criar uma instância do documento baseada no template para esta proposição
             $documentKey = 'proposicao_' . $proposicaoId . '_template_' . $templateId . '_' . time();
             
-            // Copiar o arquivo do template para um arquivo específico da proposição
+            // Criar arquivo da proposição (com ou sem template específico)
             $arquivoProposicaoPath = $this->criarArquivoProposicao($proposicaoId, $template);
             $arquivoProposicao = basename($arquivoProposicaoPath); // Apenas o nome do arquivo
             
@@ -541,37 +594,77 @@ class ProposicaoController extends Controller
      */
     public function destroy($proposicaoId)
     {
-        // TODO: Implement proper authorization and model loading
-        // $this->authorize('delete', $proposicao);
+        \Log::info('Iniciando exclusão de proposição', [
+            'proposicao_id' => $proposicaoId,
+            'user_id' => \Auth::id(),
+            'request_method' => request()->method()
+        ]);
         
-        // Simular busca da proposição usando os mesmos dados mock
-        $proposicoesBase = [
-            1 => ['status' => 'rascunho', 'autor_id' => Auth::id()],
-            2 => ['status' => 'rascunho', 'autor_id' => Auth::id()],
-            3 => ['status' => 'rascunho', 'autor_id' => Auth::id()],
-            4 => ['status' => 'aprovada', 'autor_id' => Auth::id()],
-        ];
-        
-        // Verificar se a proposição existe
-        if (!isset($proposicoesBase[$proposicaoId])) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Proposição não encontrada.'
-            ], 404);
+        try {
+            // Buscar proposição no banco de dados
+            $proposicao = Proposicao::find($proposicaoId);
+            
+            // Verificar se a proposição existe
+            if (!$proposicao) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Proposição não encontrada.'
+                ], 404);
+            }
+        } catch (\Exception $e) {
+            \Log::error('Erro ao buscar proposição para exclusão', [
+                'proposicao_id' => $proposicaoId,
+                'error' => $e->getMessage()
+            ]);
+            
+            // Fallback: verificar se existem dados na sessão
+            $sessionData = session('proposicao_' . $proposicaoId . '_tipo');
+            if (!$sessionData) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Proposição não encontrada.'
+                ], 404);
+            }
+            
+            // Usar dados da sessão como fallback
+            $proposicao = (object) [
+                'id' => $proposicaoId,
+                'status' => session('proposicao_' . $proposicaoId . '_status', 'rascunho'),
+                'autor_id' => \Auth::id(), // Assumir que é do usuário atual
+                'arquivo_path' => null
+            ];
+            
+            \Log::info('Usando dados da sessão para exclusão (fallback)', [
+                'proposicao_id' => $proposicaoId,
+                'user_id' => \Auth::id()
+            ]);
         }
         
-        $proposicaoData = $proposicoesBase[$proposicaoId];
-        
         // Verificar se é rascunho
-        if ($proposicaoData['status'] !== 'rascunho') {
+        \Log::info('Verificando status da proposição', [
+            'proposicao_id' => $proposicaoId,
+            'status' => $proposicao->status,
+            'autor_id' => $proposicao->autor_id,
+            'current_user' => \Auth::id()
+        ]);
+        
+        // Permitir exclusão de rascunhos e proposições em edição
+        $statusPermitidos = ['rascunho', 'em_edicao'];
+        if (!in_array($proposicao->status, $statusPermitidos)) {
+            \Log::warning('Tentativa de excluir proposição com status não permitido', [
+                'proposicao_id' => $proposicaoId,
+                'status' => $proposicao->status,
+                'user_id' => \Auth::id()
+            ]);
+            
             return response()->json([
                 'success' => false,
-                'message' => 'Apenas rascunhos podem ser excluídos.'
+                'message' => 'Apenas rascunhos e proposições em edição podem ser excluídas.'
             ], 400);
         }
         
         // Verificar se o usuário é o autor
-        if ($proposicaoData['autor_id'] !== Auth::id()) {
+        if ($proposicao->autor_id !== Auth::id()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Você não tem permissão para excluir esta proposição.'
@@ -579,18 +672,38 @@ class ProposicaoController extends Controller
         }
         
         try {
-            // TODO: Implement actual deletion when model is ready
-            // $proposicao->delete();
+            // Excluir arquivos associados se existirem
+            if ($proposicao->arquivo_path && \Storage::disk('public')->exists($proposicao->arquivo_path)) {
+                \Storage::disk('public')->delete($proposicao->arquivo_path);
+            }
             
-            // Por enquanto, usar sessão para simular exclusão
-            $excluidas = session('proposicoes_excluidas', []);
-            $excluidas[] = (int) $proposicaoId;
-            session(['proposicoes_excluidas' => array_unique($excluidas)]);
+            // Tentar excluir do banco de dados se for um modelo Eloquent real
+            if (is_a($proposicao, \App\Models\Proposicao::class)) {
+                $proposicao->delete();
+                $method = 'database_deletion';
+            } else {
+                // Fallback: limpar dados da sessão
+                $sessionKeys = [
+                    'proposicao_' . $proposicaoId . '_tipo',
+                    'proposicao_' . $proposicaoId . '_ementa',
+                    'proposicao_' . $proposicaoId . '_conteudo',
+                    'proposicao_' . $proposicaoId . '_status',
+                    'proposicao_' . $proposicaoId . '_modelo_id',
+                    'proposicao_' . $proposicaoId . '_template_id',
+                    'proposicao_' . $proposicaoId . '_variaveis_template',
+                    'proposicao_' . $proposicaoId . '_conteudo_processado'
+                ];
+                
+                foreach ($sessionKeys as $key) {
+                    session()->forget($key);
+                }
+                $method = 'session_cleanup';
+            }
             
             \Log::info('Proposição excluída', [
                 'proposicao_id' => $proposicaoId,
                 'user_id' => Auth::id(),
-                'method' => 'session_simulation'
+                'method' => $method
             ]);
             
             return response()->json([
@@ -636,7 +749,8 @@ class ProposicaoController extends Controller
     {
         try {
             // Definir nome do arquivo da proposição (usar DOCX)
-            $nomeArquivo = "proposicao_{$proposicaoId}_template_{$template->id}.docx";
+            $templateIdForFile = $template ? $template->id : 'blank';
+            $nomeArquivo = "proposicao_{$proposicaoId}_template_{$templateIdForFile}.docx";
             $pathDestino = "proposicoes/{$nomeArquivo}";
             $pathCompleto = storage_path('app/public/' . $pathDestino);
             
@@ -647,7 +761,7 @@ class ProposicaoController extends Controller
             }
             
             // Se o template tem um arquivo, copiar como base
-            if ($template->arquivo_path && \Storage::disk('public')->exists($template->arquivo_path)) {
+            if ($template && $template->arquivo_path && \Storage::disk('public')->exists($template->arquivo_path)) {
                 \Storage::disk('public')->copy($template->arquivo_path, $pathDestino);
                 \Log::info('Arquivo do template copiado', [
                     'template_path' => $template->arquivo_path,
@@ -655,14 +769,22 @@ class ProposicaoController extends Controller
                     'arquivo_existe_apos_copia' => \Storage::disk('public')->exists($pathDestino)
                 ]);
             } else {
-                // Criar um arquivo RTF básico com o texto gerado
-                $ementa = session('proposicao_' . $proposicaoId . '_ementa', 'Proposição em elaboração');
-                $conteudo = session('proposicao_' . $proposicaoId . '_conteudo', 'Conteúdo da proposição a ser desenvolvido.');
-                $tipo = session('proposicao_' . $proposicaoId . '_tipo', 'mocao');
+                // Criar arquivo básico com dados preenchidos pelo usuário
+                // Buscar dados da proposição do banco de dados ou sessão
+                $proposicao = Proposicao::find($proposicaoId);
+                $ementa = $proposicao->ementa ?? session('proposicao_' . $proposicaoId . '_ementa', 'Proposição em elaboração');
+                $conteudo = $proposicao->conteudo ?? session('proposicao_' . $proposicaoId . '_conteudo', 'Conteúdo da proposição a ser desenvolvido.');
+                $tipo = $proposicao->tipo ?? session('proposicao_' . $proposicaoId . '_tipo', 'mocao');
                 
-                $textoCompleto = "PROPOSIÇÃO - " . strtoupper($tipo) . "\n\n";
-                $textoCompleto .= "EMENTA: " . $ementa . "\n\n";
-                $textoCompleto .= "CONTEÚDO:\n" . $conteudo;
+                // Usar conteúdo processado se disponível, caso contrário usar texto básico
+                $textoCompleto = session('proposicao_' . $proposicaoId . '_conteudo_processado');
+                if (!$textoCompleto) {
+                    $textoCompleto = "PROPOSIÇÃO - " . strtoupper($tipo) . "\n\n";
+                    $textoCompleto .= "EMENTA\n\n";
+                    $textoCompleto .= $ementa . "\n\n";
+                    $textoCompleto .= "CONTEÚDO\n\n";
+                    $textoCompleto .= $conteudo;
+                }
                 
                 // Criar arquivo DOCX usando RTF
                 $conteudoDocx = $this->criarArquivoDocx($textoCompleto);
@@ -997,12 +1119,16 @@ class ProposicaoController extends Controller
             }
         }
 
-        // Buscar template
-        $template = \App\Models\TipoProposicaoTemplate::find($templateId);
-        
-        if (!$template) {
-            return redirect()->route('proposicoes.minhas-proposicoes')
-                            ->with('error', 'Template não encontrado.');
+        // Buscar template (lidar com template em branco especial)
+        if ($templateId === 'blank') {
+            $template = null; // Template em branco
+        } else {
+            $template = \App\Models\TipoProposicaoTemplate::find($templateId);
+            
+            if (!$template) {
+                return redirect()->route('proposicoes.minhas-proposicoes')
+                                ->with('error', 'Template não encontrado.');
+            }
         }
 
         return view('proposicoes.preparar-edicao', compact('proposicao', 'template'));
@@ -1290,6 +1416,27 @@ class ProposicaoController extends Controller
             'message' => 'Proposição protocolada com sucesso!',
             'numero_protocolo' => $numeroProtocolo
         ]);
+    }
+
+    /**
+     * Criar texto básico para template em branco
+     */
+    private function criarTextoBasico($proposicao, $variaveis)
+    {
+        $tipoFormatado = $proposicao->tipo_formatado ?? 'Proposição';
+        $ementa = $variaveis['ementa'] ?? '';
+        $conteudo = $variaveis['texto'] ?? $variaveis['conteudo'] ?? '';
+        
+        // Criar um documento simples com formatação básica
+        $texto = "{$tipoFormatado}\n\n";
+        $texto .= "EMENTA\n\n";
+        $texto .= "{$ementa}\n\n";
+        $texto .= "CONTEÚDO\n\n";
+        $texto .= "{$conteudo}\n\n";
+        $texto .= "Autor: " . (\Auth::user()->name ?? '[AUTOR]') . "\n";
+        $texto .= "Data: " . now()->format('d/m/Y');
+        
+        return $texto;
     }
 
     /**
