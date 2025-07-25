@@ -93,24 +93,6 @@ class RolesAndPermissionsSeeder extends Seeder
 
         // Criar os perfis do sistema parlamentar incluindo tramitação
         $roles = [
-            User::PERFIL_PARLAMENTAR => [
-                'name' => User::PERFIL_PARLAMENTAR,
-                'description' => 'Cria documentos, assina projetos',
-                'permissions' => [
-                    'projeto.create',
-                    'projeto.edit_own',
-                    'projeto.sign',
-                    'projeto.view_own',
-                    'transparencia.view_publico',
-                    'parlamentares.view',
-                    'sessions.view',
-                    'sessoes.view',
-                    'sessoes.presenca',
-                    'votacoes.view',
-                    'votacoes.votar',
-                    'sistema.dashboard',
-                ]
-            ],
             
             User::PERFIL_LEGISLATIVO => [
                 'name' => User::PERFIL_LEGISLATIVO,

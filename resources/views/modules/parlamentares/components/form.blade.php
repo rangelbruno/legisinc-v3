@@ -221,7 +221,11 @@
                         <select name="cargo" class="form-select mb-2" required>
                             <option value="">Selecione o cargo</option>
                             @foreach($cargos as $value => $label)
-                                <option value="{{ $value }}" {{ old('cargo', isset($parlamentar['cargo']) ? $parlamentar['cargo'] : '') == $value ? 'selected' : '' }}>{{ $label }}</option>
+                                @php
+                                    $currentCargo = old('cargo', isset($parlamentar['cargo']) ? $parlamentar['cargo'] : '');
+                                    $isSelected = strtolower($currentCargo) == strtolower($value) || $currentCargo == $value;
+                                @endphp
+                                <option value="{{ $value }}" {{ $isSelected ? 'selected' : '' }}>{{ $label }}</option>
                             @endforeach
                         </select>
                         <!--end::Select-->

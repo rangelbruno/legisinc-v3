@@ -157,7 +157,7 @@
                 
                 <button type="button" 
                         class="btn btn-outline-secondary btn-sm" 
-                        onclick="window.close()" 
+                        onclick="window.history.back()" 
                         title="Fechar Editor">
                     <i class="fas fa-times"></i> Fechar
                 </button>
@@ -289,7 +289,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     function onRequestClose() {
         if (confirm('Deseja fechar o editor? Certifique-se de que as alterações foram salvas.')) {
-            window.close();
+            window.history.back();
         }
     }
     

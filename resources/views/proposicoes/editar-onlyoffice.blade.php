@@ -401,10 +401,10 @@ OnlyOffice Server: http://localhost:8080
                 }
             }
             
-            // Tentar fechar a aba
-            window.close();
+            // Navigate back instead of trying to close window
+            window.history.back();
             
-            // Se não conseguir fechar (por limitações do navegador), redirecionar
+            // Fallback: redirect to propositions list
             setTimeout(function() {
                 window.location.href = "{{ route('proposicoes.minhas-proposicoes') }}";
             }, 100);

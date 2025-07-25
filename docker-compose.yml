@@ -68,13 +68,19 @@ services:
     image: onlyoffice/documentserver:8.0
     container_name: legisinc-onlyoffice
     restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       - JWT_ENABLED=false
       - JWT_SECRET=${ONLYOFFICE_JWT_SECRET:-MySecretKey123}
       - JWT_HEADER=Authorization
       - JWT_IN_BODY=true
       - WOPI_ENABLED=false
-      - USE_UNAUTHORIZED_STORAGE=false
+      - USE_UNAUTHORIZED_STORAGE=true
+      - ALLOW_PRIVATE_IP_ADDRESS=true
+      - ALLOW_META_IP_ADDRESS=true
+      - ALLOW_PRIVATE_IP=true
+      - REQUEST_FILTERING_AGENT_SECRET_ENABLED=false
       - DB_TYPE=postgres
       - DB_HOST=db
       - DB_PORT=5432

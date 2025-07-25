@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Spatie\Permission\Models\Role;
 use Exception;
 
 class UserService
@@ -76,6 +77,12 @@ class UserService
 
             // Atribuir perfil
             if (!empty($dados['perfil'])) {
+                // Verificar se o role existe, senão criar
+                $role = Role::firstOrCreate([
+                    'name' => $dados['perfil'],
+                    'guard_name' => 'web'
+                ]);
+                
                 $usuario->assignRole($dados['perfil']);
             }
 
@@ -121,6 +128,12 @@ class UserService
 
             // Atualizar perfil se fornecido
             if (!empty($dados['perfil'])) {
+                // Verificar se o role existe, senão criar
+                $role = Role::firstOrCreate([
+                    'name' => $dados['perfil'],
+                    'guard_name' => 'web'
+                ]);
+                
                 $usuario->syncRoles([$dados['perfil']]);
             }
 

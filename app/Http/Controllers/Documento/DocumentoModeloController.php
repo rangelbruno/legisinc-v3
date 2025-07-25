@@ -20,13 +20,59 @@ class DocumentoModeloController extends Controller
         private DocumentoModeloService $documentoModeloService
     ) {}
 
-    public function index()
+    public function index(Request $request)
     {
-        $modelos = DocumentoModelo::with(['tipoProposicao', 'creator'])
-            ->orderBy('created_at', 'desc')
-            ->paginate(15);
-
-        return view('documentos.modelos.index', compact('modelos'));
+        $query = DocumentoModelo::with(['tipoProposicao', 'creator']);
+        
+        // Filtro por categoria
+        if ($request->filled('categoria')) {
+            $query->where('categoria', $request->categoria);
+        }
+        
+        // Filtro por tipo de proposição
+        if ($request->filled('tipo_proposicao_id')) {
+            $query->where('tipo_proposicao_id', $request->tipo_proposicao_id);
+        }
+        
+        // Filtro por template/personalizado
+        if ($request->filled('is_template')) {
+            $query->where('is_template', $request->is_template === 'true');
+        }
+        
+        // Filtro por status
+        if ($request->filled('ativo')) {
+            $query->where('ativo', $request->ativo === 'true');
+        }
+        
+        // Busca por texto
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('nome', 'like', "%{$search}%")
+                  ->orWhere('descricao', 'like', "%{$search}%")
+                  ->orWhere('template_id', 'like', "%{$search}%");
+            });
+        }
+        
+        // Ordenação
+        $orderBy = $request->get('order_by', 'created_at');
+        $orderDir = $request->get('order_dir', 'desc');
+        
+        if ($orderBy === 'categoria') {
+            $query->orderBy('categoria', $orderDir)
+                  ->orderBy('ordem')
+                  ->orderBy('nome');
+        } else {
+            $query->orderBy($orderBy, $orderDir);
+        }
+        
+        $modelos = $query->paginate(15)->appends($request->all());
+        
+        // Carregar dados para os filtros
+        $categorias = DocumentoModelo::CATEGORIAS;
+        $tiposProposicao = TipoProposicao::ativos()->ordenados()->get();
+        
+        return view('documentos.modelos.index', compact('modelos', 'categorias', 'tiposProposicao'));
     }
 
     public function create()
@@ -149,22 +195,60 @@ class DocumentoModeloController extends Controller
 
     public function destroy(DocumentoModelo $modelo)
     {
+        $isAjax = request()->ajax() || request()->wantsJson() || request()->header('X-Requested-With') === 'XMLHttpRequest';
+        \Log::info('Iniciando exclusão do modelo', [
+            'modelo_id' => $modelo->id, 
+            'is_ajax' => $isAjax,
+            'headers' => request()->headers->all()
+        ]);
+        
         try {
             if ($modelo->instancias()->exists()) {
+                \Log::warning('Modelo possui instâncias associadas', ['modelo_id' => $modelo->id]);
+                
+                if ($isAjax) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Este modelo possui documentos associados e não pode ser excluído.'
+                    ], 422);
+                }
                 return back()->withErrors(['Este modelo possui documentos associados e não pode ser excluído.']);
             }
 
-            if ($modelo->arquivo_path && \Storage::exists($modelo->arquivo_path)) {
-                \Storage::delete($modelo->arquivo_path);
+            if ($modelo->arquivo_path && Storage::exists($modelo->arquivo_path)) {
+                \Log::info('Deletando arquivo do modelo', ['arquivo_path' => $modelo->arquivo_path]);
+                Storage::delete($modelo->arquivo_path);
             }
 
+            \Log::info('Deletando modelo do banco de dados', ['modelo_id' => $modelo->id]);
             $modelo->delete();
+            
+            \Log::info('Modelo excluído com sucesso', ['modelo_id' => $modelo->id]);
+
+            if ($isAjax) {
+                \Log::info('Retornando resposta AJAX de sucesso');
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Modelo excluído com sucesso!'
+                ]);
+            }
 
             return redirect()->route('documentos.modelos.index')
                            ->with('success', 'Modelo excluído com sucesso!');
                            
         } catch (\Exception $e) {
-            \Log::error('Erro ao excluir modelo de documento: ' . $e->getMessage());
+            \Log::error('Erro ao excluir modelo de documento: ' . $e->getMessage(), [
+                'modelo_id' => $modelo->id,
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            if ($isAjax) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Erro ao excluir modelo: ' . $e->getMessage()
+                ], 500);
+            }
+            
             return back()->withErrors(['Erro interno do servidor']);
         }
     }

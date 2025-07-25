@@ -32,7 +32,7 @@ class DocumentoModeloService
         
         $modelo = DocumentoModelo::create([
             'nome' => $dados['nome'],
-            'descricao' => $dados['descricao'],
+            'descricao' => $dados['descricao'] ?? null,
             'tipo_proposicao_id' => $dados['tipo_proposicao_id'] ?? null,
             'document_key' => $documentKey,
             'arquivo_nome' => $nomeArquivo,
@@ -41,7 +41,12 @@ class DocumentoModeloService
             'versao' => '1.0',
             'variaveis' => $dados['variaveis'] ?? [],
             'icon' => $dados['icon'] ?? null,
-            'created_by' => auth()->id()
+            'created_by' => auth()->id() ?? 1, // Se não houver usuário autenticado, usar ID 1 (admin)
+            'is_template' => $dados['is_template'] ?? false,
+            'template_id' => $dados['template_id'] ?? null,
+            'categoria' => $dados['categoria'] ?? null,
+            'ordem' => $dados['ordem'] ?? 0,
+            'metadata' => $dados['metadata'] ?? null
         ]);
         
         return $modelo;

@@ -615,6 +615,18 @@ Route::middleware(['web'])->prefix('auth')->name('auth.')->group(function () {
 // ===== SISTEMA DE DOCUMENTOS - GESTÃO DE MODELOS =====
 Route::prefix('admin/documentos')->name('documentos.')->middleware(['auth', 'check.screen.permission'])->group(function () {
     
+    // ===== GESTÃO DE TEMPLATES PADRÃO =====
+    Route::prefix('templates')->name('templates.')->group(function () {
+        Route::get('/', [App\Http\Controllers\Admin\DocumentoTemplateController::class, 'index'])->name('index')->middleware('check.permission:documentos.view');
+        Route::get('/create', [App\Http\Controllers\Admin\DocumentoTemplateController::class, 'create'])->name('create')->middleware('check.permission:documentos.create');
+        Route::post('/', [App\Http\Controllers\Admin\DocumentoTemplateController::class, 'store'])->name('store')->middleware('check.permission:documentos.create');
+        Route::get('/{template}/edit', [App\Http\Controllers\Admin\DocumentoTemplateController::class, 'edit'])->name('edit')->middleware('check.permission:documentos.edit');
+        Route::put('/{template}', [App\Http\Controllers\Admin\DocumentoTemplateController::class, 'update'])->name('update')->middleware('check.permission:documentos.edit');
+        Route::delete('/{template}', [App\Http\Controllers\Admin\DocumentoTemplateController::class, 'destroy'])->name('destroy')->middleware('check.permission:documentos.delete');
+        Route::post('/reordenar', [App\Http\Controllers\Admin\DocumentoTemplateController::class, 'reordenar'])->name('reordenar')->middleware('check.permission:documentos.edit');
+        Route::post('/resetar-padrao', [App\Http\Controllers\Admin\DocumentoTemplateController::class, 'resetarPadrao'])->name('resetar-padrao')->middleware('check.permission:documentos.create');
+    });
+    
     // ===== GESTÃO DE MODELOS =====
     Route::prefix('modelos')->name('modelos.')->group(function () {
         Route::get('/', [App\Http\Controllers\Documento\DocumentoModeloController::class, 'index'])->name('index')->middleware('check.permission:documentos.view');

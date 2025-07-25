@@ -250,7 +250,8 @@
                 } catch (e) {
                     console.log('Could not notify parent window:', e);
                 }
-                window.close();
+                // Navigate back instead of closing window
+                window.history.back();
             }
         });
     }

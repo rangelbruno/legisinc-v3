@@ -27,6 +27,34 @@
 
         <div id="kt_app_content" class="app-content flex-column-fluid">
             <div id="kt_app_content_container" class="app-container container-xxl">
+                @if(session('error'))
+                    <div class="alert alert-danger d-flex align-items-center p-5 mb-10">
+                        <i class="ki-duotone ki-shield-cross fs-2hx text-danger me-4">
+                            <span class="path1"></span>
+                            <span class="path2"></span>
+                            <span class="path3"></span>
+                        </i>
+                        <div class="d-flex flex-column">
+                            <h4 class="mb-1 text-danger">Erro ao criar usuário</h4>
+                            <span>{{ session('error') }}</span>
+                        </div>
+                    </div>
+                @endif
+
+                @if(session('success'))
+                    <div class="alert alert-success d-flex align-items-center p-5 mb-10">
+                        <i class="ki-duotone ki-shield-tick fs-2hx text-success me-4">
+                            <span class="path1"></span>
+                            <span class="path2"></span>
+                            <span class="path3"></span>
+                        </i>
+                        <div class="d-flex flex-column">
+                            <h4 class="mb-1 text-success">Sucesso!</h4>
+                            <span>{{ session('success') }}</span>
+                        </div>
+                    </div>
+                @endif
+
                 <form method="POST" action="{{ route('usuarios.store') }}" class="form d-flex flex-column flex-lg-row">
                     @csrf
                     
@@ -164,9 +192,16 @@
                                             <div class="invalid-feedback">{{ $message }}</div>
                                         @enderror
                                     </div>
-                                    <div class="col-md-6 fv-row">
+                                    <div class="col-md-6 fv-row" id="partido-field" style="display: none;">
                                         <label class="fs-6 fw-semibold mb-2">Partido</label>
-                                        <input type="text" class="form-control form-control-solid @error('partido') is-invalid @enderror" name="partido" value="{{ old('partido') }}" />
+                                        <select class="form-select form-select-solid @error('partido') is-invalid @enderror" name="partido">
+                                            <option value="">Selecione o partido</option>
+                                            @if(isset($partidos))
+                                                @foreach($partidos as $sigla => $nome)
+                                                    <option value="{{ $sigla }}" {{ old('partido') == $sigla ? 'selected' : '' }}>{{ $sigla }} - {{ $nome }}</option>
+                                                @endforeach
+                                            @endif
+                                        </select>
                                         @error('partido')
                                             <div class="invalid-feedback">{{ $message }}</div>
                                         @enderror
@@ -176,7 +211,7 @@
                                 <div class="row mb-5">
                                     <div class="col-md-12 fv-row">
                                         <label class="required fs-6 fw-semibold mb-2">Perfil</label>
-                                        <select class="form-select form-select-solid @error('perfil') is-invalid @enderror" name="perfil" required>
+                                        <select class="form-select form-select-solid @error('perfil') is-invalid @enderror" name="perfil" id="perfil-select" required>
                                             <option value="">Selecione o perfil</option>
                                             @foreach($perfis as $key => $nome)
                                                 <option value="{{ $key }}" {{ old('perfil') == $key ? 'selected' : '' }}>{{ $nome }}</option>
@@ -185,6 +220,53 @@
                                         @error('perfil')
                                             <div class="invalid-feedback">{{ $message }}</div>
                                         @enderror
+                                    </div>
+                                </div>
+
+                                <!-- Campos específicos para Parlamentar -->
+                                <div id="parlamentar-fields" style="display: none;">
+                                    <div class="card card-flush py-4 mb-5">
+                                        <div class="card-header">
+                                            <div class="card-title">
+                                                <h2>Dados Parlamentares</h2>
+                                            </div>
+                                        </div>
+                                        <div class="card-body pt-0">
+                                            <div class="row mb-5">
+                                                <div class="col-md-6 fv-row">
+                                                    <label class="fs-6 fw-semibold mb-2">Nome Político</label>
+                                                    <input type="text" class="form-control form-control-solid @error('nome_politico') is-invalid @enderror" name="nome_politico" value="{{ old('nome_politico') }}" placeholder="Nome pelo qual é conhecido politicamente" />
+                                                    @error('nome_politico')
+                                                        <div class="invalid-feedback">{{ $message }}</div>
+                                                    @enderror
+                                                </div>
+                                                <div class="col-md-6 fv-row">
+                                                    <label class="fs-6 fw-semibold mb-2">Cargo Parlamentar</label>
+                                                    <select class="form-select form-select-solid @error('cargo_parlamentar') is-invalid @enderror" name="cargo_parlamentar">
+                                                        <option value="">Selecione o cargo</option>
+                                                        <option value="Vereador" {{ old('cargo_parlamentar') == 'Vereador' ? 'selected' : '' }}>Vereador</option>
+                                                        <option value="Vereadora" {{ old('cargo_parlamentar') == 'Vereadora' ? 'selected' : '' }}>Vereadora</option>
+                                                        <option value="Presidente da Câmara" {{ old('cargo_parlamentar') == 'Presidente da Câmara' ? 'selected' : '' }}>Presidente da Câmara</option>
+                                                        <option value="Vice-Presidente" {{ old('cargo_parlamentar') == 'Vice-Presidente' ? 'selected' : '' }}>Vice-Presidente</option>
+                                                        <option value="1º Secretário" {{ old('cargo_parlamentar') == '1º Secretário' ? 'selected' : '' }}>1º Secretário</option>
+                                                        <option value="2º Secretário" {{ old('cargo_parlamentar') == '2º Secretário' ? 'selected' : '' }}>2º Secretário</option>
+                                                    </select>
+                                                    @error('cargo_parlamentar')
+                                                        <div class="invalid-feedback">{{ $message }}</div>
+                                                    @enderror
+                                                </div>
+                                            </div>
+                                            <div class="row mb-5">
+                                                <div class="col-md-12 fv-row">
+                                                    <label class="fs-6 fw-semibold mb-2">Comissões</label>
+                                                    <input type="text" class="form-control form-control-solid @error('comissoes') is-invalid @enderror" name="comissoes" value="{{ old('comissoes') }}" placeholder="Ex: Educação, Saúde, Finanças (separadas por vírgula)" />
+                                                    <div class="form-text">Digite as comissões separadas por vírgula</div>
+                                                    @error('comissoes')
+                                                        <div class="invalid-feedback">{{ $message }}</div>
+                                                    @enderror
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -236,6 +318,29 @@
                     }
                     e.target.value = value;
                 });
+            }
+
+            // Controle de visibilidade dos campos baseado no perfil
+            const perfilSelect = document.getElementById('perfil-select');
+            const partidoField = document.getElementById('partido-field');
+            const parlamentarFields = document.getElementById('parlamentar-fields');
+
+            function toggleFields() {
+                const selectedPerfil = perfilSelect.value;
+                
+                if (selectedPerfil === 'PARLAMENTAR' || selectedPerfil === 'RELATOR') {
+                    partidoField.style.display = 'block';
+                    parlamentarFields.style.display = 'block';
+                } else {
+                    partidoField.style.display = 'none';
+                    parlamentarFields.style.display = 'none';
+                }
+            }
+
+            if (perfilSelect) {
+                perfilSelect.addEventListener('change', toggleFields);
+                // Executar na inicialização para manter estado se houver old values
+                toggleFields();
             }
         });
     </script>

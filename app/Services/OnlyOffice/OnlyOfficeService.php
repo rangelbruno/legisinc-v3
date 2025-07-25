@@ -253,6 +253,61 @@ class OnlyOfficeService
     }
 
     /**
+     * Criar configuração genérica para OnlyOffice
+     */
+    public function criarConfiguracao(string $documentKey, string $fileName, string $downloadUrl, array $user, string $mode = 'edit'): array
+    {
+        $config = [
+            'document' => [
+                'fileType' => pathinfo($fileName, PATHINFO_EXTENSION) ?: 'docx',
+                'key' => $documentKey,
+                'title' => $fileName,
+                'url' => $downloadUrl,
+                'permissions' => [
+                    'comment' => true,
+                    'copy' => true,
+                    'download' => true,
+                    'edit' => $mode === 'edit',
+                    'fillForms' => true,
+                    'modifyFilter' => true,
+                    'modifyContentControl' => true,
+                    'review' => true,
+                    'chat' => false,
+                ]
+            ],
+            'documentType' => 'word',
+            'editorConfig' => [
+                'mode' => $mode,
+                'user' => $user,
+                'lang' => 'pt-BR'
+            ]
+        ];
+
+        if ($this->jwtSecret) {
+            $config['token'] = $this->gerarToken($config);
+        }
+
+        return $config;
+    }
+
+    /**
+     * Obter grupo do usuário para OnlyOffice
+     */
+    public function obterGrupoUsuario(User $user): string
+    {
+        // Determinar grupo baseado nas roles do usuário
+        if ($user->hasRole('ADMIN')) {
+            return 'administrators';
+        } elseif ($user->hasRole('VEREADOR')) {
+            return 'vereadores';
+        } elseif ($user->hasRole('SERVIDOR')) {
+            return 'servidores';
+        }
+        
+        return 'users';
+    }
+
+    /**
      * Gerar JWT Token
      */
     private function gerarToken(array $data): string

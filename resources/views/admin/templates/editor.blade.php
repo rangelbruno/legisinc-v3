@@ -100,13 +100,13 @@
                     Salvamento Automático
                 </span>
                 
-                <button class="btn btn-light btn-sm" onclick="window.close()">
+                <a href="{{ route('admin.templates.index') }}" class="btn btn-light btn-sm">
                     <i class="ki-duotone ki-cross fs-6 me-1">
                         <span class="path1"></span>
                         <span class="path2"></span>
                     </i>
                     Fechar
-                </button>
+                </a>
             </div>
         </div>
         

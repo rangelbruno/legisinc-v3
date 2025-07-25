@@ -78,7 +78,7 @@
                 
                 <button type="button" 
                         class="btn btn-outline-secondary btn-sm" 
-                        onclick="window.close()" 
+                        onclick="window.history.back()" 
                         title="Fechar Visualizador">
                     <i class="fas fa-times"></i> Fechar
                 </button>
@@ -140,7 +140,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function onRequestClose() {
-        window.close();
+        window.history.back();
     }
     
     // Utility functions

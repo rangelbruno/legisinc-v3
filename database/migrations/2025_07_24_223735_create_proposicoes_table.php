@@ -18,7 +18,7 @@ return new class extends Migration
             $table->longText('conteudo')->nullable();
             $table->string('arquivo_path')->nullable(); // Caminho do arquivo DOCX
             $table->unsignedBigInteger('autor_id'); // ID do usuário autor
-            $table->enum('status', ['rascunho', 'em_edicao', 'enviado_legislativo', 'retornado_legislativo', 'assinado', 'protocolado'])->default('rascunho');
+            $table->enum('status', ['rascunho', 'em_edicao', 'salvando', 'enviado_legislativo', 'retornado_legislativo', 'assinado', 'protocolado'])->default('rascunho');
             $table->integer('ano');
             $table->string('modelo_id')->nullable(); // ID do modelo usado
             $table->string('template_id')->nullable(); // ID do template usado

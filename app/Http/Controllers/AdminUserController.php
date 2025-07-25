@@ -96,12 +96,7 @@ class AdminUserController extends Controller
             'profissao' => ['nullable', 'string', 'max:100'],
             'cargo_atual' => ['nullable', 'string', 'max:100'],
             'partido' => ['nullable', 'string', 'max:50'],
-            'role' => ['required', 'string', function ($attribute, $value, $fail) {
-                $validRoles = \Spatie\Permission\Models\Role::pluck('name')->toArray();
-                if (!in_array($value, $validRoles)) {
-                    $fail('O perfil selecionado é inválido.');
-                }
-            }],
+            'role' => ['required', 'string', 'exists:roles,name'],
             'ativo' => ['boolean'],
         ]);
 
@@ -179,12 +174,7 @@ class AdminUserController extends Controller
             'profissao' => ['nullable', 'string', 'max:100'],
             'cargo_atual' => ['nullable', 'string', 'max:100'],
             'partido' => ['nullable', 'string', 'max:50'],
-            'role' => ['required', 'string', function ($attribute, $value, $fail) {
-                $validRoles = \Spatie\Permission\Models\Role::pluck('name')->toArray();
-                if (!in_array($value, $validRoles)) {
-                    $fail('O perfil selecionado é inválido.');
-                }
-            }],
+            'role' => ['required', 'string', 'exists:roles,name'],
             'ativo' => ['boolean'],
         ]);
 

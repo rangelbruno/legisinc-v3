@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('sigla', 10)->unique();
             $table->string('nome');
-            $table->string('numero', 3)->unique();
+            $table->string('numero', 3)->unique()->nullable();
             $table->string('presidente')->nullable();
             $table->date('fundacao')->nullable();
             $table->string('site')->nullable();

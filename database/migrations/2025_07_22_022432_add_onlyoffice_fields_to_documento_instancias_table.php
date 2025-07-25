@@ -21,7 +21,7 @@ return new class extends Migration
         // Popula document_key para registros existentes
         DB::table('documento_instancias')
             ->whereNull('document_key')
-            ->update(['document_key' => DB::raw("'doc_' || id || '_' || extract(epoch from created_at)::int")]);
+            ->update(['document_key' => DB::raw("'doc_' || id || '_' || EXTRACT(EPOCH FROM created_at)::integer")]);
             
         // Agora torna o campo único e não nulo
         Schema::table('documento_instancias', function (Blueprint $table) {

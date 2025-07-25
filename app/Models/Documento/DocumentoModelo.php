@@ -25,13 +25,21 @@ class DocumentoModelo extends Model
         'versao',
         'icon',
         'ativo',
-        'created_by'
+        'created_by',
+        'is_template',
+        'template_id',
+        'categoria',
+        'ordem',
+        'metadata'
     ];
 
     protected $casts = [
         'variaveis' => 'array',
         'ativo' => 'boolean',
-        'arquivo_size' => 'integer'
+        'arquivo_size' => 'integer',
+        'is_template' => 'boolean',
+        'ordem' => 'integer',
+        'metadata' => 'array'
     ];
 
     public function tipoProposicao()
@@ -63,4 +71,67 @@ class DocumentoModelo extends Model
     {
         return $query->where('tipo_proposicao_id', $tipoProposicaoId);
     }
+    
+    public function scopeTemplates($query)
+    {
+        return $query->where('is_template', true);
+    }
+    
+    public function scopeNaoTemplates($query)
+    {
+        return $query->where('is_template', false);
+    }
+    
+    public function scopePorCategoria($query, $categoria)
+    {
+        return $query->where('categoria', $categoria);
+    }
+    
+    public function scopeOrdenados($query)
+    {
+        return $query->orderBy('ordem')->orderBy('nome');
+    }
+    
+    // Categorias disponíveis
+    const CATEGORIAS = [
+        'legislativo' => 'Legislativo',
+        'administrativo' => 'Administrativo',
+        'juridico' => 'Jurídico',
+        'financeiro' => 'Financeiro',
+        'geral' => 'Geral'
+    ];
+    
+    // Templates padrão do sistema
+    const TEMPLATES_PADRAO = [
+        'projeto_lei_ordinaria' => [
+            'nome' => 'Projeto de Lei Ordinária',
+            'categoria' => 'legislativo',
+            'variaveis' => ['numero', 'ano', 'ementa', 'autor', 'artigos']
+        ],
+        'projeto_lei_complementar' => [
+            'nome' => 'Projeto de Lei Complementar',
+            'categoria' => 'legislativo',
+            'variaveis' => ['numero', 'ano', 'ementa', 'autor', 'artigos']
+        ],
+        'resolucao_mesa' => [
+            'nome' => 'Resolução da Mesa',
+            'categoria' => 'administrativo',
+            'variaveis' => ['numero', 'ano', 'ementa', 'considerandos', 'resolucao']
+        ],
+        'requerimento' => [
+            'nome' => 'Requerimento',
+            'categoria' => 'legislativo',
+            'variaveis' => ['numero', 'ano', 'autor', 'destinatario', 'assunto', 'justificativa']
+        ],
+        'indicacao' => [
+            'nome' => 'Indicação',
+            'categoria' => 'legislativo',
+            'variaveis' => ['numero', 'ano', 'autor', 'destinatario', 'sugestao', 'justificativa']
+        ],
+        'mocao' => [
+            'nome' => 'Moção',
+            'categoria' => 'legislativo',
+            'variaveis' => ['numero', 'ano', 'tipo_mocao', 'destinatario', 'motivo', 'autor']
+        ]
+    ];
 }

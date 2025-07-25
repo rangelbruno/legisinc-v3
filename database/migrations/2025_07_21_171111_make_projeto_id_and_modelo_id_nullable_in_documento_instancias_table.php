@@ -12,7 +12,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('documento_instancias', function (Blueprint $table) {
-            // Remove foreign key constraint for modelo_id (exists)
+            // Remove foreign key constraints
+            $table->dropForeign(['projeto_id']);
             $table->dropForeign(['modelo_id']);
             
             // Make the columns nullable

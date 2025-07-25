@@ -4,11 +4,14 @@ namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
 use App\Services\User\UserService;
+use App\Models\Partido;
+use App\Models\Parlamentar;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
 use Exception;
 
 class UserController extends Controller
@@ -53,7 +56,8 @@ class UserController extends Controller
     public function create(): View
     {
         $perfis = $this->userService->obterPerfisDisponiveis();
-        return view('modules.usuarios.create', compact('perfis'));
+        $partidos = Partido::ativos()->pluck('nome', 'sigla')->toArray();
+        return view('modules.usuarios.create', compact('perfis', 'partidos'));
     }
 
     /**
@@ -61,7 +65,7 @@ class UserController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
-        $validator = Validator::make($request->all(), [
+        $validationRules = [
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
             'password' => 'required|string|min:8|confirmed',
@@ -70,10 +74,21 @@ class UserController extends Controller
             'data_nascimento' => 'nullable|date',
             'profissao' => 'nullable|string|max:255',
             'cargo_atual' => 'nullable|string|max:255',
-            'partido' => 'nullable|string|max:50',
             'perfil' => 'required|string|in:' . implode(',', array_keys($this->userService->obterPerfisDisponiveis())),
             'ativo' => 'boolean',
-        ]);
+        ];
+
+        // Adicionar validações específicas para parlamentares
+        if (in_array($request->perfil, ['PARLAMENTAR', 'RELATOR'])) {
+            $validationRules['partido'] = 'required|string|exists:partidos,sigla';
+            $validationRules['nome_politico'] = 'nullable|string|max:255';
+            $validationRules['cargo_parlamentar'] = 'nullable|string|max:100';
+            $validationRules['comissoes'] = 'nullable|string';
+        } else {
+            $validationRules['partido'] = 'nullable|string|max:50';
+        }
+
+        $validator = Validator::make($request->all(), $validationRules);
 
         if ($validator->fails()) {
             return redirect()->back()
@@ -82,12 +97,38 @@ class UserController extends Controller
         }
 
         try {
-            $this->userService->criar($request->all());
+            DB::beginTransaction();
+
+            // Criar usuário
+            $usuario = $this->userService->criar($request->all());
+
+            // Se for parlamentar, criar registro na tabela parlamentares
+            if (in_array($request->perfil, ['PARLAMENTAR', 'RELATOR'])) {
+                $parlamentarData = [
+                    'user_id' => $usuario->id,
+                    'nome' => $request->name,
+                    'nome_politico' => $request->nome_politico,
+                    'partido' => $request->partido,
+                    'cargo' => $request->cargo_parlamentar ?: 'Vereador',
+                    'status' => 'ativo',
+                    'email' => $request->email,
+                    'cpf' => $request->documento,
+                    'telefone' => $request->telefone,
+                    'data_nascimento' => $request->data_nascimento,
+                    'profissao' => $request->profissao,
+                    'comissoes' => $request->comissoes ? array_map('trim', explode(',', $request->comissoes)) : [],
+                ];
+
+                Parlamentar::create($parlamentarData);
+            }
+
+            DB::commit();
 
             return redirect()->route('usuarios.index')
-                ->with('success', 'Usuário criado com sucesso!');
+                ->with('success', 'Usuário criado com sucesso!' . (in_array($request->perfil, ['PARLAMENTAR', 'RELATOR']) ? ' Dados parlamentares também foram registrados.' : ''));
 
         } catch (Exception $e) {
+            DB::rollBack();
             return redirect()->back()
                 ->with('error', 'Erro ao criar usuário: ' . $e->getMessage())
                 ->withInput();

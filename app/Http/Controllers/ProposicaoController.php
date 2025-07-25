@@ -323,12 +323,24 @@ class ProposicaoController extends Controller
         // TODO: Implement proper authorization
         // $this->authorize('update', $proposicao);
         
-        // Simular busca da proposição
-        $proposicao = (object) [
-            'id' => $proposicaoId,
-            'tipo' => session('proposicao_' . $proposicaoId . '_tipo', 'mocao'),
-            'modelo_id' => session('proposicao_' . $proposicaoId . '_modelo_id')
-        ];
+        // Buscar proposição no banco de dados primeiro
+        $proposicao = Proposicao::find($proposicaoId);
+        
+        // Se não encontrar no BD, verificar se há dados na sessão (fallback para proposições antigas)
+        if (!$proposicao) {
+            // Criar objeto mock apenas se há dados na sessão
+            if (session()->has('proposicao_' . $proposicaoId . '_tipo')) {
+                $proposicao = (object) [
+                    'id' => $proposicaoId,
+                    'tipo' => session('proposicao_' . $proposicaoId . '_tipo', 'mocao'),
+                    'modelo_id' => session('proposicao_' . $proposicaoId . '_modelo_id')
+                ];
+            } else {
+                // Proposição não existe nem no BD nem na sessão
+                return redirect()->route('proposicoes.minhas-proposicoes')
+                               ->with('error', 'Proposição não encontrada.');
+            }
+        }
         
         try {
             // Buscar o template
@@ -964,14 +976,26 @@ class ProposicaoController extends Controller
      */
     public function prepararEdicao($proposicaoId, $templateId)
     {
-        // Buscar dados da proposição
-        $proposicao = (object) [
-            'id' => $proposicaoId,
-            'tipo' => session('proposicao_' . $proposicaoId . '_tipo', 'projeto_lei'),
-            'ementa' => session('proposicao_' . $proposicaoId . '_ementa', ''),
-            'conteudo' => session('proposicao_' . $proposicaoId . '_conteudo', ''),
-            'status' => session('proposicao_' . $proposicaoId . '_status', 'rascunho')
-        ];
+        // Buscar proposição no banco de dados primeiro
+        $proposicao = Proposicao::find($proposicaoId);
+        
+        // Se não encontrar no BD, verificar se há dados na sessão (fallback para proposições antigas)
+        if (!$proposicao) {
+            // Criar objeto mock apenas se há dados na sessão
+            if (session()->has('proposicao_' . $proposicaoId . '_tipo')) {
+                $proposicao = (object) [
+                    'id' => $proposicaoId,
+                    'tipo' => session('proposicao_' . $proposicaoId . '_tipo', 'projeto_lei'),
+                    'ementa' => session('proposicao_' . $proposicaoId . '_ementa', ''),
+                    'conteudo' => session('proposicao_' . $proposicaoId . '_conteudo', ''),
+                    'status' => session('proposicao_' . $proposicaoId . '_status', 'rascunho')
+                ];
+            } else {
+                // Proposição não existe nem no BD nem na sessão
+                return redirect()->route('proposicoes.minhas-proposicoes')
+                               ->with('error', 'Proposição não encontrada.');
+            }
+        }
 
         // Buscar template
         $template = \App\Models\TipoProposicaoTemplate::find($templateId);
@@ -1149,14 +1173,23 @@ class ProposicaoController extends Controller
             'status' => 'required|string'
         ]);
 
-        // Salvar status na sessão
-        session(['proposicao_' . $proposicaoId . '_status' => $request->status]);
+        // Buscar proposição no banco de dados primeiro
+        $proposicao = Proposicao::find($proposicaoId);
+        
+        if ($proposicao) {
+            // Atualizar status no banco de dados
+            $proposicao->update(['status' => $request->status]);
+        } else {
+            // Fallback: salvar status na sessão (para proposições antigas)
+            session(['proposicao_' . $proposicaoId . '_status' => $request->status]);
+        }
         
         // Log da mudança de status
         \Log::info('Status da proposição atualizado', [
             'proposicao_id' => $proposicaoId,
             'novo_status' => $request->status,
-            'user_id' => Auth::id()
+            'user_id' => Auth::id(),
+            'salvo_em' => $proposicao ? 'banco_dados' : 'sessao'
         ]);
 
         return response()->json([

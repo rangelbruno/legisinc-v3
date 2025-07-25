@@ -118,35 +118,6 @@
                     <!--end::Card body-->
                 </div>
                 <!--end::Status-->
-
-                <!--begin::Template-->
-                <div class="card card-flush py-4">
-                    <!--begin::Card header-->
-                    <div class="card-header">
-                        <!--begin::Card title-->
-                        <div class="card-title">
-                            <h2>Template</h2>
-                        </div>
-                        <!--end::Card title-->
-                    </div>
-                    <!--end::Card header-->
-                    <!--begin::Card body-->
-                    <div class="card-body pt-0">
-                        <!--begin::Select2-->
-                        <select class="form-select mb-2" data-kt-ecommerce-catalog-add-category="template" data-placeholder="Selecione um template" name="template_padrao">
-                            <option></option>
-                            <option value="template_padrao">Template Padrão</option>
-                            <option value="template_lei">Template de Lei</option>
-                            <option value="template_requerimento">Template de Requerimento</option>
-                        </select>
-                        <!--end::Select2-->
-                        <!--begin::Description-->
-                        <div class="text-muted fs-7 mt-2">Template padrão para este tipo de proposição.</div>
-                        <!--end::Description-->
-                    </div>
-                    <!--end::Card body-->
-                </div>
-                <!--end::Template-->
             </div>
             <!--end::Aside column-->
 
@@ -163,6 +134,29 @@
                     <!--end::Card header-->
                     <!--begin::Card body-->
                     <div class="card-body pt-0">
+                        <!--begin::Input group - Autocomplete-->
+                        <div class="mb-10 fv-row">
+                            <!--begin::Label-->
+                            <label class="form-label">Buscar Tipo Existente</label>
+                            <!--end::Label-->
+                            <!--begin::Autocomplete container-->
+                            <div class="position-relative">
+                                <!--begin::Input-->
+                                <input type="text" id="autocomplete-search" class="form-control mb-2" placeholder="Digite para buscar tipos de proposição existentes..." />
+                                <!--end::Input-->
+                                <!--begin::Dropdown-->
+                                <div id="autocomplete-dropdown" class="dropdown-menu w-100" style="display: none; max-height: 300px; overflow-y: auto; position: absolute; top: 100%; left: 0; z-index: 1000;">
+                                    <!-- Results will be populated here -->
+                                </div>
+                                <!--end::Dropdown-->
+                            </div>
+                            <!--end::Autocomplete container-->
+                            <!--begin::Description-->
+                            <div class="text-muted fs-7">Digite para buscar e auto-preencher com dados de tipos existentes.</div>
+                            <!--end::Description-->
+                        </div>
+                        <!--end::Input group - Autocomplete-->
+
                         <!--begin::Input group-->
                         <div class="mb-10 fv-row">
                             <!--begin::Label-->
@@ -197,22 +191,6 @@
                         </div>
                         <!--end::Input group-->
 
-                        <!--begin::Input group-->
-                        <div class="mb-10 fv-row">
-                            <!--begin::Label-->
-                            <label class="form-label">Descrição</label>
-                            <!--end::Label-->
-                            <!--begin::Input-->
-                            <textarea name="descricao" class="form-control mb-2" rows="3" placeholder="Descrição detalhada do tipo de proposição...">{{ old('descricao') }}</textarea>
-                            <!--end::Input-->
-                            <!--begin::Description-->
-                            <div class="text-muted fs-7">Descrição opcional que será exibida como ajuda.</div>
-                            <!--end::Description-->
-                            @error('descricao')
-                                <div class="text-danger fs-7 mt-1">{{ $message }}</div>
-                            @enderror
-                        </div>
-                        <!--end::Input group-->
 
                         <!--begin::Input group-->
                         <div class="row mb-10">
@@ -331,6 +309,190 @@
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Autocomplete functionality
+    const autocompleteInput = document.getElementById('autocomplete-search');
+    const autocompleteDropdown = document.getElementById('autocomplete-dropdown');
+    let searchTimeout;
+    
+    // Mock API data - Replace with actual API endpoint
+    const mockApiData = [
+        {
+            nome: "Projeto de Lei Ordinária",
+            codigo: "projeto_lei_ordinaria",
+            icone: "ki-document",
+            cor: "primary",
+            ordem: 1,
+            configuracoes: {
+                "numeracao_automatica": true,
+                "tramitacao_obrigatoria": true,
+                "campos_obrigatorios": ["ementa", "justificativa"],
+                "prazos": {
+                    "apresentacao": 30,
+                    "emendas": 15
+                }
+            }
+        },
+        {
+            nome: "Moção",
+            codigo: "mocao",
+            icone: "ki-message-text-2",
+            cor: "warning",
+            ordem: 5,
+            configuracoes: {
+                "numeracao_automatica": true,
+                "tramitacao_simplificada": true,
+                "campos_obrigatorios": ["ementa"],
+                "tipos": ["apoio", "repudio", "pesar"]
+            }
+        },
+        {
+            nome: "Requerimento",
+            codigo: "requerimento",
+            icone: "ki-questionnaire-tablet",
+            cor: "info",
+            ordem: 3,
+            configuracoes: {
+                "numeracao_automatica": true,
+                "resposta_obrigatoria": true,
+                "prazo_resposta": 30,
+                "campos_obrigatorios": ["ementa", "justificativa"]
+            }
+        },
+        {
+            nome: "Projeto de Decreto Legislativo",
+            codigo: "projeto_decreto_legislativo",
+            icone: "ki-document-edit",
+            cor: "success",
+            ordem: 2,
+            configuracoes: {
+                "numeracao_automatica": true,
+                "tramitacao_especial": true,
+                "quorum_qualificado": true,
+                "campos_obrigatorios": ["ementa", "justificativa", "base_legal"]
+            }
+        }
+    ];
+    
+    function searchApi(query) {
+        // Simulate API call - Replace with actual fetch to your API
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                const results = mockApiData.filter(item => 
+                    item.nome.toLowerCase().includes(query.toLowerCase()) ||
+                    item.codigo.toLowerCase().includes(query.toLowerCase())
+                );
+                resolve(results);
+            }, 300);
+        });
+    }
+    
+    function populateForm(data) {
+        // Populate form fields with selected data
+        document.querySelector('input[name="nome"]').value = data.nome;
+        document.querySelector('input[name="codigo"]').value = data.codigo;
+        document.querySelector('input[name="ordem"]').value = data.ordem;
+        
+        // Set select values
+        const iconeSelect = document.querySelector('select[name="icone"]');
+        const corSelect = document.querySelector('select[name="cor"]');
+        
+        if (iconeSelect) {
+            $(iconeSelect).val(data.icone).trigger('change');
+        }
+        
+        if (corSelect) {
+            $(corSelect).val(data.cor).trigger('change');
+        }
+        
+        // Populate JSON configuration
+        if (data.configuracoes) {
+            document.querySelector('textarea[name="configuracoes"]').value = JSON.stringify(data.configuracoes, null, 2);
+        }
+        
+        // Update preview
+        updatePreview();
+        
+        // Hide autocomplete
+        autocompleteDropdown.style.display = 'none';
+        autocompleteInput.value = '';
+        
+        // Show success message
+        Swal.fire({
+            icon: 'success',
+            title: 'Dados Preenchidos!',
+            text: `Formulário preenchido com dados de "${data.nome}"`,
+            timer: 2000,
+            showConfirmButton: false
+        });
+    }
+    
+    function renderResults(results) {
+        if (results.length === 0) {
+            autocompleteDropdown.innerHTML = '<div class="dropdown-item-text text-muted">Nenhum resultado encontrado</div>';
+        } else {
+            autocompleteDropdown.innerHTML = results.map(item => `
+                <div class="dropdown-item cursor-pointer autocomplete-item" data-item='${JSON.stringify(item)}'>
+                    <div class="d-flex align-items-center">
+                        <i class="ki-duotone ${item.icone} fs-2 text-${item.cor} me-3">
+                            <span class="path1"></span>
+                            <span class="path2"></span>
+                        </i>
+                        <div>
+                            <div class="fw-bold">${item.nome}</div>
+                            <div class="text-muted fs-7">${item.codigo}</div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            
+            // Add click handlers
+            autocompleteDropdown.querySelectorAll('.autocomplete-item').forEach(item => {
+                item.addEventListener('click', function() {
+                    const data = JSON.parse(this.dataset.item);
+                    populateForm(data);
+                });
+            });
+        }
+        
+        autocompleteDropdown.style.display = 'block';
+    }
+    
+    autocompleteInput.addEventListener('input', function() {
+        const query = this.value.trim();
+        
+        clearTimeout(searchTimeout);
+        
+        if (query.length < 2) {
+            autocompleteDropdown.style.display = 'none';
+            return;
+        }
+        
+        searchTimeout = setTimeout(() => {
+            searchApi(query).then(results => {
+                renderResults(results);
+            });
+        }, 300);
+    });
+    
+    // Hide dropdown when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('#autocomplete-search') && !e.target.closest('#autocomplete-dropdown')) {
+            autocompleteDropdown.style.display = 'none';
+        }
+    });
+    
+    // Add CSS for cursor pointer
+    const style = document.createElement('style');
+    style.textContent = `
+        .cursor-pointer { cursor: pointer; }
+        .autocomplete-item:hover { background-color: #f8f9fa; }
+        #autocomplete-dropdown {
+            border: 1px solid #e4e6ef;
+            border-radius: 0.475rem;
+            box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.075);
+        }
+    `;
+    document.head.appendChild(style);
     // Auto-generate codigo from nome
     const nomeInput = document.querySelector('input[name="nome"]');
     const codigoInput = document.querySelector('input[name="codigo"]');
@@ -375,6 +537,177 @@ document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('kt_tipo_form');
     const submitButton = document.getElementById('kt_tipo_submit');
     
+    // Function to remove validation classes
+    function removeValidationClasses(element) {
+        element.classList.remove('is-invalid');
+        element.classList.remove('is-valid');
+        const feedback = element.parentElement.querySelector('.invalid-feedback');
+        if (feedback) {
+            feedback.remove();
+        }
+    }
+    
+    // Function to add validation error
+    function addValidationError(element, message) {
+        element.classList.add('is-invalid');
+        const feedback = document.createElement('div');
+        feedback.className = 'invalid-feedback';
+        feedback.textContent = message;
+        element.parentElement.appendChild(feedback);
+        
+        // Add animation to draw attention
+        element.classList.add('shake');
+        setTimeout(() => element.classList.remove('shake'), 600);
+    }
+    
+    // Function to validate and highlight fields
+    function validateForm() {
+        let isValid = true;
+        const errors = [];
+        
+        // Validate nome
+        const nomeInput = document.querySelector('input[name="nome"]');
+        removeValidationClasses(nomeInput);
+        if (!nomeInput.value.trim()) {
+            addValidationError(nomeInput, 'Nome do tipo é obrigatório');
+            errors.push({ field: 'nome', element: nomeInput });
+            isValid = false;
+        } else {
+            nomeInput.classList.add('is-valid');
+        }
+        
+        // Validate codigo
+        const codigoInput = document.querySelector('input[name="codigo"]');
+        removeValidationClasses(codigoInput);
+        if (!codigoInput.value.trim()) {
+            addValidationError(codigoInput, 'Código é obrigatório');
+            errors.push({ field: 'codigo', element: codigoInput });
+            isValid = false;
+        } else if (!/^[a-z0-9_]+$/.test(codigoInput.value)) {
+            addValidationError(codigoInput, 'Código deve conter apenas letras minúsculas, números e underscores');
+            errors.push({ field: 'codigo', element: codigoInput });
+            isValid = false;
+        } else {
+            codigoInput.classList.add('is-valid');
+        }
+        
+        // Validate icone
+        const iconeSelect = document.querySelector('select[name="icone"]');
+        const iconeContainer = iconeSelect.closest('.form-select');
+        removeValidationClasses(iconeContainer);
+        if (!iconeSelect.value) {
+            addValidationError(iconeContainer, 'Selecione um ícone');
+            errors.push({ field: 'icone', element: iconeSelect });
+            isValid = false;
+        } else {
+            iconeContainer.classList.add('is-valid');
+        }
+        
+        // Validate cor
+        const corSelect = document.querySelector('select[name="cor"]');
+        const corContainer = corSelect.closest('.form-select');
+        removeValidationClasses(corContainer);
+        if (!corSelect.value) {
+            addValidationError(corContainer, 'Selecione uma cor');
+            errors.push({ field: 'cor', element: corSelect });
+            isValid = false;
+        } else {
+            corContainer.classList.add('is-valid');
+        }
+        
+        // Validate ordem
+        const ordemInput = document.querySelector('input[name="ordem"]');
+        removeValidationClasses(ordemInput);
+        if (!ordemInput.value || parseInt(ordemInput.value) < 0) {
+            addValidationError(ordemInput, 'Ordem deve ser um número maior ou igual a 0');
+            errors.push({ field: 'ordem', element: ordemInput });
+            isValid = false;
+        } else {
+            ordemInput.classList.add('is-valid');
+        }
+        
+        // Validate JSON if provided
+        const configuracoesTextarea = document.querySelector('textarea[name="configuracoes"]');
+        removeValidationClasses(configuracoesTextarea);
+        if (configuracoesTextarea.value.trim()) {
+            try {
+                JSON.parse(configuracoesTextarea.value);
+                configuracoesTextarea.classList.add('is-valid');
+            } catch (e) {
+                addValidationError(configuracoesTextarea, 'JSON inválido: ' + e.message);
+                errors.push({ field: 'configuracoes', element: configuracoesTextarea });
+                isValid = false;
+            }
+        }
+        
+        // Scroll to first error if any
+        if (errors.length > 0) {
+            errors[0].element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            errors[0].element.focus();
+        }
+        
+        return isValid;
+    }
+    
+    // Add shake animation CSS
+    const shakeStyle = document.createElement('style');
+    shakeStyle.textContent = `
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+            20%, 40%, 60%, 80% { transform: translateX(5px); }
+        }
+        .shake {
+            animation: shake 0.6s;
+        }
+        .form-control.is-invalid, .form-select.is-invalid {
+            border-color: #f1416c !important;
+            padding-right: calc(1.5em + 1.1rem);
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23f1416c' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 2l12 12M14 2L2 14'/%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right calc(0.375em + 0.275rem) center;
+            background-size: calc(0.75em + 0.55rem) calc(0.75em + 0.55rem);
+        }
+        .form-control.is-valid, .form-select.is-valid {
+            border-color: #50cd89 !important;
+            padding-right: calc(1.5em + 1.1rem);
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%2350cd89' stroke-linecap='round' stroke-linejoin='round' stroke-width='3' d='M2 8.5L5.5 12l7-7'/%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right calc(0.375em + 0.275rem) center;
+            background-size: calc(0.75em + 0.55rem) calc(0.75em + 0.55rem);
+        }
+        .invalid-feedback {
+            display: block;
+            margin-top: 0.25rem;
+            font-size: 0.875em;
+            color: #f1416c;
+        }
+    `;
+    document.head.appendChild(shakeStyle);
+    
+    // Add real-time validation on input
+    document.querySelectorAll('input[required], select[required]').forEach(element => {
+        element.addEventListener('blur', function() {
+            if (this.name === 'nome') {
+                removeValidationClasses(this);
+                if (!this.value.trim()) {
+                    addValidationError(this, 'Nome do tipo é obrigatório');
+                } else {
+                    this.classList.add('is-valid');
+                }
+            } else if (this.name === 'codigo') {
+                removeValidationClasses(this);
+                if (!this.value.trim()) {
+                    addValidationError(this, 'Código é obrigatório');
+                } else if (!/^[a-z0-9_]+$/.test(this.value)) {
+                    addValidationError(this, 'Código deve conter apenas letras minúsculas, números e underscores');
+                } else {
+                    this.classList.add('is-valid');
+                }
+            }
+        });
+    });
+    
     form.addEventListener('submit', function(e) {
         e.preventDefault();
         
@@ -382,19 +715,14 @@ document.addEventListener('DOMContentLoaded', function() {
         submitButton.setAttribute('data-kt-indicator', 'on');
         submitButton.disabled = true;
         
-        // Validate required fields
-        const nome = document.querySelector('input[name="nome"]').value.trim();
-        const codigo = document.querySelector('input[name="codigo"]').value.trim();
-        const icone = document.querySelector('select[name="icone"]').value;
-        const cor = document.querySelector('select[name="cor"]').value;
-        
-        if (!nome || !codigo || !icone || !cor) {
+        // Validate form
+        if (!validateForm()) {
             // Hide loading state
             submitButton.removeAttribute('data-kt-indicator');
             submitButton.disabled = false;
             
             Swal.fire({
-                text: "Por favor, preencha todos os campos obrigatórios.",
+                text: "Por favor, corrija os erros destacados no formulário.",
                 icon: "warning",
                 buttonsStyling: false,
                 confirmButtonText: "Ok",
@@ -403,29 +731,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
             return;
-        }
-        
-        // Validate JSON if provided
-        const configuracoes = document.querySelector('textarea[name="configuracoes"]').value.trim();
-        if (configuracoes) {
-            try {
-                JSON.parse(configuracoes);
-            } catch (e) {
-                // Hide loading state
-                submitButton.removeAttribute('data-kt-indicator');
-                submitButton.disabled = false;
-                
-                Swal.fire({
-                    text: "O campo configurações deve conter um JSON válido.",
-                    icon: "error",
-                    buttonsStyling: false,
-                    confirmButtonText: "Ok",
-                    customClass: {
-                        confirmButton: "btn btn-primary"
-                    }
-                });
-                return;
-            }
         }
         
         // Submit form

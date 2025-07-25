@@ -160,7 +160,10 @@ class OnlyOfficeController extends Controller
         // Skip authorization for OnlyOffice server access
         // $this->authorize('view', $modelo);
         
-        \Log::info('Download modelo requested:', [
+        \Log::info('Download modelo requested from OnlyOffice:', [
+            'request_headers' => request()->headers->all(),
+            'request_ip' => request()->ip(),
+            'user_agent' => request()->userAgent(),
             'modelo_id' => $modelo->id,
             'modelo_nome' => $modelo->nome,
             'arquivo_path' => $modelo->arquivo_path,
@@ -358,8 +361,8 @@ Você pode editá-lo usando o OnlyOffice.\par
     {
         $url = route($routeName, $model);
         
-        // Replace localhost:8001 with container name for OnlyOffice access
-        return str_replace('http://localhost:8001', 'http://legisinc-app:80', $url);
+        // Use host.docker.internal with proper mapping for OnlyOffice access
+        return str_replace('http://localhost:8001', 'http://host.docker.internal:8001', $url);
     }
     
     /**
@@ -407,10 +410,21 @@ Você pode editá-lo usando o OnlyOffice.\par
             ]);
         }
         
+        $downloadUrl = $this->generateFileUrlForOnlyOffice('onlyoffice.file.modelo', $modelo);
+        
+        \Log::info('OnlyOffice configuration debug:', [
+            'modelo_id' => $modelo->id,
+            'document_key' => $modelo->document_key,
+            'arquivo_nome' => $modelo->arquivo_nome,
+            'arquivo_path' => $modelo->arquivo_path,
+            'download_url' => $downloadUrl,
+            'route_check' => route('onlyoffice.file.modelo', $modelo)
+        ]);
+        
         $config = $this->onlyOfficeService->criarConfiguracao(
             $modelo->document_key,
             $modelo->arquivo_nome,
-            $this->generateFileUrlForOnlyOffice('onlyoffice.file.modelo', $modelo),
+            $downloadUrl,
             [
                 'id' => auth()->id(),
                 'name' => auth()->user()->name,

@@ -111,20 +111,6 @@
                         </div>
                         <!--end::Row-->
 
-                        <!--begin::Row-->
-                        <div class="row mb-7">
-                            <!--begin::Label-->
-                            <label class="col-lg-4 fw-semibold text-muted">Descrição</label>
-                            <!--end::Label-->
-                            <!--begin::Col-->
-                            <div class="col-lg-8">
-                                <textarea name="descricao" class="form-control form-control-lg form-control-solid" 
-                                          rows="3" placeholder="Descrição opcional do modelo">{{ old('descricao') }}</textarea>
-                                <div class="form-text">Descreva o propósito e uso do modelo</div>
-                            </div>
-                            <!--end::Col-->
-                        </div>
-                        <!--end::Row-->
 
                         <!--begin::Row-->
                         <div class="row mb-7">
