@@ -463,26 +463,6 @@
                             </div>
                             <!--end:Menu separator-->
 
-                            <!--begin:Menu item - Editor de Documentos (Atalho)-->
-                            @if(\App\Models\ScreenPermission::userCanAccessRoute('documentos.editor.index'))
-                            <div class="menu-item">
-                                <!--begin:Menu link-->
-                                <a class="menu-link {{ request()->routeIs('documentos.editor.*') ? 'active' : '' }}" href="{{ route('documentos.editor.index') }}">
-                                    <span class="menu-icon">
-                                        <i class="ki-duotone ki-document-2 fs-2">
-                                            <span class="path1"></span>
-                                            <span class="path2"></span>
-                                        </i>
-                                    </span>
-                                    <span class="menu-title">Editor de Documentos</span>
-                                    <span class="menu-badge">
-                                        <span class="badge badge-success">Novo</span>
-                                    </span>
-                                </a>
-                                <!--end:Menu link-->
-                            </div>
-                            @endif
-                            <!--end:Menu item-->
 
                             <!--begin:Menu item - Usuários-->
                             @if(\App\Models\ScreenPermission::userCanAccessModule('usuarios'))
@@ -560,48 +540,6 @@
                                 <!--end:Menu link-->
                                 <!--begin:Menu sub-->
                                 <div class="menu-sub menu-sub-accordion {{ request()->routeIs('documentos.*') ? 'show' : '' }}">
-                                    <!--begin:Menu item - Modelos-->
-                                    @if(\App\Models\ScreenPermission::userCanAccessRoute('documentos.modelos.index'))
-                                    <div class="menu-item">
-                                        <!--begin:Menu link-->
-                                        <a class="menu-link {{ request()->routeIs('documentos.modelos.*') ? 'active' : '' }}" href="{{ route('documentos.modelos.index') }}">
-                                            <span class="menu-bullet">
-                                                <span class="bullet bullet-dot"></span>
-                                            </span>
-                                            <span class="menu-title">Modelos</span>
-                                        </a>
-                                        <!--end:Menu link-->
-                                    </div>
-                                    @endif
-                                    <!--end:Menu item-->
-                                    <!--begin:Menu item - Novo Modelo-->
-                                    @if(\App\Models\ScreenPermission::userCanAccessRoute('documentos.modelos.create'))
-                                    <div class="menu-item">
-                                        <!--begin:Menu link-->
-                                        <a class="menu-link {{ request()->routeIs('documentos.modelos.create') ? 'active' : '' }}" href="{{ route('documentos.modelos.create') }}">
-                                            <span class="menu-bullet">
-                                                <span class="bullet bullet-dot"></span>
-                                            </span>
-                                            <span class="menu-title">Novo Modelo</span>
-                                        </a>
-                                        <!--end:Menu link-->
-                                    </div>
-                                    @endif
-                                    <!--end:Menu item-->
-                                    <!--begin:Menu item - Editor-->
-                                    @if(\App\Models\ScreenPermission::userCanAccessRoute('documentos.editor.index'))
-                                    <div class="menu-item">
-                                        <!--begin:Menu link-->
-                                        <a class="menu-link {{ request()->routeIs('documentos.editor.*') ? 'active' : '' }}" href="{{ route('documentos.editor.index') }}">
-                                            <span class="menu-bullet">
-                                                <span class="bullet bullet-dot"></span>
-                                            </span>
-                                            <span class="menu-title">Editor de Documentos</span>
-                                        </a>
-                                        <!--end:Menu link-->
-                                    </div>
-                                    @endif
-                                    <!--end:Menu item-->
                                     <!--begin:Menu item - Instâncias-->
                                     @if(\App\Models\ScreenPermission::userCanAccessRoute('documentos.instancias.index'))
                                     <div class="menu-item">

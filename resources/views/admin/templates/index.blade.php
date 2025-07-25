@@ -198,7 +198,7 @@
                                     @if($tipo->template)
                                         <div>{{ $tipo->template->updated_at->format('d/m/Y H:i') }}</div>
                                         <div class="text-muted fs-7">
-                                            por {{ $tipo->template->updatedBy->name }}
+                                            por {{ $tipo->template->updatedBy->name ?? 'Sistema' }}
                                         </div>
                                     @else
                                         <span class="text-muted">—</span>
@@ -224,7 +224,7 @@
                                     </a>
                                     
                                     @if($tipo->hasTemplate())
-                                        <a href="{{ route('api.templates.download', $tipo->template) }}" 
+                                        <a href="{{ route('api.templates.download', $tipo->template) }}?v={{ $tipo->template->updated_at->timestamp }}" 
                                            class="btn btn-sm btn-light-primary ms-2">
                                             <i class="ki-duotone ki-exit-down fs-6 me-1">
                                                 <span class="path1"></span>
@@ -451,5 +451,8 @@ function confirmarExclusaoTemplate(templateId, tipoNome) {
         }
     });
 }
+
+// Cache-busting nos links de download já resolve o problema
+// O link sempre terá o timestamp correto do banco de dados
 </script>
 @endpush

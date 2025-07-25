@@ -38,11 +38,33 @@ class OnlyOfficeService
                 'fileType' => 'rtf',
                 'key' => $template->document_key,
                 'title' => $template->getNomeTemplate(),
-                'url' => $downloadUrl
+                'url' => $downloadUrl,
+                'permissions' => [
+                    'comment' => true,
+                    'copy' => true,
+                    'download' => true,
+                    'edit' => true,
+                    'fillForms' => true,
+                    'modifyFilter' => true,
+                    'modifyContentControl' => true,
+                    'review' => true,
+                    'chat' => false,
+                ]
             ],
             'documentType' => 'word',
             'editorConfig' => [
-                'mode' => 'edit'
+                'mode' => 'edit',
+                'callbackUrl' => str_replace('http://localhost:8001', 'http://host.docker.internal:8001', route('api.onlyoffice.callback', $template->document_key)),
+                'lang' => 'pt-BR',
+                'autosave' => true,
+                'coEditing' => [
+                    'mode' => 'fast',
+                    'change' => true
+                ],
+                'user' => [
+                    'id' => (string)(auth()->id() ?? 'user-' . time()),
+                    'name' => auth()->user()->name ?? 'Usuário'
+                ]
             ]
         ];
 
@@ -80,27 +102,81 @@ class OnlyOfficeService
      */
     private function salvarTemplate(TipoProposicaoTemplate $template, string $url): void
     {
-        // Download do arquivo atualizado
-        $response = Http::get($url);
-        
-        if (!$response->successful()) {
-            return;
+        try {
+            // Múltiplas opções de URL para tentar acesso ao container OnlyOffice
+            $urlsParaTentar = [
+                str_replace('http://localhost:8080', 'http://legisinc-onlyoffice:80', $url),
+                str_replace('http://localhost:8080', 'http://host.docker.internal:8080', $url),
+                str_replace('http://localhost:8080', 'http://onlyoffice-documentserver:80', $url),
+                $url // URL original como último recurso
+            ];
+            
+            \Log::info('OnlyOffice salvando template', [
+                'template_id' => $template->id,
+                'url_original' => $url,
+                'urls_para_tentar' => $urlsParaTentar
+            ]);
+            
+            $response = null;
+            $urlUtilizada = null;
+            
+            // Tentar cada URL até conseguir fazer download
+            foreach ($urlsParaTentar as $urlTentativa) {
+                try {
+                    \Log::info('Tentando URL', ['url' => $urlTentativa]);
+                    $response = Http::timeout(30)->get($urlTentativa);
+                    
+                    if ($response->successful()) {
+                        $urlUtilizada = $urlTentativa;
+                        \Log::info('URL funcionou', ['url' => $urlUtilizada, 'size' => strlen($response->body())]);
+                        break;
+                    } else {
+                        \Log::warning('URL falhou', ['url' => $urlTentativa, 'status' => $response->status()]);
+                    }
+                } catch (\Exception $e) {
+                    \Log::warning('Erro ao tentar URL', ['url' => $urlTentativa, 'error' => $e->getMessage()]);
+                    continue;
+                }
+            }
+            
+            if (!$response || !$response->successful()) {
+                \Log::error('OnlyOffice callback - falha no download de todas as URLs', [
+                    'template_id' => $template->id,
+                    'url_original' => $url
+                ]);
+                return;
+            }
+
+            // Salvar arquivo com extensão RTF
+            $nomeArquivo = "template_{$template->tipo_proposicao_id}.rtf";
+            $path = "templates/{$nomeArquivo}";
+            
+            // Salvar no storage padrão (público)
+            Storage::put($path, $response->body());
+
+            // Atualizar template
+            $template->update([
+                'arquivo_path' => $path,
+                'updated_by' => auth()->id()
+            ]);
+
+            // Extrair variáveis automaticamente
+            $this->extrairVariaveis($template);
+            
+            \Log::info('OnlyOffice template salvo com sucesso', [
+                'template_id' => $template->id,
+                'arquivo_path' => $path,
+                'url_utilizada' => $urlUtilizada,
+                'tamanho_arquivo' => strlen($response->body())
+            ]);
+            
+        } catch (\Exception $e) {
+            \Log::error('OnlyOffice callback error', [
+                'document_key' => $template->document_key,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
         }
-
-        // Salvar arquivo
-        $nomeArquivo = "template_{$template->tipo_proposicao_id}.docx";
-        $path = "templates/{$nomeArquivo}";
-        
-        Storage::put($path, $response->body());
-
-        // Atualizar template
-        $template->update([
-            'arquivo_path' => $path,
-            'updated_by' => auth()->id()
-        ]);
-
-        // Extrair variáveis automaticamente
-        $this->extrairVariaveis($template);
     }
 
     /**
@@ -184,9 +260,10 @@ class OnlyOfficeService
         $nomeArquivo = "template_{$template->tipo_proposicao_id}.rtf";
         $path = "templates/{$nomeArquivo}";
         
-        // Conteúdo mínimo de um DOCX (documento vazio válido)
+        // Conteúdo mínimo de um RTF (documento vazio válido)
         $conteudoVazio = $this->criarDocumentoVazio($template);
         
+        // Salvar no storage público padrão
         Storage::put($path, $conteudoVazio);
         
         // Atualizar template

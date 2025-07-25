@@ -92,21 +92,30 @@
             </div>
             
             <div class="d-flex align-items-center gap-3">
-                <span class="badge badge-light-success px-3 py-2">
-                    <i class="ki-duotone ki-check fs-7 me-1">
+                <button class="btn btn-success btn-sm" onclick="forceSave()">
+                    <i class="ki-duotone ki-check fs-6 me-1">
                         <span class="path1"></span>
                         <span class="path2"></span>
                     </i>
-                    Salvamento Automático
+                    Salvar
+                </button>
+                
+                <span class="badge badge-light-info px-3 py-2">
+                    <i class="ki-duotone ki-information fs-7 me-1">
+                        <span class="path1"></span>
+                        <span class="path2"></span>
+                        <span class="path3"></span>
+                    </i>
+                    Salvamento Manual
                 </span>
                 
-                <a href="{{ route('admin.templates.index') }}" class="btn btn-light btn-sm">
+                <button onclick="fecharEditor()" class="btn btn-light btn-sm">
                     <i class="ki-duotone ki-cross fs-6 me-1">
                         <span class="path1"></span>
                         <span class="path2"></span>
                     </i>
                     Fechar
-                </a>
+                </button>
             </div>
         </div>
         
@@ -208,7 +217,7 @@
             
             try {
                 console.log('Inicializando OnlyOffice com config:', config);
-                new DocsAPI.DocEditor('onlyoffice-editor', config);
+                window.docEditor = new DocsAPI.DocEditor('onlyoffice-editor', config);
             } catch (error) {
                 console.error('Erro ao inicializar OnlyOffice:', error);
                 showToast('Erro ao carregar editor: ' + error.message, 'error');
@@ -232,6 +241,40 @@
                     toast.remove();
                 }
             }, 5000);
+        }
+
+        // Force save function
+        function forceSave() {
+            if (window.docEditor) {
+                showToast('Solicitando salvamento...', 'info');
+                
+                // Request save from OnlyOffice
+                window.docEditor.requestSave();
+                
+                setTimeout(() => {
+                    showToast('Documento salvo! Aguarde alguns segundos antes de baixar.', 'success');
+                }, 1000);
+            } else {
+                showToast('Editor não está carregado ainda', 'error');
+            }
+        }
+
+        // Close editor function
+        function fecharEditor() {
+            // Try to close the tab
+            try {
+                window.close();
+            } catch (e) {
+                // If window.close() fails, redirect to templates page
+                window.location.href = '{{ route("templates.index") }}';
+            }
+            
+            // Fallback: if window is still open after a short delay, redirect
+            setTimeout(() => {
+                if (!window.closed) {
+                    window.location.href = '{{ route("templates.index") }}';
+                }
+            }, 100);
         }
     </script>
 </body>

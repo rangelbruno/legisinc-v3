@@ -90,6 +90,11 @@ class TemplateController extends Controller
             ]
         );
 
+        // Sempre gerar novo document_key para nova sessão de edição
+        $template->update([
+            'document_key' => 'template_' . $tipo->id . '_' . time() . '_' . auth()->id()
+        ]);
+
         // Configuração do ONLYOFFICE
         $config = $this->onlyOfficeService->criarConfiguracaoTemplate($template);
 
@@ -130,7 +135,10 @@ class TemplateController extends Controller
             abort(404, 'Arquivo do template não encontrado');
         }
 
-        return Storage::download($template->arquivo_path);
+        // Gerar nome do arquivo baseado no tipo de proposição
+        $nomeArquivo = \Illuminate\Support\Str::slug($template->tipoProposicao->nome) . '.rtf';
+        
+        return Storage::download($template->arquivo_path, $nomeArquivo);
     }
 
     /**
