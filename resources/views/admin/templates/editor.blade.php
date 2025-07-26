@@ -34,8 +34,214 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
             z-index: 1000;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .editor-header .badge {
+            font-weight: 600;
+            font-size: 0.85rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .editor-header .btn {
+            font-weight: 600;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .editor-header .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+        
+        .editor-header .btn-outline-light {
+            background-color: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+        }
+        
+        .editor-header .btn-outline-light:hover {
+            background-color: rgba(255,255,255,0.2);
+            border-color: rgba(255,255,255,0.8);
+        }
+        
+        .badge-warning {
+            background-color: #ffc107 !important;
+            color: #000 !important;
+        }
+        
+        .badge-success {
+            background-color: #28a745 !important;
+            color: #fff !important;
+        }
+        
+        /* Toast Notifications */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 10000;
+            width: 380px;
+        }
+        
+        .custom-toast {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+            margin-bottom: 12px;
+            padding: 16px 20px;
+            border-left: 4px solid;
+            animation: slideInRight 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .custom-toast.toast-success {
+            border-left-color: #10b981;
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.05) 0%, rgba(255, 255, 255, 0.95) 100%);
+        }
+        
+        .custom-toast.toast-info {
+            border-left-color: #3b82f6;
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, rgba(255, 255, 255, 0.95) 100%);
+        }
+        
+        .custom-toast.toast-warning {
+            border-left-color: #f59e0b;
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.05) 0%, rgba(255, 255, 255, 0.95) 100%);
+        }
+        
+        .custom-toast.toast-error {
+            border-left-color: #ef4444;
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.05) 0%, rgba(255, 255, 255, 0.95) 100%);
+        }
+        
+        .toast-content {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .toast-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 12px;
+        }
+        
+        .toast-success .toast-icon {
+            background: #10b981;
+            color: white;
+        }
+        
+        .toast-info .toast-icon {
+            background: #3b82f6;
+            color: white;
+        }
+        
+        .toast-warning .toast-icon {
+            background: #f59e0b;
+            color: white;
+        }
+        
+        .toast-error .toast-icon {
+            background: #ef4444;
+            color: white;
+        }
+        
+        .toast-message {
+            flex: 1;
+            font-weight: 500;
+            color: #1f2937;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+        
+        .toast-close {
+            background: none;
+            border: none;
+            color: #6b7280;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 20px;
+            flex-shrink: 0;
+            font-size: 14px;
+        }
+        
+        .toast-close:hover {
+            background: rgba(0, 0, 0, 0.1);
+            color: #374151;
+        }
+        
+        .toast-progress {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 3px;
+            border-radius: 0 0 12px 12px;
+            opacity: 0.6;
+            animation: progressBar 4s linear;
+        }
+        
+        .toast-success .toast-progress {
+            background: #10b981;
+        }
+        
+        .toast-info .toast-progress {
+            background: #3b82f6;
+        }
+        
+        .toast-warning .toast-progress {
+            background: #f59e0b;
+        }
+        
+        .toast-error .toast-progress {
+            background: #ef4444;
+        }
+        
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes slideOutRight {
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+        
+        @keyframes progressBar {
+            from {
+                width: 100%;
+            }
+            to {
+                width: 0%;
+            }
+        }
+        
+        .custom-toast.removing {
+            animation: slideOutRight 0.3s cubic-bezier(0.4, 0, 1, 1);
         }
         
         .editor-content {
@@ -103,16 +309,16 @@
                     Salvar
                 </button>
                 
-                <span class="badge badge-light-info px-3 py-2">
+                <span id="statusSalvamento" class="badge badge-warning px-3 py-2">
                     <i class="ki-duotone ki-information fs-7 me-1">
                         <span class="path1"></span>
                         <span class="path2"></span>
                         <span class="path3"></span>
                     </i>
-                    Salvamento Manual
+                    <span id="statusTexto">Não Salvo</span>
                 </span>
                 
-                <button onclick="fecharEditor()" class="btn btn-light btn-sm">
+                <button onclick="fecharEditor()" class="btn btn-outline-light btn-sm border-2">
                     <i class="ki-duotone ki-cross fs-6 me-1">
                         <span class="path1"></span>
                         <span class="path2"></span>
@@ -127,6 +333,9 @@
             <div id="onlyoffice-editor"></div>
         </div>
     </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
 
     <!-- Variables Panel -->
     <div class="variables-panel" id="variablesPanel">
@@ -378,12 +587,15 @@ Tem certeza que deseja sair?`;
             config.events = {
                 'onDocumentReady': function() {
                     console.log('🚀 OnlyOffice document ready');
-                    showToast('Template carregado com sucesso!', 'success');
+                    showToast('Editor carregado e pronto para uso', 'success', 3000);
                     
                     // Reset state
                     documentModified = false;
                     window._onlyofficeState.documentSaved = false;
                     window._onlyofficeState.allowClose = false;
+                    
+                    // Initialize status badge
+                    updateStatusBadge('saved');
                     
                     // Log available methods for debugging
                     console.log('📋 Available docEditor methods:', Object.getOwnPropertyNames(window.docEditor));
@@ -424,6 +636,9 @@ Tem certeza que deseja sair?`;
                         if (!document.title.includes('*')) {
                             document.title = '* ' + document.title.replace('✅ Template Salvo - ', '');
                         }
+                        
+                        // Update status badge
+                        updateStatusBadge('modified');
                     }
                 },
                 'onRequestSaveAs': function(event) {
@@ -433,7 +648,7 @@ Tem certeza que deseja sair?`;
                 },
                 'onDownloadAs': function(event) {
                     console.log('📥 OnlyOffice download as triggered:', event);
-                    showToast('📥 Download/Save em progresso...', 'info');
+                    showToast('Processando salvamento do documento...', 'info', 3000);
                     
                     // This indicates OnlyOffice is processing the save
                     // The actual save will happen via callback
@@ -450,7 +665,7 @@ Tem certeza que deseja sair?`;
                 },
                 'onError': function(event) {
                     console.error('Erro OnlyOffice:', event);
-                    showToast('Erro no editor: ' + JSON.stringify(event.data), 'error');
+                    showToast('Erro no editor. Tente recarregar a página', 'error', 6000);
                 },
                 'onRequestClose': function() {
                     // This event is fired when OnlyOffice wants to close
@@ -475,33 +690,127 @@ Tem certeza que deseja sair?`;
                 
             } catch (error) {
                 console.error('Erro ao inicializar OnlyOffice:', error);
-                showToast('Erro ao carregar editor: ' + error.message, 'error');
+                showToast('Falha ao carregar o editor. Recarregue a página', 'error', 6000);
             }
         });
 
-        // Toast notifications
-        function showToast(message, type = 'info') {
+        // Update status badge function
+        function updateStatusBadge(status) {
+            const badge = document.getElementById('statusSalvamento');
+            const texto = document.getElementById('statusTexto');
+            const icon = badge.querySelector('i');
+            
+            if (!badge || !texto) return;
+            
+            // Remove all status classes
+            badge.classList.remove('badge-warning', 'badge-success', 'badge-info', 'badge-danger');
+            
+            switch(status) {
+                case 'saved':
+                    badge.classList.add('badge-success');
+                    texto.textContent = 'Salvo';
+                    icon.className = 'ki-duotone ki-check fs-7 me-1';
+                    icon.innerHTML = '<span class="path1"></span><span class="path2"></span>';
+                    break;
+                case 'modified':
+                    badge.classList.add('badge-warning');
+                    texto.textContent = 'Não Salvo';
+                    icon.className = 'ki-duotone ki-information fs-7 me-1';
+                    icon.innerHTML = '<span class="path1"></span><span class="path2"></span><span class="path3"></span>';
+                    break;
+                case 'saving':
+                    badge.classList.add('badge-info');
+                    texto.textContent = 'Salvando...';
+                    icon.className = 'ki-duotone ki-loading fs-7 me-1';
+                    icon.innerHTML = '<span class="path1"></span><span class="path2"></span>';
+                    break;
+                case 'error':
+                    badge.classList.add('badge-danger');
+                    texto.textContent = 'Erro';
+                    icon.className = 'ki-duotone ki-cross fs-7 me-1';
+                    icon.innerHTML = '<span class="path1"></span><span class="path2"></span>';
+                    break;
+                default:
+                    badge.classList.add('badge-warning');
+                    texto.textContent = 'Não Salvo';
+                    icon.className = 'ki-duotone ki-information fs-7 me-1';
+                    icon.innerHTML = '<span class="path1"></span><span class="path2"></span><span class="path3"></span>';
+            }
+        }
+
+        // Modern Toast notifications
+        function showToast(message, type = 'info', duration = 4000) {
+            const container = document.getElementById('toastContainer');
+            if (!container) return;
+            
+            // Create toast element
             const toast = document.createElement('div');
-            toast.className = `alert alert-${type === 'success' ? 'success' : type === 'error' ? 'danger' : 'info'} alert-dismissible position-fixed`;
-            toast.style.cssText = 'top: 20px; left: 50%; transform: translateX(-50%); z-index: 9999; min-width: 300px;';
+            toast.className = `custom-toast toast-${type}`;
+            
+            // Define icons for each type
+            const icons = {
+                success: '✓',
+                info: 'i',
+                warning: '!', 
+                error: '✕'
+            };
+            
+            // Clean message
+            const cleanMessage = message.trim();
+            
             toast.innerHTML = `
-                ${message}
-                <button type="button" class="btn-close" onclick="this.parentElement.remove()"></button>
+                <div class="toast-content">
+                    <div class="toast-icon">${icons[type] || 'i'}</div>
+                    <div class="toast-message">${cleanMessage}</div>
+                    <button class="toast-close" onclick="removeToast(this.parentElement)">&times;</button>
+                </div>
+                <div class="toast-progress"></div>
             `;
             
-            document.body.appendChild(toast);
+            // Add to container
+            container.appendChild(toast);
+            
+            // Auto remove after duration
+            const autoRemoveTimer = setTimeout(() => {
+                removeToast(toast);
+            }, duration);
+            
+            // Store timer for manual removal
+            toast.autoRemoveTimer = autoRemoveTimer;
+            
+            // Add click to dismiss
+            toast.addEventListener('click', (e) => {
+                if (!e.target.classList.contains('toast-close')) {
+                    removeToast(toast);
+                }
+            });
+            
+            return toast;
+        }
+        
+        // Remove toast with animation
+        function removeToast(toast) {
+            if (!toast || toast.classList.contains('removing')) return;
+            
+            // Clear auto-remove timer
+            if (toast.autoRemoveTimer) {
+                clearTimeout(toast.autoRemoveTimer);
+            }
+            
+            toast.classList.add('removing');
             
             setTimeout(() => {
                 if (toast.parentElement) {
                     toast.remove();
                 }
-            }, 5000);
+            }, 300);
         }
 
         // Force save function using OnlyOffice API
         function forceSave() {
             console.log('💾 Force save triggered');
-            showToast('Salvando documento...', 'info');
+            updateStatusBadge('saving');
+            showToast('Iniciando salvamento...', 'info', 2000);
             
             if (window.docEditor) {
                 console.log('Available methods:', Object.getOwnPropertyNames(window.docEditor));
@@ -559,11 +868,13 @@ Tem certeza que deseja sair?`;
                             console.log('🎯 This should prevent beforeunload warnings now');
                             console.groupEnd();
                             
-                            showToast('💾 Salvamento OnlyOffice iniciado!', 'success');
+                            // Update status badge
+                            updateStatusBadge('saved');
+                            showToast('Documento salvo com sucesso!', 'success', 3000);
                             
                             // Reload page after save to avoid version conflict
                             setTimeout(() => {
-                                showToast('🔄 Recarregando editor...', 'info');
+                                showToast('Recarregando para aplicar alterações...', 'info', 2000);
                                 window._onlyofficeState.allowClose = true;
                                 window.location.reload();
                             }, 3000);
@@ -581,7 +892,8 @@ Tem certeza que deseja sair?`;
                             documentModified = false;
                             window._onlyofficeState.documentSaved = true;
                             document.title = '✅ Template Salvo - ' + document.title.replace('✅ Template Salvo - ', '').replace('* ', '');
-                            showToast('💾 Salvamento via hack iniciado!', 'success');
+                            updateStatusBadge('saved');
+                            showToast('Documento salvo com sucesso!', 'success', 3000);
                         }, 2000);
                         
                         return;
@@ -608,17 +920,20 @@ Tem certeza que deseja sair?`;
                         documentModified = false;
                         window._onlyofficeState.documentSaved = true;
                         document.title = '✅ Template Salvo - ' + document.title.replace('✅ Template Salvo - ', '').replace('* ', '');
-                        showToast('💾 Timestamp salvo (manual)!', 'info');
+                        updateStatusBadge('saved');
+                        showToast('Documento salvo manualmente', 'success', 3000);
                     } else {
-                        showToast('❌ Erro ao salvar: ' + (data.message || 'Erro desconhecido'), 'error');
+                        updateStatusBadge('error');
+                        showToast('Erro ao salvar: ' + (data.message || 'Tente novamente'), 'error', 5000);
                     }
                 })
                 .catch(error => {
                     console.error('Manual save failed:', error);
-                    showToast('❌ Erro ao salvar documento', 'error');
+                    updateStatusBadge('error');
+                    showToast('Falha no salvamento. Verifique sua conexão', 'error', 5000);
                 });
             } else {
-                showToast('❌ Editor não está carregado', 'error');
+                showToast('Editor ainda não foi carregado completamente', 'warning', 4000);
             }
         }
 
