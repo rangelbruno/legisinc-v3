@@ -10,11 +10,13 @@ use Illuminate\Support\Facades\Http;
 class OnlyOfficeService
 {
     private string $serverUrl;
+    private string $internalUrl;
     private string $jwtSecret;
 
     public function __construct()
     {
         $this->serverUrl = config('onlyoffice.server_url');
+        $this->internalUrl = config('onlyoffice.internal_url');
         $this->jwtSecret = config('onlyoffice.jwt_secret');
     }
 
@@ -27,16 +29,21 @@ class OnlyOfficeService
         $this->garantirArquivoTemplate($template);
         
         $downloadUrl = $template->getUrlDownload();
+        
+        // Adicionar timestamp ao document_key para forçar reload após salvar
+        $documentKeyWithVersion = $template->document_key . '_v' . $template->updated_at->timestamp;
+        
         \Log::info('OnlyOffice config criada', [
             'template_id' => $template->id,
             'download_url' => $downloadUrl,
-            'document_key' => $template->document_key
+            'document_key' => $documentKeyWithVersion,
+            'original_key' => $template->document_key
         ]);
         
         $config = [
             'document' => [
                 'fileType' => 'rtf',
-                'key' => $template->document_key,
+                'key' => $documentKeyWithVersion,
                 'title' => $template->getNomeTemplate(),
                 'url' => $downloadUrl,
                 'permissions' => [
@@ -55,9 +62,11 @@ class OnlyOfficeService
             'editorConfig' => [
                 'mode' => 'edit',
                 'callbackUrl' => str_replace('http://localhost:8001', 'http://host.docker.internal:8001', route('api.onlyoffice.callback', $template->document_key)),
+                'createUrl' => route('api.templates.download', $template->id),
                 'lang' => 'pt-BR',
                 'customization' => [
-                    'autosave' => false, // Desabilitar autosave para evitar múltiplos callbacks
+                    'autosave' => true, // Habilitar autosave para garantir salvamento
+                    'autosaveType' => 0, // 0 = strict mode
                     'forcesave' => true, // Permitir salvamento manual
                     'compactHeader' => true,
                     'toolbarNoTabs' => false,
@@ -91,7 +100,10 @@ class OnlyOfficeService
      */
     public function processarCallback(string $documentKey, array $data): array
     {
-        $template = TipoProposicaoTemplate::where('document_key', $documentKey)->first();
+        // Remover versão do document_key se existir
+        $originalKey = preg_replace('/_v\d+$/', '', $documentKey);
+        
+        $template = TipoProposicaoTemplate::where('document_key', $originalKey)->first();
         
         if (!$template) {
             return ['error' => 1];
@@ -168,8 +180,8 @@ class OnlyOfficeService
     private function salvarTemplate(TipoProposicaoTemplate $template, string $url): void
     {
         try {
-            // Usar URL direta entre containers Docker (mais rápido)
-            $urlOtimizada = str_replace('http://localhost:8080', 'http://legisinc-onlyoffice:80', $url);
+            // Usar URL interna entre containers Docker (mais rápido)
+            $urlOtimizada = str_replace($this->serverUrl, $this->internalUrl, $url);
             
             // Download direto com timeout reduzido
             $response = Http::timeout(5)->get($urlOtimizada);

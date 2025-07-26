@@ -94,14 +94,14 @@ class TemplateController extends Controller
         $callbackEmProcessamento = \Cache::has('onlyoffice_callback_' . $template->document_key) ||
                                    \Cache::has('onlyoffice_save_lock_' . $template->document_key);
         
-        // Só gerar novo document_key se:
+        // Sempre gerar novo document_key se:
         // 1. Não houver um key
-        // 2. Passou mais de 5 minutos desde a última modificação
+        // 2. Passou mais de 2 minutos desde a última modificação
         // 3. Não há callback em processamento
         $tempoDesdeUltimaModificacao = $template->updated_at->diffInMinutes(now());
         
         if (empty($template->document_key) || 
-            ($tempoDesdeUltimaModificacao > 5 && !$callbackEmProcessamento)) {
+            ($tempoDesdeUltimaModificacao > 2 && !$callbackEmProcessamento)) {
             
             $novoDocumentKey = 'template_' . $tipo->id . '_' . time() . '_' . uniqid();
             
@@ -138,7 +138,14 @@ class TemplateController extends Controller
         // Adicionar informação de sessão para evitar refresh desnecessário
         $config['editorConfig']['customization'] = $config['editorConfig']['customization'] ?? [];
         $config['editorConfig']['customization']['forcesave'] = true;
-        $config['editorConfig']['customization']['autosave'] = false;
+        $config['editorConfig']['customization']['autosave'] = true; // Manter autosave habilitado
+        
+        // Adicionar callback URL correta com document_key versionado
+        $config['editorConfig']['callbackUrl'] = str_replace(
+            'http://localhost:8001', 
+            'http://host.docker.internal:8001', 
+            route('api.onlyoffice.callback', $config['document']['key'])
+        );
 
         return view('admin.templates.editor', [
             'tipo' => $tipo,
@@ -219,6 +226,50 @@ class TemplateController extends Controller
         $documentoPath = $this->onlyOfficeService->gerarDocumento($template, $dados);
 
         return response()->download($documentoPath);
+    }
+
+    /**
+     * Salvar template manualmente
+     */
+    public function salvarTemplate(TipoProposicao $tipo)
+    {
+        try {
+            $template = $tipo->template;
+            
+            if (!$template) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Template não encontrado'
+                ], 404);
+            }
+
+            // Atualizar timestamp do template para indicar que foi modificado
+            $template->touch();
+
+            \Log::info('Template salvo manualmente', [
+                'template_id' => $template->id,
+                'tipo_id' => $tipo->id,
+                'user_id' => auth()->id(),
+                'document_key' => $template->document_key
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Template salvo com sucesso!',
+                'timestamp' => $template->updated_at->format('d/m/Y H:i:s')
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Erro ao salvar template manualmente', [
+                'tipo_id' => $tipo->id,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Erro ao salvar template: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**

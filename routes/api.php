@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Route;
 
 // OnlyOffice callback routes (no CSRF protection needed)
 Route::post('/onlyoffice/callback/proposicao/{proposicao}', [App\Http\Controllers\ProposicaoController::class, 'onlyOfficeCallback'])->name('api.onlyoffice.callback.proposicao');
+Route::post('/onlyoffice/callback/instance/{instance}', [App\Http\Controllers\ProposicaoController::class, 'onlyOfficeCallbackInstance'])->name('api.onlyoffice.callback.instance');
 
 
 // Parâmetros API routes - Mantido para compatibilidade, mas deprecado

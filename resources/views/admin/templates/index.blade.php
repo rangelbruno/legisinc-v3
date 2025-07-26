@@ -206,8 +206,7 @@
                                 </td>
                                 <td>
                                     <a href="{{ route('templates.editor', $tipo) }}" 
-                                       class="btn btn-sm btn-primary"
-                                       target="_blank">
+                                       class="btn btn-sm btn-primary">
                                         @if($tipo->hasTemplate())
                                             <i class="ki-duotone ki-pencil fs-6 me-1">
                                                 <span class="path1"></span>

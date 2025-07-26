@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\TipoProposicao;
 use App\Models\Proposicao;
+use App\Models\DocumentoTemplate;
 use App\Services\Template\TemplateProcessorService;
+use App\Services\Template\TemplateInstanceService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -1455,5 +1457,190 @@ class ProposicaoController extends Controller
             'protocolo' => $protocolo,
             'observacoes_legislativo' => $observacoes
         ]);
+    }
+
+    // ===============================================
+    // NOVA ARQUITETURA - DocumentoTemplate
+    // ===============================================
+
+    /**
+     * Selecionar template da nova arquitetura
+     */
+    public function selecionarTemplate(Request $request, int $proposicaoId)
+    {
+        $request->validate([
+            'template_id' => 'required|exists:documento_templates,id'
+        ]);
+
+        $proposicao = Proposicao::findOrFail($proposicaoId);
+        $template = DocumentoTemplate::with('variaveis')->findOrFail($request->template_id);
+
+        // Buscar variáveis editáveis do template
+        $variaveisEditaveis = $template->variaveis()
+            ->where('tipo', 'editavel')
+            ->get();
+
+        return view('proposicoes.preencher-variaveis', [
+            'proposicao' => $proposicao,
+            'template' => $template,
+            'variaveis' => $variaveisEditaveis
+        ]);
+    }
+
+    /**
+     * Processar template da nova arquitetura
+     */
+    public function processarTemplateNovaArquitetura(Request $request, int $proposicaoId)
+    {
+        $proposicao = Proposicao::findOrFail($proposicaoId);
+        $templateId = $request->input('template_id');
+
+        $templateInstanceService = app(TemplateInstanceService::class);
+
+        try {
+            // 1. Criar instância do template
+            $instance = $templateInstanceService->criarInstanciaTemplate(
+                $proposicaoId, 
+                $templateId
+            );
+
+            // 2. Processar variáveis
+            $variaveisPreenchidas = $request->input('variaveis', []);
+            $templateInstanceService->processarVariaveisInstance(
+                $instance, 
+                $variaveisPreenchidas
+            );
+
+            // 3. Redirecionar para OnlyOffice
+            return redirect()->route('proposicoes.editar-onlyoffice-nova-arquitetura', [
+                'proposicao' => $proposicaoId,
+                'instance' => $instance->id
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Erro ao processar template da nova arquitetura', [
+                'proposicao_id' => $proposicaoId,
+                'template_id' => $templateId,
+                'erro' => $e->getMessage()
+            ]);
+
+            return back()->withErrors('Erro ao processar template: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Editor OnlyOffice com nova arquitetura
+     */
+    public function editarOnlyOfficeNovaArquitetura(int $proposicaoId, int $instanceId)
+    {
+        $instance = \App\Models\ProposicaoTemplateInstance::with(['proposicao', 'template'])
+            ->findOrFail($instanceId);
+
+        // Verificar se arquivo está pronto
+        if ($instance->status !== 'pronto') {
+            return back()->withErrors('Template ainda não está pronto para edição.');
+        }
+
+        $templateInstanceService = app(TemplateInstanceService::class);
+
+        // Configurar OnlyOffice
+        $config = $templateInstanceService->obterConfiguracaoOnlyOffice($instance);
+
+        // Atualizar status para editando
+        $instance->update(['status' => 'editando']);
+
+        return view('proposicoes.editar-onlyoffice-nova-arquitetura', [
+            'config' => $config,
+            'proposicao' => $instance->proposicao,
+            'instance' => $instance
+        ]);
+    }
+
+    /**
+     * Servir arquivo de instância para OnlyOffice
+     */
+    public function serveInstance(int $instanceId)
+    {
+        $instance = \App\Models\ProposicaoTemplateInstance::findOrFail($instanceId);
+
+        if (!$instance->arquivo_instance_path || !\Storage::exists($instance->arquivo_instance_path)) {
+            abort(404, 'Arquivo não encontrado');
+        }
+
+        $arquivo = \Storage::get($instance->arquivo_instance_path);
+        
+        return response($arquivo, 200, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'Content-Disposition' => 'inline; filename="document.docx"',
+            'Cache-Control' => 'no-cache, no-store, must-revalidate'
+        ]);
+    }
+
+    /**
+     * Callback OnlyOffice para instâncias
+     */
+    public function onlyOfficeCallbackInstance(int $instanceId)
+    {
+        try {
+            $input = file_get_contents('php://input');
+            $data = json_decode($input, true);
+            
+            \Log::info('OnlyOffice callback recebido para instância', [
+                'instance_id' => $instanceId,
+                'callback_data' => $data
+            ]);
+            
+            if (!$data) {
+                return response()->json(['error' => 0]);
+            }
+
+            $instance = \App\Models\ProposicaoTemplateInstance::findOrFail($instanceId);
+            $status = $data['status'] ?? 0;
+            
+            // Status 2 = documento está sendo salvo
+            if ($status == 2) {
+                if (isset($data['url'])) {
+                    // Download do arquivo atualizado
+                    $fileContent = file_get_contents($data['url']);
+                    
+                    if ($fileContent) {
+                        // Salvar arquivo atualizado
+                        \Storage::put($instance->arquivo_instance_path, $fileContent);
+                        
+                        \Log::info('Arquivo da instância salvo via OnlyOffice', [
+                            'instance_id' => $instanceId,
+                            'size' => strlen($fileContent)
+                        ]);
+                        
+                        // Atualizar timestamp
+                        $instance->touch();
+                    }
+                }
+            }
+            
+            return response()->json(['error' => 0]);
+            
+        } catch (\Exception $e) {
+            \Log::error('Erro no callback do OnlyOffice para instância', [
+                'instance_id' => $instanceId,
+                'error' => $e->getMessage()
+            ]);
+            
+            return response()->json(['error' => 1]);
+        }
+    }
+
+    /**
+     * Finalizar edição de instância
+     */
+    public function finalizarEdicaoInstance(int $instanceId)
+    {
+        $instance = \App\Models\ProposicaoTemplateInstance::findOrFail($instanceId);
+        
+        $templateInstanceService = app(TemplateInstanceService::class);
+        $templateInstanceService->finalizarEdicao($instance);
+
+        return redirect()->route('proposicoes.show', $instance->proposicao_id)
+            ->with('success', 'Edição finalizada com sucesso!');
     }
 }

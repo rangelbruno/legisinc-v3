@@ -10,6 +10,9 @@
     <link href="{{ asset('assets/plugins/global/plugins.bundle.css') }}" rel="stylesheet">
     <link href="{{ asset('assets/css/style.bundle.css') }}" rel="stylesheet">
     
+    <!-- SweetAlert2 for better debugging -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
     <style>
         body, html {
             margin: 0;
@@ -179,8 +182,176 @@
     </div>
 
     <!-- Scripts -->
+    <!-- OnlyOffice Warning Override - STRATEGIC APPROACH -->
+    <script>
+        console.log('🎯 Setting up STRATEGIC OnlyOffice warning management...');
+        
+        // Global state and functions
+        window._onlyofficeState = {
+            documentSaved: false,
+            allowClose: false,
+            originalBeforeUnload: null
+        };
+        
+        // Define smart beforeunload function globally with detailed debugging
+        window.smartBeforeUnload = function(e) {
+            const debugInfo = {
+                trigger: 'smartBeforeUnload',
+                timestamp: new Date().toISOString(),
+                state: window._onlyofficeState,
+                documentModified: window.documentModified,
+                eventType: e ? e.type : 'unknown',
+                caller: (new Error()).stack.split('\n')[2]?.trim()
+            };
+            
+            console.group('🔍 BEFOREUNLOAD DEBUG');
+            console.log('📊 Full State:', debugInfo);
+            
+            // If we just saved or explicitly allowed close, don't warn
+            if (window._onlyofficeState.documentSaved || window._onlyofficeState.allowClose) {
+                console.log('✅ Allowing close - documentSaved:', window._onlyofficeState.documentSaved, 'allowClose:', window._onlyofficeState.allowClose);
+                console.groupEnd();
+                return undefined;
+            }
+            
+            // Check if there are actual unsaved changes  
+            const hasUnsavedChanges = window.documentModified === true;
+            if (!hasUnsavedChanges) {
+                console.log('✅ No unsaved changes detected');
+                console.groupEnd();
+                return undefined;
+            }
+            
+            // This is where the warning comes from
+            console.error('⚠️ WARNING TRIGGERED - Unsaved changes detected!');
+            console.log('🎯 This is OUR custom warning, not OnlyOffice');
+            console.groupEnd();
+            
+            // Use SweetAlert for better debugging
+            if (typeof Swal !== 'undefined') {
+                e.preventDefault();
+                Swal.fire({
+                    title: 'Alterações não salvas',
+                    html: `
+                        <p>Você tem alterações não salvas.</p>
+                        <div style="font-size: 12px; text-align: left; margin-top: 10px;">
+                            <strong>Debug Info:</strong><br>
+                            Estado salvo: ${window._onlyofficeState.documentSaved}<br>
+                            Documento modificado: ${window.documentModified}<br>
+                            Permitir fechar: ${window._onlyofficeState.allowClose}<br>
+                            Timestamp: ${debugInfo.timestamp}
+                        </div>
+                    `,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Sair mesmo assim',
+                    cancelButtonText: 'Cancelar'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        window._onlyofficeState.allowClose = true;
+                        window.location.href = '{{ route("templates.index") }}';
+                    }
+                });
+                return undefined;
+            } else {
+                const message = `CUSTOM WARNING: Você tem alterações não salvas. 
+                
+DEBUG: documentSaved=${window._onlyofficeState.documentSaved}, documentModified=${window.documentModified}
+                
+Tem certeza que deseja sair?`;
+                e.returnValue = message;
+                return message;
+            }
+        };
+        
+        // Strategic approach: Allow OnlyOffice to work but manage warnings intelligently
+        const setupWarningManagement = () => {
+            // Store original beforeunload to restore if needed
+            window._onlyofficeState.originalBeforeUnload = window.onbeforeunload;
+            
+            // Apply smart beforeunload
+            window.onbeforeunload = window.smartBeforeUnload;
+            
+            console.log('✅ Strategic warning management setup complete');
+        };
+        
+        // Setup immediately
+        setupWarningManagement();
+        
+        // Intercept ALL beforeunload attempts for debugging
+        const originalWindowOnBeforeUnload = Object.getOwnPropertyDescriptor(window, 'onbeforeunload');
+        
+        Object.defineProperty(window, 'onbeforeunload', {
+            get: function() {
+                return this._customBeforeUnload || null;
+            },
+            set: function(handler) {
+                console.group('🕵️ BEFOREUNLOAD SETTER INTERCEPTED');
+                console.log('🎯 Someone is trying to set beforeunload handler:', handler);
+                console.log('📍 Caller stack:', (new Error()).stack);
+                console.log('🔍 Handler type:', typeof handler);
+                
+                if (handler && handler !== window.smartBeforeUnload) {
+                    console.warn('⚠️ EXTERNAL beforeunload handler detected! This might be OnlyOffice');
+                    console.log('📝 External handler source:', handler.toString().substring(0, 200) + '...');
+                    
+                    // Store the external handler but don't use it
+                    this._externalBeforeUnload = handler;
+                    
+                    // Keep our smart handler
+                    this._customBeforeUnload = window.smartBeforeUnload;
+                    console.log('🛡️ Blocked external handler, keeping our smart handler');
+                } else {
+                    console.log('✅ Setting our smart handler');
+                    this._customBeforeUnload = handler;
+                }
+                console.groupEnd();
+            },
+            configurable: true
+        });
+        
+        // Monitor for OnlyOffice overriding our handler and restore it
+        const monitorInterval = setInterval(() => {
+            if (window._customBeforeUnload !== window.smartBeforeUnload) {
+                console.log('🔄 Handler changed, restoring smart handler...');
+                window._customBeforeUnload = window.smartBeforeUnload;
+            }
+        }, 1000); // Check every second
+        
+        // Intercept beforeunload events directly
+        window.addEventListener('beforeunload', function(e) {
+            console.group('🚨 BEFOREUNLOAD EVENT TRIGGERED');
+            console.log('📅 Timestamp:', new Date().toISOString());
+            console.log('🎯 Event target:', e.target);
+            console.log('🔍 Event type:', e.type);
+            console.log('📍 Call stack:', (new Error()).stack);
+            console.log('📊 Current state:', {
+                documentModified: window.documentModified,
+                documentSaved: window._onlyofficeState.documentSaved,
+                allowClose: window._onlyofficeState.allowClose
+            });
+            
+            // Call our smart handler
+            const result = window.smartBeforeUnload(e);
+            console.log('💡 Smart handler result:', result);
+            console.groupEnd();
+            
+            return result;
+        }, true); // Use capture phase
+        
+        // Cleanup function
+        window._cleanupOnlyOfficeWarnings = () => {
+            clearInterval(monitorInterval);
+        };
+        
+        console.log('🎯 Strategic OnlyOffice warning management with full debugging ready');
+    </script>
+    
     <script src="{{ config('onlyoffice.server_url') }}/web-apps/apps/api/documents/api.js"></script>
     <script>
+        // Global variable to track if document has been modified
+        let documentModified = false;
+        
         // Toggle panel de variáveis
         function togglePanel() {
             const panel = document.getElementById('variablesPanel');
@@ -206,18 +377,102 @@
             
             config.events = {
                 'onDocumentReady': function() {
-                    console.log('Template carregado para edição');
+                    console.log('🚀 OnlyOffice document ready');
                     showToast('Template carregado com sucesso!', 'success');
+                    
+                    // Reset state
+                    documentModified = false;
+                    window._onlyofficeState.documentSaved = false;
+                    window._onlyofficeState.allowClose = false;
+                    
+                    // Log available methods for debugging
+                    console.log('📋 Available docEditor methods:', Object.getOwnPropertyNames(window.docEditor));
+                    
+                    // Log current configuration
+                    console.log('⚙️ OnlyOffice Config Debug:');
+                    console.log('- Autosave enabled:', true);
+                    console.log('- Forcesave enabled:', true);
+                    console.log('- Callback URL configured:', '{{ route("api.onlyoffice.callback", $template->document_key ?? "test") }}');
+                    
+                    // Override OnlyOffice's beforeunload after document is ready
+                    setTimeout(() => {
+                        overrideOnlyOfficeWarnings();
+                        
+                        // Set up periodic override to catch any new beforeunload handlers OnlyOffice adds
+                        setInterval(() => {
+                            overrideOnlyOfficeWarnings();
+                        }, 5000); // Re-override every 5 seconds
+                        
+                    }, 2000); // Increased delay to ensure OnlyOffice has finished loading
+                },
+                'onDocumentStateChange': function(event) {
+                    console.log('📝 Document state changed:', event);
+                    if (event && event.data) {
+                        // Update our tracking variables
+                        documentModified = true;
+                        window._onlyofficeState.documentSaved = false;
+                        
+                        console.log('✏️ Document has been modified - forcing OnlyOffice to recognize changes');
+                        
+                        // Force OnlyOffice to recognize this as a real change
+                        if (window.docEditor && typeof window.docEditor.setModified === 'function') {
+                            window.docEditor.setModified(true);
+                            console.log('📝 Explicitly set document as modified in OnlyOffice');
+                        }
+                        
+                        // Update page title to show unsaved changes
+                        if (!document.title.includes('*')) {
+                            document.title = '* ' + document.title.replace('✅ Template Salvo - ', '');
+                        }
+                    }
+                },
+                'onRequestSaveAs': function(event) {
+                    console.log('OnlyOffice requesting save as:', event);
+                    showToast('Processando salvamento...', 'info');
+                    return true;
+                },
+                'onDownloadAs': function(event) {
+                    console.log('📥 OnlyOffice download as triggered:', event);
+                    showToast('📥 Download/Save em progresso...', 'info');
+                    
+                    // This indicates OnlyOffice is processing the save
+                    // The actual save will happen via callback
+                },
+                'onRequestInsertImage': function(event) {
+                    console.log('OnlyOffice image insert requested:', event);
+                },
+                'onMetaChange': function(event) {
+                    console.log('Document meta changed:', event);
+                    // This can indicate document changes
+                    if (event && event.data) {
+                        documentModified = true;
+                    }
                 },
                 'onError': function(event) {
                     console.error('Erro OnlyOffice:', event);
                     showToast('Erro no editor: ' + JSON.stringify(event.data), 'error');
+                },
+                'onRequestClose': function() {
+                    // This event is fired when OnlyOffice wants to close
+                    console.log('OnlyOffice requesting close');
+                    // Return false to prevent OnlyOffice from showing its own warning
+                    if (documentModified) {
+                        const shouldClose = confirm('Você tem alterações não salvas. Tem certeza que deseja fechar sem salvar?');
+                        if (shouldClose) {
+                            documentModified = false; // Clear flag to allow closing
+                        }
+                        return shouldClose;
+                    }
+                    return true;
                 }
             };
             
             try {
                 console.log('Inicializando OnlyOffice com config:', config);
                 window.docEditor = new DocsAPI.DocEditor('onlyoffice-editor', config);
+                
+                // After OnlyOffice loads, we'll override its beforeunload behavior
+                
             } catch (error) {
                 console.error('Erro ao inicializar OnlyOffice:', error);
                 showToast('Erro ao carregar editor: ' + error.message, 'error');
@@ -243,46 +498,204 @@
             }, 5000);
         }
 
-        // Force save function
+        // Force save function using OnlyOffice API
         function forceSave() {
+            console.log('💾 Force save triggered');
+            showToast('Salvando documento...', 'info');
+            
             if (window.docEditor) {
-                showToast('Salvando documento...', 'info');
+                console.log('Available methods:', Object.getOwnPropertyNames(window.docEditor));
                 
-                // O OnlyOffice salva automaticamente via callback
-                // Apenas notificar o usuário
-                setTimeout(() => {
-                    showToast('Documento salvo com sucesso!', 'success');
-                }, 1000);
-                
-                // Forçar refresh do editor para garantir que o callback seja disparado
-                if (window.docEditor.refreshHistory) {
-                    try {
-                        window.docEditor.refreshHistory();
-                    } catch (e) {
-                        console.log('RefreshHistory não disponível');
+                try {
+                    // First, force document to be marked as modified if it hasn't been already
+                    if (!documentModified) {
+                        console.log('🔧 Document not marked as modified, forcing change detection...');
+                        
+                        // Try to force a minimal change to trigger modification state
+                        if (typeof window.docEditor.setModified === 'function') {
+                            window.docEditor.setModified(true);
+                            console.log('📝 Forced document modified state');
+                        }
+                        
+                        // Alternative: try inserting and removing a space to force change
+                        if (typeof window.docEditor.insertText === 'function') {
+                            console.log('🔤 Inserting minimal change to force modification...');
+                            window.docEditor.insertText(' ', false);
+                            // Remove it immediately
+                            setTimeout(() => {
+                                if (typeof window.docEditor.deletePrevious === 'function') {
+                                    window.docEditor.deletePrevious();
+                                }
+                            }, 100);
+                        }
+                        
+                        documentModified = true;
+                        window._onlyofficeState.documentSaved = false;
                     }
+                    
+                    // Method 1: Try downloadAs (triggers proper OnlyOffice save workflow)
+                    if (typeof window.docEditor.downloadAs === 'function') {
+                        console.log('📥 Using downloadAs to trigger OnlyOffice save...');
+                        
+                        // This should trigger the proper save callback with status 2 or 6
+                        window.docEditor.downloadAs('rtf', 'template_' + Date.now() + '.rtf');
+                        
+                        // Mark as saved in our state management
+                        setTimeout(() => {
+                            console.group('💾 MARKING DOCUMENT AS SAVED');
+                            console.log('⏰ Previous state:', {
+                                documentModified: documentModified,
+                                documentSaved: window._onlyofficeState.documentSaved
+                            });
+                            
+                            documentModified = false;
+                            window._onlyofficeState.documentSaved = true;
+                            document.title = '✅ Template Salvo - ' + document.title.replace('✅ Template Salvo - ', '').replace('* ', '');
+                            
+                            console.log('🆕 New state:', {
+                                documentModified: documentModified,
+                                documentSaved: window._onlyofficeState.documentSaved
+                            });
+                            console.log('🎯 This should prevent beforeunload warnings now');
+                            console.groupEnd();
+                            
+                            showToast('💾 Salvamento OnlyOffice iniciado!', 'success');
+                            
+                            // Reload page after save to avoid version conflict
+                            setTimeout(() => {
+                                showToast('🔄 Recarregando editor...', 'info');
+                                window._onlyofficeState.allowClose = true;
+                                window.location.reload();
+                            }, 3000);
+                        }, 2000); // Increased timeout for processing
+                        
+                        return;
+                    }
+                    
+                    // Method 2: Try requestInsertImage hack
+                    if (typeof window.docEditor.requestInsertImage === 'function') {
+                        console.log('🖼️ Using requestInsertImage hack...');
+                        window.docEditor.requestInsertImage();
+                        
+                        setTimeout(() => {
+                            documentModified = false;
+                            window._onlyofficeState.documentSaved = true;
+                            document.title = '✅ Template Salvo - ' + document.title.replace('✅ Template Salvo - ', '').replace('* ', '');
+                            showToast('💾 Salvamento via hack iniciado!', 'success');
+                        }, 2000);
+                        
+                        return;
+                    }
+                    
+                    throw new Error('No OnlyOffice save methods available');
+                    
+                } catch (e) {
+                    console.log('⚠️ OnlyOffice save methods not available, using manual fallback:', e);
                 }
+                
+                // Fallback: Manual save endpoint (timestamps only)
+                const url = '{{ route("templates.salvar", $tipo) }}';
+                fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        documentModified = false;
+                        window._onlyofficeState.documentSaved = true;
+                        document.title = '✅ Template Salvo - ' + document.title.replace('✅ Template Salvo - ', '').replace('* ', '');
+                        showToast('💾 Timestamp salvo (manual)!', 'info');
+                    } else {
+                        showToast('❌ Erro ao salvar: ' + (data.message || 'Erro desconhecido'), 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Manual save failed:', error);
+                    showToast('❌ Erro ao salvar documento', 'error');
+                });
             } else {
-                showToast('Editor não está carregado ainda', 'error');
+                showToast('❌ Editor não está carregado', 'error');
             }
         }
 
-        // Close editor function
+        // Legacy function cleanup - removed aggressive overrides
+        function overrideOnlyOfficeWarnings() {
+            // Just ensure our smart handler is in place
+            console.log('🔄 Ensuring smart warning handler is active...');
+            if (window.onbeforeunload !== window.smartBeforeUnload) {
+                window.onbeforeunload = window.smartBeforeUnload;
+                console.log('✅ Smart handler restored');
+            }
+        }
+        
+        // Close editor function - SMART APPROACH
         function fecharEditor() {
-            // Try to close the tab
-            try {
-                window.close();
-            } catch (e) {
-                // If window.close() fails, redirect to templates page
-                window.location.href = '{{ route("templates.index") }}';
+            console.log('🚪 Attempting to close editor...');
+            console.log('State:', { documentModified, saved: window._onlyofficeState.documentSaved });
+            
+            // Set allow close flag to prevent warnings
+            window._onlyofficeState.allowClose = true;
+            
+            // Check if there are unsaved changes
+            const hasUnsavedChanges = documentModified && !window._onlyofficeState.documentSaved;
+            
+            let confirmTitle = 'Fechar Editor';
+            let confirmText = 'Tem certeza que deseja fechar o editor?';
+            let confirmIcon = 'question';
+            
+            if (hasUnsavedChanges) {
+                confirmTitle = 'Alterações não salvas';
+                confirmText = 'Você tem alterações não salvas. Tem certeza que deseja fechar sem salvar?';
+                confirmIcon = 'warning';
             }
             
-            // Fallback: if window is still open after a short delay, redirect
-            setTimeout(() => {
-                if (!window.closed) {
+            // Use SweetAlert for confirmation
+            Swal.fire({
+                title: confirmTitle,
+                text: confirmText,
+                icon: confirmIcon,
+                showCancelButton: true,
+                confirmButtonText: 'Sim, fechar',
+                cancelButtonText: 'Cancelar',
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    console.log('✅ User confirmed close - redirecting...');
+                    
+                    // Stop the monitoring interval
+                    if (window._cleanupOnlyOfficeWarnings) {
+                        window._cleanupOnlyOfficeWarnings();
+                    }
+                    
+                    // Show loading message
+                    Swal.fire({
+                        title: 'Fechando editor...',
+                        text: 'Aguarde um momento',
+                        allowOutsideClick: false,
+                        showConfirmButton: false,
+                        willOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+                    
+                    // Redirect
                     window.location.href = '{{ route("templates.index") }}';
+                    
+                    // Fallback
+                    setTimeout(() => {
+                        window.location.replace('{{ route("templates.index") }}');
+                    }, 1000);
+                } else {
+                    // User cancelled, reset flag
+                    window._onlyofficeState.allowClose = false;
+                    console.log('❌ User cancelled close');
                 }
-            }, 100);
+            });
         }
     </script>
 </body>

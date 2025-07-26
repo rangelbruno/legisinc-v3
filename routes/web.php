@@ -529,6 +529,13 @@ Route::prefix('proposicoes')->name('proposicoes.')->middleware(['auth', 'check.s
     Route::get('/{proposicao}/editar-onlyoffice/{template}', [App\Http\Controllers\ProposicaoController::class, 'editarOnlyOffice'])->name('editar-onlyoffice');
     Route::get('/{proposicao}/preparar-edicao/{template}', [App\Http\Controllers\ProposicaoController::class, 'prepararEdicao'])->name('preparar-edicao');
     Route::get('/{proposicao}/editor-completo/{template}', [App\Http\Controllers\ProposicaoController::class, 'editorCompleto'])->name('editor-completo');
+    
+    // Nova Arquitetura - Template Instance routes
+    Route::post('/{proposicao}/selecionar-template', [App\Http\Controllers\ProposicaoController::class, 'selecionarTemplate'])->name('selecionar-template');
+    Route::post('/{proposicao}/processar-template', [App\Http\Controllers\ProposicaoController::class, 'processarTemplateNovaArquitetura'])->name('processar-template');
+    Route::get('/{proposicao}/nova-arquitetura/{instance}', [App\Http\Controllers\ProposicaoController::class, 'editarOnlyOfficeNovaArquitetura'])->name('editar-onlyoffice-nova-arquitetura');
+    Route::get('/instance/{instance}/serve', [App\Http\Controllers\ProposicaoController::class, 'serveInstance'])->name('serve-instance');
+    Route::post('/{instance}/finalizar-edicao', [App\Http\Controllers\ProposicaoController::class, 'finalizarEdicaoInstance'])->name('finalizar-edicao-instance');
     Route::post('/{proposicao}/salvar-dados-temporarios', [App\Http\Controllers\ProposicaoController::class, 'salvarDadosTemporarios'])->name('salvar-dados-temporarios');
     Route::post('/{proposicao}/salvar-texto', [App\Http\Controllers\ProposicaoController::class, 'salvarTexto'])->name('salvar-texto');
     Route::post('/{proposicao}/upload-anexo', [App\Http\Controllers\ProposicaoController::class, 'uploadAnexo'])->name('upload-anexo');
@@ -731,6 +738,24 @@ Route::prefix('admin')->middleware(['auth', 'check.screen.permission'])->group(f
          ->name('templates.destroy');
     Route::get('templates/{tipo}/editor', [App\Http\Controllers\TemplateController::class, 'editor'])
          ->name('templates.editor');
+    Route::post('templates/{tipo}/salvar', [App\Http\Controllers\TemplateController::class, 'salvarTemplate'])
+         ->name('templates.salvar');
+
+    // Nova Arquitetura - DocumentoTemplate routes
+    Route::prefix('documento-templates')->name('documento-templates.')->group(function () {
+        Route::get('/', [App\Http\Controllers\DocumentoTemplateController::class, 'index'])->name('index');
+        Route::get('/create', [App\Http\Controllers\DocumentoTemplateController::class, 'create'])->name('create');
+        Route::post('/', [App\Http\Controllers\DocumentoTemplateController::class, 'store'])->name('store');
+        Route::get('/{documentoTemplate}', [App\Http\Controllers\DocumentoTemplateController::class, 'show'])->name('show');
+        Route::get('/{documentoTemplate}/edit', [App\Http\Controllers\DocumentoTemplateController::class, 'edit'])->name('edit');
+        Route::put('/{documentoTemplate}', [App\Http\Controllers\DocumentoTemplateController::class, 'update'])->name('update');
+        Route::delete('/{documentoTemplate}', [App\Http\Controllers\DocumentoTemplateController::class, 'destroy'])->name('destroy');
+        Route::get('/{documentoTemplate}/download', [App\Http\Controllers\DocumentoTemplateController::class, 'download'])->name('download');
+        Route::get('/{documentoTemplate}/preview', [App\Http\Controllers\DocumentoTemplateController::class, 'preview'])->name('preview');
+        Route::get('/{documentoTemplate}/serve', [App\Http\Controllers\DocumentoTemplateController::class, 'serve'])->name('serve');
+        Route::patch('/{documentoTemplate}/toggle-status', [App\Http\Controllers\DocumentoTemplateController::class, 'toggleStatus'])->name('toggle-status');
+        Route::post('/{documentoTemplate}/duplicate', [App\Http\Controllers\DocumentoTemplateController::class, 'duplicate'])->name('duplicate');
+    });
     
     // System Diagnostic routes
     Route::get('system-diagnostic', [App\Http\Controllers\Admin\SystemDiagnosticController::class, 'index'])

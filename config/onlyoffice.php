@@ -2,6 +2,7 @@
 
 return [
     'server_url' => env('ONLYOFFICE_SERVER_URL', 'http://localhost:8080'),
+    'internal_url' => env('ONLYOFFICE_INTERNAL_URL', env('ONLYOFFICE_SERVER_URL', 'http://localhost:8080')),
     'jwt_secret' => env('ONLYOFFICE_JWT_SECRET'),
     'storage_path' => env('ONLYOFFICE_STORAGE_PATH', 'storage/onlyoffice'),
     'callback_url' => env('ONLYOFFICE_CALLBACK_URL'),
