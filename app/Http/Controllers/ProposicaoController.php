@@ -1425,7 +1425,18 @@ ${texto}
             '/\\\$\\\{([^}]+)\\\}/', // Padrão com escape duplo
         ];
         
-        // Também buscar variáveis codificadas em Unicode (formato OnlyOffice)
+        // Primeiro processar variáveis normais
+        foreach ($patterns as $pattern) {
+            if (preg_match_all($pattern, $conteudoRTF, $matches)) {
+                $variaveisNoTemplate = array_merge($variaveisNoTemplate, $matches[1]);
+            }
+        }
+        
+        // Criar lista de variáveis já encontradas no formato normal
+        $variaveisNormaisEncontradas = array_unique($variaveisNoTemplate);
+        
+        // Também buscar variáveis codificadas em Unicode (formato OnlyOffice) 
+        // Mas apenas se não existir versão normal da mesma variável
         // Exemplo: \u36*\u116*\u101*\u120*\u116*\u111* = $texto
         if (preg_match_all('/\\\\u36\*([\\\\u\d\*]+)/', $conteudoRTF, $unicodeMatches)) {
             foreach ($unicodeMatches[0] as $unicodeSequence) {
@@ -1434,16 +1445,11 @@ ${texto}
                 if ($decoded && strpos($decoded, '$') === 0) {
                     // Extrair nome da variável (remover $ e possíveis {})
                     $nomeVariavel = str_replace(['$', '{', '}'], '', $decoded);
-                    if ($nomeVariavel) {
+                    if ($nomeVariavel && !in_array($nomeVariavel, $variaveisNormaisEncontradas)) {
+                        // Só adicionar se não existe versão normal da mesma variável
                         $variaveisNoTemplate[] = $nomeVariavel;
                     }
                 }
-            }
-        }
-        
-        foreach ($patterns as $pattern) {
-            if (preg_match_all($pattern, $conteudoRTF, $matches)) {
-                $variaveisNoTemplate = array_merge($variaveisNoTemplate, $matches[1]);
             }
         }
         
@@ -1465,33 +1471,59 @@ ${texto}
         $substituicoes = 0;
         $detalhesSubstituicoes = [];
         
+        // Ordenar variáveis por tamanho decrescente para evitar substituições parciais
+        // Ex: substituir 'data_atual' antes de 'data' para evitar '27/07/2025_atual'
+        uksort($todasVariaveis, function($a, $b) {
+            return strlen($b) - strlen($a);
+        });
+        
         foreach ($todasVariaveis as $variavel => $valor) {
             // Tentar diferentes formatos de placeholder
             $placeholders = [
-                '${' . $variavel . '}',  // Formato normal
+                '${' . $variavel . '}',  // Formato normal com chaves
+                '$' . $variavel,  // Formato simples sem chaves
                 '$\\{' . $variavel . '\\}', // Com escape RTF
                 '\${' . $variavel . '}', // Com escape simples
             ];
             
-            // Adicionar placeholder para formato Unicode se a variável estiver no template
+            // Adicionar placeholder para formato Unicode apenas se não há versão normal
             $unicodePlaceholder = $this->codificarVariavelParaUnicode('$' . $variavel);
             if ($unicodePlaceholder && strpos($conteudoProcessado, $unicodePlaceholder) !== false) {
-                $placeholders[] = $unicodePlaceholder;
+                // Verificar se não existe versão normal da mesma variável
+                $temVersaoNormal = false;
+                foreach (['${' . $variavel . '}', '$' . $variavel, '$\\{' . $variavel . '\\}', '\${' . $variavel . '}'] as $normalPlaceholder) {
+                    if (strpos($conteudoProcessado, $normalPlaceholder) !== false) {
+                        $temVersaoNormal = true;
+                        break;
+                    }
+                }
+                
+                if (!$temVersaoNormal) {
+                    $placeholders[] = $unicodePlaceholder;
+                }
             }
             
             $substituicoesVariavel = 0;
             foreach ($placeholders as $placeholder) {
                 $antes = substr_count($conteudoProcessado, $placeholder);
                 
-                // Se é um placeholder Unicode, usar valor convertido para RTF Unicode
-                if (strpos($placeholder, '\\u') !== false) {
+                // Para placeholders sem chaves, usar substituição com word boundary
+                if ($placeholder === '$' . $variavel) {
+                    // Usar regex para garantir que não substitui parcialmente
+                    $pattern = '/\$' . preg_quote($variavel, '/') . '(?![a-zA-Z_])/';
+                    $conteudoProcessado = preg_replace($pattern, $valor, $conteudoProcessado);
+                    $depois = substr_count($conteudoProcessado, $placeholder);
+                } else if (strpos($placeholder, '\\u') !== false) {
+                    // Se é um placeholder Unicode, usar valor convertido para RTF Unicode
                     $valorRtf = $this->codificarTextoParaUnicode($valor);
                     $conteudoProcessado = str_replace($placeholder, $valorRtf, $conteudoProcessado);
+                    $depois = substr_count($conteudoProcessado, $placeholder);
                 } else {
+                    // Substituição normal
                     $conteudoProcessado = str_replace($placeholder, $valor, $conteudoProcessado);
+                    $depois = substr_count($conteudoProcessado, $placeholder);
                 }
                 
-                $depois = substr_count($conteudoProcessado, $placeholder);
                 $substituicoesVariavel += ($antes - $depois);
             }
             
