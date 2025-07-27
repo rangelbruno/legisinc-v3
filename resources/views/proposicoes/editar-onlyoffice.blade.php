@@ -16,71 +16,162 @@
             font-family: Arial, sans-serif;
             background-color: #ffffff;
             overflow: hidden;
+            padding-top: 70px; /* Espaço para o header fixo */
         }
         
         .editor-header {
-            background: #343a40;
-            color: white;
-            padding: 12px 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            background: #fff;
+            border-bottom: 1px solid #E4E6EA;
+            padding: 0;
             position: fixed;
             top: 0;
             left: 0;
             right: 0;
             z-index: 1000;
-            height: 60px;
+            height: 70px;
             box-sizing: border-box;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        
+        .editor-toolbar-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 100%;
+            padding: 0 2rem;
+        }
+        
+        .editor-title-section {
+            display: flex;
+            flex-column;
+            justify-content: center;
         }
         
         .editor-title {
             margin: 0;
-            font-size: 18px;
+            font-size: 1.275rem;
             font-weight: 600;
+            color: #181C32;
+            line-height: 1.2;
+        }
+        
+        .editor-breadcrumb {
+            display: flex;
+            align-items: center;
+            margin: 0;
+            padding: 0;
+            list-style: none;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-top: 2px;
+        }
+        
+        .breadcrumb-item {
+            display: flex;
+            align-items: center;
+        }
+        
+        .breadcrumb-item:not(:first-child)::before {
+            content: '';
+            display: inline-block;
+            width: 5px;
+            height: 2px;
+            background: #B5B5C3;
+            margin: 0 0.5rem;
+        }
+        
+        .breadcrumb-item a {
+            color: #A1A5B7;
+            text-decoration: none;
+            transition: color 0.15s ease;
+        }
+        
+        .breadcrumb-item a:hover {
+            color: #009EF7;
+        }
+        
+        .breadcrumb-item.active {
+            color: #A1A5B7;
         }
         
         .editor-actions {
             display: flex;
-            gap: 10px;
+            align-items: center;
+            gap: 0.5rem;
         }
         
         .btn {
-            padding: 8px 16px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            text-decoration: none;
-            font-size: 14px;
             display: inline-flex;
             align-items: center;
-            gap: 6px;
+            justify-content: center;
+            padding: 0.575rem 1rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            line-height: 1.5;
+            border-radius: 0.475rem;
+            border: 1px solid transparent;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            gap: 0.5rem;
+        }
+        
+        .btn-sm {
+            padding: 0.5rem 0.75rem;
+            font-size: 0.8125rem;
         }
         
         .btn-secondary {
-            background: #6c757d;
-            color: white;
+            background: #F5F8FA;
+            border-color: #E4E6EA;
+            color: #7E8299;
+        }
+        
+        .btn-secondary:hover {
+            background: #E4E6EA;
+            color: #5E6278;
         }
         
         .btn-primary {
-            background: #007bff;
-            color: white;
+            background: #009EF7;
+            border-color: #009EF7;
+            color: #ffffff;
         }
         
-        .btn:hover {
-            opacity: 0.9;
+        .btn-primary:hover {
+            background: #0095E8;
+            border-color: #0095E8;
+        }
+        
+        .btn-success {
+            background: #50CD89;
+            border-color: #50CD89;
+            color: #ffffff;
+        }
+        
+        .btn-success:hover {
+            background: #47BE7D;
+            border-color: #47BE7D;
+        }
+        
+        .btn:disabled {
+            opacity: 0.65;
+            cursor: not-allowed;
+        }
+        
+        .ki-duotone {
+            display: inline-flex;
+            font-style: normal;
+            font-weight: normal;
+            font-variant: normal;
+            line-height: 1;
         }
         
         #onlyoffice-placeholder {
             width: 100%;
-            height: calc(100vh - 60px);
+            height: calc(100vh - 70px);
             border: none;
-            position: absolute;
-            top: 60px;
-            left: 0;
-            right: 0;
-            bottom: 0;
+            position: relative;
             visibility: hidden;
             opacity: 0;
             transition: opacity 0.3s ease;
@@ -90,14 +181,10 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            height: calc(100vh - 60px);
+            height: calc(100vh - 70px);
             flex-direction: column;
             gap: 20px;
-            position: absolute;
-            top: 60px;
-            left: 0;
-            right: 0;
-            bottom: 0;
+            position: relative;
             background: #ffffff;
             z-index: 999;
         }
@@ -119,19 +206,37 @@
 </head>
 <body>
     <div class="editor-header">
-        <h1 class="editor-title">
-            Editando Proposição {{ $proposicao->id ?? '' }} - {{ $template ? ($template->tipoProposicao->nome ?? $template->nome) : 'Template em Branco' }}
-        </h1>
-        <div class="editor-actions">
-            <a href="{{ route('proposicoes.minhas-proposicoes') }}" class="btn btn-secondary">
-                ← Voltar às Proposições
-            </a>
-            <button id="btn-salvar" class="btn btn-primary" onclick="salvarDocumento()">
-                💾 Salvar
-            </button>
-            <button id="btn-fechar" class="btn btn-secondary" onclick="fecharAba()">
-                ✕ Fechar Aba
-            </button>
+        <div class="editor-toolbar-container">
+            <!--begin::Page title-->
+            <div class="editor-title-section">
+                <h1 class="editor-title">
+                    <i class="ki-duotone ki-document fs-2 me-2">
+                        <span class="path1"></span>
+                        <span class="path2"></span>
+                    </i>
+                    Editando Proposição {{ $proposicao->id ?? '' }}
+                </h1>
+            </div>
+            <!--end::Page title-->
+            
+            <!--begin::Actions-->
+            <div class="editor-actions">
+                <button id="btn-salvar" class="btn btn-sm btn-primary" onclick="salvarDocumento()">
+                    <i class="ki-duotone ki-save fs-2">
+                        <span class="path1"></span>
+                        <span class="path2"></span>
+                    </i>
+                    Salvar
+                </button>
+                <button id="btn-fechar" class="btn btn-sm btn-secondary" onclick="fecharAba()">
+                    <i class="ki-duotone ki-cross fs-2">
+                        <span class="path1"></span>
+                        <span class="path2"></span>
+                    </i>
+                    Fechar
+                </button>
+            </div>
+            <!--end::Actions-->
         </div>
     </div>
     
@@ -169,7 +274,7 @@
         
         function inicializarOnlyOffice() {
             // Calcular dimensões do editor
-            const headerHeight = 60;
+            const headerHeight = 70;
             const editorHeight = window.innerHeight - headerHeight;
             
             const config = {
@@ -254,8 +359,15 @@
                         console.log("Estado do documento alterado:", event);
                         // Documento foi modificado
                         if (event.data) {
-                            document.getElementById('btn-salvar').innerHTML = '💾 Salvar*';
-                            document.getElementById('btn-salvar').style.background = '#28a745';
+                            const btnSalvar = document.getElementById('btn-salvar');
+                            btnSalvar.innerHTML = `
+                                <i class="ki-duotone ki-save fs-2">
+                                    <span class="path1"></span>
+                                    <span class="path2"></span>
+                                </i>
+                                Salvar*
+                            `;
+                            btnSalvar.className = 'btn btn-sm btn-success';
                         }
                     },
                     "onError": function(event) {
@@ -320,12 +432,25 @@ OnlyOffice Server: http://localhost:8080
                     "onSave": function(event) {
                         console.log("Documento salvo com sucesso:", event);
                         // Atualizar botão para indicar que foi salvo
-                        document.getElementById('btn-salvar').innerHTML = '💾 Salvo!';
-                        document.getElementById('btn-salvar').style.background = '#28a745';
+                        const btnSalvar = document.getElementById('btn-salvar');
+                        btnSalvar.innerHTML = `
+                            <i class="ki-duotone ki-check fs-2">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                            </i>
+                            Salvo!
+                        `;
+                        btnSalvar.className = 'btn btn-sm btn-success';
                         
                         setTimeout(function() {
-                            document.getElementById('btn-salvar').innerHTML = '💾 Salvar';
-                            document.getElementById('btn-salvar').style.background = '#007bff';
+                            btnSalvar.innerHTML = `
+                                <i class="ki-duotone ki-save fs-2">
+                                    <span class="path1"></span>
+                                    <span class="path2"></span>
+                                </i>
+                                Salvar
+                            `;
+                            btnSalvar.className = 'btn btn-sm btn-primary';
                         }, 3000);
                     }
                 }
@@ -356,22 +481,41 @@ OnlyOffice Server: http://localhost:8080
                 console.log("Salvando documento...");
                 
                 // Mostrar mensagem de salvamento
-                document.getElementById('btn-salvar').innerHTML = '💾 Salvando...';
-                document.getElementById('btn-salvar').disabled = true;
+                const btnSalvar = document.getElementById('btn-salvar');
+                btnSalvar.innerHTML = `
+                    <i class="ki-duotone ki-loading fs-2">
+                        <span class="path1"></span>
+                        <span class="path2"></span>
+                    </i>
+                    Salvando...
+                `;
+                btnSalvar.disabled = true;
                 
                 // O OnlyOffice salva automaticamente quando há mudanças
                 // Vamos apenas dar feedback visual ao usuário
                 // O callback com status 2 será chamado automaticamente pelo OnlyOffice
                 
                 setTimeout(function() {
-                    document.getElementById('btn-salvar').innerHTML = '💾 Salvo!';
-                    document.getElementById('btn-salvar').style.background = '#28a745';
-                    document.getElementById('btn-salvar').disabled = false;
+                    btnSalvar.innerHTML = `
+                        <i class="ki-duotone ki-check fs-2">
+                            <span class="path1"></span>
+                            <span class="path2"></span>
+                        </i>
+                        Salvo!
+                    `;
+                    btnSalvar.className = 'btn btn-sm btn-success';
+                    btnSalvar.disabled = false;
                     
                     // Voltar ao estado normal após mais 2 segundos
                     setTimeout(function() {
-                        document.getElementById('btn-salvar').innerHTML = '💾 Salvar';
-                        document.getElementById('btn-salvar').style.background = '#007bff';
+                        btnSalvar.innerHTML = `
+                            <i class="ki-duotone ki-save fs-2">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                            </i>
+                            Salvar
+                        `;
+                        btnSalvar.className = 'btn btn-sm btn-primary';
                     }, 2000);
                 }, 1500);
                 
@@ -437,7 +581,7 @@ OnlyOffice Server: http://localhost:8080
         // Redimensionar editor quando a janela mudar de tamanho
         window.addEventListener('resize', function() {
             if (docEditor) {
-                const headerHeight = 60;
+                const headerHeight = 70;
                 const newHeight = window.innerHeight - headerHeight;
                 try {
                     docEditor.resize();

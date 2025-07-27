@@ -150,14 +150,6 @@
 
                     <hr>
 
-                    <div class="d-grid gap-2">
-                        <button class="btn btn-outline-primary" onclick="imprimirProposicao()">
-                            <i class="fas fa-print me-2"></i>Imprimir
-                        </button>
-                        <button class="btn btn-outline-success" onclick="exportarPDF()">
-                            <i class="fas fa-file-pdf me-2"></i>Exportar PDF
-                        </button>
-                    </div>
                 </div>
             </div>
 
@@ -165,70 +157,246 @@
             <div class="card">
                 <div class="card-header">
                     <h6 class="card-title mb-0">
-                        <i class="fas fa-history text-info me-2"></i>
-                        Histórico
+                        <i class="ki-duotone ki-time fs-3 text-primary me-2">
+                            <span class="path1"></span>
+                            <span class="path2"></span>
+                        </i>
+                        Histórico da Proposição
                     </h6>
                 </div>
                 <div class="card-body">
-                    <div class="timeline">
+                    <!--begin::Timeline-->
+                    <div class="timeline-label">
+                        <!--begin::Timeline item-->
                         <div class="timeline-item">
-                            <div class="timeline-marker bg-success"></div>
-                            <div class="timeline-content">
-                                <h6 class="mb-1">Proposição Criada</h6>
-                                <p class="mb-1 text-muted small">
-                                    {{ date('d/m/Y H:i', strtotime($proposicao->created_at ?? now())) }}
-                                </p>
-                                <small class="text-muted">
-                                    Proposição criada por {{ $proposicao->autor->name ?? 'Sistema' }}
-                                </small>
-                            </div>
-                        </div>
+                            <!--begin::Timeline line-->
+                            <div class="timeline-line w-40px"></div>
+                            <!--end::Timeline line-->
 
-                        @if($proposicao->status !== 'rascunho')
-                            <div class="timeline-item">
-                                <div class="timeline-marker bg-info"></div>
-                                <div class="timeline-content">
-                                    <h6 class="mb-1">Enviada para Análise</h6>
-                                    <p class="mb-1 text-muted small">
-                                        {{ date('d/m/Y H:i', strtotime($proposicao->updated_at ?? now())) }}
-                                    </p>
-                                    <small class="text-muted">
-                                        Proposição enviada para análise legislativa
-                                    </small>
+                            <!--begin::Timeline icon-->
+                            <div class="timeline-icon symbol symbol-circle symbol-40px">
+                                <div class="symbol-label bg-light-success">
+                                    <i class="ki-duotone ki-plus fs-2 text-success">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                        <span class="path3"></span>
+                                    </i>
                                 </div>
                             </div>
+                            <!--end::Timeline icon-->
+
+                            <!--begin::Timeline content-->
+                            <div class="timeline-content mb-10 mt-n2">
+                                <!--begin::Timeline heading-->
+                                <div class="overflow-auto pe-3">
+                                    <!--begin::Title-->
+                                    <div class="fs-5 fw-semibold mb-2">Proposição Criada</div>
+                                    <!--end::Title-->
+
+                                    <!--begin::Description-->
+                                    <div class="d-flex align-items-center mt-1 fs-6">
+                                        <!--begin::Info-->
+                                        <div class="text-muted me-2 fs-7">{{ date('d/m/Y H:i', strtotime($proposicao->created_at ?? now())) }}</div>
+                                        <!--end::Info-->
+                                    </div>
+                                    <!--end::Description-->
+                                </div>
+                                <!--end::Timeline heading-->
+
+                                <!--begin::Timeline details-->
+                                <div class="overflow-auto pb-5">
+                                    <div class="notice d-flex bg-light-primary rounded border-primary border border-dashed p-4">
+                                        <div class="d-flex flex-stack flex-grow-1">
+                                            <div class="fw-semibold">
+                                                <div class="fs-6 text-gray-700">
+                                                    <span class="text-primary">{{ $proposicao->autor->name ?? 'Sistema' }}</span> 
+                                                    criou esta proposição do tipo <strong>{{ strtoupper($proposicao->tipo) }}</strong>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!--end::Timeline details-->
+                            </div>
+                            <!--end::Timeline content-->
+                        </div>
+                        <!--end::Timeline item-->
+
+                        @if($proposicao->status !== 'rascunho')
+                            <!--begin::Timeline item-->
+                            <div class="timeline-item">
+                                <!--begin::Timeline line-->
+                                <div class="timeline-line w-40px"></div>
+                                <!--end::Timeline line-->
+
+                                <!--begin::Timeline icon-->
+                                <div class="timeline-icon symbol symbol-circle symbol-40px">
+                                    <div class="symbol-label bg-light-info">
+                                        <i class="ki-duotone ki-send fs-2 text-info">
+                                            <span class="path1"></span>
+                                            <span class="path2"></span>
+                                        </i>
+                                    </div>
+                                </div>
+                                <!--end::Timeline icon-->
+
+                                <!--begin::Timeline content-->
+                                <div class="timeline-content mb-10 mt-n2">
+                                    <!--begin::Timeline heading-->
+                                    <div class="overflow-auto pe-3">
+                                        <!--begin::Title-->
+                                        <div class="fs-5 fw-semibold mb-2">Enviada para Análise</div>
+                                        <!--end::Title-->
+
+                                        <!--begin::Description-->
+                                        <div class="d-flex align-items-center mt-1 fs-6">
+                                            <!--begin::Info-->
+                                            <div class="text-muted me-2 fs-7">{{ date('d/m/Y H:i', strtotime($proposicao->updated_at ?? now())) }}</div>
+                                            <!--end::Info-->
+                                        </div>
+                                        <!--end::Description-->
+                                    </div>
+                                    <!--end::Timeline heading-->
+
+                                    <!--begin::Timeline details-->
+                                    <div class="overflow-auto pb-5">
+                                        <div class="notice d-flex bg-light-info rounded border-info border border-dashed p-4">
+                                            <div class="d-flex flex-stack flex-grow-1">
+                                                <div class="fw-semibold">
+                                                    <div class="fs-6 text-gray-700">
+                                                        Proposição enviada para análise legislativa
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <!--end::Timeline details-->
+                                </div>
+                                <!--end::Timeline content-->
+                            </div>
+                            <!--end::Timeline item-->
                         @endif
 
                         @if($proposicao->status === 'aprovada')
+                            <!--begin::Timeline item-->
                             <div class="timeline-item">
-                                <div class="timeline-marker bg-success"></div>
-                                <div class="timeline-content">
-                                    <h6 class="mb-1">Aprovada</h6>
-                                    <p class="mb-1 text-muted small">
-                                        {{ date('d/m/Y H:i', strtotime($proposicao->updated_at ?? now())) }}
-                                    </p>
-                                    <small class="text-muted">
-                                        Proposição aprovada pelo legislativo
-                                    </small>
+                                <!--begin::Timeline line-->
+                                <div class="timeline-line w-40px"></div>
+                                <!--end::Timeline line-->
+
+                                <!--begin::Timeline icon-->
+                                <div class="timeline-icon symbol symbol-circle symbol-40px">
+                                    <div class="symbol-label bg-light-success">
+                                        <i class="ki-duotone ki-check fs-2 text-success">
+                                            <span class="path1"></span>
+                                            <span class="path2"></span>
+                                        </i>
+                                    </div>
                                 </div>
+                                <!--end::Timeline icon-->
+
+                                <!--begin::Timeline content-->
+                                <div class="timeline-content mb-10 mt-n2">
+                                    <!--begin::Timeline heading-->
+                                    <div class="overflow-auto pe-3">
+                                        <!--begin::Title-->
+                                        <div class="fs-5 fw-semibold mb-2">Proposição Aprovada</div>
+                                        <!--end::Title-->
+
+                                        <!--begin::Description-->
+                                        <div class="d-flex align-items-center mt-1 fs-6">
+                                            <!--begin::Info-->
+                                            <div class="text-muted me-2 fs-7">{{ date('d/m/Y H:i', strtotime($proposicao->updated_at ?? now())) }}</div>
+                                            <!--end::Info-->
+                                        </div>
+                                        <!--end::Description-->
+                                    </div>
+                                    <!--end::Timeline heading-->
+
+                                    <!--begin::Timeline details-->
+                                    <div class="overflow-auto pb-5">
+                                        <div class="notice d-flex bg-light-success rounded border-success border border-dashed p-4">
+                                            <div class="d-flex flex-stack flex-grow-1">
+                                                <div class="fw-semibold">
+                                                    <div class="fs-6 text-gray-700">
+                                                        <i class="ki-duotone ki-check-circle fs-4 text-success me-2">
+                                                            <span class="path1"></span>
+                                                            <span class="path2"></span>
+                                                        </i>
+                                                        Proposição aprovada pelo legislativo
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <!--end::Timeline details-->
+                                </div>
+                                <!--end::Timeline content-->
                             </div>
+                            <!--end::Timeline item-->
                         @endif
 
                         @if($proposicao->status === 'rejeitada')
+                            <!--begin::Timeline item-->
                             <div class="timeline-item">
-                                <div class="timeline-marker bg-danger"></div>
-                                <div class="timeline-content">
-                                    <h6 class="mb-1">Rejeitada</h6>
-                                    <p class="mb-1 text-muted small">
-                                        {{ date('d/m/Y H:i', strtotime($proposicao->updated_at ?? now())) }}
-                                    </p>
-                                    <small class="text-muted">
-                                        Proposição rejeitada pelo legislativo
-                                    </small>
+                                <!--begin::Timeline line-->
+                                <div class="timeline-line w-40px"></div>
+                                <!--end::Timeline line-->
+
+                                <!--begin::Timeline icon-->
+                                <div class="timeline-icon symbol symbol-circle symbol-40px">
+                                    <div class="symbol-label bg-light-danger">
+                                        <i class="ki-duotone ki-cross fs-2 text-danger">
+                                            <span class="path1"></span>
+                                            <span class="path2"></span>
+                                        </i>
+                                    </div>
                                 </div>
+                                <!--end::Timeline icon-->
+
+                                <!--begin::Timeline content-->
+                                <div class="timeline-content mb-10 mt-n2">
+                                    <!--begin::Timeline heading-->
+                                    <div class="overflow-auto pe-3">
+                                        <!--begin::Title-->
+                                        <div class="fs-5 fw-semibold mb-2">Proposição Rejeitada</div>
+                                        <!--end::Title-->
+
+                                        <!--begin::Description-->
+                                        <div class="d-flex align-items-center mt-1 fs-6">
+                                            <!--begin::Info-->
+                                            <div class="text-muted me-2 fs-7">{{ date('d/m/Y H:i', strtotime($proposicao->updated_at ?? now())) }}</div>
+                                            <!--end::Info-->
+                                        </div>
+                                        <!--end::Description-->
+                                    </div>
+                                    <!--end::Timeline heading-->
+
+                                    <!--begin::Timeline details-->
+                                    <div class="overflow-auto pb-5">
+                                        <div class="notice d-flex bg-light-danger rounded border-danger border border-dashed p-4">
+                                            <div class="d-flex flex-stack flex-grow-1">
+                                                <div class="fw-semibold">
+                                                    <div class="fs-6 text-gray-700">
+                                                        <i class="ki-duotone ki-information fs-4 text-danger me-2">
+                                                            <span class="path1"></span>
+                                                            <span class="path2"></span>
+                                                            <span class="path3"></span>
+                                                        </i>
+                                                        Proposição rejeitada pelo legislativo
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <!--end::Timeline details-->
+                                </div>
+                                <!--end::Timeline content-->
                             </div>
+                            <!--end::Timeline item-->
                         @endif
                     </div>
+                    <!--end::Timeline-->
                 </div>
             </div>
         </div>
@@ -344,40 +512,34 @@ window.addEventListener('afterprint', function() {
     border-radius: 5px;
 }
 
-.timeline {
+/* Timeline styles following Keen UI template patterns */
+.timeline-label {
     position: relative;
-    padding-left: 30px;
 }
 
-.timeline::before {
-    content: '';
+.timeline-line {
     position: absolute;
-    left: 9px;
-    top: 0;
-    bottom: 0;
-    width: 2px;
-    background: #dee2e6;
+    left: 20px;
+    top: 40px;
+    bottom: -20px;
+    border-left: 1px dashed #E1E3EA;
 }
 
-.timeline-item {
+.timeline-item:last-child .timeline-line {
+    display: none;
+}
+
+.timeline-icon {
     position: relative;
-    margin-bottom: 20px;
+    z-index: 1;
 }
 
-.timeline-marker {
-    position: absolute;
-    left: -25px;
-    top: 5px;
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    border: 2px solid white;
+.timeline-content {
+    margin-left: 60px;
 }
 
-.timeline-content h6 {
-    font-size: 14px;
-    font-weight: 600;
-    margin-bottom: 5px;
+.notice {
+    border-radius: 0.475rem;
 }
 
 .badge {
