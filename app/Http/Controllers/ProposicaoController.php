@@ -393,16 +393,29 @@ class ProposicaoController extends Controller
         }
         
         try {
-            // Lidar com template em branco especial
-            if ($templateId === 'blank') {
-                $template = null; // Template em branco
-            } else {
-                // Buscar o template específico
-                $template = \App\Models\TipoProposicaoTemplate::find($templateId);
+            // Buscar template do administrador baseado no tipo da proposição
+            $template = null;
+            
+            if ($templateId !== 'blank') {
+                // Primeiro, buscar o tipo de proposição
+                $tipoProposicao = \App\Models\TipoProposicao::buscarPorCodigo($proposicao->tipo);
                 
-                if (!$template) {
-                    return redirect()->route('proposicoes.minhas-proposicoes')
-                                    ->with('error', 'Template não encontrado.');
+                if ($tipoProposicao) {
+                    // Buscar template criado pelo admin para este tipo de proposição
+                    $template = \App\Models\TipoProposicaoTemplate::where('tipo_proposicao_id', $tipoProposicao->id)
+                                                                  ->where('ativo', true)
+                                                                  ->first();
+                    
+                    \Log::info('Buscando template do admin', [
+                        'proposicao_id' => $proposicaoId,
+                        'tipo_proposicao' => $proposicao->tipo,
+                        'tipo_proposicao_id' => $tipoProposicao->id,
+                        'template_encontrado' => $template ? $template->id : 'nenhum'
+                    ]);
+                } else {
+                    \Log::warning('Tipo de proposição não encontrado', [
+                        'tipo' => $proposicao->tipo
+                    ]);
                 }
             }
             
@@ -728,6 +741,93 @@ class ProposicaoController extends Controller
     }
 
     /**
+     * Obter cargo do parlamentar
+     */
+    private function obterCargoParlamentar($user)
+    {
+        if (!$user) return '[CARGO DO PARLAMENTAR]';
+        
+        // Verificar roles
+        if (method_exists($user, 'getRoleNames')) {
+            $roles = $user->getRoleNames();
+            
+            if ($roles->contains('Vereador')) return 'Vereador';
+            if ($roles->contains('Presidente')) return 'Presidente da Câmara';
+            if ($roles->contains('Vice-Presidente')) return 'Vice-Presidente da Câmara';
+            if ($roles->contains('Secretario')) return 'Secretário da Câmara';
+        }
+        
+        return 'Parlamentar';
+    }
+    
+    /**
+     * Obter partido do parlamentar
+     */
+    private function obterPartidoParlamentar($user)
+    {
+        if (!$user) return '[PARTIDO]';
+        
+        // Verificar se existe campo partido no usuário
+        if (isset($user->partido)) {
+            return $user->partido;
+        }
+        
+        // Verificar se existe relação com modelo Parlamentar
+        if (method_exists($user, 'parlamentar') && $user->parlamentar) {
+            return $user->parlamentar->partido ?? '[PARTIDO]';
+        }
+        
+        return '[PARTIDO]';
+    }
+    
+    /**
+     * Formatar tipo de proposição
+     */
+    private function formatarTipoProposicao($tipo)
+    {
+        $tipos = [
+            'projeto_lei_ordinaria' => 'Projeto de Lei Ordinária',
+            'projeto_lei_complementar' => 'Projeto de Lei Complementar',
+            'indicacao' => 'Indicação',
+            'projeto_decreto_legislativo' => 'Projeto de Decreto Legislativo',
+            'projeto_resolucao' => 'Projeto de Resolução',
+            'mocao' => 'Moção'
+        ];
+        
+        return $tipos[$tipo] ?? ucfirst(str_replace('_', ' ', $tipo));
+    }
+    
+    /**
+     * Formatar data por extenso
+     */
+    private function formatarDataExtenso($data)
+    {
+        $meses = [
+            1 => 'janeiro', 2 => 'fevereiro', 3 => 'março', 4 => 'abril',
+            5 => 'maio', 6 => 'junho', 7 => 'julho', 8 => 'agosto',
+            9 => 'setembro', 10 => 'outubro', 11 => 'novembro', 12 => 'dezembro'
+        ];
+        
+        return $data->day . ' de ' . $meses[$data->month] . ' de ' . $data->year;
+    }
+    
+    /**
+     * Gerar número da proposição
+     */
+    private function gerarNumeroProposicao($proposicao)
+    {
+        if (isset($proposicao->numero) && $proposicao->numero) {
+            return $proposicao->numero;
+        }
+        
+        // Gerar número baseado no ID e ano
+        $id = is_object($proposicao) ? $proposicao->id : $proposicao;
+        $ano = date('Y');
+        
+        return sprintf('%04d/%d', $id, $ano);
+    }
+
+    /**
      * Processar template do modelo com os dados preenchidos
      */
     private function processarTemplate($modelo, array $dados): string
@@ -763,13 +863,15 @@ class ProposicaoController extends Controller
             }
             
             // Se o template tem um arquivo, copiar como base
-            if ($template && $template->arquivo_path && \Storage::disk('public')->exists($template->arquivo_path)) {
-                \Storage::disk('public')->copy($template->arquivo_path, $pathDestino);
-                \Log::info('Arquivo do template copiado', [
-                    'template_path' => $template->arquivo_path,
-                    'proposicao_path' => $pathDestino,
-                    'arquivo_existe_apos_copia' => \Storage::disk('public')->exists($pathDestino)
-                ]);
+            \Log::info('Verificando template para cópia', [
+                'template_exists' => $template ? 'sim' : 'não',
+                'template_id' => $template ? $template->id : null,
+                'arquivo_path' => $template ? $template->arquivo_path : null
+            ]);
+            
+            if ($template && $template->arquivo_path) {
+                // Processar template com variáveis substituídas
+                $this->processarTemplateComVariaveis($proposicaoId, $template, $pathDestino);
             } else {
                 // Criar arquivo básico com dados preenchidos pelo usuário
                 // Buscar dados da proposição do banco de dados ou sessão
@@ -810,6 +912,757 @@ class ProposicaoController extends Controller
             ]);
             
             throw $e;
+        }
+    }
+    
+    /**
+     * Processar template com substituição de variáveis
+     */
+    private function processarTemplateComVariaveis($proposicaoId, $template, $pathDestino)
+    {
+        try {
+            // Buscar proposição
+            $proposicao = Proposicao::find($proposicaoId);
+            
+            // Buscar variáveis preenchidas pelo parlamentar da sessão
+            $variaveisPreenchidas = session('proposicao_' . $proposicaoId . '_variaveis_template', []);
+            
+            // DEBUG: Vamos também buscar da proposição diretamente
+            $variaveisProposicao = [
+                'ementa' => $proposicao->ementa,
+                'texto' => $proposicao->conteudo,
+                'conteudo' => $proposicao->conteudo
+            ];
+            
+            // Se não há variáveis na sessão, usar as da proposição
+            if (empty($variaveisPreenchidas)) {
+                $variaveisPreenchidas = $variaveisProposicao;
+            }
+            
+            \Log::info('Processando template com variáveis', [
+                'proposicao_id' => $proposicaoId,
+                'template_id' => $template->id,
+                'variaveis_preenchidas' => $variaveisPreenchidas,
+                'variaveis_proposicao' => $variaveisProposicao,
+                'session_key' => 'proposicao_' . $proposicaoId . '_variaveis_template'
+            ]);
+            
+            // Verificar se existe arquivo físico do template com sistema de fallback
+            $conteudoTemplate = $this->carregarTemplateComFallback($template);
+            
+            if ($conteudoTemplate) {
+                \Log::info('Template carregado com sucesso', [
+                    'tamanho_arquivo' => strlen($conteudoTemplate),
+                    'contem_variaveis' => strpos($conteudoTemplate, '${') !== false
+                ]);
+                
+                // Verificar se o template tem variáveis válidas
+                $this->validarEBackupTemplate($template, $conteudoTemplate);
+                
+                // Processar variáveis no template
+                $templateProcessorService = app(\App\Services\Template\TemplateProcessorService::class);
+                
+                // Usar o serviço para processar o template (mas ele funciona com texto, não RTF binário)
+                // Por isso vamos fazer substituição direta no RTF
+                $conteudoProcessado = $this->substituirVariaveisRTF(
+                    $conteudoTemplate, 
+                    $proposicao, 
+                    $variaveisPreenchidas
+                );
+                
+                // Salvar arquivo processado
+                \Storage::disk('public')->put($pathDestino, $conteudoProcessado);
+                
+                \Log::info('Template processado com variáveis substituídas', [
+                    'template_path' => $template->arquivo_path,
+                    'proposicao_path' => $pathDestino,
+                    'tamanho_original' => strlen($conteudoTemplate),
+                    'tamanho_processado' => strlen($conteudoProcessado),
+                    'arquivo_existe_apos_processamento' => \Storage::disk('public')->exists($pathDestino)
+                ]);
+            } else {
+                \Log::warning('Arquivo do template não encontrado para processamento', [
+                    'template_path' => $template->arquivo_path,
+                    'existe_local' => \Storage::disk('local')->exists($template->arquivo_path),
+                    'existe_public' => \Storage::disk('public')->exists($template->arquivo_path)
+                ]);
+            }
+            
+        } catch (\Exception $e) {
+            \Log::error('Erro ao processar template com variáveis', [
+                'proposicao_id' => $proposicaoId,
+                'template_id' => $template->id,
+                'error' => $e->getMessage()
+            ]);
+            throw $e;
+        }
+    }
+    
+    /**
+     * Carregar template com sistema de fallback
+     */
+    private function carregarTemplateComFallback($template)
+    {
+        $conteudoTemplate = null;
+        
+        // Tentar carregar o template principal
+        if (\Storage::disk('local')->exists($template->arquivo_path)) {
+            $conteudoTemplate = \Storage::disk('local')->get($template->arquivo_path);
+        } elseif (\Storage::disk('public')->exists($template->arquivo_path)) {
+            $conteudoTemplate = \Storage::disk('public')->get($template->arquivo_path);
+        }
+        
+        // Garantir que o conteúdo está em UTF-8
+        if ($conteudoTemplate && !mb_check_encoding($conteudoTemplate, 'UTF-8')) {
+            $conteudoTemplate = mb_convert_encoding($conteudoTemplate, 'UTF-8', 'auto');
+        }
+        
+        // Validar se o template contém variáveis essenciais
+        if ($conteudoTemplate && $this->validarConteudoTemplateBasico($conteudoTemplate)) {
+            return $conteudoTemplate;
+        }
+        
+        // Template principal está corrompido ou não contém variáveis, tentar fallbacks
+        \Log::warning('Template principal corrompido, tentando fallbacks', [
+            'template_id' => $template->id,
+            'arquivo_path' => $template->arquivo_path,
+            'conteudo_existe' => $conteudoTemplate !== null,
+            'tamanho_conteudo' => $conteudoTemplate ? strlen($conteudoTemplate) : 0
+        ]);
+        
+        // Fallback 1: Tentar backup mais recente
+        $conteudoBackup = $this->carregarBackupMaisRecente($template);
+        if ($conteudoBackup && $this->validarConteudoTemplateBasico($conteudoBackup)) {
+            \Log::info('Template restaurado do backup', [
+                'template_id' => $template->id
+            ]);
+            
+            // Restaurar o template principal com o backup
+            if ($template->arquivo_path) {
+                \Storage::disk('local')->put($template->arquivo_path, $conteudoBackup);
+            }
+            
+            return $conteudoBackup;
+        }
+        
+        // Fallback 2: Usar template padrão baseado no tipo de proposição
+        $templatePadrao = $this->obterTemplatePadrao($template->tipoProposicao->nome ?? 'mocao');
+        if ($templatePadrao) {
+            \Log::info('Usando template padrão como fallback', [
+                'template_id' => $template->id,
+                'tipo_proposicao' => $template->tipoProposicao->nome ?? 'mocao'
+            ]);
+            
+            // Salvar template padrão como novo template
+            if ($template->arquivo_path) {
+                \Storage::disk('local')->put($template->arquivo_path, $templatePadrao);
+            }
+            
+            return $templatePadrao;
+        }
+        
+        // Fallback 3: Template mínimo de emergência
+        \Log::error('Usando template de emergência', [
+            'template_id' => $template->id
+        ]);
+        
+        return $this->obterTemplateEmergencia();
+    }
+    
+    /**
+     * Validar se template contém variáveis básicas essenciais
+     */
+    private function validarConteudoTemplateBasico($conteudo)
+    {
+        if (!$conteudo || strlen($conteudo) < 50) {
+            return false;
+        }
+        
+        // Verificar se contém pelo menos uma variável (mais flexível)
+        $temVariavel = preg_match('/\$\{[^}]+\}/', $conteudo);
+        
+        // Se não tem variáveis, verificar se tem conteúdo significativo (possíveis imagens)
+        if (!$temVariavel) {
+            // Arquivo grande pode conter imagens e ainda ser válido
+            if (strlen($conteudo) > 100000) {
+                \Log::info('Template sem variáveis mas com conteúdo significativo aceito no fallback', [
+                    'tamanho_conteudo' => strlen($conteudo)
+                ]);
+                return true;
+            }
+            return false;
+        }
+        
+        return true; // Tem pelo menos uma variável
+    }
+    
+    /**
+     * Carregar backup mais recente do template
+     */
+    private function carregarBackupMaisRecente($template)
+    {
+        try {
+            if (!$template->arquivo_path) {
+                return null;
+            }
+            
+            $templateBaseName = pathinfo($template->arquivo_path, PATHINFO_FILENAME);
+            $templateDir = dirname($template->arquivo_path);
+            
+            // Buscar backups
+            $arquivos = \Storage::disk('local')->files($templateDir);
+            $backupsDoTemplate = array_filter($arquivos, function($arquivo) use ($templateBaseName) {
+                return strpos(basename($arquivo), $templateBaseName . '_backup_') === 0;
+            });
+            
+            if (empty($backupsDoTemplate)) {
+                return null;
+            }
+            
+            // Ordenar por data (mais recente primeiro)
+            usort($backupsDoTemplate, function($a, $b) {
+                return \Storage::disk('local')->lastModified($b) - \Storage::disk('local')->lastModified($a);
+            });
+            
+            return \Storage::disk('local')->get($backupsDoTemplate[0]);
+            
+        } catch (\Exception $e) {
+            \Log::error('Erro ao carregar backup', [
+                'template_id' => $template->id,
+                'error' => $e->getMessage()
+            ]);
+            return null;
+        }
+    }
+    
+    /**
+     * Obter template padrão baseado no tipo de proposição
+     */
+    private function obterTemplatePadrao($tipoProposicao)
+    {
+        $templates = [
+            'mocao' => '{\rtf1\ansi\ansicpg1252\deff0\deflang1046 {\fonttbl {\f0 Times New Roman;}}
+{\colortbl;\red0\green0\blue0;}
+\f0\fs24
+
+{\qc\b\fs28 MOÇÃO Nº ${numero_proposicao}\par}
+\par
+{\qc Data: ${data_atual}\par}
+{\qc Autor: ${autor_nome}\par}
+{\qc Município: ${municipio}\par}
+\par
+\par
+{\b EMENTA:\par}
+\par
+${ementa}
+\par
+\par
+{\b TEXTO:\par}
+\par
+${texto}
+\par
+\par
+{\qr Câmara Municipal de ${municipio}\par}
+{\qr ${data_atual}\par}
+}',
+            'projeto_lei_ordinaria' => '{\rtf1\ansi\ansicpg1252\deff0\deflang1046 {\fonttbl {\f0 Times New Roman;}}
+{\colortbl;\red0\green0\blue0;}
+\f0\fs24
+
+{\qc\b\fs28 PROJETO DE LEI ORDINÁRIA Nº ${numero_proposicao}\par}
+\par
+{\qc Data: ${data_atual}\par}
+{\qc Autor: ${autor_nome}\par}
+{\qc Município: ${municipio}\par}
+\par
+\par
+{\b EMENTA:\par}
+\par
+${ementa}
+\par
+\par
+{\b TEXTO:\par}
+\par
+${texto}
+\par
+\par
+{\qr Câmara Municipal de ${municipio}\par}
+{\qr ${data_atual}\par}
+}'
+        ];
+        
+        return $templates[$tipoProposicao] ?? $templates['mocao'];
+    }
+    
+    /**
+     * Template mínimo de emergência
+     */
+    private function obterTemplateEmergencia()
+    {
+        return '{\rtf1\ansi\ansicpg1252\deff0\deflang1046 {\fonttbl {\f0 Times New Roman;}}
+{\colortbl;\red0\green0\blue0;}
+\f0\fs24
+
+{\qc\b\fs28 ${tipo_proposicao} Nº ${numero_proposicao}\par}
+\par
+{\qc Data: ${data_atual}\par}
+{\qc Autor: ${autor_nome}\par}
+\par
+\par
+{\b EMENTA:\par}
+\par
+${ementa}
+\par
+\par
+{\b TEXTO:\par}
+\par
+${texto}
+\par
+\par
+{\qr ${municipio}, ${data_atual}\par}
+}';
+    }
+    
+    /**
+     * Validar template e fazer backup se estiver funcionando
+     */
+    private function validarEBackupTemplate($template, $conteudoTemplate)
+    {
+        try {
+            // Usar validação flexível - aceita templates com variáveis OU conteúdo significativo (imagens)
+            $temVariaveisEssenciais = preg_match('/\$\{[^}]+\}/', $conteudoTemplate);
+            $temConteudoSignificativo = strlen($conteudoTemplate) > 100000; // >100KB indica imagens
+            
+            if ($temVariaveisEssenciais || $temConteudoSignificativo) {
+                // Template está válido, fazer backup
+                $backupPath = str_replace('.rtf', '_backup_' . date('Y_m_d_His') . '.rtf', $template->arquivo_path);
+                
+                // Manter apenas os 5 backups mais recentes
+                $this->limparBackupsAntigos($template);
+                
+                // Salvar backup
+                \Storage::disk('local')->put($backupPath, $conteudoTemplate);
+                
+                \Log::info('Backup do template criado', [
+                    'template_id' => $template->id,
+                    'backup_path' => $backupPath,
+                    'variaveis_encontradas' => $this->extrairVariaveisTemplate($conteudoTemplate)
+                ]);
+            } else {
+                \Log::warning('Template não contém variáveis essenciais', [
+                    'template_id' => $template->id,
+                    'variaveis_faltando' => ['${ementa}', '${texto}', '${numero_proposicao}']
+                ]);
+                
+                // Tentar restaurar do backup mais recente
+                $this->tentarRestaurarTemplate($template);
+            }
+            
+        } catch (\Exception $e) {
+            \Log::error('Erro ao validar template', [
+                'template_id' => $template->id,
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+    
+    /**
+     * Limpar backups antigos, mantendo apenas os 5 mais recentes
+     */
+    private function limparBackupsAntigos($template)
+    {
+        try {
+            $templateBaseName = pathinfo($template->arquivo_path, PATHINFO_FILENAME);
+            $templateDir = dirname($template->arquivo_path);
+            
+            // Buscar todos os backups existentes
+            $backups = \Storage::disk('local')->files($templateDir);
+            $backupsDoTemplate = array_filter($backups, function($arquivo) use ($templateBaseName) {
+                return strpos(basename($arquivo), $templateBaseName . '_backup_') === 0;
+            });
+            
+            // Ordenar por data (mais recente primeiro)
+            usort($backupsDoTemplate, function($a, $b) {
+                return \Storage::disk('local')->lastModified($b) - \Storage::disk('local')->lastModified($a);
+            });
+            
+            // Remover backups além dos 5 mais recentes
+            if (count($backupsDoTemplate) >= 5) {
+                $backupsParaRemover = array_slice($backupsDoTemplate, 4);
+                foreach ($backupsParaRemover as $backup) {
+                    \Storage::disk('local')->delete($backup);
+                }
+            }
+            
+        } catch (\Exception $e) {
+            \Log::error('Erro ao limpar backups antigos', [
+                'template_id' => $template->id,
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+    
+    /**
+     * Tentar restaurar template do backup mais recente
+     */
+    private function tentarRestaurarTemplate($template)
+    {
+        try {
+            $templateBaseName = pathinfo($template->arquivo_path, PATHINFO_FILENAME);
+            $templateDir = dirname($template->arquivo_path);
+            
+            // Buscar backup mais recente
+            $backups = \Storage::disk('local')->files($templateDir);
+            $backupsDoTemplate = array_filter($backups, function($arquivo) use ($templateBaseName) {
+                return strpos(basename($arquivo), $templateBaseName . '_backup_') === 0;
+            });
+            
+            if (!empty($backupsDoTemplate)) {
+                // Ordenar por data (mais recente primeiro)
+                usort($backupsDoTemplate, function($a, $b) {
+                    return \Storage::disk('local')->lastModified($b) - \Storage::disk('local')->lastModified($a);
+                });
+                
+                $backupMaisRecente = $backupsDoTemplate[0];
+                $conteudoBackup = \Storage::disk('local')->get($backupMaisRecente);
+                
+                // Restaurar o template
+                \Storage::disk('local')->put($template->arquivo_path, $conteudoBackup);
+                
+                \Log::info('Template restaurado do backup', [
+                    'template_id' => $template->id,
+                    'backup_usado' => $backupMaisRecente,
+                    'data_backup' => \Storage::disk('local')->lastModified($backupMaisRecente)
+                ]);
+                
+                return true;
+            }
+            
+        } catch (\Exception $e) {
+            \Log::error('Erro ao restaurar template do backup', [
+                'template_id' => $template->id,
+                'error' => $e->getMessage()
+            ]);
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Extrair variáveis do template para logging
+     */
+    private function extrairVariaveisTemplate($conteudo)
+    {
+        $variaveis = [];
+        if (preg_match_all('/\$\{([^}]+)\}/', $conteudo, $matches)) {
+            $variaveis = array_unique($matches[1]);
+        }
+        return $variaveis;
+    }
+    
+    /**
+     * Substituir variáveis diretamente no arquivo RTF
+     */
+    private function substituirVariaveisRTF($conteudoRTF, $proposicao, $variaveisPreenchidas)
+    {
+        // Obter as proposição real do banco de dados se ela for um objeto simples
+        if (!($proposicao instanceof \App\Models\Proposicao)) {
+            $proposicaoModel = \App\Models\Proposicao::find($proposicao->id);
+            if ($proposicaoModel) {
+                $proposicao = $proposicaoModel;
+            }
+        }
+        
+        // Não usar o TemplateProcessorService aqui pois causa conflito
+        // Vamos definir as variáveis diretamente
+        
+        // Obter variáveis específicas
+        $user = \Auth::user();
+        $agora = \Carbon\Carbon::now();
+        
+        $variaveisSystem = [
+            // Datas e horários
+            'data' => $agora->format('d/m/Y'),
+            'data_atual' => $agora->format('d/m/Y'),
+            'data_extenso' => $this->formatarDataExtenso($agora),
+            'mes_atual' => $agora->format('m'),
+            'ano_atual' => $agora->format('Y'),
+            'dia_atual' => $agora->format('d'),
+            'hora_atual' => $agora->format('H:i'),
+            'data_criacao' => $proposicao->created_at?->format('d/m/Y') ?? $agora->format('d/m/Y'),
+            
+            // Proposição
+            'numero_proposicao' => $this->gerarNumeroProposicao($proposicao),
+            'tipo_proposicao' => $proposicao->tipo_formatado ?? $this->formatarTipoProposicao($proposicao->tipo ?? 'mocao'),
+            'status_proposicao' => $proposicao->status ?? 'rascunho',
+            
+            // Parlamentar / Autor
+            'nome_parlamentar' => $user->name ?? '[NOME DO PARLAMENTAR]',
+            'autor_nome' => $proposicao->autor->name ?? $user->name ?? '[NOME DO AUTOR]',
+            'cargo_parlamentar' => $this->obterCargoParlamentar($user),
+            'email_parlamentar' => $user->email ?? '[EMAIL DO PARLAMENTAR]',
+            'partido_parlamentar' => $this->obterPartidoParlamentar($user),
+            
+            // Instituição
+            'nome_municipio' => config('app.municipio', 'São Paulo'),
+            'municipio' => config('app.municipio', 'São Paulo'),
+            'nome_camara' => config('app.nome_camara', 'Câmara Municipal'),
+            'endereco_camara' => config('app.endereco_camara', 'Endereço da Câmara'),
+            'legislatura_atual' => config('app.legislatura', '2021-2024'),
+            'sessao_legislativa' => $agora->format('Y')
+        ];
+        
+        // Combinar variáveis do sistema e preenchidas pelo parlamentar
+        $todasVariaveis = array_merge($variaveisSystem, $variaveisPreenchidas);
+        
+        // DEBUG: Log das variáveis encontradas no template
+        $variaveisNoTemplate = [];
+        
+        // Tentar diferentes padrões de regex para encontrar variáveis
+        $patterns = [
+            '/\$\{([^}]+)\}/',  // Padrão normal: ${variavel}
+            '/\$\\\\{([^}]+)\\\\}/', // Padrão com escape de RTF
+            '/\\\$\\\{([^}]+)\\\}/', // Padrão com escape duplo
+        ];
+        
+        // Também buscar variáveis codificadas em Unicode (formato OnlyOffice)
+        // Exemplo: \u36*\u116*\u101*\u120*\u116*\u111* = $texto
+        if (preg_match_all('/\\\\u36\*([\\\\u\d\*]+)/', $conteudoRTF, $unicodeMatches)) {
+            foreach ($unicodeMatches[0] as $unicodeSequence) {
+                // Decodificar sequência Unicode para texto
+                $decoded = $this->decodificarSequenciaUnicode($unicodeSequence);
+                if ($decoded && strpos($decoded, '$') === 0) {
+                    // Extrair nome da variável (remover $ e possíveis {})
+                    $nomeVariavel = str_replace(['$', '{', '}'], '', $decoded);
+                    if ($nomeVariavel) {
+                        $variaveisNoTemplate[] = $nomeVariavel;
+                    }
+                }
+            }
+        }
+        
+        foreach ($patterns as $pattern) {
+            if (preg_match_all($pattern, $conteudoRTF, $matches)) {
+                $variaveisNoTemplate = array_merge($variaveisNoTemplate, $matches[1]);
+            }
+        }
+        
+        // Remover duplicatas
+        $variaveisNoTemplate = array_unique($variaveisNoTemplate);
+        
+        \Log::info('DEBUG: Análise de variáveis no template', [
+            'variaveis_no_template' => $variaveisNoTemplate,
+            'variaveis_disponiveis' => array_keys($todasVariaveis),
+            'template_preview' => substr($conteudoRTF, 0, 500) . '...',
+            'template_contém_dollar' => strpos($conteudoRTF, '$') !== false,
+            'template_contém_chaves' => strpos($conteudoRTF, '{') !== false,
+            'template_busca_manual_ementa' => strpos($conteudoRTF, '${ementa}') !== false,
+            'template_busca_manual_texto' => strpos($conteudoRTF, '${texto}') !== false
+        ]);
+        
+        // Sempre tentar substituir variáveis primeiro
+        $conteudoProcessado = $conteudoRTF;
+        $substituicoes = 0;
+        $detalhesSubstituicoes = [];
+        
+        foreach ($todasVariaveis as $variavel => $valor) {
+            // Tentar diferentes formatos de placeholder
+            $placeholders = [
+                '${' . $variavel . '}',  // Formato normal
+                '$\\{' . $variavel . '\\}', // Com escape RTF
+                '\${' . $variavel . '}', // Com escape simples
+            ];
+            
+            // Adicionar placeholder para formato Unicode se a variável estiver no template
+            $unicodePlaceholder = $this->codificarVariavelParaUnicode('$' . $variavel);
+            if ($unicodePlaceholder && strpos($conteudoProcessado, $unicodePlaceholder) !== false) {
+                $placeholders[] = $unicodePlaceholder;
+            }
+            
+            $substituicoesVariavel = 0;
+            foreach ($placeholders as $placeholder) {
+                $antes = substr_count($conteudoProcessado, $placeholder);
+                
+                // Se é um placeholder Unicode, usar valor convertido para RTF Unicode
+                if (strpos($placeholder, '\\u') !== false) {
+                    $valorRtf = $this->codificarTextoParaUnicode($valor);
+                    $conteudoProcessado = str_replace($placeholder, $valorRtf, $conteudoProcessado);
+                } else {
+                    $conteudoProcessado = str_replace($placeholder, $valor, $conteudoProcessado);
+                }
+                
+                $depois = substr_count($conteudoProcessado, $placeholder);
+                $substituicoesVariavel += ($antes - $depois);
+            }
+            
+            $substituicoes += $substituicoesVariavel;
+            
+            if ($substituicoesVariavel > 0) {
+                $detalhesSubstituicoes[$variavel] = [
+                    'placeholders' => $placeholders,
+                    'valor' => substr($valor, 0, 50) . '...',
+                    'substituicoes' => $substituicoesVariavel
+                ];
+            }
+        }
+        
+        \Log::info('DEBUG: Detalhes das substituições', [
+            'detalhes' => $detalhesSubstituicoes,
+            'total_substituicoes' => $substituicoes
+        ]);
+        
+        \Log::info('Substituições realizadas', [
+            'total_substituicoes' => $substituicoes,
+            'tinha_variaveis_antes' => strpos($conteudoRTF, '${') !== false,
+            'tem_variaveis_depois' => strpos($conteudoProcessado, '${') !== false
+        ]);
+        
+        // Se não houve substituições e ainda não há conteúdo significativo, adicionar ao final
+        // IMPORTANTE: Não adicionar conteúdo se o template já tem conteúdo significativo (imagens, texto longo)
+        $temConteudoSignificativo = strlen($conteudoRTF) > 100000; // Templates com imagens são grandes
+        
+        if ($temConteudoSignificativo && $substituicoes === 0) {
+            \Log::info('Template tem conteúdo significativo mas sem variáveis - mantendo conteúdo original sem adicionar conteúdo extra', [
+                'tamanho_template' => strlen($conteudoRTF),
+                'tem_variaveis' => strpos($conteudoRTF, '${') !== false
+            ]);
+        }
+        
+        if ($substituicoes === 0 && strpos($conteudoRTF, '${') === false && !$temConteudoSignificativo) {
+            \Log::info('Template não tinha variáveis nem conteúdo significativo, adicionando conteúdo estruturado ao final');
+            
+            // Encontrar a posição antes do fechamento do RTF
+            $posicaoFinal = strrpos($conteudoProcessado, '}');
+            if ($posicaoFinal !== false) {
+                $conteudoAntes = substr($conteudoProcessado, 0, $posicaoFinal);
+                
+                // Adicionar conteúdo formatado em RTF
+                $conteudoAdicional = '\\par\\par';
+                $conteudoAdicional .= '{\\qc\\b\\fs32 MOÇÃO Nº ' . $variaveisSystem['numero_proposicao'] . '\\par}';
+                $conteudoAdicional .= '\\par';
+                $conteudoAdicional .= '{\\qc Data: ' . $variaveisSystem['data_atual'] . '\\par}';
+                $conteudoAdicional .= '{\\qc Autor: ' . $variaveisSystem['autor_nome'] . '\\par}';
+                $conteudoAdicional .= '{\\qc Município: ' . $variaveisSystem['municipio'] . '\\par}';
+                $conteudoAdicional .= '\\par\\par';
+                $conteudoAdicional .= '{\\b\\fs28 EMENTA\\par}';
+                $conteudoAdicional .= '\\par';
+                $conteudoAdicional .= ($variaveisPreenchidas['ementa'] ?? '[EMENTA NÃO PREENCHIDA]');
+                $conteudoAdicional .= '\\par\\par';
+                $conteudoAdicional .= '{\\b\\fs28 TEXTO\\par}';
+                $conteudoAdicional .= '\\par';
+                $conteudoAdicional .= ($variaveisPreenchidas['texto'] ?? '[TEXTO NÃO PREENCHIDO]');
+                $conteudoAdicional .= '\\par\\par\\par';
+                $conteudoAdicional .= '{\\qr Câmara Municipal de ' . $variaveisSystem['municipio'] . '\\par}';
+                $conteudoAdicional .= '{\\qr ' . $variaveisSystem['data_atual'] . '\\par}';
+                
+                $conteudoProcessado = $conteudoAntes . $conteudoAdicional . '}';
+            }
+        }
+        
+        \Log::info('Variáveis processadas no RTF', [
+            'tem_variaveis_predefinidas' => strpos($conteudoRTF, '${') !== false,
+            'variaveis_disponiveis' => array_keys($todasVariaveis),
+            'valores_exemplo' => [
+                'ementa' => substr($variaveisPreenchidas['ementa'] ?? '[não definida]', 0, 50) . '...',
+                'texto' => substr($variaveisPreenchidas['texto'] ?? '[não definido]', 0, 50) . '...',
+                'autor_nome' => $variaveisSystem['autor_nome'],
+                'data_atual' => $variaveisSystem['data_atual']
+            ]
+        ]);
+        
+        return $conteudoProcessado;
+    }
+    
+    /**
+     * Decodificar sequência Unicode do RTF para texto
+     */
+    private function decodificarSequenciaUnicode($sequenciaUnicode)
+    {
+        try {
+            // Extrair códigos Unicode da sequência
+            // Exemplo: \u36*\u116*\u101*\u120*\u116*\u111* 
+            preg_match_all('/\\\\u(\d+)\*/', $sequenciaUnicode, $matches);
+            
+            if (empty($matches[1])) {
+                return null;
+            }
+            
+            $texto = '';
+            foreach ($matches[1] as $codigo) {
+                $texto .= chr((int)$codigo);
+            }
+            
+            return $texto;
+            
+        } catch (\Exception $e) {
+            \Log::warning('Erro ao decodificar sequência Unicode', [
+                'sequencia' => $sequenciaUnicode,
+                'error' => $e->getMessage()
+            ]);
+            return null;
+        }
+    }
+    
+    /**
+     * Codificar variável para formato Unicode do RTF
+     */
+    private function codificarVariavelParaUnicode($variavel)
+    {
+        try {
+            $sequencia = '';
+            for ($i = 0; $i < strlen($variavel); $i++) {
+                $char = $variavel[$i];
+                $codigo = ord($char);
+                $sequencia .= '\\u' . $codigo . '*';
+            }
+            return $sequencia;
+            
+        } catch (\Exception $e) {
+            \Log::warning('Erro ao codificar variável para Unicode', [
+                'variavel' => $variavel,
+                'error' => $e->getMessage()
+            ]);
+            return null;
+        }
+    }
+    
+    /**
+     * Codificar texto para formato Unicode do RTF (para valores)
+     */
+    private function codificarTextoParaUnicode($texto)
+    {
+        try {
+            // Para texto longo, usar formato misto: caracteres especiais em Unicode, texto normal como está
+            $textoProcessado = '';
+            $chunks = explode("\n", $texto); // Preservar quebras de linha
+            
+            foreach ($chunks as $index => $chunk) {
+                if ($index > 0) {
+                    $textoProcessado .= '\\par '; // Quebra de linha em RTF
+                }
+                
+                // Para cada chunk, processar caracteres especiais
+                for ($i = 0; $i < strlen($chunk); $i++) {
+                    $char = $chunk[$i];
+                    $codigo = ord($char);
+                    
+                    // Converter apenas caracteres especiais para Unicode, manter ASCII normal
+                    if ($codigo > 127) {
+                        $textoProcessado .= '\\u' . $codigo . '*';
+                    } else {
+                        $textoProcessado .= $char;
+                    }
+                }
+            }
+            
+            return $textoProcessado;
+            
+        } catch (\Exception $e) {
+            \Log::warning('Erro ao codificar texto para Unicode RTF', [
+                'texto_inicio' => substr($texto, 0, 50) . '...',
+                'error' => $e->getMessage()
+            ]);
+            return $texto; // Fallback para texto original
         }
     }
     
@@ -1121,15 +1974,24 @@ class ProposicaoController extends Controller
             }
         }
 
-        // Buscar template (lidar com template em branco especial)
-        if ($templateId === 'blank') {
-            $template = null; // Template em branco
-        } else {
-            $template = \App\Models\TipoProposicaoTemplate::find($templateId);
+        // Buscar template do administrador baseado no tipo da proposição
+        $template = null;
+        
+        if ($templateId !== 'blank') {
+            // Primeiro, buscar o tipo de proposição
+            $tipoProposicao = \App\Models\TipoProposicao::buscarPorCodigo($proposicao->tipo);
             
-            if (!$template) {
-                return redirect()->route('proposicoes.minhas-proposicoes')
-                                ->with('error', 'Template não encontrado.');
+            if ($tipoProposicao) {
+                // Buscar template criado pelo admin para este tipo de proposição
+                $template = \App\Models\TipoProposicaoTemplate::where('tipo_proposicao_id', $tipoProposicao->id)
+                                                              ->where('ativo', true)
+                                                              ->first();
+                
+                \Log::info('Template do admin encontrado para preparar edição', [
+                    'proposicao_id' => $proposicaoId,
+                    'tipo_proposicao' => $proposicao->tipo,
+                    'template_encontrado' => $template ? $template->id : 'nenhum'
+                ]);
             }
         }
 

@@ -258,30 +258,157 @@
             position: fixed;
             top: 80px;
             right: 20px;
-            width: 280px;
+            width: 320px;
             background: white;
-            border-radius: 10px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
             z-index: 999;
-            max-height: 400px;
-            overflow-y: auto;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         
         .variables-panel.collapsed {
             height: 50px;
             overflow: hidden;
+            max-height: 50px;
         }
         
         .panel-toggle {
             cursor: pointer;
             padding: 15px;
             border-bottom: 1px solid #e9ecef;
-            background: #f8f9fa;
-            border-radius: 10px 10px 0 0;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 12px 12px 0 0;
+            flex-shrink: 0;
         }
         
         .panel-content {
             padding: 15px;
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+        
+        /* Scrollbar personalizada */
+        .panel-content::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .panel-content::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 3px;
+        }
+        
+        .panel-content::-webkit-scrollbar-thumb {
+            background: #cbd5e0;
+            border-radius: 3px;
+        }
+        
+        .panel-content::-webkit-scrollbar-thumb:hover {
+            background: #a0aec0;
+        }
+        
+        /* Estilos para botões de variáveis */
+        .variable-btn {
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            border: 1px solid #e2e8f0;
+            background: linear-gradient(135deg, #ffffff 0%, #f7fafc 100%);
+            color: #2d3748;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            padding: 0.5rem 0.75rem;
+            text-align: left;
+            width: 100%;
+            margin-bottom: 0.5rem;
+            border-radius: 8px;
+        }
+        
+        .variable-btn:hover {
+            background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
+            border-color: #3182ce;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(66, 153, 225, 0.3);
+        }
+        
+        .variable-btn:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(66, 153, 225, 0.3);
+        }
+        
+        .variable-btn .var-name {
+            font-weight: 600;
+            font-size: 0.875rem;
+            display: block;
+        }
+        
+        .variable-btn .var-desc {
+            font-size: 0.75rem;
+            opacity: 0.7;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        
+        /* Categoria de variáveis */
+        .variable-category {
+            margin-bottom: 1.5rem;
+        }
+        
+        .variable-category-title {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #718096;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .variable-category-title i {
+            font-size: 1rem;
+            opacity: 0.6;
+        }
+        
+        /* Search input */
+        .variable-search {
+            width: 100%;
+            padding: 0.5rem 0.75rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            margin-bottom: 1rem;
+            transition: all 0.2s ease;
+        }
+        
+        .variable-search:focus {
+            outline: none;
+            border-color: #4299e1;
+            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+        }
+        
+        /* Copy notification */
+        .copy-notification {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 500;
+            z-index: 10000;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .copy-notification.show {
+            opacity: 1;
         }
     </style>
 </head>
@@ -337,6 +464,15 @@
     <!-- Toast Container -->
     <div class="toast-container" id="toastContainer"></div>
 
+    <!-- Copy Notification -->
+    <div id="copyNotification" class="copy-notification">
+        <i class="ki-duotone ki-check fs-2 me-2">
+            <span class="path1"></span>
+            <span class="path2"></span>
+        </i>
+        <span id="copyNotificationText">Variável copiada!</span>
+    </div>
+
     <!-- Variables Panel -->
     <div class="variables-panel" id="variablesPanel">
         <div class="panel-toggle" onclick="togglePanel()">
@@ -348,7 +484,7 @@
                         <span class="path3"></span>
                         <span class="path4"></span>
                     </i>
-                    Variáveis
+                    Variáveis Disponíveis
                 </strong>
                 <i class="ki-duotone ki-up fs-6" id="panelIcon">
                     <span class="path1"></span>
@@ -358,34 +494,202 @@
         </div>
         
         <div class="panel-content" id="panelContent">
-            <div class="mb-3">
-                <strong class="fs-7 text-muted">DADOS DA PROPOSIÇÃO</strong>
-                <div class="mt-2">
-                    <div class="mb-2"><code class="fs-8">${numero_proposicao}</code> <small class="text-muted">- Número</small></div>
-                    <div class="mb-2"><code class="fs-8">${ementa}</code> <small class="text-muted">- Ementa</small></div>
-                    <div class="mb-2"><code class="fs-8">${texto}</code> <small class="text-muted">- Texto principal</small></div>
+            <!-- Busca de variáveis -->
+            <input type="text" id="variableSearch" class="variable-search" placeholder="Buscar variáveis...">
+            
+            <!-- Categorias de variáveis -->
+            <div id="variablesList">
+                <!-- Dados da Proposição -->
+                <div class="variable-category">
+                    <div class="variable-category-title">
+                        <i class="ki-duotone ki-document">
+                            <span class="path1"></span>
+                            <span class="path2"></span>
+                        </i>
+                        DADOS DA PROPOSIÇÃO
+                    </div>
+                    <div class="variable-items">
+                        <button type="button" onclick="inserirVariavel('${numero_proposicao}')" class="btn variable-btn">
+                            <span class="var-name">${numero_proposicao}</span>
+                            <span class="var-desc">Número da proposição</span>
+                        </button>
+                        <button type="button" onclick="inserirVariavel('${tipo_proposicao}')" class="btn variable-btn">
+                            <span class="var-name">${tipo_proposicao}</span>
+                            <span class="var-desc">Tipo da proposição</span>
+                        </button>
+                        <button type="button" onclick="inserirVariavel('${status_proposicao}')" class="btn variable-btn">
+                            <span class="var-name">${status_proposicao}</span>
+                            <span class="var-desc">Status atual</span>
+                        </button>
+                        <button type="button" onclick="inserirVariavel('${ementa}')" class="btn variable-btn">
+                            <span class="var-name">${ementa}</span>
+                            <span class="var-desc">Ementa da proposição</span>
+                        </button>
+                        <button type="button" onclick="inserirVariavel('${texto}')" class="btn variable-btn">
+                            <span class="var-name">${texto}</span>
+                            <span class="var-desc">Texto principal</span>
+                        </button>
+                        <button type="button" onclick="inserirVariavel('${justificativa}')" class="btn variable-btn">
+                            <span class="var-name">${justificativa}</span>
+                            <span class="var-desc">Justificativa</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Autor e Parlamentar -->
+                <div class="variable-category">
+                    <div class="variable-category-title">
+                        <i class="ki-duotone ki-user">
+                            <span class="path1"></span>
+                            <span class="path2"></span>
+                        </i>
+                        AUTOR & PARLAMENTAR
+                    </div>
+                    <div class="variable-items">
+                        <button type="button" onclick="inserirVariavel('${autor_nome}')" class="btn variable-btn">
+                            <span class="var-name">${autor_nome}</span>
+                            <span class="var-desc">Nome do autor</span>
+                        </button>
+                        <button type="button" onclick="inserirVariavel('${nome_parlamentar}')" class="btn variable-btn">
+                            <span class="var-name">${nome_parlamentar}</span>
+                            <span class="var-desc">Nome do parlamentar</span>
+                        </button>
+                        <button type="button" onclick="inserirVariavel('${cargo_parlamentar}')" class="btn variable-btn">
+                            <span class="var-name">${cargo_parlamentar}</span>
+                            <span class="var-desc">Cargo do parlamentar</span>
+                        </button>
+                        <button type="button" onclick="inserirVariavel('${email_parlamentar}')" class="btn variable-btn">
+                            <span class="var-name">${email_parlamentar}</span>
+                            <span class="var-desc">E-mail do parlamentar</span>
+                        </button>
+                        <button type="button" onclick="inserirVariavel('${partido_parlamentar}')" class="btn variable-btn">
+                            <span class="var-name">${partido_parlamentar}</span>
+                            <span class="var-desc">Partido político</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Datas e Horários -->
+                <div class="variable-category">
+                    <div class="variable-category-title">
+                        <i class="ki-duotone ki-calendar">
+                            <span class="path1"></span>
+                            <span class="path2"></span>
+                        </i>
+                        DATAS & HORÁRIOS
+                    </div>
+                    <div class="variable-items">
+                        <button type="button" onclick="inserirVariavel('${data_atual}')" class="btn variable-btn">
+                            <span class="var-name">${data_atual}</span>
+                            <span class="var-desc">Data atual (dd/mm/aaaa)</span>
+                        </button>
+                        <button type="button" onclick="inserirVariavel('${data_extenso}')" class="btn variable-btn">
+                            <span class="var-name">${data_extenso}</span>
+                            <span class="var-desc">Data por extenso</span>
+                        </button>
+                        <button type="button" onclick="inserirVariavel('${hora_atual}')" class="btn variable-btn">
+                            <span class="var-name">${hora_atual}</span>
+                            <span class="var-desc">Hora atual</span>
+                        </button>
+                        <button type="button" onclick="inserirVariavel('${dia_atual}')" class="btn variable-btn">
+                            <span class="var-name">${dia_atual}</span>
+                            <span class="var-desc">Dia do mês</span>
+                        </button>
+                        <button type="button" onclick="inserirVariavel('${mes_atual}')" class="btn variable-btn">
+                            <span class="var-name">${mes_atual}</span>
+                            <span class="var-desc">Mês atual</span>
+                        </button>
+                        <button type="button" onclick="inserirVariavel('${ano_atual}')" class="btn variable-btn">
+                            <span class="var-name">${ano_atual}</span>
+                            <span class="var-desc">Ano atual</span>
+                        </button>
+                        <button type="button" onclick="inserirVariavel('${data_criacao}')" class="btn variable-btn">
+                            <span class="var-name">${data_criacao}</span>
+                            <span class="var-desc">Data de criação</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Instituição -->
+                <div class="variable-category">
+                    <div class="variable-category-title">
+                        <i class="ki-duotone ki-bank">
+                            <span class="path1"></span>
+                            <span class="path2"></span>
+                        </i>
+                        INSTITUIÇÃO
+                    </div>
+                    <div class="variable-items">
+                        <button type="button" onclick="inserirVariavel('${municipio}')" class="btn variable-btn">
+                            <span class="var-name">${municipio}</span>
+                            <span class="var-desc">Nome do município</span>
+                        </button>
+                        <button type="button" onclick="inserirVariavel('${nome_camara}')" class="btn variable-btn">
+                            <span class="var-name">${nome_camara}</span>
+                            <span class="var-desc">Nome da câmara</span>
+                        </button>
+                        <button type="button" onclick="inserirVariavel('${endereco_camara}')" class="btn variable-btn">
+                            <span class="var-name">${endereco_camara}</span>
+                            <span class="var-desc">Endereço da câmara</span>
+                        </button>
+                        <button type="button" onclick="inserirVariavel('${legislatura_atual}')" class="btn variable-btn">
+                            <span class="var-name">${legislatura_atual}</span>
+                            <span class="var-desc">Legislatura atual</span>
+                        </button>
+                        <button type="button" onclick="inserirVariavel('${sessao_legislativa}')" class="btn variable-btn">
+                            <span class="var-name">${sessao_legislativa}</span>
+                            <span class="var-desc">Sessão legislativa</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Campos Editáveis -->
+                <div class="variable-category">
+                    <div class="variable-category-title">
+                        <i class="ki-duotone ki-pencil">
+                            <span class="path1"></span>
+                            <span class="path2"></span>
+                        </i>
+                        CAMPOS EDITÁVEIS
+                    </div>
+                    <div class="variable-items">
+                        <button type="button" onclick="inserirVariavel('${observacoes}')" class="btn variable-btn">
+                            <span class="var-name">${observacoes}</span>
+                            <span class="var-desc">Observações adicionais</span>
+                        </button>
+                        <button type="button" onclick="inserirVariavel('${considerandos}')" class="btn variable-btn">
+                            <span class="var-name">${considerandos}</span>
+                            <span class="var-desc">Considerandos</span>
+                        </button>
+                        <button type="button" onclick="inserirVariavel('${artigo_1}')" class="btn variable-btn">
+                            <span class="var-name">${artigo_1}</span>
+                            <span class="var-desc">Primeiro artigo</span>
+                        </button>
+                        <button type="button" onclick="inserirVariavel('${artigo_2}')" class="btn variable-btn">
+                            <span class="var-name">${artigo_2}</span>
+                            <span class="var-desc">Segundo artigo</span>
+                        </button>
+                        <button type="button" onclick="inserirVariavel('${artigo_3}')" class="btn variable-btn">
+                            <span class="var-name">${artigo_3}</span>
+                            <span class="var-desc">Terceiro artigo</span>
+                        </button>
+                    </div>
                 </div>
             </div>
             
-            <div class="mb-3">
-                <strong class="fs-7 text-muted">AUTOR & DATA</strong>
-                <div class="mt-2">
-                    <div class="mb-2"><code class="fs-8">${autor_nome}</code> <small class="text-muted">- Nome do autor</small></div>
-                    <div class="mb-2"><code class="fs-8">${data_atual}</code> <small class="text-muted">- Data atual</small></div>
+            <div class="bg-light p-3 rounded mt-3">
+                <div class="fs-8 text-muted mb-3">
+                    <strong>💡 Como usar:</strong> Clique na variável para copiá-la e use Ctrl+V para colar no documento.
                 </div>
-            </div>
-            
-            <div class="mb-3">
-                <strong class="fs-7 text-muted">LOCALIZAÇÃO</strong>
-                <div class="mt-2">
-                    <div class="mb-2"><code class="fs-8">${municipio}</code> <small class="text-muted">- Nome do município</small></div>
-                </div>
-            </div>
-            
-            <div class="bg-light p-3 rounded">
-                <div class="fs-8 text-muted">
-                    <strong>💡 Dica:</strong> Copie e cole as variáveis no documento. Elas serão substituídas automaticamente ao gerar documentos.
-                </div>
+                
+                <!-- Botão para inserir template exemplo -->
+                <button type="button" onclick="inserirTemplateExemplo()" class="btn btn-sm btn-success w-100">
+                    <i class="ki-duotone ki-document fs-6 me-1">
+                        <span class="path1"></span>
+                        <span class="path2"></span>
+                    </i>
+                    Inserir Template de Exemplo
+                </button>
             </div>
         </div>
     </div>
@@ -577,8 +881,136 @@ Tem certeza que deseja sair?`;
             }
         }
 
+        // Função melhorada para inserir variável no documento
+        function inserirVariavel(variavel) {
+            console.log('📝 Inserindo variável:', variavel);
+            
+            // Mostrar notificação de cópia
+            showCopyNotification(variavel);
+            
+            // Tentar copiar para área de transferência
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(variavel).then(() => {
+                    // Sucesso - notificação já mostrada
+                    console.log('✅ Variável copiada para clipboard');
+                }).catch((err) => {
+                    console.error('Erro ao copiar para clipboard:', err);
+                    // Fallback
+                    copiarTextoFallback(variavel);
+                });
+            } else {
+                // Fallback para browsers mais antigos
+                copiarTextoFallback(variavel);
+            }
+        }
+        
+        // Função para mostrar notificação de cópia
+        function showCopyNotification(text) {
+            const notification = document.getElementById('copyNotification');
+            const notificationText = document.getElementById('copyNotificationText');
+            
+            notificationText.textContent = `${text} copiado!`;
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 2000);
+        }
+        
+        // Função fallback para copiar texto
+        function copiarTextoFallback(texto) {
+            const textarea = document.createElement('textarea');
+            textarea.value = texto;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            textarea.style.pointerEvents = 'none';
+            document.body.appendChild(textarea);
+            textarea.select();
+            
+            try {
+                const success = document.execCommand('copy');
+                if (!success) {
+                    showToast(`Use Ctrl+C para copiar: ${texto}`, 'info', 6000);
+                }
+            } catch (err) {
+                console.error('Erro no fallback de cópia:', err);
+                showToast(`Copie manualmente: ${texto}`, 'info', 6000);
+            } finally {
+                document.body.removeChild(textarea);
+            }
+        }
+        
+        // Função para inserir template exemplo
+        function inserirTemplateExemplo() {
+            const templateExemplo = `MOÇÃO Nº \${numero_proposicao}
+
+Autor: \${autor_nome}
+Cargo: \${cargo_parlamentar}
+Partido: \${partido_parlamentar}
+Data: \${data_atual}
+Município: \${municipio}
+
+Ementa: \${ementa}
+
+\${texto}
+
+Justificativa:
+\${justificativa}
+
+\${nome_camara}
+\${data_extenso}
+
+_______________________________
+Assinatura do Autor`;
+            
+            // Mostrar notificação customizada
+            showCopyNotification('Template de exemplo');
+            
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(templateExemplo).then(() => {
+                    console.log('✅ Template exemplo copiado');
+                }).catch(() => {
+                    copiarTextoFallback(templateExemplo);
+                });
+            } else {
+                copiarTextoFallback(templateExemplo);
+            }
+        }
+
+        // Função de busca de variáveis
+        function setupVariableSearch() {
+            const searchInput = document.getElementById('variableSearch');
+            const categories = document.querySelectorAll('.variable-category');
+            
+            searchInput.addEventListener('input', function(e) {
+                const searchTerm = e.target.value.toLowerCase();
+                
+                categories.forEach(category => {
+                    const buttons = category.querySelectorAll('.variable-btn');
+                    let hasVisibleButtons = false;
+                    
+                    buttons.forEach(button => {
+                        const varName = button.querySelector('.var-name').textContent.toLowerCase();
+                        const varDesc = button.querySelector('.var-desc').textContent.toLowerCase();
+                        
+                        if (varName.includes(searchTerm) || varDesc.includes(searchTerm)) {
+                            button.style.display = 'block';
+                            hasVisibleButtons = true;
+                        } else {
+                            button.style.display = 'none';
+                        }
+                    });
+                    
+                    // Esconder categoria se não houver botões visíveis
+                    category.style.display = hasVisibleButtons ? 'block' : 'none';
+                });
+            });
+        }
+        
         // OnlyOffice Config
         document.addEventListener('DOMContentLoaded', function() {
+            // Configurar busca de variáveis
+            setupVariableSearch();
             const config = @json($config);
             
             console.log('OnlyOffice Config:', config);

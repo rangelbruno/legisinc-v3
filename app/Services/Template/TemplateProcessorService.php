@@ -12,20 +12,33 @@ use Illuminate\Support\Str;
 class TemplateProcessorService
 {
     private array $systemVariables = [
-        'data' => 'Data atual',
-        'nome_parlamentar' => 'Nome do parlamentar logado',
-        'cargo_parlamentar' => 'Cargo do parlamentar',
-        'email_parlamentar' => 'Email do parlamentar',
+        // Datas e horários
+        'data' => 'Data atual (formato: dd/mm/aaaa)',
+        'data_atual' => 'Data atual (formato: dd/mm/aaaa)',
         'data_extenso' => 'Data por extenso',
         'mes_atual' => 'Mês atual',
         'ano_atual' => 'Ano atual',
         'dia_atual' => 'Dia atual',
         'hora_atual' => 'Hora atual',
         'data_criacao' => 'Data de criação da proposição',
+        
+        // Proposição
         'numero_proposicao' => 'Número da proposição',
         'tipo_proposicao' => 'Tipo da proposição',
+        'status_proposicao' => 'Status atual da proposição',
+        
+        // Parlamentar
+        'nome_parlamentar' => 'Nome do parlamentar logado',
+        'autor_nome' => 'Nome do autor da proposição',
+        'cargo_parlamentar' => 'Cargo do parlamentar',
+        'email_parlamentar' => 'Email do parlamentar',
+        'partido_parlamentar' => 'Partido do parlamentar',
+        
+        // Instituição
         'nome_municipio' => 'Nome do município',
+        'municipio' => 'Nome do município',
         'nome_camara' => 'Nome da câmara',
+        'endereco_camara' => 'Endereço da câmara',
         'legislatura_atual' => 'Legislatura atual',
         'sessao_legislativa' => 'Sessão legislativa atual'
     ];
@@ -109,7 +122,7 @@ class TemplateProcessorService
      */
     public function extrairVariaveis(string $conteudo): array
     {
-        preg_match_all('/\{([a-zA-Z_][a-zA-Z0-9_]*)\}/', $conteudo, $matches);
+        preg_match_all('/\$\{([a-zA-Z_][a-zA-Z0-9_]*)\}/', $conteudo, $matches);
         return array_unique($matches[1]);
     }
 
@@ -130,12 +143,12 @@ class TemplateProcessorService
     private function substituirVariaveis(string $conteudo, array $variaveis): string
     {
         foreach ($variaveis as $variavel => $valor) {
-            $placeholder = '{' . $variavel . '}';
+            $placeholder = '${' . $variavel . '}';
             $conteudo = str_replace($placeholder, $valor, $conteudo);
         }
         
         // Limpar variáveis não substituídas (mostrar como placeholders)
-        $conteudo = preg_replace('/\{([a-zA-Z_][a-zA-Z0-9_]*)\}/', '[{$1}]', $conteudo);
+        $conteudo = preg_replace('/\$\{([a-zA-Z_][a-zA-Z0-9_]*)\}/', '[${$1}]', $conteudo);
         
         return $conteudo;
     }
@@ -148,21 +161,37 @@ class TemplateProcessorService
         $user = Auth::user();
         $agora = Carbon::now();
         
+        // Obter autor da proposição (pode ser diferente do usuário logado)
+        $autor = $proposicao->autor ?? $user;
+        
         return [
+            // Datas e horários
             'data' => $agora->format('d/m/Y'),
-            'nome_parlamentar' => $user->name ?? '[NOME DO PARLAMENTAR]',
-            'cargo_parlamentar' => $this->obterCargoParlamentar($user),
-            'email_parlamentar' => $user->email ?? '[EMAIL DO PARLAMENTAR]',
+            'data_atual' => $agora->format('d/m/Y'),
             'data_extenso' => $this->formatarDataExtenso($agora),
             'mes_atual' => $agora->format('m'),
             'ano_atual' => $agora->format('Y'),
             'dia_atual' => $agora->format('d'),
             'hora_atual' => $agora->format('H:i'),
             'data_criacao' => $proposicao->created_at?->format('d/m/Y') ?? $agora->format('d/m/Y'),
+            
+            // Proposição
             'numero_proposicao' => $this->gerarNumeroProposicao($proposicao),
             'tipo_proposicao' => $proposicao->tipo_formatado ?? '[TIPO DA PROPOSIÇÃO]',
+            'status_proposicao' => $proposicao->status ?? 'rascunho',
+            
+            // Parlamentar / Autor
+            'nome_parlamentar' => $user->name ?? '[NOME DO PARLAMENTAR]',
+            'autor_nome' => $autor->name ?? '[NOME DO AUTOR]',
+            'cargo_parlamentar' => $this->obterCargoParlamentar($user),
+            'email_parlamentar' => $user->email ?? '[EMAIL DO PARLAMENTAR]',
+            'partido_parlamentar' => $this->obterPartidoParlamentar($user),
+            
+            // Instituição
             'nome_municipio' => config('app.municipio', 'São Paulo'),
+            'municipio' => config('app.municipio', 'São Paulo'),
             'nome_camara' => config('app.nome_camara', 'Câmara Municipal'),
+            'endereco_camara' => config('app.endereco_camara', 'Endereço da Câmara'),
             'legislatura_atual' => config('app.legislatura', '2021-2024'),
             'sessao_legislativa' => $agora->format('Y')
         ];
@@ -188,15 +217,24 @@ class TemplateProcessorService
     private function obterConteudoTemplate(TipoProposicaoTemplate $template): string
     {
         // Se template tem arquivo físico
-        if ($template->arquivo_path && \Storage::disk('public')->exists($template->arquivo_path)) {
-            $conteudo = \Storage::disk('public')->get($template->arquivo_path);
+        if ($template->arquivo_path) {
+            $conteudo = null;
             
-            // Se é RTF, extrair texto simples
-            if (Str::endsWith($template->arquivo_path, '.rtf')) {
-                return $this->extrairTextoRTF($conteudo);
+            // Verificar primeiro no disco local (storage/app/private/)
+            if (\Storage::disk('local')->exists($template->arquivo_path)) {
+                $conteudo = \Storage::disk('local')->get($template->arquivo_path);
+            } elseif (\Storage::disk('public')->exists($template->arquivo_path)) {
+                $conteudo = \Storage::disk('public')->get($template->arquivo_path);
             }
             
-            return $conteudo;
+            if ($conteudo) {
+                // Se é RTF, extrair texto simples
+                if (Str::endsWith($template->arquivo_path, '.rtf')) {
+                    return $this->extrairTextoRTF($conteudo);
+                }
+                
+                return $conteudo;
+            }
         }
         
         // Template básico se não houver arquivo
@@ -236,6 +274,26 @@ class TemplateProcessorService
     }
 
     /**
+     * Obter partido do parlamentar
+     */
+    private function obterPartidoParlamentar(?User $user): string
+    {
+        if (!$user) return '[PARTIDO]';
+        
+        // Verificar se existe campo partido no usuário
+        if (isset($user->partido)) {
+            return $user->partido;
+        }
+        
+        // Verificar se existe relação com modelo Parlamentar
+        if (method_exists($user, 'parlamentar') && $user->parlamentar) {
+            return $user->parlamentar->partido ?? '[PARTIDO]';
+        }
+        
+        return '[PARTIDO]';
+    }
+
+    /**
      * Formatar data por extenso
      */
     private function formatarDataExtenso(Carbon $data): string
@@ -271,20 +329,33 @@ class TemplateProcessorService
         
         return array_merge(
             [
+                // Datas e horários
                 'data' => $agora->format('d/m/Y'),
-                'nome_parlamentar' => 'João da Silva',
-                'cargo_parlamentar' => 'Vereador',
-                'email_parlamentar' => 'joao.silva@camara.gov.br',
+                'data_atual' => $agora->format('d/m/Y'),
                 'data_extenso' => $this->formatarDataExtenso($agora),
                 'mes_atual' => $agora->format('m'),
                 'ano_atual' => $agora->format('Y'),
                 'dia_atual' => $agora->format('d'),
                 'hora_atual' => $agora->format('H:i'),
                 'data_criacao' => $agora->format('d/m/Y'),
+                
+                // Proposição
                 'numero_proposicao' => '0001/' . $agora->format('Y'),
                 'tipo_proposicao' => 'Projeto de Lei Ordinária',
+                'status_proposicao' => 'Rascunho',
+                
+                // Parlamentar / Autor
+                'nome_parlamentar' => 'João da Silva',
+                'autor_nome' => 'João da Silva',
+                'cargo_parlamentar' => 'Vereador',
+                'email_parlamentar' => 'joao.silva@camara.gov.br',
+                'partido_parlamentar' => 'PSB',
+                
+                // Instituição
                 'nome_municipio' => 'São Paulo',
+                'municipio' => 'São Paulo',
                 'nome_camara' => 'Câmara Municipal de São Paulo',
+                'endereco_camara' => 'Viaduto Jacareí, 100 - Bela Vista',
                 'legislatura_atual' => '2021-2024',
                 'sessao_legislativa' => $agora->format('Y')
             ],
@@ -304,25 +375,25 @@ class TemplateProcessorService
     /**
      * Obter template básico
      */
-    private function getTemplateBasico(string $tipoProposicao): string
+    private function getTemplateBasico(string $tipoNome): string
     {
-        return "# {tipo_proposicao} Nº {numero_proposicao}
+        return "# ${tipo_proposicao} Nº ${numero_proposicao}
 
-**Data:** {data}
-**Autor:** {nome_parlamentar} - {cargo_parlamentar}
+**Data:** ${data}
+**Autor:** ${nome_parlamentar} - ${cargo_parlamentar}
 
 ## EMENTA
-{ementa}
+${ementa}
 
 ## TEXTO
 
-{texto}
+${texto}
 
 ## JUSTIFICATIVA
-{justificativa}
+${justificativa}
 
 ---
-{nome_camara}
-{data_extenso}";
+${nome_camara}
+${data_extenso}";
     }
 }

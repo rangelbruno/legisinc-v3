@@ -79,7 +79,12 @@
                                                     <span class="path1"></span>
                                                     <span class="path2"></span>
                                                 </i>
-                                                {{ $template ? $template->nome : 'Template em Branco' }}
+                                                @if($template)
+                                                    {{ $template->tipoProposicao->nome ?? 'Template Personalizado' }}
+                                                    <small class="text-success ms-2">(Template do Admin)</small>
+                                                @else
+                                                    Template em Branco
+                                                @endif
                                             </span>
                                         </div>
                                     </div>
@@ -113,7 +118,11 @@
                                                 <span class="path1"></span>
                                                 <span class="path2"></span>
                                             </i>
-                                            Abrir Editor OnlyOffice
+                                            @if($template)
+                                                Abrir Editor com Template Admin
+                                            @else
+                                                Abrir Editor OnlyOffice
+                                            @endif
                                         </button>
                                         <div class="fs-7 text-muted mb-3">Editor será aberto em nova aba</div>
                                         
@@ -335,7 +344,11 @@ $(document).ready(function() {
         $(this).prop('disabled', true);
         
         // Mostrar mensagem
-        toastr.info('Abrindo editor em nova aba...');
+        @if($template)
+            toastr.info('Abrindo editor com template do administrador...');
+        @else
+            toastr.info('Abrindo editor em nova aba...');
+        @endif
         
         // Abrir editor OnlyOffice diretamente em nova aba
         const url = `/proposicoes/${proposicaoId}/editar-onlyoffice/${templateId}`;

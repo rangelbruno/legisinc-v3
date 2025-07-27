@@ -199,9 +199,27 @@ class OnlyOfficeService
                 return;
             }
 
+            // Validar e possivelmente combinar conteúdo do template
+            $conteudo = $response->body();
+            $conteudoFinal = $this->prepararConteudoTemplate($conteudo, $template);
+            
+            if (!$conteudoFinal) {
+                \Log::warning('Template rejeitado - não foi possível preparar conteúdo válido', [
+                    'template_id' => $template->id,
+                    'tipo_proposicao_id' => $template->tipo_proposicao_id
+                ]);
+                return;
+            }
+            
+            // Usar conteúdo preparado em vez do original
+            $conteudo = $conteudoFinal;
+            
             // Salvar arquivo com extensão RTF
             $nomeArquivo = "template_{$template->tipo_proposicao_id}.rtf";
             $path = "templates/{$nomeArquivo}";
+            
+            // Fazer backup do template atual antes de sobrescrever
+            $this->backupTemplateAtual($template);
             
             // Usar transação para garantir atomicidade e performance
             \DB::transaction(function() use ($template, $path, $response) {
@@ -457,6 +475,245 @@ class OnlyOfficeService
         }
         
         return 'users';
+    }
+
+    /**
+     * Preparar conteúdo do template: combinar imagens com variáveis se necessário
+     */
+    private function prepararConteudoTemplate(string $conteudo, TipoProposicaoTemplate $template): ?string
+    {
+        // Verificar se o conteúdo atual tem variáveis
+        $temVariaveis = preg_match('/\$\{[^}]+\}/', $conteudo);
+        
+        // Se tem variáveis, usar como está
+        if ($temVariaveis) {
+            \Log::info('Template mantém variáveis após edição', [
+                'template_id' => $template->id,
+                'tamanho_conteudo' => strlen($conteudo)
+            ]);
+            return $conteudo;
+        }
+        
+        // Se não tem variáveis, mas tem conteúdo significativo (imagens), tentar combinar
+        if (strlen($conteudo) > 100000) {
+            \Log::info('Template sem variáveis mas com conteúdo significativo - tentando combinar', [
+                'template_id' => $template->id,
+                'tamanho_conteudo' => strlen($conteudo)
+            ]);
+            
+            return $this->combinarImagemComVariaveis($conteudo, $template);
+        }
+        
+        // Conteúdo muito pequeno e sem variáveis - rejeitar
+        return null;
+    }
+    
+    /**
+     * Combinar template com imagem + variáveis essenciais
+     */
+    private function combinarImagemComVariaveis(string $conteudoComImagem, TipoProposicaoTemplate $template): string
+    {
+        // Primeiro, tentar buscar se existem variáveis textuais óbvias no conteúdo
+        // que possam ser reutilizadas ao invés de adicionar novas
+        
+        // Variáveis básicas que tentaremos inserir no conteúdo existente
+        $variaveisBasicas = [
+            'numero_proposicao' => '${numero_proposicao}',
+            'data_atual' => '${data_atual}',
+            'autor_nome' => '${autor_nome}',
+            'municipio' => '${municipio}',
+            'ementa' => '${ementa}',
+            'texto' => '${texto}'
+        ];
+        
+        $conteudoModificado = $conteudoComImagem;
+        
+        // Tentar substituir padrões comuns de texto por variáveis
+        $substituicoes = [
+            // Padrões de número
+            '/\bN[°º]?\s*\d+\/\d+/iu' => '${numero_proposicao}',
+            '/\bmoção\s+n[°º]?\s*\d+/iu' => 'MOÇÃO Nº ${numero_proposicao}',
+            
+            // Padrões de data
+            '/\b\d{1,2}\/\d{1,2}\/\d{4}\b/' => '${data_atual}',
+            
+            // Padrões de município específico (se encontrar "São Paulo", trocar por variável)
+            '/\bSão Paulo\b/iu' => '${municipio}',
+            
+            // Padrões de ementa e texto (mais complexo, vamos ser conservadores)
+            '/\bEmenta:\s*([^\\\\]+?)\\\\par/ius' => 'EMENTA:\\par\\par${ementa}\\par',
+            '/\bTexto:\s*([^\\\\]+?)\\\\par/ius' => 'TEXTO:\\par\\par${texto}\\par',
+        ];
+        
+        $variaveisInseridas = 0;
+        foreach ($substituicoes as $padrao => $variavel) {
+            if (preg_match($padrao, $conteudoModificado)) {
+                $conteudoModificado = preg_replace($padrao, $variavel, $conteudoModificado);
+                $variaveisInseridas++;
+            }
+        }
+        
+        // Se conseguimos inserir pelo menos algumas variáveis, usar o conteúdo modificado
+        if ($variaveisInseridas > 0) {
+            \Log::info('Template com variáveis inseridas no conteúdo original', [
+                'template_id' => $template->id,
+                'variaveis_inseridas' => $variaveisInseridas,
+                'tamanho_original' => strlen($conteudoComImagem),
+                'tamanho_final' => strlen($conteudoModificado)
+            ]);
+            
+            return $conteudoModificado;
+        }
+        
+        // Se não conseguiu inserir variáveis no conteúdo original,
+        // usar a abordagem de template limpo com variáveis
+        $templateComVariaveis = '{\rtf1\ansi\ansicpg1252\deff0\deflang1046 {\fonttbl {\f0 Times New Roman;}}
+{\colortbl;\red0\green0\blue0;}
+\f0\fs24
+
+{\qc\b\fs28 MOÇÃO Nº ${numero_proposicao}\par}
+\par
+{\qc Data: ${data_atual}\par}
+{\qc Autor: ${autor_nome}\par}
+{\qc Município: ${municipio}\par}
+\par
+\par
+{\b EMENTA:\par}
+\par
+${ementa}
+\par
+\par
+{\b TEXTO:\par}
+\par
+${texto}
+\par
+\par
+{\qr Câmara Municipal de ${municipio}\par}
+{\qr ${data_atual}\par}
+}';
+        
+        \Log::info('Template substituído por versão limpa com variáveis', [
+            'template_id' => $template->id,
+            'tamanho_original' => strlen($conteudoComImagem),
+            'tamanho_final' => strlen($templateComVariaveis),
+            'motivo' => 'Não foi possível inserir variáveis no conteúdo original'
+        ]);
+        
+        return $templateComVariaveis;
+    }
+    
+    /**
+     * Validar se o conteúdo do template contém variáveis essenciais
+     */
+    private function validarConteudoTemplate(string $conteudo, TipoProposicaoTemplate $template): bool
+    {
+        // Verificar se não é um arquivo muito pequeno (possível erro)
+        if (strlen($conteudo) < 100) {
+            \Log::warning('Template muito pequeno, possível erro', [
+                'template_id' => $template->id,
+                'tamanho_conteudo' => strlen($conteudo)
+            ]);
+            return false;
+        }
+        
+        // Verificar se contém pelo menos uma variável (mais flexível)
+        $temVariavel = preg_match('/\$\{[^}]+\}/', $conteudo);
+        
+        // Se não tem nenhuma variável, verificar se tem conteúdo significativo (imagens, texto, etc)
+        if (!$temVariavel) {
+            // Arquivo muito grande pode conter imagens e ainda ser válido
+            if (strlen($conteudo) > 100000) {
+                \Log::info('Template sem variáveis mas com conteúdo significativo (possíveis imagens)', [
+                    'template_id' => $template->id,
+                    'tamanho_conteudo' => strlen($conteudo)
+                ]);
+                return true;
+            }
+            
+            \Log::warning('Template sem variáveis e conteúdo insuficiente', [
+                'template_id' => $template->id,
+                'tamanho_conteudo' => strlen($conteudo)
+            ]);
+            return false;
+        }
+        
+        \Log::info('Template validado com sucesso', [
+            'template_id' => $template->id,
+            'tem_variavel' => $temVariavel,
+            'tamanho_conteudo' => strlen($conteudo)
+        ]);
+        
+        return true;
+    }
+    
+    /**
+     * Fazer backup do template atual antes de sobrescrever
+     */
+    private function backupTemplateAtual(TipoProposicaoTemplate $template): void
+    {
+        try {
+            if ($template->arquivo_path && \Storage::exists($template->arquivo_path)) {
+                $conteudoAtual = \Storage::get($template->arquivo_path);
+                
+                // Criar nome do backup com timestamp
+                $backupPath = str_replace('.rtf', '_backup_' . date('Y_m_d_His') . '.rtf', $template->arquivo_path);
+                
+                // Salvar backup
+                \Storage::put($backupPath, $conteudoAtual);
+                
+                \Log::info('Backup do template criado antes da atualização', [
+                    'template_id' => $template->id,
+                    'backup_path' => $backupPath,
+                    'tamanho_original' => strlen($conteudoAtual)
+                ]);
+                
+                // Limpar backups antigos (manter apenas os 5 mais recentes)
+                $this->limparBackupsAntigos($template);
+            }
+            
+        } catch (\Exception $e) {
+            \Log::error('Erro ao criar backup do template', [
+                'template_id' => $template->id,
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+    
+    /**
+     * Limpar backups antigos, mantendo apenas os 5 mais recentes
+     */
+    private function limparBackupsAntigos(TipoProposicaoTemplate $template): void
+    {
+        try {
+            $templateBaseName = pathinfo($template->arquivo_path, PATHINFO_FILENAME);
+            $templateDir = dirname($template->arquivo_path);
+            
+            // Buscar todos os backups existentes
+            $arquivos = \Storage::files($templateDir);
+            $backupsDoTemplate = array_filter($arquivos, function($arquivo) use ($templateBaseName) {
+                return strpos(basename($arquivo), $templateBaseName . '_backup_') === 0;
+            });
+            
+            // Ordenar por data de modificação (mais recente primeiro)
+            usort($backupsDoTemplate, function($a, $b) {
+                return \Storage::lastModified($b) - \Storage::lastModified($a);
+            });
+            
+            // Remover backups além dos 5 mais recentes
+            if (count($backupsDoTemplate) > 5) {
+                $backupsParaRemover = array_slice($backupsDoTemplate, 5);
+                foreach ($backupsParaRemover as $backup) {
+                    \Storage::delete($backup);
+                    \Log::info('Backup antigo removido', ['backup_path' => $backup]);
+                }
+            }
+            
+        } catch (\Exception $e) {
+            \Log::error('Erro ao limpar backups antigos', [
+                'template_id' => $template->id,
+                'error' => $e->getMessage()
+            ]);
+        }
     }
 
     /**
