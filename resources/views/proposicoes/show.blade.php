@@ -141,10 +141,75 @@
                                 <i class="fas fa-trash me-2"></i>Excluir Rascunho
                             </button>
                         </div>
+                    @elseif($proposicao->status === 'salvando')
+                        <div class="alert alert-warning mb-3">
+                            <i class="fas fa-save me-2"></i>
+                            <strong>Salvando:</strong> Proposição está sendo preparada.
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-success" onclick="enviarLegislativo()">
+                                <i class="fas fa-paper-plane me-2"></i>Enviar para Legislativo
+                            </button>
+                            <a href="{{ route('proposicoes.editar-texto', $proposicao->id) }}" class="btn btn-outline-primary">
+                                <i class="fas fa-edit me-2"></i>Continuar Editando
+                            </a>
+                        </div>
+                    @elseif($proposicao->status === 'enviado_legislativo')
+                        <div class="alert alert-info mb-3">
+                            <i class="fas fa-clock me-2"></i>
+                            <strong>Aguardando Legislativo:</strong> Proposição enviada e aguardando análise.
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-outline-info" disabled>
+                                <i class="fas fa-hourglass-half me-2"></i>Aguardando Retorno
+                            </button>
+                            <button class="btn btn-outline-secondary btn-sm" onclick="consultarStatus()">
+                                <i class="fas fa-search me-2"></i>Consultar Status
+                            </button>
+                        </div>
                     @elseif($proposicao->status === 'analise')
-                        <div class="alert alert-info">
-                            <i class="fas fa-info-circle me-2"></i>
-                            <strong>Em análise:</strong> Aguardando análise do legislativo.
+                        <div class="alert alert-primary mb-3">
+                            <i class="fas fa-search me-2"></i>
+                            <strong>Em Análise:</strong> Legislativo está analisando a proposição.
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-outline-primary" disabled>
+                                <i class="fas fa-eye me-2"></i>Em Análise
+                            </button>
+                            <button class="btn btn-outline-secondary btn-sm" onclick="consultarStatus()">
+                                <i class="fas fa-info-circle me-2"></i>Ver Detalhes
+                            </button>
+                        </div>
+                    @elseif($proposicao->status === 'retornado')
+                        <div class="alert alert-warning mb-3">
+                            <i class="fas fa-undo me-2"></i>
+                            <strong>Retornado:</strong> Proposição retornada para ajustes.
+                        </div>
+                        <div class="d-grid gap-2">
+                            <a href="{{ route('proposicoes.editar-texto', $proposicao->id) }}" class="btn btn-warning">
+                                <i class="fas fa-edit me-2"></i>Fazer Ajustes
+                            </a>
+                            <button class="btn btn-outline-info btn-sm" onclick="verComentarios()">
+                                <i class="fas fa-comments me-2"></i>Ver Comentários
+                            </button>
+                        </div>
+                    @elseif($proposicao->status === 'aprovado')
+                        <div class="alert alert-success mb-3">
+                            <i class="fas fa-check-circle me-2"></i>
+                            <strong>Aprovado:</strong> Proposição aprovada pelo Legislativo.
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-success" disabled>
+                                <i class="fas fa-thumbs-up me-2"></i>Aprovado
+                            </button>
+                            <button class="btn btn-outline-primary btn-sm" onclick="baixarDocumento()">
+                                <i class="fas fa-download me-2"></i>Baixar Documento
+                            </button>
+                        </div>
+                    @else
+                        <div class="alert alert-secondary">
+                            <i class="fas fa-question-circle me-2"></i>
+                            Status: {{ ucfirst($proposicao->status) }}
                         </div>
                     @endif
 
@@ -402,6 +467,205 @@
         </div>
     </div>
 </div>
+
+<!-- Modal - Consultar Status -->
+<div class="modal fade" id="modalConsultarStatus" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="fw-bold">
+                    <i class="fas fa-search me-2 text-primary"></i>
+                    Status da Proposição #{{ $proposicao->id }}
+                </h2>
+                <div class="btn btn-icon btn-sm btn-active-icon-primary" data-bs-dismiss="modal">
+                    <i class="ki-duotone ki-cross fs-1">
+                        <span class="path1"></span>
+                        <span class="path2"></span>
+                    </i>
+                </div>
+            </div>
+            <div class="modal-body py-10 px-lg-17">
+                <!-- Status Atual -->
+                <div class="card mb-6">
+                    <div class="card-body p-6">
+                        <div class="d-flex align-items-center mb-4">
+                            <div class="symbol symbol-50px me-4">
+                                <div class="symbol-label bg-light-primary">
+                                    <i class="fas fa-info-circle fs-2 text-primary"></i>
+                                </div>
+                            </div>
+                            <div class="flex-grow-1">
+                                <h4 class="text-gray-900 fw-bold mb-1">Status Atual</h4>
+                                <span class="badge badge-light-{{ $proposicao->status === 'enviado_legislativo' ? 'info' : ($proposicao->status === 'aprovado' ? 'success' : 'warning') }} fs-6">
+                                    {{ ucfirst(str_replace('_', ' ', $proposicao->status)) }}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="text-gray-700">
+                            @switch($proposicao->status)
+                                @case('rascunho')
+                                    A proposição está em elaboração e ainda não foi enviada.
+                                    @break
+                                @case('salvando')
+                                    A proposição está sendo preparada para envio.
+                                    @break
+                                @case('enviado_legislativo')
+                                    A proposição foi enviada para o Legislativo e está aguardando análise inicial.
+                                    @break
+                                @case('analise')
+                                    O Legislativo está analisando a proposição e verificando sua conformidade.
+                                    @break
+                                @case('retornado')
+                                    A proposição foi retornada para ajustes pelo autor.
+                                    @break
+                                @case('aprovado')
+                                    A proposição foi aprovada e está pronta para tramitação.
+                                    @break
+                                @default
+                                    Status personalizado: {{ $proposicao->status }}
+                            @endswitch
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Timeline de Status -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title">
+                            <i class="fas fa-history me-2"></i>
+                            Fluxo de Tramitação
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="timeline timeline-border-dashed">
+                            <!-- Rascunho -->
+                            <div class="timeline-item">
+                                <div class="timeline-line w-40px"></div>
+                                <div class="timeline-icon symbol symbol-circle symbol-40px me-4">
+                                    <div class="symbol-label bg-light-{{ in_array($proposicao->status, ['rascunho', 'salvando', 'enviado_legislativo', 'analise', 'retornado', 'aprovado']) ? 'success' : 'secondary' }}">
+                                        <i class="fas fa-{{ in_array($proposicao->status, ['rascunho', 'salvando', 'enviado_legislativo', 'analise', 'retornado', 'aprovado']) ? 'check' : 'circle' }} fs-2 text-{{ in_array($proposicao->status, ['rascunho', 'salvando', 'enviado_legislativo', 'analise', 'retornado', 'aprovado']) ? 'success' : 'secondary' }}"></i>
+                                    </div>
+                                </div>
+                                <div class="timeline-content mb-10 mt-n1">
+                                    <div class="pe-3 mb-5">
+                                        <div class="fs-5 fw-semibold mb-2">1. Criação da Proposição</div>
+                                        <div class="d-flex align-items-center mt-1 fs-6">
+                                            <div class="text-muted me-2 fs-7">{{ date('d/m/Y H:i', strtotime($proposicao->created_at ?? now())) }}</div>
+                                        </div>
+                                        <div class="text-gray-700 fw-normal">Proposição criada como rascunho pelo autor.</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Enviado ao Legislativo -->
+                            <div class="timeline-item">
+                                <div class="timeline-line w-40px"></div>
+                                <div class="timeline-icon symbol symbol-circle symbol-40px me-4">
+                                    <div class="symbol-label bg-light-{{ in_array($proposicao->status, ['enviado_legislativo', 'analise', 'retornado', 'aprovado']) ? 'info' : 'secondary' }}">
+                                        <i class="fas fa-{{ in_array($proposicao->status, ['enviado_legislativo', 'analise', 'retornado', 'aprovado']) ? 'paper-plane' : 'circle' }} fs-2 text-{{ in_array($proposicao->status, ['enviado_legislativo', 'analise', 'retornado', 'aprovado']) ? 'info' : 'secondary' }}"></i>
+                                    </div>
+                                </div>
+                                <div class="timeline-content mb-10 mt-n1">
+                                    <div class="pe-3 mb-5">
+                                        <div class="fs-5 fw-semibold mb-2">2. Envio ao Legislativo</div>
+                                        <div class="d-flex align-items-center mt-1 fs-6">
+                                            <div class="text-muted me-2 fs-7">
+                                                @if(in_array($proposicao->status, ['enviado_legislativo', 'analise', 'retornado', 'aprovado']))
+                                                    {{ date('d/m/Y H:i') }}
+                                                @else
+                                                    Pendente
+                                                @endif
+                                            </div>
+                                        </div>
+                                        <div class="text-gray-700 fw-normal">
+                                            @if(in_array($proposicao->status, ['enviado_legislativo', 'analise', 'retornado', 'aprovado']))
+                                                Proposição enviada para análise do Legislativo.
+                                            @else
+                                                Aguardando envio da proposição.
+                                            @endif
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Em Análise -->
+                            <div class="timeline-item">
+                                <div class="timeline-line w-40px"></div>
+                                <div class="timeline-icon symbol symbol-circle symbol-40px me-4">
+                                    <div class="symbol-label bg-light-{{ in_array($proposicao->status, ['analise', 'retornado', 'aprovado']) ? 'primary' : 'secondary' }}">
+                                        <i class="fas fa-{{ in_array($proposicao->status, ['analise', 'retornado', 'aprovado']) ? 'search' : 'circle' }} fs-2 text-{{ in_array($proposicao->status, ['analise', 'retornado', 'aprovado']) ? 'primary' : 'secondary' }}"></i>
+                                    </div>
+                                </div>
+                                <div class="timeline-content mb-10 mt-n1">
+                                    <div class="pe-3 mb-5">
+                                        <div class="fs-5 fw-semibold mb-2">3. Análise Técnica</div>
+                                        <div class="d-flex align-items-center mt-1 fs-6">
+                                            <div class="text-muted me-2 fs-7">
+                                                @if(in_array($proposicao->status, ['analise', 'retornado', 'aprovado']))
+                                                    {{ date('d/m/Y H:i') }}
+                                                @else
+                                                    Pendente
+                                                @endif
+                                            </div>
+                                        </div>
+                                        <div class="text-gray-700 fw-normal">
+                                            @if($proposicao->status === 'analise')
+                                                Proposição está sendo analisada pela equipe técnica.
+                                            @elseif(in_array($proposicao->status, ['retornado', 'aprovado']))
+                                                Análise técnica concluída.
+                                            @else
+                                                Aguardando início da análise técnica.
+                                            @endif
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Resultado -->
+                            <div class="timeline-item">
+                                <div class="timeline-icon symbol symbol-circle symbol-40px me-4">
+                                    <div class="symbol-label bg-light-{{ $proposicao->status === 'aprovado' ? 'success' : ($proposicao->status === 'retornado' ? 'warning' : 'secondary') }}">
+                                        <i class="fas fa-{{ $proposicao->status === 'aprovado' ? 'check-circle' : ($proposicao->status === 'retornado' ? 'undo' : 'circle') }} fs-2 text-{{ $proposicao->status === 'aprovado' ? 'success' : ($proposicao->status === 'retornado' ? 'warning' : 'secondary') }}"></i>
+                                    </div>
+                                </div>
+                                <div class="timeline-content mb-10 mt-n1">
+                                    <div class="pe-3 mb-5">
+                                        <div class="fs-5 fw-semibold mb-2">4. Resultado da Análise</div>
+                                        <div class="d-flex align-items-center mt-1 fs-6">
+                                            <div class="text-muted me-2 fs-7">
+                                                @if(in_array($proposicao->status, ['aprovado', 'retornado']))
+                                                    {{ date('d/m/Y H:i') }}
+                                                @else
+                                                    Pendente
+                                                @endif
+                                            </div>
+                                        </div>
+                                        <div class="text-gray-700 fw-normal">
+                                            @if($proposicao->status === 'aprovado')
+                                                Proposição aprovada e pronta para tramitação.
+                                            @elseif($proposicao->status === 'retornado')
+                                                Proposição retornada para ajustes.
+                                            @else
+                                                Aguardando conclusão da análise.
+                                            @endif
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Fechar</button>
+                <button type="button" class="btn btn-primary" onclick="atualizarStatus()">
+                    <i class="fas fa-sync-alt me-2"></i>Atualizar Status
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @endsection
 
 @push('scripts')
@@ -570,4 +834,90 @@ window.addEventListener('afterprint', function() {
     }
 }
 </style>
+@endpush
+
+@push('scripts')
+<script>
+function enviarLegislativo() {
+    if (confirm('Tem certeza que deseja enviar esta proposição para o Legislativo?')) {
+        // Simular envio - aqui você implementaria a lógica real
+        toastr.success('Proposição enviada para o Legislativo!');
+        setTimeout(() => {
+            location.reload();
+        }, 1500);
+    }
+}
+
+function consultarStatus() {
+    // Abrir modal com status detalhado
+    $('#modalConsultarStatus').modal('show');
+}
+
+function atualizarStatus() {
+    // Simular atualização de status do legislativo
+    const proposicaoId = {{ $proposicao->id }};
+    
+    // Desabilitar botão e mostrar loading
+    const btn = document.querySelector('#modalConsultarStatus .btn-primary');
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Atualizando...';
+    
+    // Simular requisição AJAX
+    setTimeout(() => {
+        toastr.success('Status atualizado com sucesso!');
+        
+        // Reabilitar botão
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+        
+        // Fechar modal e recarregar página para mostrar mudanças
+        $('#modalConsultarStatus').modal('hide');
+        setTimeout(() => {
+            location.reload();
+        }, 1000);
+    }, 2000);
+}
+
+function verComentarios() {
+    // Implementar visualização de comentários
+    toastr.info('Carregando comentários do Legislativo...');
+    // Aqui você abriria um modal ou redirecionaria para página de comentários
+}
+
+function baixarDocumento() {
+    // Implementar download do documento aprovado
+    toastr.success('Iniciando download do documento...');
+    // Aqui você faria o download do PDF final
+}
+
+function verHistorico() {
+    // Implementar visualização completa do histórico
+    toastr.info('Carregando histórico completo...');
+    // Aqui você redirecionaria para página de histórico detalhado
+}
+
+function compartilhar() {
+    // Implementar compartilhamento
+    if (navigator.share) {
+        navigator.share({
+            title: 'Proposição #{{ $proposicao->id }}',
+            text: '{{ $proposicao->ementa }}',
+            url: window.location.href
+        });
+    } else {
+        // Fallback para navegadores que não suportam Web Share API
+        navigator.clipboard.writeText(window.location.href).then(() => {
+            toastr.success('Link copiado para a área de transferência!');
+        });
+    }
+}
+
+function excluirProposicao() {
+    if (confirm('Tem certeza que deseja excluir este rascunho? Esta ação não pode ser desfeita.')) {
+        // Implementar exclusão
+        toastr.warning('Funcionalidade de exclusão será implementada');
+    }
+}
+</script>
 @endpush

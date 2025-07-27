@@ -523,45 +523,11 @@ class ProposicaoController extends Controller
      */
     public function show($proposicaoId)
     {
-        // TODO: Implement proper authorization and model loading
+        // Buscar proposição real do banco de dados
+        $proposicao = Proposicao::findOrFail($proposicaoId);
+        
+        // TODO: Implement proper authorization
         // $this->authorize('view', $proposicao);
-        
-        // Usar os mesmos dados mock consistentes
-        $proposicoesBase = [
-            1 => [
-                'tipo' => 'projeto_lei_ordinaria',
-                'ementa' => 'Dispõe sobre a regulamentação do uso de bicicletas em vias públicas',
-                'status' => 'rascunho'
-            ],
-            2 => [
-                'tipo' => 'projeto_lei_complementar',
-                'ementa' => 'Altera a Lei Orgânica do Município para incluir dispositivos sobre transparência',
-                'status' => 'rascunho'
-            ],
-            3 => [
-                'tipo' => 'indicacao',
-                'ementa' => 'Indica ao Poder Executivo a necessidade de melhorias na iluminação pública',
-                'status' => 'rascunho'
-            ],
-            4 => [
-                'tipo' => 'projeto_lei_ordinaria',
-                'ementa' => 'Institui o Programa Municipal de Compostagem de Resíduos Orgânicos',
-                'status' => 'aprovada'
-            ]
-        ];
-        
-        $dados = $proposicoesBase[$proposicaoId] ?? [
-            'tipo' => 'projeto_lei_ordinaria',
-            'ementa' => 'Exemplo de proposição',
-            'status' => 'rascunho'
-        ];
-        
-        $proposicao = (object) array_merge([
-            'id' => $proposicaoId,
-            'conteudo' => 'Conteúdo da proposição...',
-            'autor' => Auth::user(),
-            'created_at' => now()
-        ], $dados);
         
         return view('proposicoes.show', compact('proposicao'));
     }
