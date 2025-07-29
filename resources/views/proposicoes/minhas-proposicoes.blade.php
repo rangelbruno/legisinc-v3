@@ -28,12 +28,20 @@
     <!--end::Toolbar-->
 
     <!--begin::Stats-->
-    <div class="row g-5 g-xl-10 mb-5 mb-xl-10">
-        <div class="col-md-6 col-lg-6 col-xl-6 col-xxl-3 mb-md-5 mb-xl-10">
-            <div class="card card-flush bgi-no-repeat bgi-size-contain bgi-position-x-end h-md-50 mb-5 mb-xl-10" style="background-color: #F1416C;background-image:url('{{ asset('assets/media/patterns/vector-1.png') }}')">
+    <div class="row g-5 g-xl-10 mb-3">
+        <div class="col-md-6 col-lg-6 col-xl-6 col-xxl-3 mb-3">
+            <div class="card card-flush bgi-no-repeat bgi-size-contain bgi-position-x-end mb-3" style="background-color: #F1416C;background-image:url('{{ asset('assets/media/patterns/vector-1.png') }}'); min-height: 150px;">
                 <div class="card-header pt-5">
                     <div class="card-title d-flex flex-column">
                         <div class="d-flex align-items-center">
+                            <div class="symbol symbol-30px me-3">
+                                <div class="symbol-label bg-white bg-opacity-20">
+                                    <i class="ki-duotone ki-document fs-3 text-white">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                    </i>
+                                </div>
+                            </div>
                             <span class="fs-4 fw-semibold text-white me-1 align-self-start" data-stat="total">{{ $proposicoes->total() }}</span>
                         </div>
                         <span class="text-white opacity-75 pt-1 fw-semibold fs-6">Total de Proposições</span>
@@ -49,11 +57,19 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-6 col-lg-6 col-xl-6 col-xxl-3 mb-md-5 mb-xl-10">
-            <div class="card card-flush bgi-no-repeat bgi-size-contain bgi-position-x-end h-md-50 mb-5 mb-xl-10" style="background-color: #F1BC00;background-image:url('{{ asset('assets/media/patterns/vector-1.png') }}')">
+        <div class="col-md-6 col-lg-6 col-xl-6 col-xxl-3 mb-3">
+            <div class="card card-flush bgi-no-repeat bgi-size-contain bgi-position-x-end mb-3" style="background-color: #F1BC00;background-image:url('{{ asset('assets/media/patterns/vector-1.png') }}'); min-height: 150px;">
                 <div class="card-header pt-5">
                     <div class="card-title d-flex flex-column">
                         <div class="d-flex align-items-center">
+                            <div class="symbol symbol-30px me-3">
+                                <div class="symbol-label bg-white bg-opacity-20">
+                                    <i class="ki-duotone ki-pencil fs-3 text-white">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                    </i>
+                                </div>
+                            </div>
                             <span class="fs-4 fw-semibold text-white me-1 align-self-start" data-stat="rascunho">{{ $proposicoes->whereIn('status', ['rascunho', 'em_edicao'])->count() }}</span>
                         </div>
                         <span class="text-white opacity-75 pt-1 fw-semibold fs-6">Em Edição</span>
@@ -69,11 +85,19 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-6 col-lg-6 col-xl-6 col-xxl-3 mb-md-5 mb-xl-10">
-            <div class="card card-flush bgi-no-repeat bgi-size-contain bgi-position-x-end h-md-50 mb-5 mb-xl-10" style="background-color: #7239EA;background-image:url('{{ asset('assets/media/patterns/vector-1.png') }}')">
+        <div class="col-md-6 col-lg-6 col-xl-6 col-xxl-3 mb-3">
+            <div class="card card-flush bgi-no-repeat bgi-size-contain bgi-position-x-end mb-3" style="background-color: #7239EA;background-image:url('{{ asset('assets/media/patterns/vector-1.png') }}'); min-height: 150px;">
                 <div class="card-header pt-5">
                     <div class="card-title d-flex flex-column">
                         <div class="d-flex align-items-center">
+                            <div class="symbol symbol-30px me-3">
+                                <div class="symbol-label bg-white bg-opacity-20">
+                                    <i class="ki-duotone ki-time fs-3 text-white">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                    </i>
+                                </div>
+                            </div>
                             <span class="fs-4 fw-semibold text-white me-1 align-self-start">{{ $proposicoes->whereIn('status', ['analise', 'enviado_legislativo', 'em_revisao', 'aguardando_aprovacao_autor', 'devolvido_edicao', 'retornado_legislativo'])->count() }}</span>
                         </div>
                         <span class="text-white opacity-75 pt-1 fw-semibold fs-6">Em Análise</span>
@@ -89,11 +113,20 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-6 col-lg-6 col-xl-6 col-xxl-3 mb-md-5 mb-xl-10">
-            <div class="card card-flush bgi-no-repeat bgi-size-contain bgi-position-x-end h-md-50 mb-5 mb-xl-10" style="background-color: #17C653;background-image:url('{{ asset('assets/media/patterns/vector-1.png') }}')">
+        <div class="col-md-6 col-lg-6 col-xl-6 col-xxl-3 mb-3">
+            <div class="card card-flush bgi-no-repeat bgi-size-contain bgi-position-x-end mb-3" style="background-color: #17C653;background-image:url('{{ asset('assets/media/patterns/vector-1.png') }}'); min-height: 150px;">
                 <div class="card-header pt-5">
                     <div class="card-title d-flex flex-column">
                         <div class="d-flex align-items-center">
+                            <div class="symbol symbol-30px me-3">
+                                <div class="symbol-label bg-white bg-opacity-20">
+                                    <i class="ki-duotone ki-notification-bing fs-3 text-white">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                        <span class="path3"></span>
+                                    </i>
+                                </div>
+                            </div>
                             <span class="fs-4 fw-semibold text-white me-1 align-self-start">{{ $proposicoes->whereIn('status', ['aprovada', 'aguardando_aprovacao_autor', 'devolvido_edicao', 'retornado_legislativo'])->count() }}</span>
                         </div>
                         <span class="text-white opacity-75 pt-1 fw-semibold fs-6">Requer Ação</span>
