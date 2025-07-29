@@ -580,6 +580,9 @@ Route::prefix('proposicoes')->name('proposicoes.')->middleware(['auth', 'check.s
     // Voltar proposição para parlamentar (do legislativo)
     Route::put('/{proposicao}/voltar-parlamentar', [App\Http\Controllers\ProposicaoController::class, 'voltarParaParlamentar'])->name('voltar-parlamentar');
     
+    // Aprovar edições do legislativo (parlamentar)
+    Route::post('/{proposicao}/aprovar-edicoes-legislativo', [App\Http\Controllers\ProposicaoController::class, 'aprovarEdicoesLegislativo'])->name('aprovar-edicoes-legislativo');
+    
     // ===== PROTOCOLO =====
     Route::get('/protocolar', [App\Http\Controllers\ProposicaoProtocoloController::class, 'index'])->name('protocolar');
     Route::get('/{proposicao}/protocolar', [App\Http\Controllers\ProposicaoProtocoloController::class, 'protocolar'])->name('protocolar.show');

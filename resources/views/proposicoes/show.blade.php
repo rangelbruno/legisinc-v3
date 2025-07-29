@@ -60,8 +60,26 @@
                                         @case('rejeitada')
                                             <span class="badge badge-danger fs-6">Rejeitada</span>
                                             @break
+                                        @case('aguardando_aprovacao_autor')
+                                            <span class="badge badge-primary fs-6">Aguardando Aprovação</span>
+                                            @break
+                                        @case('devolvido_edicao')
+                                            <span class="badge badge-warning fs-6">Devolvido para Edição</span>
+                                            @break
+                                        @case('editado_legislativo')
+                                            <span class="badge badge-info fs-6">Editado pelo Legislativo</span>
+                                            @break
+                                        @case('enviado_legislativo')
+                                            <span class="badge badge-secondary fs-6">Enviado para Legislativo</span>
+                                            @break
+                                        @case('em_revisao')
+                                            <span class="badge badge-primary fs-6">Em Revisão</span>
+                                            @break
+                                        @case('em_edicao')
+                                            <span class="badge badge-warning fs-6">Em Edição</span>
+                                            @break
                                         @default
-                                            <span class="badge badge-secondary fs-6">{{ ucfirst($proposicao->status) }}</span>
+                                            <span class="badge badge-secondary fs-6">{{ ucfirst(str_replace('_', ' ', $proposicao->status)) }}</span>
                                     @endswitch
                                 </div>
                             </div>
@@ -89,6 +107,22 @@
                             </div>
                         </div>
                     </div>
+
+                    @if(in_array($proposicao->status, ['aguardando_aprovacao_autor', 'devolvido_edicao']) && $proposicao->observacoes_retorno)
+                    <div class="alert alert-warning mt-3">
+                        <h6 class="alert-heading">
+                            <i class="fas fa-comment-dots me-2"></i>
+                            Observações do Legislativo
+                        </h6>
+                        <p class="mb-0">{{ $proposicao->observacoes_retorno }}</p>
+                        @if($proposicao->data_retorno_legislativo)
+                        <small class="text-muted">
+                            <i class="fas fa-clock me-1"></i>
+                            {{ $proposicao->data_retorno_legislativo->format('d/m/Y H:i') }}
+                        </small>
+                        @endif
+                    </div>
+                    @endif
                 </div>
             </div>
 
@@ -155,27 +189,73 @@
                             </a>
                         </div>
                     @elseif($proposicao->status === 'enviado_legislativo')
+                        <div class="alert alert-info mb-3">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-info-circle fs-2 text-info me-3"></i>
+                                <div>
+                                    <h6 class="alert-heading mb-1">Em Análise Legislativa</h6>
+                                    <p class="mb-0 small">Sua proposição está sendo analisada pelo Legislativo. Você será notificado quando houver atualizações.</p>
+                                </div>
+                            </div>
+                        </div>
                         <div class="d-grid gap-2">
-                            <a href="{{ route('proposicoes.onlyoffice.editor', $proposicao) }}" class="btn btn-success">
-                                <i class="fas fa-file-word me-2"></i>Abrir com o Editor
-                            </a>
-                            <button class="btn btn-outline-secondary" onclick="voltarParaParlamentar()">
-                                <i class="fas fa-arrow-left me-2"></i>Voltar para Parlamentar
-                            </button>
-                            <button class="btn btn-outline-secondary btn-sm" onclick="consultarStatus()">
+                            <button class="btn btn-outline-info btn-sm" onclick="consultarStatus()">
                                 <i class="fas fa-search me-2"></i>Consultar Status
                             </button>
                         </div>
-                    @elseif($proposicao->status === 'analise')
+                    @elseif(in_array($proposicao->status, ['aguardando_aprovacao_autor', 'devolvido_edicao']))
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-success" onclick="aprovarEdicoes()">
+                                <i class="fas fa-check me-2"></i>
+                                @if($proposicao->status === 'aguardando_aprovacao_autor')
+                                    Aprovar Edições
+                                @else
+                                    Aceitar Edições
+                                @endif
+                            </button>
+                            <a href="{{ route('proposicoes.editar-texto', $proposicao->id) }}" class="btn btn-outline-warning">
+                                <i class="fas fa-edit me-2"></i>Fazer Novas Edições
+                            </a>
+                            <button class="btn btn-outline-info btn-sm" onclick="verHistoricoEdicoes()">
+                                <i class="fas fa-history me-2"></i>Ver Histórico
+                            </button>
+                        </div>
+                    @elseif($proposicao->status === 'em_edicao')
+                        <div class="d-grid gap-2">
+                            @if($proposicao->template_id)
+                                <a href="{{ route('proposicoes.editar-onlyoffice', ['proposicao' => $proposicao->id, 'template' => $proposicao->template_id]) }}" class="btn btn-primary">
+                                    <i class="fas fa-file-word me-2"></i>Continuar Edição no Editor
+                                </a>
+                            @else
+                                <a href="{{ route('proposicoes.editar-texto', $proposicao->id) }}" class="btn btn-primary">
+                                    <i class="fas fa-edit me-2"></i>Continuar Edição
+                                </a>
+                            @endif
+                            <button class="btn btn-success" onclick="enviarParaLegislativo()">
+                                <i class="fas fa-paper-plane me-2"></i>Enviar para Legislativo
+                            </button>
+                            <button class="btn btn-outline-danger btn-sm" onclick="excluirProposicao()">
+                                <i class="fas fa-trash me-2"></i>Descartar Proposição
+                            </button>
+                        </div>
+                    @elseif(in_array($proposicao->status, ['analise', 'em_revisao']))
                         <div class="alert alert-primary mb-3">
-                            <i class="fas fa-search me-2"></i>
-                            <strong>Em Análise:</strong> Legislativo está analisando a proposição.
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-search-list fs-2 text-primary me-3"></i>
+                                <div>
+                                    <h6 class="alert-heading mb-1">
+                                        @if($proposicao->status === 'em_revisao')
+                                            Em Revisão Técnica
+                                        @else
+                                            Em Análise Legislativa
+                                        @endif
+                                    </h6>
+                                    <p class="mb-0 small">O Legislativo está fazendo a análise técnica da sua proposição. Aguarde o retorno.</p>
+                                </div>
+                            </div>
                         </div>
                         <div class="d-grid gap-2">
-                            <button class="btn btn-outline-primary" disabled>
-                                <i class="fas fa-eye me-2"></i>Em Análise
-                            </button>
-                            <button class="btn btn-outline-secondary btn-sm" onclick="consultarStatus()">
+                            <button class="btn btn-outline-primary btn-sm" onclick="consultarStatus()">
                                 <i class="fas fa-info-circle me-2"></i>Ver Detalhes
                             </button>
                         </div>
@@ -185,11 +265,21 @@
                             <strong>Retornado:</strong> Proposição retornada para ajustes.
                         </div>
                         <div class="d-grid gap-2">
-                            <a href="{{ route('proposicoes.editar-texto', $proposicao->id) }}" class="btn btn-warning">
-                                <i class="fas fa-edit me-2"></i>Fazer Ajustes
+                            <button class="btn btn-outline-primary btn-sm" onclick="consultarStatus()">
+                                <i class="fas fa-info-circle me-2"></i>Ver Detalhes
+                            </button>
+                        </div>
+                    @elseif($proposicao->status === 'retornado_legislativo')
+                        <div class="alert alert-info mb-3">
+                            <i class="fas fa-arrow-left-right me-2"></i>
+                            <strong>Retornado do Legislativo:</strong> Proposição aprovada pelo Legislativo e retornada para assinatura.
+                        </div>
+                        <div class="d-grid gap-2">
+                            <a href="{{ route('proposicoes.assinar', $proposicao->id) }}" class="btn btn-success btn-sm">
+                                <i class="fas fa-signature me-2"></i>Assinar Proposição
                             </a>
-                            <button class="btn btn-outline-info btn-sm" onclick="verComentarios()">
-                                <i class="fas fa-comments me-2"></i>Ver Comentários
+                            <button class="btn btn-outline-primary btn-sm" onclick="consultarStatus()">
+                                <i class="fas fa-info-circle me-2"></i>Ver Detalhes
                             </button>
                         </div>
                     @elseif($proposicao->status === 'aprovado')
@@ -286,7 +376,60 @@
                         </div>
                         <!--end::Timeline item-->
 
-                        @if($proposicao->status !== 'rascunho')
+                        @if($proposicao->status === 'em_edicao')
+                            <!--begin::Timeline item-->
+                            <div class="timeline-item">
+                                <!--begin::Timeline line-->
+                                <div class="timeline-line w-40px"></div>
+                                <!--end::Timeline line-->
+
+                                <!--begin::Timeline icon-->
+                                <div class="timeline-icon symbol symbol-circle symbol-40px">
+                                    <div class="symbol-label bg-light-warning">
+                                        <i class="ki-duotone ki-pencil fs-2 text-warning">
+                                            <span class="path1"></span>
+                                            <span class="path2"></span>
+                                        </i>
+                                    </div>
+                                </div>
+                                <!--end::Timeline icon-->
+
+                                <!--begin::Timeline content-->
+                                <div class="timeline-content mb-10 mt-n2">
+                                    <!--begin::Timeline heading-->
+                                    <div class="overflow-auto pe-3">
+                                        <!--begin::Title-->
+                                        <div class="fs-5 fw-semibold mb-2">Em Edição</div>
+                                        <!--end::Title-->
+
+                                        <!--begin::Description-->
+                                        <div class="d-flex align-items-center mt-1 fs-6">
+                                            <!--begin::Info-->
+                                            <div class="text-muted me-2 fs-7">{{ date('d/m/Y H:i', strtotime($proposicao->updated_at ?? now())) }}</div>
+                                            <!--end::Info-->
+                                        </div>
+                                        <!--end::Description-->
+                                    </div>
+                                    <!--end::Timeline heading-->
+
+                                    <!--begin::Timeline details-->
+                                    <div class="overflow-auto pb-5">
+                                        <div class="notice d-flex bg-light-warning rounded border-warning border border-dashed p-4">
+                                            <div class="d-flex flex-stack flex-grow-1">
+                                                <div class="fw-semibold">
+                                                    <div class="fs-6 text-gray-700">
+                                                        Proposição está sendo editada e ainda não foi enviada para análise
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <!--end::Timeline details-->
+                                </div>
+                                <!--end::Timeline content-->
+                            </div>
+                            <!--end::Timeline item-->
+                        @elseif(in_array($proposicao->status, ['enviado_legislativo', 'em_revisao', 'analise']))
                             <!--begin::Timeline item-->
                             <div class="timeline-item">
                                 <!--begin::Timeline line-->
@@ -329,6 +472,71 @@
                                                 <div class="fw-semibold">
                                                     <div class="fs-6 text-gray-700">
                                                         Proposição enviada para análise legislativa
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <!--end::Timeline details-->
+                                </div>
+                                <!--end::Timeline content-->
+                            </div>
+                            <!--end::Timeline item-->
+                        @endif
+
+                        @if(in_array($proposicao->status, ['aguardando_aprovacao_autor', 'devolvido_edicao']))
+                            <!--begin::Timeline item-->
+                            <div class="timeline-item">
+                                <!--begin::Timeline line-->
+                                <div class="timeline-line w-40px"></div>
+                                <!--end::Timeline line-->
+
+                                <!--begin::Timeline icon-->
+                                <div class="timeline-icon symbol symbol-circle symbol-40px">
+                                    <div class="symbol-label bg-light-primary">
+                                        <i class="ki-duotone ki-arrow-left fs-2 text-primary">
+                                            <span class="path1"></span>
+                                            <span class="path2"></span>
+                                        </i>
+                                    </div>
+                                </div>
+                                <!--end::Timeline icon-->
+
+                                <!--begin::Timeline content-->
+                                <div class="timeline-content mb-10 mt-n2">
+                                    <!--begin::Timeline heading-->
+                                    <div class="overflow-auto pe-3">
+                                        <!--begin::Title-->
+                                        <div class="fs-5 fw-semibold mb-2">
+                                            @if($proposicao->status === 'aguardando_aprovacao_autor')
+                                                Aguardando Aprovação do Autor
+                                            @else
+                                                Devolvido para Edição
+                                            @endif
+                                        </div>
+                                        <!--end::Title-->
+
+                                        <!--begin::Description-->
+                                        <div class="d-flex align-items-center mt-1 fs-6">
+                                            <!--begin::Info-->
+                                            <div class="text-muted me-2 fs-7">{{ date('d/m/Y H:i', strtotime($proposicao->data_retorno_legislativo ?? $proposicao->updated_at ?? now())) }}</div>
+                                            <!--end::Info-->
+                                        </div>
+                                        <!--end::Description-->
+                                    </div>
+                                    <!--end::Timeline heading-->
+
+                                    <!--begin::Timeline details-->
+                                    <div class="overflow-auto pb-5">
+                                        <div class="notice d-flex bg-light-primary rounded border-primary border border-dashed p-4">
+                                            <div class="d-flex flex-stack flex-grow-1">
+                                                <div class="fw-semibold">
+                                                    <div class="fs-6 text-gray-700">
+                                                        @if($proposicao->status === 'aguardando_aprovacao_autor')
+                                                            Proposição editada pelo Legislativo e aguarda aprovação do autor
+                                                        @else
+                                                            Proposição devolvida pelo Legislativo para correções
+                                                        @endif
                                                     </div>
                                                 </div>
                                             </div>
@@ -483,7 +691,7 @@
                     </i>
                 </div>
             </div>
-            <div class="modal-body py-10 px-lg-17">
+            <div class="modal-body py-10 px-lg-17" style="max-height: 70vh; overflow-y: auto;">
                 <!-- Status Atual -->
                 <div class="card mb-6">
                     <div class="card-body p-6">
@@ -847,13 +1055,153 @@ function enviarLegislativo() {
     }
 }
 
+function enviarParaLegislativo() {
+    Swal.fire({
+        title: 'Enviar para o Legislativo?',
+        html: `<div class="text-center">
+                <i class="fas fa-paper-plane text-primary fa-4x mb-3"></i>
+                <p class="mb-3">Sua proposição será enviada para análise técnica do Legislativo.</p>
+                <div class="text-start small">
+                    <p class="mb-1"><i class="fas fa-check-circle text-success me-1"></i> O Legislativo revisará o conteúdo</p>
+                    <p class="mb-1"><i class="fas fa-check-circle text-success me-1"></i> Você será notificado sobre alterações</p>
+                    <p class="mb-0"><i class="fas fa-check-circle text-success me-1"></i> Após aprovação, poderá assinar</p>
+                </div>
+               </div>`,
+        width: '450px',
+        icon: null,
+        showCancelButton: true,
+        confirmButtonText: '<i class="fas fa-paper-plane me-1"></i>Enviar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#28a745',
+        cancelButtonColor: '#6c757d',
+        customClass: {
+            confirmButton: 'btn btn-success',
+            cancelButton: 'btn btn-secondary'
+        },
+        reverseButtons: true
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Mostrar loading
+            Swal.fire({
+                title: 'Enviando Proposição...',
+                html: '<div class="text-center"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Carregando...</span></div><p class="mt-2 mb-0">Aguarde enquanto sua proposição é enviada para o Legislativo...</p></div>',
+                allowOutsideClick: false,
+                showConfirmButton: false,
+                willOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            $.ajax({
+                url: `{{ route('proposicoes.enviar-legislativo', $proposicao) }}`,
+                method: 'PUT',
+                data: {
+                    _token: $('meta[name="csrf-token"]').attr('content')
+                },
+                success: function(response) {
+                    if (response.success) {
+                        Swal.fire({
+                            title: 'Enviado com Sucesso!',
+                            html: `<div class="text-center">
+                                    <i class="fas fa-check-circle text-success fa-4x mb-3"></i>
+                                    <p>Sua proposição foi enviada para análise do Legislativo.</p>
+                                    <p class="text-muted small">Você será notificado sobre o andamento.</p>
+                                   </div>`,
+                            icon: null,
+                            confirmButtonText: 'OK',
+                            confirmButtonColor: '#28a745'
+                        }).then(() => {
+                            window.location.href = '{{ route("proposicoes.minhas-proposicoes") }}';
+                        });
+                    } else {
+                        Swal.fire({
+                            title: 'Erro!',
+                            text: response.message || 'Erro ao enviar proposição',
+                            icon: 'error',
+                            confirmButtonText: 'OK',
+                            confirmButtonColor: '#dc3545'
+                        });
+                    }
+                },
+                error: function(xhr) {
+                    console.error('Erro:', xhr);
+                    console.error('Status:', xhr.status);
+                    console.error('Response:', xhr.responseText);
+                    
+                    let message = 'Erro ao enviar proposição. Tente novamente.';
+                    
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        message = xhr.responseJSON.message;
+                    } else if (xhr.status === 403) {
+                        message = 'Você não tem permissão para enviar esta proposição.';
+                    } else if (xhr.status === 400) {
+                        message = 'Dados inválidos. Verifique se a proposição tem ementa e conteúdo.';
+                    } else if (xhr.status === 404) {
+                        message = 'Proposição não encontrada.';
+                    }
+                    
+                    Swal.fire({
+                        title: 'Erro!',
+                        text: message,
+                        icon: 'error',
+                        confirmButtonText: 'OK',
+                        confirmButtonColor: '#dc3545'
+                    });
+                }
+            });
+        }
+    });
+}
+
+function aprovarEdicoes() {
+    if (confirm('Tem certeza que deseja aprovar as edições feitas pelo Legislativo? A proposição ficará pronta para assinatura.')) {
+        $.ajax({
+            url: `{{ route('proposicoes.aprovar-edicoes-legislativo', $proposicao) }}`,
+            method: 'POST',
+            data: {
+                _token: $('meta[name="csrf-token"]').attr('content')
+            },
+            beforeSend: function() {
+                $('button[onclick="aprovarEdicoes()"]').prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i>Aprovando...');
+            },
+            success: function(response) {
+                if (response.success) {
+                    toastr.success(response.message);
+                    setTimeout(() => {
+                        if (response.redirect) {
+                            window.location.href = response.redirect;
+                        } else {
+                            location.reload();
+                        }
+                    }, 2000);
+                } else {
+                    toastr.error(response.message || 'Erro ao aprovar edições');
+                    $('button[onclick="aprovarEdicoes()"]').prop('disabled', false).html('<i class="fas fa-check me-2"></i>Aprovar Edições');
+                }
+            },
+            error: function(xhr) {
+                console.error('Erro:', xhr);
+                let message = 'Erro ao aprovar edições';
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    message = xhr.responseJSON.message;
+                }
+                toastr.error(message);
+                $('button[onclick="aprovarEdicoes()"]').prop('disabled', false).html('<i class="fas fa-check me-2"></i>Aprovar Edições');
+            }
+        });
+    }
+}
+
+function verHistoricoEdicoes() {
+    toastr.info('Funcionalidade de histórico em desenvolvimento');
+}
+
 function consultarStatus() {
     // Abrir modal com status detalhado
     $('#modalConsultarStatus').modal('show');
 }
 
 function atualizarStatus() {
-    // Simular atualização de status do legislativo
     const proposicaoId = {{ $proposicao->id }};
     
     // Desabilitar botão e mostrar loading
@@ -862,20 +1210,73 @@ function atualizarStatus() {
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Atualizando...';
     
-    // Simular requisição AJAX
-    setTimeout(() => {
-        toastr.success('Status atualizado com sucesso!');
-        
+    // Fazer requisição AJAX para obter dados atualizados
+    fetch(`/proposicoes/${proposicaoId}/status`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+            'Accept': 'application/json'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            // Atualizar status atual no modal
+            const statusBadge = document.querySelector('#modalConsultarStatus .badge');
+            if (statusBadge) {
+                statusBadge.textContent = data.status_formatado;
+                statusBadge.className = `badge badge-light-${data.status_class} fs-6`;
+            }
+            
+            // Atualizar descrição do status
+            const statusDescription = document.querySelector('#modalConsultarStatus .text-gray-700');
+            if (statusDescription) {
+                statusDescription.textContent = data.status_descricao;
+            }
+            
+            // Atualizar timeline se houver mudanças
+            if (data.timeline_updated) {
+                atualizarTimeline(data.timeline);
+            }
+            
+            // Atualizar também o status na página principal
+            const statusBadgeMain = document.querySelector('.proposicao-status .badge');
+            if (statusBadgeMain) {
+                statusBadgeMain.textContent = data.status_formatado;
+                statusBadgeMain.className = `badge badge-${data.status_class}`;
+            }
+            
+            toastr.success('Status atualizado com sucesso!');
+        } else {
+            toastr.error(data.message || 'Erro ao atualizar status');
+        }
+    })
+    .catch(error => {
+        console.error('Erro na requisição:', error);
+        toastr.error('Erro de conexão. Tente novamente.');
+    })
+    .finally(() => {
         // Reabilitar botão
         btn.disabled = false;
         btn.innerHTML = originalText;
-        
-        // Fechar modal e recarregar página para mostrar mudanças
-        $('#modalConsultarStatus').modal('hide');
-        setTimeout(() => {
-            location.reload();
-        }, 1000);
-    }, 2000);
+    });
+}
+
+function atualizarTimeline(timelineData) {
+    // Função para atualizar a timeline com novos dados
+    const timeline = document.querySelector('#modalConsultarStatus .timeline');
+    if (timeline && timelineData) {
+        // Aqui você pode implementar a lógica para atualizar
+        // os ícones e estados dos itens da timeline
+        // baseado nos dados retornados do servidor
+        console.log('Timeline atualizada:', timelineData);
+    }
 }
 
 function verComentarios() {
@@ -913,10 +1314,81 @@ function compartilhar() {
 }
 
 function excluirProposicao() {
-    if (confirm('Tem certeza que deseja excluir este rascunho? Esta ação não pode ser desfeita.')) {
-        // Implementar exclusão
-        toastr.warning('Funcionalidade de exclusão será implementada');
-    }
+    Swal.fire({
+        title: 'Descartar Proposição?',
+        html: `<div class="text-center">
+                <i class="fas fa-exclamation-triangle text-warning fa-4x mb-3"></i>
+                <p class="text-muted">Esta ação <strong class="text-danger">não pode ser desfeita!</strong></p>
+                <div class="text-start small text-muted mt-3">
+                    <p class="mb-1"><i class="fas fa-times-circle text-danger me-1"></i> Todo conteúdo será perdido</p>
+                    <p class="mb-1"><i class="fas fa-times-circle text-danger me-1"></i> Arquivos serão removidos</p>
+                    <p class="mb-0"><i class="fas fa-times-circle text-danger me-1"></i> Histórico será excluído</p>
+                </div>
+               </div>`,
+        width: '400px',
+        icon: null,
+        showCancelButton: true,
+        confirmButtonText: '<i class="fas fa-trash me-1"></i>Descartar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#dc3545',
+        cancelButtonColor: '#6c757d',
+        customClass: {
+            popup: 'swal2-sm',
+            confirmButton: 'btn btn-danger btn-sm',
+            cancelButton: 'btn btn-secondary btn-sm'
+        },
+        reverseButtons: true,
+        focusCancel: true
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Mostrar loading
+            Swal.fire({
+                title: 'Excluindo Proposição...',
+                html: '<div class="text-center"><div class="spinner-border text-danger" role="status"><span class="visually-hidden">Carregando...</span></div></div>',
+                allowOutsideClick: false,
+                showConfirmButton: false,
+                willOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            // Fazer a requisição AJAX para excluir
+            $.ajax({
+                url: `{{ route('proposicoes.destroy', $proposicao) }}`,
+                method: 'DELETE',
+                data: {
+                    _token: $('meta[name="csrf-token"]').attr('content')
+                },
+                success: function(response) {
+                    Swal.fire({
+                        title: 'Proposição Descartada!',
+                        text: 'A proposição foi excluída com sucesso.',
+                        icon: 'success',
+                        confirmButtonText: 'OK',
+                        confirmButtonColor: '#28a745'
+                    }).then(() => {
+                        // Redirecionar para a lista de proposições
+                        window.location.href = '{{ route("proposicoes.minhas-proposicoes") }}';
+                    });
+                },
+                error: function(xhr) {
+                    console.error('Erro ao excluir:', xhr);
+                    let message = 'Erro ao excluir proposição. Tente novamente.';
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        message = xhr.responseJSON.message;
+                    }
+                    
+                    Swal.fire({
+                        title: 'Erro!',
+                        text: message,
+                        icon: 'error',
+                        confirmButtonText: 'OK',
+                        confirmButtonColor: '#dc3545'
+                    });
+                }
+            });
+        }
+    });
 }
 
 function voltarParaParlamentar() {

@@ -477,37 +477,71 @@ class ProposicaoController extends Controller
     /**
      * Enviar proposição para análise do legislativo
      */
-    public function enviarLegislativo($proposicaoId)
+    public function enviarLegislativo(Proposicao $proposicao)
     {
-        // TODO: Implement proper authorization and validation
-        // $this->authorize('update', $proposicao);
+        \Log::info('Método enviarLegislativo chamado', [
+            'proposicao_id' => $proposicao->id,
+            'proposicao_status' => $proposicao->status,
+            'proposicao_ementa' => $proposicao->ementa ? 'presente' : 'ausente',
+            'proposicao_conteudo' => $proposicao->conteudo ? 'presente' : 'ausente',
+            'proposicao_arquivo' => $proposicao->arquivo_path ? 'presente' : 'ausente',
+            'user_id' => auth()->id(),
+            'is_author' => $proposicao->autor_id === auth()->id()
+        ]);
         
-        // Validar se tem conteúdo
-        $ementa = session('proposicao_' . $proposicaoId . '_ementa');
-        $conteudo = session('proposicao_' . $proposicaoId . '_conteudo');
-        
-        if (!$ementa || !$conteudo) {
+        try {
+            // Verificar se o usuário é o autor da proposição
+            if ($proposicao->autor_id !== auth()->id()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Você não tem permissão para enviar esta proposição.'
+                ], 403);
+            }
+
+            // Verificar se a proposição está no status correto
+            if (!in_array($proposicao->status, ['rascunho', 'em_edicao'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Esta proposição não pode ser enviada no status atual.'
+                ], 400);
+            }
+
+            // Validar se tem conteúdo mínimo
+            if (empty($proposicao->ementa) || (!$proposicao->conteudo && !$proposicao->arquivo_path)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Proposição deve ter ementa e conteúdo antes de ser enviada.'
+                ], 400);
+            }
+
+            // Atualizar status para enviado ao legislativo
+            $proposicao->update([
+                'status' => 'enviado_legislativo'
+            ]);
+
+            \Log::info('Proposição enviada para legislativo', [
+                'proposicao_id' => $proposicao->id,
+                'user_id' => auth()->id(),
+                'status_anterior' => $proposicao->getOriginal('status')
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Proposição enviada para análise legislativa com sucesso!'
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Erro ao enviar proposição para legislativo', [
+                'proposicao_id' => $proposicao->id,
+                'user_id' => auth()->id(),
+                'error' => $e->getMessage()
+            ]);
+
             return response()->json([
                 'success' => false,
-                'message' => 'Proposição deve ter ementa e conteúdo antes de ser enviada.'
-            ], 400);
+                'message' => 'Erro interno do servidor. Tente novamente.'
+            ], 500);
         }
-
-        // Atualizar status
-        session([
-            'proposicao_' . $proposicaoId . '_status' => 'enviado_legislativo',
-            'proposicao_' . $proposicaoId . '_enviado_em' => now()
-        ]);
-
-        \Log::info('Proposição enviada para legislativo', [
-            'proposicao_id' => $proposicaoId,
-            'user_id' => Auth::id()
-        ]);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Proposição enviada para análise legislativa!'
-        ]);
     }
 
     /**
@@ -547,39 +581,62 @@ class ProposicaoController extends Controller
     /**
      * Visualizar status de tramitação da proposição
      */
-    public function statusTramitacao($proposicaoId)
+    public function statusTramitacao(Proposicao $proposicao)
     {
-        // Buscar dados completos da proposição
-        $status = session('proposicao_' . $proposicaoId . '_status', 'rascunho');
-        $assinatura = session('proposicao_' . $proposicaoId . '_assinatura');
-        $protocolo = session('proposicao_' . $proposicaoId . '_protocolo');
-        $observacoes = session('proposicao_' . $proposicaoId . '_observacoes_legislativo');
-        $enviadoEm = session('proposicao_' . $proposicaoId . '_enviado_em');
-
-        // Definir ordem dos status para o progress bar
-        $statusOrder = [
-            'rascunho' => 1,
-            'enviado_legislativo' => 2,
-            'retornado_legislativo' => 3,
-            'assinado' => 4,
-            'protocolado' => 5
-        ];
-
-        $proposicao = (object) [
-            'id' => $proposicaoId,
-            'tipo' => session('proposicao_' . $proposicaoId . '_tipo', 'projeto_lei'),
-            'ementa' => session('proposicao_' . $proposicaoId . '_ementa', ''),
-            'conteudo' => session('proposicao_' . $proposicaoId . '_conteudo', ''),
-            'status' => $status,
-            'status_order' => $statusOrder[$status] ?? 1,
-            'assinatura' => $assinatura,
-            'protocolo' => $protocolo,
-            'observacoes_legislativo' => $observacoes,
-            'enviado_em' => $enviadoEm,
-            'template_id' => session('proposicao_' . $proposicaoId . '_modelo_id')
-        ];
-
-        return view('proposicoes.status-tramitacao', compact('proposicao'));
+        try {
+            // Buscar dados atualizados da proposição
+            $proposicao->refresh();
+            
+            // Definir classe do badge baseado no status
+            $statusClasses = [
+                'rascunho' => 'warning',
+                'em_edicao' => 'warning', 
+                'enviado_legislativo' => 'secondary',
+                'em_revisao' => 'primary',
+                'aguardando_aprovacao_autor' => 'primary',
+                'devolvido_edicao' => 'warning',
+                'retornado_legislativo' => 'info',
+                'aprovado' => 'success',
+                'rejeitado' => 'danger'
+            ];
+            
+            // Definir descrições do status
+            $statusDescricoes = [
+                'rascunho' => 'A proposição está em elaboração e ainda não foi enviada.',
+                'em_edicao' => 'A proposição está sendo editada pelo autor.',
+                'enviado_legislativo' => 'A proposição foi enviada para o Legislativo e está aguardando análise inicial.',
+                'em_revisao' => 'O Legislativo está analisando a proposição e verificando sua conformidade.',
+                'aguardando_aprovacao_autor' => 'A proposição foi editada pelo Legislativo e aguarda aprovação do autor.',
+                'devolvido_edicao' => 'A proposição foi devolvida pelo Legislativo para ajustes do autor.',
+                'retornado_legislativo' => 'A proposição foi aprovada pelo Legislativo e retornada para assinatura do autor.',
+                'aprovado' => 'A proposição foi aprovada e está pronta para tramitação.',
+                'rejeitado' => 'A proposição foi rejeitada pelo Legislativo.'
+            ];
+            
+            // Formatar nome do status
+            $statusFormatado = ucfirst(str_replace('_', ' ', $proposicao->status));
+            
+            return response()->json([
+                'success' => true,
+                'status' => $proposicao->status,
+                'status_formatado' => $statusFormatado,
+                'status_class' => $statusClasses[$proposicao->status] ?? 'secondary',
+                'status_descricao' => $statusDescricoes[$proposicao->status] ?? 'Status personalizado: ' . $proposicao->status,
+                'timeline_updated' => false, // Por enquanto não implementamos atualização da timeline
+                'timeline' => null
+            ]);
+            
+        } catch (\Exception $e) {
+            \Log::error('Erro ao obter status da proposição', [
+                'proposicao_id' => $proposicao->id,
+                'error' => $e->getMessage()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Erro ao obter status atualizado da proposição.'
+            ], 500);
+        }
     }
 
     /**
@@ -2560,6 +2617,59 @@ ${texto}
                 'proposicao_id' => $proposicao->id,
                 'user_id' => auth()->id(),
                 'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Erro interno do servidor. Tente novamente.'
+            ], 500);
+        }
+    }
+
+    /**
+     * Aprovar edições feitas pelo Legislativo
+     */
+    public function aprovarEdicoesLegislativo(Request $request, Proposicao $proposicao)
+    {
+        try {
+            // Verificar se o usuário é o autor da proposição
+            if ($proposicao->autor_id !== auth()->id()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Acesso negado. Apenas o autor pode aprovar as edições.'
+                ], 403);
+            }
+
+            // Verificar se a proposição está no status correto
+            if (!in_array($proposicao->status, ['aguardando_aprovacao_autor', 'devolvido_edicao'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Esta proposição não pode ser aprovada no status atual.'
+                ], 400);
+            }
+
+            // Atualizar status para 'aprovado_assinatura' - próximo passo é assinar
+            $proposicao->update([
+                'status' => 'aprovado_assinatura',
+                'data_aprovacao_autor' => now()
+            ]);
+
+            \Log::info('Edições do legislativo aprovadas pelo parlamentar', [
+                'proposicao_id' => $proposicao->id,
+                'user_id' => auth()->id(),
+                'status_anterior' => $proposicao->getOriginal('status')
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Edições aprovadas com sucesso! A proposição está pronta para assinatura.',
+                'redirect' => route('proposicoes.show', $proposicao)
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Erro ao aprovar edições do legislativo', [
+                'error' => $e->getMessage(),
+                'proposicao_id' => $proposicao->id
             ]);
 
             return response()->json([

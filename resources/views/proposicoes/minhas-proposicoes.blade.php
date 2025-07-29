@@ -54,16 +54,16 @@
                 <div class="card-header pt-5">
                     <div class="card-title d-flex flex-column">
                         <div class="d-flex align-items-center">
-                            <span class="fs-4 fw-semibold text-white me-1 align-self-start" data-stat="rascunho">{{ $proposicoes->where('status', 'rascunho')->count() }}</span>
+                            <span class="fs-4 fw-semibold text-white me-1 align-self-start" data-stat="rascunho">{{ $proposicoes->whereIn('status', ['rascunho', 'em_edicao'])->count() }}</span>
                         </div>
-                        <span class="text-white opacity-75 pt-1 fw-semibold fs-6">Rascunhos</span>
+                        <span class="text-white opacity-75 pt-1 fw-semibold fs-6">Em Edição</span>
                     </div>
                 </div>
                 <div class="card-body d-flex align-items-end pt-0">
                     <div class="d-flex align-items-center flex-column mt-3 w-100">
                         <div class="d-flex justify-content-between w-100 mt-auto mb-2">
                             <span class="fw-semibold fs-7 text-white opacity-75">Pendentes</span>
-                            <span class="fw-bold fs-6 text-white" data-stat="rascunho">{{ $proposicoes->where('status', 'rascunho')->count() }}</span>
+                            <span class="fw-bold fs-6 text-white" data-stat="rascunho">{{ $proposicoes->whereIn('status', ['rascunho', 'em_edicao'])->count() }}</span>
                         </div>
                     </div>
                 </div>
@@ -74,7 +74,7 @@
                 <div class="card-header pt-5">
                     <div class="card-title d-flex flex-column">
                         <div class="d-flex align-items-center">
-                            <span class="fs-4 fw-semibold text-white me-1 align-self-start">{{ $proposicoes->where('status', 'analise')->count() }}</span>
+                            <span class="fs-4 fw-semibold text-white me-1 align-self-start">{{ $proposicoes->whereIn('status', ['analise', 'enviado_legislativo', 'em_revisao', 'aguardando_aprovacao_autor', 'devolvido_edicao', 'retornado_legislativo'])->count() }}</span>
                         </div>
                         <span class="text-white opacity-75 pt-1 fw-semibold fs-6">Em Análise</span>
                     </div>
@@ -83,7 +83,7 @@
                     <div class="d-flex align-items-center flex-column mt-3 w-100">
                         <div class="d-flex justify-content-between w-100 mt-auto mb-2">
                             <span class="fw-semibold fs-7 text-white opacity-75">Tramitando</span>
-                            <span class="fw-bold fs-6 text-white">{{ $proposicoes->where('status', 'analise')->count() }}</span>
+                            <span class="fw-bold fs-6 text-white">{{ $proposicoes->whereIn('status', ['analise', 'enviado_legislativo', 'em_revisao', 'aguardando_aprovacao_autor', 'devolvido_edicao', 'retornado_legislativo'])->count() }}</span>
                         </div>
                     </div>
                 </div>
@@ -94,16 +94,16 @@
                 <div class="card-header pt-5">
                     <div class="card-title d-flex flex-column">
                         <div class="d-flex align-items-center">
-                            <span class="fs-4 fw-semibold text-white me-1 align-self-start">{{ $proposicoes->where('status', 'aprovada')->count() }}</span>
+                            <span class="fs-4 fw-semibold text-white me-1 align-self-start">{{ $proposicoes->whereIn('status', ['aprovada', 'aguardando_aprovacao_autor', 'devolvido_edicao', 'retornado_legislativo'])->count() }}</span>
                         </div>
-                        <span class="text-white opacity-75 pt-1 fw-semibold fs-6">Aprovadas</span>
+                        <span class="text-white opacity-75 pt-1 fw-semibold fs-6">Requer Ação</span>
                     </div>
                 </div>
                 <div class="card-body d-flex align-items-end pt-0">
                     <div class="d-flex align-items-center flex-column mt-3 w-100">
                         <div class="d-flex justify-content-between w-100 mt-auto mb-2">
-                            <span class="fw-semibold fs-7 text-white opacity-75">Finalizadas</span>
-                            <span class="fw-bold fs-6 text-white">{{ $proposicoes->where('status', 'aprovada')->count() }}</span>
+                            <span class="fw-semibold fs-7 text-white opacity-75">Aguardando</span>
+                            <span class="fw-bold fs-6 text-white">{{ $proposicoes->whereIn('status', ['aguardando_aprovacao_autor', 'devolvido_edicao', 'retornado_legislativo'])->count() }}</span>
                         </div>
                     </div>
                 </div>
@@ -211,8 +211,72 @@
                                                     Rejeitada
                                                 </span>
                                                 @break
+                                            @case('aguardando_aprovacao_autor')
+                                                <span class="badge badge-primary">
+                                                    <i class="ki-duotone ki-check-circle fs-7 me-1">
+                                                        <span class="path1"></span>
+                                                        <span class="path2"></span>
+                                                    </i>
+                                                    Aguardando Aprovação
+                                                </span>
+                                                @break
+                                            @case('devolvido_edicao')
+                                                <span class="badge badge-warning">
+                                                    <i class="ki-duotone ki-arrow-left fs-7 me-1">
+                                                        <span class="path1"></span>
+                                                        <span class="path2"></span>
+                                                    </i>
+                                                    Devolvido para Edição
+                                                </span>
+                                                @break
+                                            @case('editado_legislativo')
+                                                <span class="badge badge-info">
+                                                    <i class="ki-duotone ki-pencil fs-7 me-1">
+                                                        <span class="path1"></span>
+                                                        <span class="path2"></span>
+                                                    </i>
+                                                    Editado pelo Legislativo
+                                                </span>
+                                                @break
+                                            @case('enviado_legislativo')
+                                                <span class="badge badge-secondary">
+                                                    <i class="ki-duotone ki-send fs-7 me-1">
+                                                        <span class="path1"></span>
+                                                        <span class="path2"></span>
+                                                    </i>
+                                                    Enviado para Legislativo
+                                                </span>
+                                                @break
+                                            @case('em_revisao')
+                                                <span class="badge badge-primary">
+                                                    <i class="ki-duotone ki-search-list fs-7 me-1">
+                                                        <span class="path1"></span>
+                                                        <span class="path2"></span>
+                                                        <span class="path3"></span>
+                                                    </i>
+                                                    Em Revisão
+                                                </span>
+                                                @break
+                                            @case('em_edicao')
+                                                <span class="badge badge-warning">
+                                                    <i class="ki-duotone ki-pencil fs-7 me-1">
+                                                        <span class="path1"></span>
+                                                        <span class="path2"></span>
+                                                    </i>
+                                                    Em Edição
+                                                </span>
+                                                @break
+                                            @case('retornado_legislativo')
+                                                <span class="badge badge-info">
+                                                    <i class="ki-duotone ki-arrow-left-right fs-7 me-1">
+                                                        <span class="path1"></span>
+                                                        <span class="path2"></span>
+                                                    </i>
+                                                    Retornado do Legislativo
+                                                </span>
+                                                @break
                                             @default
-                                                <span class="badge badge-secondary">{{ ucfirst($proposicao->status) }}</span>
+                                                <span class="badge badge-secondary">{{ ucfirst(str_replace('_', ' ', $proposicao->status)) }}</span>
                                         @endswitch
                                     </td>
                                     <td>
@@ -252,6 +316,28 @@
                                                 </i>
                                                 Excluir
                                             </button>
+                                        @elseif(in_array($proposicao->status, ['aguardando_aprovacao_autor', 'devolvido_edicao']))
+                                            <a href="{{ route('proposicoes.editar-texto', $proposicao->id) }}" 
+                                               class="btn btn-sm btn-warning ms-2">
+                                                <i class="ki-duotone ki-check fs-6 me-1">
+                                                    <span class="path1"></span>
+                                                    <span class="path2"></span>
+                                                </i>
+                                                @if($proposicao->status === 'aguardando_aprovacao_autor')
+                                                    Aprovar Edições
+                                                @else
+                                                    Revisar Edições
+                                                @endif
+                                            </a>
+                                        @elseif($proposicao->status === 'retornado_legislativo')
+                                            <a href="{{ route('proposicoes.assinar', $proposicao->id) }}" 
+                                               class="btn btn-sm btn-success ms-2">
+                                                <i class="ki-duotone ki-check-square fs-6 me-1">
+                                                    <span class="path1"></span>
+                                                    <span class="path2"></span>
+                                                </i>
+                                                Assinar Proposição
+                                            </a>
                                         @endif
                                     </td>
                                 </tr>
@@ -426,30 +512,39 @@ document.querySelector('[data-kt-proposicoes-table-filter="search"]').addEventLi
 // Função para confirmar exclusão de proposição
 function confirmarExclusaoProposicao(proposicaoId) {
     Swal.fire({
-        title: 'Confirmar Exclusão',
-        html: `Tem certeza que deseja excluir esta proposição?<br><strong>Esta ação não pode ser desfeita.</strong>`,
-        icon: 'warning',
+        title: 'Descartar Proposição?',
+        html: `<div class="text-center">
+                <i class="fas fa-exclamation-triangle text-warning fa-4x mb-3"></i>
+                <p class="text-muted">Esta ação <strong class="text-danger">não pode ser desfeita!</strong></p>
+                <div class="text-start small text-muted mt-3">
+                    <p class="mb-1"><i class="fas fa-times-circle text-danger me-1"></i> Todo conteúdo será perdido</p>
+                    <p class="mb-1"><i class="fas fa-times-circle text-danger me-1"></i> Arquivos serão removidos</p>
+                    <p class="mb-0"><i class="fas fa-times-circle text-danger me-1"></i> Histórico será excluído</p>
+                </div>
+               </div>`,
+        width: '400px',
+        icon: null,
         showCancelButton: true,
-        confirmButtonText: 'Sim, Excluir',
+        confirmButtonText: '<i class="fas fa-trash me-1"></i>Descartar',
         cancelButtonText: 'Cancelar',
-        confirmButtonColor: '#f1416c',
-        cancelButtonColor: '#7e8299',
+        confirmButtonColor: '#dc3545',
+        cancelButtonColor: '#6c757d',
         customClass: {
-            confirmButton: 'btn btn-danger',
-            cancelButton: 'btn btn-light'
+            popup: 'swal2-sm',
+            confirmButton: 'btn btn-danger btn-sm',
+            cancelButton: 'btn btn-secondary btn-sm'
         },
-        reverseButtons: true
+        reverseButtons: true,
+        focusCancel: true
     }).then((result) => {
         if (result.isConfirmed) {
             // Mostrar loading
             Swal.fire({
-                title: 'Excluindo...',
-                text: 'Aguarde enquanto a proposição é removida.',
-                icon: 'info',
+                title: 'Excluindo Proposição...',
+                html: '<div class="text-center"><div class="spinner-border text-danger" role="status"><span class="visually-hidden">Carregando...</span></div></div>',
                 allowOutsideClick: false,
-                allowEscapeKey: false,
                 showConfirmButton: false,
-                didOpen: () => {
+                willOpen: () => {
                     Swal.showLoading();
                 }
             });
@@ -479,10 +574,11 @@ function confirmarExclusaoProposicao(proposicaoId) {
             .then(data => {
                 if (data.success) {
                     Swal.fire({
-                        title: 'Sucesso!',
-                        text: data.message,
+                        title: 'Proposição Descartada!',
+                        text: 'A proposição foi excluída com sucesso.',
                         icon: 'success',
-                        confirmButtonText: 'Ok'
+                        confirmButtonText: 'OK',
+                        confirmButtonColor: '#28a745'
                     }).then(() => {
                         // Remover a linha da tabela
                         document.querySelector(`tr[data-proposicao-id="${proposicaoId}"]`)?.remove();
@@ -497,10 +593,11 @@ function confirmarExclusaoProposicao(proposicaoId) {
                     });
                 } else {
                     Swal.fire({
-                        title: 'Erro',
+                        title: 'Erro!',
                         text: data.message || 'Erro ao excluir proposição.',
                         icon: 'error',
-                        confirmButtonText: 'Ok'
+                        confirmButtonText: 'OK',
+                        confirmButtonColor: '#dc3545'
                     });
                 }
             })
@@ -524,14 +621,16 @@ function confirmarExclusaoProposicao(proposicaoId) {
                         title: 'Erro!',
                         text: errorMessage,
                         icon: 'error',
-                        confirmButtonText: 'Ok'
+                        confirmButtonText: 'OK',
+                        confirmButtonColor: '#dc3545'
                     });
                 } else {
                     Swal.fire({
-                        title: 'Erro',
+                        title: 'Erro!',
                         text: 'Erro de conexão. Tente novamente.',
                         icon: 'error',
-                        confirmButtonText: 'Ok'
+                        confirmButtonText: 'OK',
+                        confirmButtonColor: '#dc3545'
                     });
                 }
             });
