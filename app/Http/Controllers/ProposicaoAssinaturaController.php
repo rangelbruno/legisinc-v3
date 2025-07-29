@@ -17,8 +17,7 @@ class ProposicaoAssinaturaController extends Controller
     {
         $proposicoes = Proposicao::where('autor_id', Auth::id())
             ->whereIn('status', ['aprovado_assinatura', 'devolvido_correcao'])
-            ->with(['revisor'])
-            ->orderBy('data_revisao', 'desc')
+            ->orderBy('updated_at', 'desc')
             ->paginate(15);
 
         return view('proposicoes.assinatura.index', compact('proposicoes'));
@@ -31,7 +30,7 @@ class ProposicaoAssinaturaController extends Controller
     {
         // $this->authorize('update', $proposicao);
         
-        if ($proposicao->status !== 'aprovado_assinatura') {
+        if (!in_array($proposicao->status, ['aprovado_assinatura', 'retornado_legislativo'])) {
             abort(403, 'Proposição não está disponível para assinatura.');
         }
 
@@ -96,11 +95,12 @@ class ProposicaoAssinaturaController extends Controller
             'ip_assinatura' => $request->ip(),
         ]);
 
-        $proposicao->adicionarTramitacao(
-            'Proposição assinada digitalmente',
-            'aprovado_assinatura',
-            'assinado'
-        );
+        // TODO: Implementar sistema de tramitação quando disponível
+        // $proposicao->adicionarTramitacao(
+        //     'Proposição assinada digitalmente',
+        //     'aprovado_assinatura',
+        //     'assinado'
+        // );
 
         return response()->json([
             'success' => true,
@@ -126,11 +126,12 @@ class ProposicaoAssinaturaController extends Controller
             'status' => 'enviado_protocolo'
         ]);
 
-        $proposicao->adicionarTramitacao(
-            'Enviado para protocolo',
-            'assinado',
-            'enviado_protocolo'
-        );
+        // TODO: Implementar sistema de tramitação quando disponível
+        // $proposicao->adicionarTramitacao(
+        //     'Enviado para protocolo',
+        //     'assinado',
+        //     'enviado_protocolo'
+        // );
 
         return response()->json([
             'success' => true,
@@ -197,11 +198,12 @@ class ProposicaoAssinaturaController extends Controller
             'data_revisao' => null,
         ]);
 
-        $proposicao->adicionarTramitacao(
-            'Reenviado para análise legislativa após correções',
-            'devolvido_correcao',
-            'enviado_legislativo'
-        );
+        // TODO: Implementar sistema de tramitação quando disponível
+        // $proposicao->adicionarTramitacao(
+        //     'Reenviado para análise legislativa após correções',
+        //     'devolvido_correcao',
+        //     'enviado_legislativo'
+        // );
 
         return response()->json([
             'success' => true,
@@ -216,7 +218,6 @@ class ProposicaoAssinaturaController extends Controller
     {
         $proposicoes = Proposicao::where('autor_id', Auth::id())
             ->whereNotNull('data_assinatura')
-            ->with(['revisor'])
             ->orderBy('data_assinatura', 'desc')
             ->paginate(15);
 

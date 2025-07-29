@@ -102,7 +102,7 @@
                         <span class="bullet bg-gray-400 w-5px h-2px"></span>
                     </li>
                     <li class="breadcrumb-item text-muted">
-                        <a href="{{ route('proposicoes.assinatura.index') }}" class="text-muted text-hover-primary">Assinatura</a>
+                        <a href="{{ route('proposicoes.assinatura') }}" class="text-muted text-hover-primary">Assinatura</a>
                     </li>
                     <li class="breadcrumb-item">
                         <span class="bullet bg-gray-400 w-5px h-2px"></span>
@@ -113,7 +113,7 @@
             <!--end::Page title-->
             <!--begin::Actions-->
             <div class="d-flex align-items-center gap-2 gap-lg-3">
-                <a href="{{ route('proposicoes.assinatura.index') }}" class="btn btn-sm btn-outline btn-outline-dashed btn-outline-secondary btn-active-light-secondary">
+                <a href="{{ route('proposicoes.assinatura') }}" class="btn btn-sm btn-outline btn-outline-dashed btn-outline-secondary btn-active-light-secondary">
                     <i class="ki-duotone ki-arrow-left fs-2">
                         <span class="path1"></span>
                         <span class="path2"></span>
@@ -686,7 +686,7 @@ function processarAssinatura() {
                         icon: 'success',
                         confirmButtonText: 'OK'
                     }).then(() => {
-                        window.location.href = '{{ route("proposicoes.assinatura.index") }}';
+                        window.location.href = '{{ route("proposicoes.assinatura") }}';
                     });
                 } else {
                     Swal.fire({

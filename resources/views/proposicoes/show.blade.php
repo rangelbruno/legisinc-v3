@@ -78,6 +78,12 @@
                                         @case('em_edicao')
                                             <span class="badge badge-warning fs-6">Em Edição</span>
                                             @break
+                                        @case('assinado')
+                                            <span class="badge badge-success fs-6">Assinado</span>
+                                            @break
+                                        @case('enviado_protocolo')
+                                            <span class="badge badge-info fs-6">Enviado para Protocolo</span>
+                                            @break
                                         @default
                                             <span class="badge badge-secondary fs-6">{{ ucfirst(str_replace('_', ' ', $proposicao->status)) }}</span>
                                     @endswitch
@@ -275,12 +281,18 @@
                     @elseif($proposicao->status === 'retornado_legislativo')
                         <div class="alert alert-info mb-3">
                             <i class="fas fa-arrow-left-right me-2"></i>
-                            <strong>Retornado do Legislativo:</strong> Proposição aprovada pelo Legislativo e retornada para assinatura.
+                            <strong>Retornado do Legislativo:</strong> Proposição aprovada pelo Legislativo e pronta para assinatura digital.
                         </div>
                         <div class="d-grid gap-2">
-                            <a href="{{ route('proposicoes.assinar', $proposicao->id) }}" class="btn btn-success btn-sm">
-                                <i class="fas fa-signature me-2"></i>Assinar Proposição
-                            </a>
+                            @if($proposicao->template_id)
+                                <a href="{{ route('proposicoes.editar-onlyoffice', ['proposicao' => $proposicao->id, 'template' => $proposicao->template_id]) }}" class="btn btn-success">
+                                    <i class="fas fa-signature me-2"></i>Assinar Documento
+                                </a>
+                            @else
+                                <a href="{{ route('proposicoes.assinar', $proposicao->id) }}" class="btn btn-success">
+                                    <i class="fas fa-signature me-2"></i>Assinar Documento
+                                </a>
+                            @endif
                             <button class="btn btn-outline-primary btn-sm" onclick="consultarStatus()">
                                 <i class="fas fa-info-circle me-2"></i>Ver Detalhes
                             </button>
@@ -296,6 +308,32 @@
                             </button>
                             <button class="btn btn-outline-primary btn-sm" onclick="baixarDocumento()">
                                 <i class="fas fa-download me-2"></i>Baixar Documento
+                            </button>
+                        </div>
+                    @elseif($proposicao->status === 'assinado')
+                        <div class="alert alert-success mb-3">
+                            <i class="fas fa-signature me-2"></i>
+                            <strong>Assinado:</strong> Documento assinado digitalmente.
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-primary" onclick="enviarParaProtocolo()">
+                                <i class="fas fa-file-signature me-2"></i>Enviar para Protocolo
+                            </button>
+                            <button class="btn btn-outline-primary btn-sm" onclick="baixarDocumento()">
+                                <i class="fas fa-download me-2"></i>Baixar Documento Assinado
+                            </button>
+                        </div>
+                    @elseif($proposicao->status === 'enviado_protocolo')
+                        <div class="alert alert-info mb-3">
+                            <i class="fas fa-file-signature me-2"></i>
+                            <strong>Protocolado:</strong> Documento enviado para protocolo oficial.
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-outline-info btn-sm" onclick="consultarProtocolo()">
+                                <i class="fas fa-search me-2"></i>Consultar Protocolo
+                            </button>
+                            <button class="btn btn-outline-primary btn-sm" onclick="baixarDocumento()">
+                                <i class="fas fa-download me-2"></i>Baixar Documento Final
                             </button>
                         </div>
                     @else
@@ -659,6 +697,112 @@
                                                             <span class="path3"></span>
                                                         </i>
                                                         Proposição rejeitada pelo legislativo
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <!--end::Timeline details-->
+                                </div>
+                                <!--end::Timeline content-->
+                            </div>
+                            <!--end::Timeline item-->
+                        @endif
+
+                        @if($proposicao->status === 'assinado')
+                            <!--begin::Timeline item-->
+                            <div class="timeline-item">
+                                <!--begin::Timeline line-->
+                                <div class="timeline-line w-40px"></div>
+                                <!--end::Timeline line-->
+
+                                <!--begin::Timeline icon-->
+                                <div class="timeline-icon symbol symbol-circle symbol-40px">
+                                    <div class="symbol-label bg-light-success">
+                                        <i class="fas fa-signature fs-2 text-success"></i>
+                                    </div>
+                                </div>
+                                <!--end::Timeline icon-->
+
+                                <!--begin::Timeline content-->
+                                <div class="timeline-content mb-10 mt-n2">
+                                    <!--begin::Timeline heading-->
+                                    <div class="overflow-auto pe-3">
+                                        <!--begin::Title-->
+                                        <div class="fs-5 fw-semibold mb-2">Documento Assinado</div>
+                                        <!--end::Title-->
+
+                                        <!--begin::Description-->
+                                        <div class="d-flex align-items-center mt-1 fs-6">
+                                            <!--begin::Info-->
+                                            <div class="text-muted me-2 fs-7">{{ date('d/m/Y H:i', strtotime($proposicao->updated_at ?? now())) }}</div>
+                                            <!--end::Info-->
+                                        </div>
+                                        <!--end::Description-->
+                                    </div>
+                                    <!--end::Timeline heading-->
+
+                                    <!--begin::Timeline details-->
+                                    <div class="overflow-auto pb-5">
+                                        <div class="notice d-flex bg-light-success rounded border-success border border-dashed p-4">
+                                            <div class="d-flex flex-stack flex-grow-1">
+                                                <div class="fw-semibold">
+                                                    <div class="fs-6 text-gray-700">
+                                                        <i class="fas fa-check-circle fs-4 text-success me-2"></i>
+                                                        Documento assinado digitalmente e pronto para protocolo
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <!--end::Timeline details-->
+                                </div>
+                                <!--end::Timeline content-->
+                            </div>
+                            <!--end::Timeline item-->
+                        @endif
+
+                        @if($proposicao->status === 'enviado_protocolo')
+                            <!--begin::Timeline item-->
+                            <div class="timeline-item">
+                                <!--begin::Timeline line-->
+                                <div class="timeline-line w-40px"></div>
+                                <!--end::Timeline line-->
+
+                                <!--begin::Timeline icon-->
+                                <div class="timeline-icon symbol symbol-circle symbol-40px">
+                                    <div class="symbol-label bg-light-info">
+                                        <i class="fas fa-paper-plane fs-2 text-info"></i>
+                                    </div>
+                                </div>
+                                <!--end::Timeline icon-->
+
+                                <!--begin::Timeline content-->
+                                <div class="timeline-content mb-10 mt-n2">
+                                    <!--begin::Timeline heading-->
+                                    <div class="overflow-auto pe-3">
+                                        <!--begin::Title-->
+                                        <div class="fs-5 fw-semibold mb-2">Enviado para Protocolo</div>
+                                        <!--end::Title-->
+
+                                        <!--begin::Description-->
+                                        <div class="d-flex align-items-center mt-1 fs-6">
+                                            <!--begin::Info-->
+                                            <div class="text-muted me-2 fs-7">{{ date('d/m/Y H:i', strtotime($proposicao->updated_at ?? now())) }}</div>
+                                            <!--end::Info-->
+                                        </div>
+                                        <!--end::Description-->
+                                    </div>
+                                    <!--end::Timeline heading-->
+
+                                    <!--begin::Timeline details-->
+                                    <div class="overflow-auto pb-5">
+                                        <div class="notice d-flex bg-light-info rounded border-info border border-dashed p-4">
+                                            <div class="d-flex flex-stack flex-grow-1">
+                                                <div class="fw-semibold">
+                                                    <div class="fs-6 text-gray-700">
+                                                        <i class="fas fa-check-circle fs-4 text-info me-2"></i>
+                                                        Documento enviado para protocolo oficial e tramitação
                                                     </div>
                                                 </div>
                                             </div>
@@ -1157,42 +1301,71 @@ function enviarParaLegislativo() {
 }
 
 function aprovarEdicoes() {
-    if (confirm('Tem certeza que deseja aprovar as edições feitas pelo Legislativo? A proposição ficará pronta para assinatura.')) {
-        $.ajax({
-            url: `{{ route('proposicoes.aprovar-edicoes-legislativo', $proposicao) }}`,
-            method: 'POST',
-            data: {
-                _token: $('meta[name="csrf-token"]').attr('content')
-            },
-            beforeSend: function() {
-                $('button[onclick="aprovarEdicoes()"]').prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i>Aprovando...');
-            },
-            success: function(response) {
-                if (response.success) {
-                    toastr.success(response.message);
-                    setTimeout(() => {
-                        if (response.redirect) {
-                            window.location.href = response.redirect;
-                        } else {
-                            location.reload();
-                        }
-                    }, 2000);
-                } else {
-                    toastr.error(response.message || 'Erro ao aprovar edições');
+    Swal.fire({
+        title: 'Aprovar Edições do Legislativo?',
+        text: 'Tem certeza que deseja aprovar as edições feitas pelo Legislativo? A proposição ficará pronta para assinatura.',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Sim, Aprovar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#50cd89',
+        cancelButtonColor: '#7239ea',
+        reverseButtons: true
+    }).then((result) => {
+        if (result.isConfirmed) {
+            $.ajax({
+                url: `{{ route('proposicoes.aprovar-edicoes-legislativo', $proposicao) }}`,
+                method: 'POST',
+                data: {
+                    _token: $('meta[name="csrf-token"]').attr('content')
+                },
+                beforeSend: function() {
+                    $('button[onclick="aprovarEdicoes()"]').prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i>Aprovando...');
+                },
+                success: function(response) {
+                    if (response.success) {
+                        Swal.fire({
+                            title: 'Aprovado!',
+                            text: response.message,
+                            icon: 'success',
+                            confirmButtonText: 'OK',
+                            confirmButtonColor: '#50cd89'
+                        }).then(() => {
+                            if (response.redirect) {
+                                window.location.href = response.redirect;
+                            } else {
+                                location.reload();
+                            }
+                        });
+                    } else {
+                        Swal.fire({
+                            title: 'Erro!',
+                            text: response.message || 'Erro ao aprovar edições',
+                            icon: 'error',
+                            confirmButtonText: 'OK',
+                            confirmButtonColor: '#dc3545'
+                        });
+                        $('button[onclick="aprovarEdicoes()"]').prop('disabled', false).html('<i class="fas fa-check me-2"></i>Aprovar Edições');
+                    }
+                },
+                error: function(xhr) {
+                    console.error('Erro:', xhr);
+                    let message = 'Erro ao aprovar edições';
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        message = xhr.responseJSON.message;
+                    }
+                    Swal.fire({
+                        title: 'Erro!',
+                        text: message,
+                        icon: 'error',
+                        confirmButtonText: 'OK',
+                        confirmButtonColor: '#dc3545'
+                    });
                     $('button[onclick="aprovarEdicoes()"]').prop('disabled', false).html('<i class="fas fa-check me-2"></i>Aprovar Edições');
                 }
-            },
-            error: function(xhr) {
-                console.error('Erro:', xhr);
-                let message = 'Erro ao aprovar edições';
-                if (xhr.responseJSON && xhr.responseJSON.message) {
-                    message = xhr.responseJSON.message;
-                }
-                toastr.error(message);
-                $('button[onclick="aprovarEdicoes()"]').prop('disabled', false).html('<i class="fas fa-check me-2"></i>Aprovar Edições');
-            }
-        });
-    }
+            });
+        }
+    });
 }
 
 function verHistoricoEdicoes() {
@@ -1289,9 +1462,87 @@ function verComentarios() {
 }
 
 function baixarDocumento() {
-    // Implementar download do documento aprovado
-    toastr.success('Iniciando download do documento...');
-    // Aqui você faria o download do PDF final
+    // Mostrar loading
+    Swal.fire({
+        title: 'Preparando Download...',
+        html: '<div class="text-center"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Carregando...</span></div><p class="mt-2 mb-0">Preparando o documento para download...</p></div>',
+        allowOutsideClick: false,
+        showConfirmButton: false,
+        willOpen: () => {
+            Swal.showLoading();
+        }
+    });
+
+    // Fazer requisição para download
+    fetch(`{{ route('proposicoes.onlyoffice.download', $proposicao) }}`, {
+        method: 'GET',
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`Erro ${response.status}: ${response.statusText}`);
+        }
+        
+        // Verificar se é realmente um arquivo
+        const contentType = response.headers.get('content-type');
+        if (!contentType || (!contentType.includes('application/pdf') && !contentType.includes('application/vnd.openxmlformats'))) {
+            throw new Error('Formato de arquivo não suportado');
+        }
+        
+        return response.blob();
+    })
+    .then(blob => {
+        if (blob.size === 0) {
+            throw new Error('Arquivo vazio recebido');
+        }
+        
+        // Determinar extensão baseada no content-type
+        let filename = `proposicao_{{ $proposicao->id }}_assinada`;
+        const contentType = blob.type;
+        if (contentType.includes('pdf')) {
+            filename += '.pdf';
+        } else if (contentType.includes('word') || contentType.includes('openxml')) {
+            filename += '.docx';
+        } else {
+            filename += '.pdf'; // default
+        }
+        
+        // Criar URL do blob e iniciar download
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        
+        Swal.close();
+        toastr.success('Download iniciado com sucesso!');
+    })
+    .catch(error => {
+        console.error('Erro no download:', error);
+        let errorMessage = 'Não foi possível baixar o documento. Tente novamente.';
+        
+        if (error.message.includes('404')) {
+            errorMessage = 'Documento não encontrado. Pode não ter sido gerado ainda.';
+        } else if (error.message.includes('403')) {
+            errorMessage = 'Você não tem permissão para baixar este documento.';
+        } else if (error.message.includes('500')) {
+            errorMessage = 'Erro interno do servidor. Contate o administrador.';
+        }
+        
+        Swal.fire({
+            title: 'Erro no Download',
+            text: errorMessage,
+            icon: 'error',
+            confirmButtonText: 'OK',
+            confirmButtonColor: '#dc3545'
+        });
+    });
 }
 
 function verHistorico() {
@@ -1464,6 +1715,124 @@ function voltarParaParlamentar() {
                 });
             });
         }
+    });
+}
+
+function enviarParaProtocolo() {
+    Swal.fire({
+        title: 'Enviar para Protocolo?',
+        html: `<div class="text-center">
+                <i class="fas fa-file-signature text-primary fa-4x mb-3"></i>
+                <p class="mb-3">O documento assinado será enviado para protocolo oficial.</p>
+                <div class="text-start small">
+                    <p class="mb-1"><i class="fas fa-check-circle text-success me-1"></i> Documento será protocolado oficialmente</p>
+                    <p class="mb-1"><i class="fas fa-check-circle text-success me-1"></i> Número de protocolo será gerado</p>
+                    <p class="mb-0"><i class="fas fa-check-circle text-success me-1"></i> Tramitação oficial será iniciada</p>
+                </div>
+               </div>`,
+        width: '450px',
+        icon: null,
+        showCancelButton: true,
+        confirmButtonText: '<i class="fas fa-paper-plane me-1"></i>Enviar para Protocolo',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#0d6efd',
+        cancelButtonColor: '#6c757d',
+        customClass: {
+            confirmButton: 'btn btn-primary',
+            cancelButton: 'btn btn-secondary'
+        },
+        reverseButtons: true
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Mostrar loading
+            Swal.fire({
+                title: 'Enviando para Protocolo...',
+                html: '<div class="text-center"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Carregando...</span></div><p class="mt-2 mb-0">Aguarde enquanto o documento é enviado para protocolo...</p></div>',
+                allowOutsideClick: false,
+                showConfirmButton: false,
+                willOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            $.ajax({
+                url: `{{ route('proposicoes.enviar-protocolo', $proposicao) }}`,
+                method: 'PUT',
+                data: {
+                    _token: $('meta[name="csrf-token"]').attr('content')
+                },
+                success: function(response) {
+                    if (response.success) {
+                        Swal.fire({
+                            title: 'Enviado com Sucesso!',
+                            html: `<div class="text-center">
+                                    <i class="fas fa-check-circle text-success fa-4x mb-3"></i>
+                                    <p>Documento enviado para protocolo com sucesso!</p>
+                                    ${response.protocolo ? `<p class="text-muted">Protocolo: <strong>${response.protocolo}</strong></p>` : ''}
+                                   </div>`,
+                            icon: null,
+                            confirmButtonText: 'OK',
+                            confirmButtonColor: '#28a745'
+                        }).then(() => {
+                            if (response.redirect) {
+                                window.location.href = response.redirect;
+                            } else {
+                                location.reload();
+                            }
+                        });
+                    } else {
+                        Swal.fire({
+                            title: 'Erro!',
+                            text: response.message || 'Erro ao enviar para protocolo',
+                            icon: 'error',
+                            confirmButtonText: 'OK',
+                            confirmButtonColor: '#dc3545'
+                        });
+                    }
+                },
+                error: function(xhr) {
+                    console.error('Erro:', xhr);
+                    let message = 'Erro ao enviar para protocolo. Tente novamente.';
+                    
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        message = xhr.responseJSON.message;
+                    } else if (xhr.status === 403) {
+                        message = 'Você não tem permissão para enviar esta proposição para protocolo.';
+                    } else if (xhr.status === 404) {
+                        message = 'Proposição não encontrada.';
+                    }
+                    
+                    Swal.fire({
+                        title: 'Erro!',
+                        text: message,
+                        icon: 'error',
+                        confirmButtonText: 'OK',
+                        confirmButtonColor: '#dc3545'
+                    });
+                }
+            });
+        }
+    });
+}
+
+function consultarProtocolo() {
+    Swal.fire({
+        title: 'Consultar Protocolo',
+        html: `<div class="text-start">
+                <p class="mb-3">Esta proposição foi enviada para protocolo oficial.</p>
+                <div class="alert alert-info">
+                    <h6 class="mb-2"><i class="fas fa-info-circle me-2"></i>Status do Protocolo</h6>
+                    <p class="mb-1"><strong>Proposição:</strong> {{ $proposicao->tipo }} #{{ $proposicao->id }}</p>
+                    <p class="mb-1"><strong>Autor:</strong> {{ $proposicao->autor->name }}</p>
+                    <p class="mb-1"><strong>Data de Envio:</strong> {{ $proposicao->updated_at ? $proposicao->updated_at->format('d/m/Y H:i') : 'N/A' }}</p>
+                    <p class="mb-0"><strong>Status:</strong> Aguardando processamento no protocolo</p>
+                </div>
+                <p class="text-muted small">O número de protocolo será gerado pelo sistema de protocolo oficial da Câmara.</p>
+               </div>`,
+        width: '500px',
+        icon: null,
+        confirmButtonText: 'Fechar',
+        confirmButtonColor: '#6c757d'
     });
 }
 </script>

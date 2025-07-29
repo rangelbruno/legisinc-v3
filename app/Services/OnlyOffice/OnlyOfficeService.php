@@ -821,6 +821,39 @@ ${texto}
             $section->addText($proposicao->observacoes_edicao);
         }
         
+        // Se a proposição estiver assinada, adicionar informações da assinatura
+        if ($proposicao->status === 'assinado' && $proposicao->assinatura_digital) {
+            $section->addTextBreak(3);
+            $section->addText('ASSINATURA DIGITAL', ['bold' => true, 'size' => 14]);
+            $section->addTextBreak(1);
+            
+            // Adicionar linha de separação
+            $section->addText(str_repeat('_', 80), ['size' => 10]);
+            $section->addTextBreak(1);
+            
+            // Informações da assinatura
+            $section->addText('Documento assinado digitalmente por:', ['bold' => true]);
+            $section->addText($proposicao->autor->name);
+            
+            if ($proposicao->data_assinatura) {
+                $section->addText('Data da Assinatura: ' . $proposicao->data_assinatura->format('d/m/Y H:i:s'));
+            }
+            
+            // Hash da assinatura (primeiros e últimos caracteres para segurança)
+            if (strlen($proposicao->assinatura_digital) > 20) {
+                $hashDisplay = substr($proposicao->assinatura_digital, 0, 8) . '...' . substr($proposicao->assinatura_digital, -8);
+                $section->addText('Hash da Assinatura: ' . $hashDisplay, ['size' => 10, 'color' => '666666']);
+            }
+            
+            if ($proposicao->ip_assinatura) {
+                $section->addText('IP da Assinatura: ' . $proposicao->ip_assinatura, ['size' => 10, 'color' => '666666']);
+            }
+            
+            $section->addTextBreak(1);
+            $section->addText('Este documento foi assinado digitalmente conforme a legislação vigente.', 
+                ['italic' => true, 'size' => 10, 'color' => '666666']);
+        }
+        
         // Salvar documento temporário
         $tempFile = tempnam(sys_get_temp_dir(), 'proposicao_');
         $objWriter = \PhpOffice\PhpWord\IOFactory::createWriter($phpWord, 'Word2007');
@@ -858,6 +891,34 @@ Status: " . ucfirst(str_replace('_', ' ', $proposicao->status)) . "\par
             $rtf .= "\n\par
 {\b OBSERVAÇÕES DO LEGISLATIVO:\par}
 {$proposicao->observacoes_edicao}\par";
+        }
+
+        // Se a proposição estiver assinada, adicionar informações da assinatura
+        if ($proposicao->status === 'assinado' && $proposicao->assinatura_digital) {
+            $rtf .= "\n\par\par\par
+{\b ASSINATURA DIGITAL:\par}
+\par
+" . str_repeat('_', 80) . "\par
+\par
+{\b Documento assinado digitalmente por:\par}
+{$proposicao->autor->name}\par";
+
+            if ($proposicao->data_assinatura) {
+                $rtf .= "Data da Assinatura: " . $proposicao->data_assinatura->format('d/m/Y H:i:s') . "\par";
+            }
+
+            // Hash da assinatura (primeiros e últimos caracteres para segurança)
+            if (strlen($proposicao->assinatura_digital) > 20) {
+                $hashDisplay = substr($proposicao->assinatura_digital, 0, 8) . '...' . substr($proposicao->assinatura_digital, -8);
+                $rtf .= "{\fs20\cf1 Hash da Assinatura: {$hashDisplay}\par}";
+            }
+
+            if ($proposicao->ip_assinatura) {
+                $rtf .= "{\fs20\cf1 IP da Assinatura: {$proposicao->ip_assinatura}\par}";
+            }
+
+            $rtf .= "\par
+{\i\fs20\cf1 Este documento foi assinado digitalmente conforme a legislação vigente.\par}";
         }
 
         $rtf .= "\n}";

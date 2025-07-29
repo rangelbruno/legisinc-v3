@@ -23,7 +23,13 @@ class Proposicao extends Model
         'ultima_modificacao',
         'observacoes_edicao',
         'observacoes_retorno',
-        'data_retorno_legislativo'
+        'data_retorno_legislativo',
+        'confirmacao_leitura',
+        'assinatura_digital',
+        'certificado_digital',
+        'data_assinatura',
+        'ip_assinatura',
+        'data_aprovacao_autor'
         // Campos temporariamente comentados até migração ser executada:
         // 'numero',
         // 'variaveis_template',
@@ -33,8 +39,11 @@ class Proposicao extends Model
     protected $casts = [
         'ultima_modificacao' => 'datetime',
         'data_retorno_legislativo' => 'datetime',
+        'data_assinatura' => 'datetime',
+        'data_aprovacao_autor' => 'datetime',
         'created_at' => 'datetime',
-        'updated_at' => 'datetime'
+        'updated_at' => 'datetime',
+        'confirmacao_leitura' => 'boolean'
         // 'variaveis_template' => 'array'
     ];
 
