@@ -640,6 +640,125 @@ class ProposicaoController extends Controller
     }
 
     /**
+     * Buscar notificações do usuário atual
+     */
+    public function buscarNotificacoes()
+    {
+        try {
+            $user = \Auth::user();
+            $notificacoes = [];
+
+            // Buscar proposições retornadas do legislativo
+            $proposicoesRetornadas = Proposicao::where('autor_id', $user->id)
+                ->where('status', 'retornado_legislativo')
+                ->orderBy('updated_at', 'desc')
+                ->limit(10)
+                ->get();
+
+            foreach ($proposicoesRetornadas as $proposicao) {
+                $notificacoes[] = [
+                    'id' => 'prop_ret_' . $proposicao->id,
+                    'tipo' => 'retornado_legislativo',
+                    'titulo' => 'Proposição #' . $proposicao->id . ' Retornada',
+                    'descricao' => 'Proposição aprovada pelo Legislativo e aguarda sua assinatura',
+                    'ementa' => \Str::limit($proposicao->ementa ?? 'Sem ementa', 60),
+                    'data' => $proposicao->updated_at,
+                    'data_formatada' => $proposicao->updated_at->diffForHumans(),
+                    'link' => route('proposicoes.show', $proposicao->id),
+                    'link_acao' => route('proposicoes.assinar', $proposicao->id),
+                    'acao_texto' => 'Assinar',
+                    'icone' => 'ki-duotone ki-check-square',
+                    'cor' => 'info',
+                    'prioridade' => 'alta'
+                ];
+            }
+
+            // Buscar proposições aguardando aprovação do autor
+            $proposicoesAguardando = Proposicao::where('autor_id', $user->id)
+                ->where('status', 'aguardando_aprovacao_autor')
+                ->orderBy('updated_at', 'desc')
+                ->limit(5)
+                ->get();
+
+            foreach ($proposicoesAguardando as $proposicao) {
+                $notificacoes[] = [
+                    'id' => 'prop_agrd_' . $proposicao->id,
+                    'tipo' => 'aguardando_aprovacao_autor',
+                    'titulo' => 'Proposição #' . $proposicao->id . ' Editada',
+                    'descricao' => 'Proposição editada pelo Legislativo aguarda sua aprovação',
+                    'ementa' => \Str::limit($proposicao->ementa ?? 'Sem ementa', 60),
+                    'data' => $proposicao->updated_at,
+                    'data_formatada' => $proposicao->updated_at->diffForHumans(),
+                    'link' => route('proposicoes.show', $proposicao->id),
+                    'link_acao' => route('proposicoes.editar-texto', $proposicao->id),
+                    'acao_texto' => 'Revisar',
+                    'icone' => 'ki-duotone ki-check-circle',
+                    'cor' => 'primary',
+                    'prioridade' => 'media'
+                ];
+            }
+
+            // Buscar proposições devolvidas para edição
+            $proposicoesDevolvidas = Proposicao::where('autor_id', $user->id)
+                ->where('status', 'devolvido_edicao')
+                ->orderBy('updated_at', 'desc')
+                ->limit(5)
+                ->get();
+
+            foreach ($proposicoesDevolvidas as $proposicao) {
+                $notificacoes[] = [
+                    'id' => 'prop_dev_' . $proposicao->id,
+                    'tipo' => 'devolvido_edicao',
+                    'titulo' => 'Proposição #' . $proposicao->id . ' Devolvida',
+                    'descricao' => 'Proposição devolvida pelo Legislativo para ajustes',
+                    'ementa' => \Str::limit($proposicao->ementa ?? 'Sem ementa', 60),
+                    'data' => $proposicao->updated_at,
+                    'data_formatada' => $proposicao->updated_at->diffForHumans(),
+                    'link' => route('proposicoes.show', $proposicao->id),
+                    'link_acao' => route('proposicoes.editar-texto', $proposicao->id),
+                    'acao_texto' => 'Editar',
+                    'icone' => 'ki-duotone ki-arrow-left',
+                    'cor' => 'warning',
+                    'prioridade' => 'media'
+                ];
+            }
+
+            // Ordenar por prioridade e data
+            usort($notificacoes, function($a, $b) {
+                $prioridades = ['alta' => 3, 'media' => 2, 'baixa' => 1];
+                $prioridadeA = $prioridades[$a['prioridade']] ?? 1;
+                $prioridadeB = $prioridades[$b['prioridade']] ?? 1;
+                
+                if ($prioridadeA === $prioridadeB) {
+                    return $b['data']->timestamp - $a['data']->timestamp;
+                }
+                
+                return $prioridadeB - $prioridadeA;
+            });
+
+            return response()->json([
+                'success' => true,
+                'notificacoes' => $notificacoes,
+                'total' => count($notificacoes),
+                'nao_lidas' => count(array_filter($notificacoes, function($n) { 
+                    return $n['prioridade'] === 'alta'; 
+                }))
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Erro ao buscar notificações', [
+                'user_id' => \Auth::id(),
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Erro ao buscar notificações.'
+            ], 500);
+        }
+    }
+
+    /**
      * Excluir proposição (apenas rascunhos)
      */
     public function destroy($proposicaoId)
