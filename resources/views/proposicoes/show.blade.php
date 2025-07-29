@@ -155,13 +155,12 @@
                             </a>
                         </div>
                     @elseif($proposicao->status === 'enviado_legislativo')
-                        <div class="alert alert-info mb-3">
-                            <i class="fas fa-clock me-2"></i>
-                            <strong>Aguardando Legislativo:</strong> Proposição enviada e aguardando análise.
-                        </div>
                         <div class="d-grid gap-2">
-                            <button class="btn btn-outline-info" disabled>
-                                <i class="fas fa-hourglass-half me-2"></i>Aguardando Retorno
+                            <a href="{{ route('proposicoes.onlyoffice.editor', $proposicao) }}" class="btn btn-success">
+                                <i class="fas fa-file-word me-2"></i>Abrir com o Editor
+                            </a>
+                            <button class="btn btn-outline-secondary" onclick="voltarParaParlamentar()">
+                                <i class="fas fa-arrow-left me-2"></i>Voltar para Parlamentar
                             </button>
                             <button class="btn btn-outline-secondary btn-sm" onclick="consultarStatus()">
                                 <i class="fas fa-search me-2"></i>Consultar Status
@@ -918,6 +917,79 @@ function excluirProposicao() {
         // Implementar exclusão
         toastr.warning('Funcionalidade de exclusão será implementada');
     }
+}
+
+function voltarParaParlamentar() {
+    Swal.fire({
+        title: 'Confirmar Devolução',
+        html: `Tem certeza que deseja devolver esta proposição para o Parlamentar?<br><br><strong>Após esta ação:</strong><ul style="text-align: left;"><li>O Legislativo não terá mais acesso à proposição</li><li>O Parlamentar poderá assinar o documento</li><li>O documento seguirá para o Protocolo</li></ul>`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Sim, Devolver',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#28a745',
+        cancelButtonColor: '#6c757d',
+        customClass: {
+            confirmButton: 'btn btn-success',
+            cancelButton: 'btn btn-secondary'
+        },
+        reverseButtons: true
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Mostrar loading
+            Swal.fire({
+                title: 'Devolvendo...',
+                text: 'Aguarde enquanto a proposição é devolvida para o Parlamentar.',
+                icon: 'info',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showConfirmButton: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+            
+            // Fazer requisição PUT
+            fetch(`/proposicoes/{{ $proposicao->id }}/voltar-parlamentar`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    'Accept': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire({
+                        title: 'Sucesso!',
+                        text: data.message,
+                        icon: 'success',
+                        confirmButtonText: 'Ok'
+                    }).then(() => {
+                        // Redirecionar para a página indicada ou padrão
+                        window.location.href = data.redirect || '{{ route("proposicoes.legislativo.index") }}';
+                    });
+                } else {
+                    Swal.fire({
+                        title: 'Erro',
+                        text: data.message || 'Erro ao devolver proposição.',
+                        icon: 'error',
+                        confirmButtonText: 'Ok'
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Erro na requisição:', error);
+                Swal.fire({
+                    title: 'Erro',
+                    text: 'Erro de conexão. Tente novamente.',
+                    icon: 'error',
+                    confirmButtonText: 'Ok'
+                });
+            });
+        }
+    });
 }
 </script>
 @endpush

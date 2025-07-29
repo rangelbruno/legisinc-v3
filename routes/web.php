@@ -547,12 +547,23 @@ Route::prefix('proposicoes')->name('proposicoes.')->middleware(['auth', 'check.s
     Route::post('/{proposicao}/enviar-protocolo', [App\Http\Controllers\ProposicaoController::class, 'enviarProtocolo'])->name('enviar-protocolo');
     
     // ===== LEGISLATIVO - REVISÃO =====
+    Route::get('/legislativo', [App\Http\Controllers\ProposicaoLegislativoController::class, 'index'])->name('legislativo.index')->middleware('check.proposicao.permission');
+    Route::get('/{proposicao}/legislativo/editar', [App\Http\Controllers\ProposicaoLegislativoController::class, 'editar'])->name('legislativo.editar')->middleware('check.proposicao.permission');
+    Route::put('/{proposicao}/legislativo/salvar-edicao', [App\Http\Controllers\ProposicaoLegislativoController::class, 'salvarEdicao'])->name('legislativo.salvar-edicao')->middleware('check.proposicao.permission');
+    Route::put('/{proposicao}/legislativo/enviar-parlamentar', [App\Http\Controllers\ProposicaoLegislativoController::class, 'enviarParaParlamentar'])->name('legislativo.enviar-parlamentar')->middleware('check.proposicao.permission');
+    
+    // OnlyOffice para Legislativo
+    Route::get('/{proposicao}/onlyoffice/editor', [App\Http\Controllers\OnlyOfficeController::class, 'editorLegislativo'])->name('onlyoffice.editor')->middleware('check.proposicao.permission');
+    Route::post('/{proposicao}/onlyoffice/callback/{documentKey}', [App\Http\Controllers\OnlyOfficeController::class, 'callback'])->name('onlyoffice.callback');
     Route::get('/revisar', [App\Http\Controllers\ProposicaoLegislativoController::class, 'index'])->name('revisar');
     Route::get('/{proposicao}/revisar', [App\Http\Controllers\ProposicaoLegislativoController::class, 'revisar'])->name('revisar.show');
     Route::post('/{proposicao}/salvar-analise', [App\Http\Controllers\ProposicaoLegislativoController::class, 'salvarAnalise'])->name('salvar-analise');
     Route::put('/{proposicao}/aprovar', [App\Http\Controllers\ProposicaoLegislativoController::class, 'aprovar'])->name('aprovar');
     Route::put('/{proposicao}/devolver', [App\Http\Controllers\ProposicaoLegislativoController::class, 'devolver'])->name('devolver');
     Route::get('/relatorio-legislativo', [App\Http\Controllers\ProposicaoLegislativoController::class, 'relatorio'])->name('relatorio-legislativo');
+    Route::get('/relatorio-legislativo/dados', [App\Http\Controllers\ProposicaoLegislativoController::class, 'dadosRelatorio'])->name('relatorio-legislativo.dados');
+    Route::get('/relatorio-legislativo/pdf', [App\Http\Controllers\ProposicaoLegislativoController::class, 'relatorioPdf'])->name('relatorio-legislativo.pdf');
+    Route::get('/relatorio-legislativo/excel', [App\Http\Controllers\ProposicaoLegislativoController::class, 'relatorioExcel'])->name('relatorio-legislativo.excel');
     Route::get('/aguardando-protocolo', [App\Http\Controllers\ProposicaoLegislativoController::class, 'aguardandoProtocolo'])->name('aguardando-protocolo');
     
     // ===== PARLAMENTAR - ASSINATURA =====
@@ -565,6 +576,9 @@ Route::prefix('proposicoes')->name('proposicoes.')->middleware(['auth', 'check.s
     Route::post('/{proposicao}/salvar-correcoes', [App\Http\Controllers\ProposicaoAssinaturaController::class, 'salvarCorrecoes'])->name('salvar-correcoes');
     Route::put('/{proposicao}/reenviar-legislativo', [App\Http\Controllers\ProposicaoAssinaturaController::class, 'reenviarLegislativo'])->name('reenviar-legislativo');
     Route::get('/historico-assinaturas', [App\Http\Controllers\ProposicaoAssinaturaController::class, 'historico'])->name('historico-assinaturas');
+    
+    // Voltar proposição para parlamentar (do legislativo)
+    Route::put('/{proposicao}/voltar-parlamentar', [App\Http\Controllers\ProposicaoController::class, 'voltarParaParlamentar'])->name('voltar-parlamentar');
     
     // ===== PROTOCOLO =====
     Route::get('/protocolar', [App\Http\Controllers\ProposicaoProtocoloController::class, 'index'])->name('protocolar');
@@ -582,13 +596,26 @@ Route::prefix('proposicoes')->name('proposicoes.')->middleware(['auth', 'check.s
     Route::delete('/{proposicao}', [App\Http\Controllers\ProposicaoController::class, 'destroy'])->name('destroy');
 });
 
-// ONLYOFFICE ROUTES FOR PROPOSIÇÕES
+// ONLYOFFICE ROUTES FOR PROPOSIÇÕES (sem autenticação)
 Route::prefix('onlyoffice')->name('onlyoffice.')->group(function () {
     // File serving routes (no auth middleware since OnlyOffice server needs direct access)
     Route::get('/file/proposicao/{proposicao}/{arquivo}', [App\Http\Controllers\ProposicaoController::class, 'serveFile'])->name('file.proposicao');
     
     // Callback routes for document updates
     Route::post('/callback/proposicao/{proposicao}', [App\Http\Controllers\ProposicaoController::class, 'onlyOfficeCallback'])->name('callback.proposicao');
+});
+
+// OnlyOffice download route for Legislativo (sem autenticação para acesso do servidor OnlyOffice)
+Route::get('/proposicoes/{proposicao}/onlyoffice/download', [App\Http\Controllers\OnlyOfficeController::class, 'download'])->name('proposicoes.onlyoffice.download');
+
+// ROTAS DE ADMINISTRAÇÃO - TEMPLATES DE RELATÓRIO
+Route::prefix('admin/templates')->name('admin.templates.')->middleware(['auth', 'check.screen.permission'])->group(function () {
+    Route::get('/relatorio-pdf', [App\Http\Controllers\Admin\TemplateRelatorioController::class, 'editarTemplatePdf'])->name('relatorio-pdf');
+    Route::post('/relatorio-pdf/salvar', [App\Http\Controllers\Admin\TemplateRelatorioController::class, 'salvarTemplatePdf'])->name('salvar-pdf');
+    Route::post('/relatorio-pdf/preview', [App\Http\Controllers\Admin\TemplateRelatorioController::class, 'previewTemplate'])->name('preview');
+    Route::get('/backups', [App\Http\Controllers\Admin\TemplateRelatorioController::class, 'listarBackups'])->name('listar-backups');
+    Route::post('/backup/restaurar', [App\Http\Controllers\Admin\TemplateRelatorioController::class, 'restaurarBackup'])->name('restaurar-backup');
+    Route::post('/resetar', [App\Http\Controllers\Admin\TemplateRelatorioController::class, 'resetarTemplate'])->name('resetar');
 });
 
 // ROTAS DE ADMINISTRAÇÃO - TIPOS DE PROPOSIÇÃO

@@ -2,18 +2,20 @@
 
 namespace App\Http\Controllers;
 
-// use App\Models\Projeto; // REMOVED - migrated to Proposições
+use App\Models\Proposicao;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 class ProposicaoAssinaturaController extends Controller
 {
+    use AuthorizesRequests;
     /**
      * Lista proposições aguardando assinatura do parlamentar
      */
     public function index()
     {
-        $proposicoes = Projeto::where('autor_id', Auth::id())
+        $proposicoes = Proposicao::where('autor_id', Auth::id())
             ->whereIn('status', ['aprovado_assinatura', 'devolvido_correcao'])
             ->with(['revisor'])
             ->orderBy('data_revisao', 'desc')
@@ -25,7 +27,7 @@ class ProposicaoAssinaturaController extends Controller
     /**
      * Tela para assinatura da proposição aprovada
      */
-    public function assinar(Projeto $proposicao)
+    public function assinar(Proposicao $proposicao)
     {
         $this->authorize('update', $proposicao);
         
@@ -39,7 +41,7 @@ class ProposicaoAssinaturaController extends Controller
     /**
      * Tela para correção da proposição devolvida
      */
-    public function corrigir(Projeto $proposicao)
+    public function corrigir(Proposicao $proposicao)
     {
         $this->authorize('update', $proposicao);
         
@@ -53,7 +55,7 @@ class ProposicaoAssinaturaController extends Controller
     /**
      * Confirmar leitura da proposição
      */
-    public function confirmarLeitura(Projeto $proposicao)
+    public function confirmarLeitura(Proposicao $proposicao)
     {
         $this->authorize('update', $proposicao);
         
@@ -70,7 +72,7 @@ class ProposicaoAssinaturaController extends Controller
     /**
      * Processar assinatura digital
      */
-    public function processarAssinatura(Request $request, Projeto $proposicao)
+    public function processarAssinatura(Request $request, Proposicao $proposicao)
     {
         $this->authorize('update', $proposicao);
         
@@ -109,7 +111,7 @@ class ProposicaoAssinaturaController extends Controller
     /**
      * Enviar proposição para protocolo
      */
-    public function enviarProtocolo(Projeto $proposicao)
+    public function enviarProtocolo(Proposicao $proposicao)
     {
         $this->authorize('update', $proposicao);
         
@@ -139,7 +141,7 @@ class ProposicaoAssinaturaController extends Controller
     /**
      * Salvar correções na proposição devolvida
      */
-    public function salvarCorrecoes(Request $request, Projeto $proposicao)
+    public function salvarCorrecoes(Request $request, Proposicao $proposicao)
     {
         $this->authorize('update', $proposicao);
         
@@ -170,7 +172,7 @@ class ProposicaoAssinaturaController extends Controller
     /**
      * Reenviar proposição para legislativo após correções
      */
-    public function reenviarLegislativo(Projeto $proposicao)
+    public function reenviarLegislativo(Proposicao $proposicao)
     {
         $this->authorize('update', $proposicao);
         
@@ -212,7 +214,7 @@ class ProposicaoAssinaturaController extends Controller
      */
     public function historico()
     {
-        $proposicoes = Projeto::where('autor_id', Auth::id())
+        $proposicoes = Proposicao::where('autor_id', Auth::id())
             ->whereNotNull('data_assinatura')
             ->with(['revisor'])
             ->orderBy('data_assinatura', 'desc')

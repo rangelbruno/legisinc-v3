@@ -17,6 +17,12 @@ class ProposicaoController extends Controller
      */
     public function create()
     {
+        // Verificar se é usuário do Legislativo - eles não podem criar proposições
+        if (auth()->user()->isLegislativo()) {
+            return redirect()->route('proposicoes.legislativo.index')
+                ->with('warning', 'Usuários do Legislativo não podem criar proposições. Acesse as proposições enviadas para análise.');
+        }
+
         try {
             // Buscar tipos ativos do banco de dados
             $tipos = TipoProposicao::getParaDropdown();
@@ -509,6 +515,12 @@ class ProposicaoController extends Controller
      */
     public function minhasProposicoes()
     {
+        // Verificar se é usuário do Legislativo - eles não podem acessar esta página
+        if (auth()->user()->isLegislativo()) {
+            return redirect()->route('proposicoes.legislativo.index')
+                ->with('warning', 'Usuários do Legislativo devem acessar as proposições pela área do Legislativo.');
+        }
+
         // Buscar proposições do usuário logado do banco de dados
         $proposicoes = Proposicao::doAutor(Auth::id())
             ->with('autor')
@@ -2502,5 +2514,58 @@ ${texto}
 
         return redirect()->route('proposicoes.show', $instance->proposicao_id)
             ->with('success', 'Edição finalizada com sucesso!');
+    }
+
+    /**
+     * Voltar proposição para parlamentar (do legislativo)
+     */
+    public function voltarParaParlamentar(Proposicao $proposicao)
+    {
+        try {
+            // Verificar se o usuário é do legislativo
+            if (!auth()->user()->isLegislativo()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Acesso negado. Apenas usuários do Legislativo podem executar esta ação.'
+                ], 403);
+            }
+
+            // Verificar se a proposição está no status correto
+            if (!in_array($proposicao->status, ['enviado_legislativo', 'em_revisao'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Esta proposição não pode ser devolvida no status atual.'
+                ], 400);
+            }
+
+            // Alterar o status para 'retornado_legislativo' - proposição volta para o parlamentar assinar
+            $proposicao->status = 'retornado_legislativo';
+            $proposicao->save();
+
+            \Log::info('Proposição devolvida para parlamentar', [
+                'proposicao_id' => $proposicao->id,
+                'user_id' => auth()->id(),
+                'status_anterior' => $proposicao->getOriginal('status'),
+                'status_novo' => $proposicao->status
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Proposição devolvida para o Parlamentar com sucesso! O Legislativo não terá mais acesso.',
+                'redirect' => route('proposicoes.legislativo.index')
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Erro ao voltar proposição para parlamentar', [
+                'proposicao_id' => $proposicao->id,
+                'user_id' => auth()->id(),
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Erro interno do servidor. Tente novamente.'
+            ], 500);
+        }
     }
 }

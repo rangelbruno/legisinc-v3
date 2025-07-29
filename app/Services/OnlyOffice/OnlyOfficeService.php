@@ -723,4 +723,259 @@ ${texto}
     {
         return \Firebase\JWT\JWT::encode($data, $this->jwtSecret, 'HS256');
     }
+
+    /**
+     * Gerar documento DOCX de uma proposição
+     */
+    public function gerarDocumentoProposicao(\App\Models\Proposicao $proposicao)
+    {
+        // Log do conteúdo da proposição para debug
+        \Log::info('Gerando documento para proposição', [
+            'proposicao_id' => $proposicao->id,
+            'tipo' => $proposicao->tipo,
+            'ementa_length' => strlen($proposicao->ementa ?? ''),
+            'conteudo_length' => strlen($proposicao->conteudo ?? ''),
+            'has_conteudo' => !empty($proposicao->conteudo),
+            'conteudo_preview' => $proposicao->conteudo ? substr(strip_tags($proposicao->conteudo), 0, 100) : 'VAZIO'
+        ]);
+        
+        // Verificar se existe PHPWord
+        if (!class_exists('\PhpOffice\PhpWord\PhpWord')) {
+            // Se não existe, gerar documento RTF simples
+            return $this->gerarDocumentoRTFProposicao($proposicao);
+        }
+
+        $phpWord = new \PhpOffice\PhpWord\PhpWord();
+        
+        // Configurar documento
+        $phpWord->getSettings()->setThemeFontLang(new \PhpOffice\PhpWord\Style\Language(\PhpOffice\PhpWord\Style\Language::PT_BR));
+        
+        // Adicionar seção
+        $section = $phpWord->addSection();
+        
+        // Adicionar título
+        $section->addText(
+            "PROPOSIÇÃO: " . strtoupper($proposicao->tipo),
+            ['bold' => true, 'size' => 16],
+            ['alignment' => \PhpOffice\PhpWord\SimpleType\Jc::CENTER]
+        );
+        
+        $section->addTextBreak(2);
+        
+        // Adicionar informações básicas
+        $section->addText('INFORMAÇÕES BÁSICAS', ['bold' => true, 'size' => 14]);
+        $section->addText("Autor: {$proposicao->autor->name}");
+        $section->addText("Data: " . $proposicao->created_at->format('d/m/Y'));
+        $section->addText("Status: " . ucfirst(str_replace('_', ' ', $proposicao->status)));
+        
+        $section->addTextBreak(2);
+        
+        // Adicionar ementa
+        $section->addText('EMENTA', ['bold' => true, 'size' => 14]);
+        $section->addText($proposicao->ementa);
+        
+        $section->addTextBreak(2);
+        
+        // Adicionar conteúdo da proposição
+        if (!empty($proposicao->conteudo)) {
+            $section->addText('CONTEÚDO DA PROPOSIÇÃO', ['bold' => true, 'size' => 14]);
+            
+            // Verificar se o conteúdo contém HTML
+            if (strip_tags($proposicao->conteudo) != $proposicao->conteudo) {
+                // Se contém HTML, tentar converter
+                try {
+                    \PhpOffice\PhpWord\Shared\Html::addHtml($section, $proposicao->conteudo);
+                } catch (\Exception $e) {
+                    // Se a conversão HTML falhar, usar texto limpo
+                    \Log::warning('Erro ao converter HTML, usando texto limpo', ['error' => $e->getMessage()]);
+                    $textoLimpo = strip_tags($proposicao->conteudo);
+                    $paragrafos = explode("\n", $textoLimpo);
+                    foreach ($paragrafos as $paragrafo) {
+                        if (trim($paragrafo)) {
+                            $section->addText(trim($paragrafo));
+                        } else {
+                            $section->addTextBreak();
+                        }
+                    }
+                }
+            } else {
+                // É texto puro, dividir em parágrafos
+                $paragrafos = explode("\n", $proposicao->conteudo);
+                foreach ($paragrafos as $paragrafo) {
+                    if (trim($paragrafo)) {
+                        $section->addText(trim($paragrafo));
+                    } else {
+                        $section->addTextBreak();
+                    }
+                }
+            }
+        } else {
+            $section->addText('CONTEÚDO DA PROPOSIÇÃO', ['bold' => true, 'size' => 14]);
+            $section->addText('[CONTEÚDO NÃO DISPONÍVEL - Adicione o texto da proposição aqui]', ['italic' => true, 'color' => '999999']);
+        }
+        
+        // Se houver observações do legislativo, adicionar
+        if ($proposicao->observacoes_edicao) {
+            $section->addTextBreak(2);
+            $section->addText('OBSERVAÇÕES DO LEGISLATIVO', ['bold' => true, 'size' => 14]);
+            $section->addText($proposicao->observacoes_edicao);
+        }
+        
+        // Salvar documento temporário
+        $tempFile = tempnam(sys_get_temp_dir(), 'proposicao_');
+        $objWriter = \PhpOffice\PhpWord\IOFactory::createWriter($phpWord, 'Word2007');
+        $objWriter->save($tempFile);
+        
+        // Retornar arquivo
+        return response()->download($tempFile, "proposicao_{$proposicao->id}.docx")
+            ->deleteFileAfterSend(true);
+    }
+
+    /**
+     * Gerar documento RTF simples de uma proposição
+     */
+    private function gerarDocumentoRTFProposicao(\App\Models\Proposicao $proposicao)
+    {
+        $conteudo = $proposicao->conteudo ? str_replace("\n", "\par\n", strip_tags($proposicao->conteudo)) : '[CONTEÚDO NÃO DISPONÍVEL - Adicione o texto da proposição aqui]';
+        
+        $rtf = "{\rtf1\ansi\deff0 {\fonttbl {\f0 Times New Roman;}}
+{\colortbl;\red0\green0\blue0;}
+\f0\fs24
+{\qc\b\fs28 PROPOSIÇÃO: " . strtoupper($proposicao->tipo) . "\par}
+\par
+{\b INFORMAÇÕES BÁSICAS:\par}
+Autor: {$proposicao->autor->name}\par
+Data: " . $proposicao->created_at->format('d/m/Y') . "\par
+Status: " . ucfirst(str_replace('_', ' ', $proposicao->status)) . "\par
+\par
+{\b EMENTA:\par}
+{$proposicao->ementa}\par
+\par
+{\b CONTEÚDO DA PROPOSIÇÃO:\par}
+" . $conteudo . "\par";
+
+        if ($proposicao->observacoes_edicao) {
+            $rtf .= "\n\par
+{\b OBSERVAÇÕES DO LEGISLATIVO:\par}
+{$proposicao->observacoes_edicao}\par";
+        }
+
+        $rtf .= "\n}";
+
+        // Salvar arquivo temporário
+        $tempFile = tempnam(sys_get_temp_dir(), 'proposicao_') . '.rtf';
+        file_put_contents($tempFile, $rtf);
+        
+        // Retornar arquivo
+        return response()->download($tempFile, "proposicao_{$proposicao->id}.rtf")
+            ->deleteFileAfterSend(true);
+    }
+
+    /**
+     * Processar callback do OnlyOffice para uma proposição
+     */
+    public function processarCallbackProposicao(\App\Models\Proposicao $proposicao, string $documentKey, array $data): array
+    {
+        $status = $data['status'] ?? 0;
+
+        // Status 2 = documento salvo e pronto para download
+        if ($status == 2 && isset($data['url'])) {
+            try {
+                $originalUrl = $data['url'];
+                
+                // Ajustar URL para comunicação entre containers
+                $urlOtimizada = $originalUrl;
+                if (config('app.env') === 'local') {
+                    // Converter localhost:8080 para nome do container OnlyOffice
+                    $urlOtimizada = str_replace(['http://localhost:8080', 'http://127.0.0.1:8080'], 'http://legisinc-onlyoffice', $originalUrl);
+                }
+                
+                \Log::info('OnlyOffice callback - tentando baixar documento', [
+                    'proposicao_id' => $proposicao->id,
+                    'original_url' => $originalUrl,
+                    'optimized_url' => $urlOtimizada
+                ]);
+                
+                // Baixar o documento atualizado
+                $response = Http::timeout(10)->get($urlOtimizada);
+                
+                if (!$response->successful()) {
+                    \Log::error('Erro ao baixar documento do OnlyOffice', [
+                        'proposicao_id' => $proposicao->id,
+                        'original_url' => $originalUrl,
+                        'optimized_url' => $urlOtimizada,
+                        'status' => $response->status()
+                    ]);
+                    return ['error' => 1];
+                }
+
+                // Extrair conteúdo do documento
+                $conteudo = $this->extrairConteudoDocumento($response->body());
+                
+                // Atualizar proposição
+                $proposicao->update([
+                    'conteudo' => $conteudo,
+                    'ultima_modificacao' => now(),
+                    'modificado_por' => auth()->id()
+                ]);
+                
+                \Log::info('Proposição atualizada com sucesso via OnlyOffice', [
+                    'proposicao_id' => $proposicao->id,
+                    'conteudo_length' => strlen($conteudo)
+                ]);
+                
+            } catch (\Exception $e) {
+                \Log::error('Erro ao processar callback do OnlyOffice para proposição', [
+                    'proposicao_id' => $proposicao->id,
+                    'error' => $e->getMessage()
+                ]);
+                return ['error' => 1];
+            }
+        }
+        
+        return ['error' => 0];
+    }
+
+    /**
+     * Extrair conteúdo de texto de um documento
+     */
+    private function extrairConteudoDocumento(string $documentContent): string
+    {
+        // Salvar temporariamente para processar
+        $tempFile = tempnam(sys_get_temp_dir(), 'doc_extract_');
+        file_put_contents($tempFile, $documentContent);
+        
+        try {
+            // Verificar se é DOCX
+            if (class_exists('\PhpOffice\PhpWord\IOFactory')) {
+                $phpWord = \PhpOffice\PhpWord\IOFactory::load($tempFile);
+                $sections = $phpWord->getSections();
+                
+                $extractedContent = '';
+                foreach ($sections as $section) {
+                    $elements = $section->getElements();
+                    foreach ($elements as $element) {
+                        if (method_exists($element, 'getText')) {
+                            $extractedContent .= $element->getText() . "\n";
+                        }
+                    }
+                }
+                
+                return $extractedContent;
+            }
+            
+            // Se não conseguir extrair com PHPWord, tentar como RTF
+            $content = file_get_contents($tempFile);
+            
+            // Remover tags RTF básicas
+            $content = preg_replace('/\{\\[^{}]*\}/', '', $content);
+            $content = preg_replace('/[\{\}]/', '', $content);
+            $content = str_replace('\par', "\n", $content);
+            
+            return trim($content);
+            
+        } finally {
+            unlink($tempFile);
+        }
+    }
 }

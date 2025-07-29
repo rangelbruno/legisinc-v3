@@ -8,6 +8,9 @@ use Illuminate\Support\Facades\Route;
 Route::post('/onlyoffice/callback/proposicao/{proposicao}', [App\Http\Controllers\ProposicaoController::class, 'onlyOfficeCallback'])->name('api.onlyoffice.callback.proposicao');
 Route::post('/onlyoffice/callback/instance/{instance}', [App\Http\Controllers\ProposicaoController::class, 'onlyOfficeCallbackInstance'])->name('api.onlyoffice.callback.instance');
 
+// OnlyOffice callback for Legislativo editor
+Route::post('/onlyoffice/callback/legislativo/{proposicao}/{documentKey}', [App\Http\Controllers\OnlyOfficeController::class, 'callback'])->name('api.onlyoffice.callback.legislativo');
+
 
 // Parâmetros API routes - Mantido para compatibilidade, mas deprecado
 Route::prefix('parametros')->name('api.parametros.')->middleware(['web'])->group(function () {

@@ -40,6 +40,10 @@ class CheckProposicaoPermission
                 return $this->checkParlamentarPermission($user, $next, $request);
 
             // Rotas do Legislativo
+            case 'proposicoes.legislativo.index':
+            case 'proposicoes.legislativo.editar':
+            case 'proposicoes.legislativo.salvar-edicao':
+            case 'proposicoes.legislativo.enviar-parlamentar':
             case 'proposicoes.revisar':
             case 'proposicoes.revisar.show':
             case 'proposicoes.salvar-analise':
@@ -47,6 +51,8 @@ class CheckProposicaoPermission
             case 'proposicoes.devolver':
             case 'proposicoes.relatorio-legislativo':
             case 'proposicoes.aguardando-protocolo':
+            case 'proposicoes.onlyoffice.editor':
+            case 'proposicoes.onlyoffice.download':
                 return $this->checkLegislativoPermission($user, $next, $request);
 
             // Rotas de Assinatura (Parlamentar)
@@ -73,6 +79,10 @@ class CheckProposicaoPermission
             // Rotas gerais (todos os perfis autenticados)
             case 'proposicoes.show':
             case 'proposicoes.buscar-modelos':
+                return $next($request);
+            
+            // Rota de callback do OnlyOffice (sem autenticação)
+            case 'proposicoes.onlyoffice.callback':
                 return $next($request);
 
             default:

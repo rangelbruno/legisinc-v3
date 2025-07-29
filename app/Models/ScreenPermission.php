@@ -168,13 +168,81 @@ class ScreenPermission extends Model
             return $permission ? $permission->can_access : false;
         }
 
-        // Se não há permissões configuradas, permitir apenas dashboard para não deixar usuário sem acesso
-        if ($route === 'dashboard.index') {
-            return true;
+        // Se não há permissões configuradas, usar permissões padrão por perfil
+        return self::getDefaultAccessByRole($roleName, $route);
+    }
+
+    /**
+     * Obter acesso padrão de módulo por perfil
+     */
+    private static function getDefaultModuleAccessByRole(string $roleName, string $module): bool
+    {
+        switch ($roleName) {
+            case 'ADMIN':
+                return true;
+            
+            case 'LEGISLATIVO':
+                $defaultModules = self::getDefaultLegislativoModules();
+                return $defaultModules[$module] ?? false;
+            
+            case 'PARLAMENTAR':
+                $parlamentarModules = ['dashboard' => true, 'proposicoes' => true, 'parlamentares' => true];
+                return $parlamentarModules[$module] ?? false;
+                
+            case 'PUBLICO':
+            case 'CIDADAO_VERIFICADO':
+                return $module === 'dashboard';
+                
+            default:
+                return false;
         }
-        
-        // Outras rotas requerem configuração explícita pelo administrador
-        return false;
+    }
+
+    /**
+     * Obter permissões padrão para perfil LEGISLATIVO (fallback)
+     */
+    public static function getDefaultLegislativoPermissions(): array
+    {
+        return [
+            // Dashboard
+            'dashboard' => true,
+            
+            // Proposições - Apenas rotas de revisão e processamento
+            // Legislativo NÃO pode criar proposições
+            'proposicoes.show' => true,
+            'proposicoes.buscar-modelos' => true,
+            'proposicoes.legislativo.index' => true,
+            'proposicoes.legislativo.editar' => true,
+            'proposicoes.legislativo.salvar-edicao' => true,
+            'proposicoes.legislativo.enviar-parlamentar' => true,
+            'proposicoes.revisar' => true,
+            'proposicoes.revisar.show' => true,
+            'proposicoes.salvar-analise' => true,
+            'proposicoes.aprovar' => true,
+            'proposicoes.devolver' => true,
+            'proposicoes.relatorio-legislativo' => true,
+            'proposicoes.aguardando-protocolo' => true,
+            
+            // Parlamentares - Visualização necessária
+            'parlamentares.index' => true,
+            'parlamentares.show' => true,
+            
+            // Sistema
+            'user.profile' => true,
+            'user.update-last-access' => true,
+        ];
+    }
+
+    /**
+     * Obter módulos padrão para perfil LEGISLATIVO
+     */
+    public static function getDefaultLegislativoModules(): array
+    {
+        return [
+            'dashboard' => true,
+            'proposicoes' => true,
+            'parlamentares' => true,
+        ];
     }
 
     /**
@@ -188,7 +256,8 @@ class ScreenPermission extends Model
                 return true;
             
             case 'LEGISLATIVO':
-                return true; // Acesso total
+                $defaultPermissions = self::getDefaultLegislativoPermissions();
+                return $defaultPermissions[$route] ?? false;
             
             case 'PARLAMENTAR':
                 $parlamentarRoutes = [
@@ -275,13 +344,8 @@ class ScreenPermission extends Model
             return $hasAccess;
         }
 
-        // Se não há permissões configuradas, permitir apenas dashboard para não deixar usuário sem acesso
-        if ($module === 'dashboard') {
-            return true;
-        }
-        
-        // Outros módulos requerem configuração explícita pelo administrador
-        return false;
+        // Se não há permissões configuradas, usar permissões padrão por perfil
+        return self::getDefaultModuleAccessByRole($roleName, $module);
     }
 
     /**

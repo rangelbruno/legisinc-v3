@@ -2,268 +2,572 @@
 
 @section('title', 'Proposições para Revisão')
 
+@use('Illuminate\Support\Str')
+
 @section('content')
-<div class="container-fluid">
-    <!-- Header -->
-    <div class="d-flex align-items-center justify-content-between flex-wrap mb-5">
-        <div>
-            <h1 class="h3 text-gray-800 mb-0">Revisão Legislativa</h1>
-            <p class="text-muted">Proposições aguardando análise técnica</p>
-        </div>
-        <div>
-            <a href="{{ route('proposicoes.relatorio-legislativo') }}" class="btn btn-outline-primary me-2">
-                <i class="fas fa-chart-bar me-2"></i>Relatório
-            </a>
-            <a href="{{ route('proposicoes.aguardando-protocolo') }}" class="btn btn-outline-success">
-                <i class="fas fa-clipboard-list me-2"></i>Aguardando Protocolo
-            </a>
-        </div>
-    </div>
+<style>
+.dashboard-card-primary {
+    background: linear-gradient(135deg, #7239EA 0%, #5a2bc4 100%) !important;
+    background-image: url("{{ asset('assets/media/patterns/vector-1.png') }}"), linear-gradient(135deg, #7239EA 0%, #5a2bc4 100%) !important;
+    background-repeat: no-repeat !important;
+    background-size: contain, cover !important;
+    background-position: right center, center !important;
+}
+.dashboard-card-info {
+    background: linear-gradient(135deg, #009EF7 0%, #0077d4 100%) !important;
+    background-image: url("{{ asset('assets/media/patterns/vector-1.png') }}"), linear-gradient(135deg, #009EF7 0%, #0077d4 100%) !important;
+    background-repeat: no-repeat !important;
+    background-size: contain, cover !important;
+    background-position: right center, center !important;
+}
+.dashboard-card-success {
+    background: linear-gradient(135deg, #17C653 0%, #13a342 100%) !important;
+    background-image: url("{{ asset('assets/media/patterns/vector-1.png') }}"), linear-gradient(135deg, #17C653 0%, #13a342 100%) !important;
+    background-repeat: no-repeat !important;
+    background-size: contain, cover !important;
+    background-position: right center, center !important;
+}
+.dashboard-card-warning {
+    background: linear-gradient(135deg, #FFC700 0%, #e6b300 100%) !important;
+    background-image: url("{{ asset('assets/media/patterns/vector-1.png') }}"), linear-gradient(135deg, #FFC700 0%, #e6b300 100%) !important;
+    background-repeat: no-repeat !important;
+    background-size: contain, cover !important;
+    background-position: right center, center !important;
+}
+.dashboard-card-danger {
+    background: linear-gradient(135deg, #F1416C 0%, #e02454 100%) !important;
+    background-image: url("{{ asset('assets/media/patterns/vector-1.png') }}"), linear-gradient(135deg, #F1416C 0%, #e02454 100%) !important;
+    background-repeat: no-repeat !important;
+    background-size: contain, cover !important;
+    background-position: right center, center !important;
+}
+</style>
 
-    <!-- Estatísticas Rápidas -->
-    <div class="row mb-4">
-        <div class="col-lg-3 col-md-6">
-            <div class="card bg-primary text-white">
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="flex-grow-1">
-                            <h4 class="mb-0">{{ $proposicoes->where('status', 'enviado_legislativo')->count() }}</h4>
-                            <p class="mb-0 opacity-75">Aguardando Revisão</p>
-                        </div>
-                        <div class="flex-shrink-0">
-                            <i class="fas fa-clock fa-2x opacity-75"></i>
-                        </div>
+<!--begin::Post-->
+<div class="post d-flex flex-column-fluid" id="kt_post">
+    <!--begin::Container-->
+    <div id="kt_content_container" class="container-xxl">
+        <!--begin::Row-->
+        <div class="row g-5 g-xl-8">
+            <!--begin::Col-->
+            <div class="col-xl-12">
+                <!--begin::Header-->
+                <div class="d-flex flex-wrap flex-stack mb-6">
+                    <!--begin::Heading-->
+                    <h3 class="fw-bold my-2">
+                        Revisão Legislativa
+                        <span class="fs-6 text-gray-500 fw-semibold ms-1">Proposições aguardando análise técnica</span>
+                    </h3>
+                    <!--end::Heading-->
+                    <!--begin::Actions-->
+                    <div class="d-flex flex-wrap my-2">
+                        <a href="{{ route('proposicoes.relatorio-legislativo') }}" class="btn btn-light-primary me-3">
+                            <i class="ki-duotone ki-chart-line-star fs-3">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                                <span class="path3"></span>
+                            </i>
+                            Relatório
+                        </a>
+                        <a href="{{ route('proposicoes.aguardando-protocolo') }}" class="btn btn-light-success">
+                            <i class="ki-duotone ki-clipboard-check fs-3">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                                <span class="path3"></span>
+                            </i>
+                            Aguardando Protocolo
+                        </a>
                     </div>
+                    <!--end::Actions-->
                 </div>
-            </div>
-        </div>
-        <div class="col-lg-3 col-md-6">
-            <div class="card bg-warning text-white">
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="flex-grow-1">
-                            <h4 class="mb-0">{{ $proposicoes->where('status', 'em_revisao')->count() }}</h4>
-                            <p class="mb-0 opacity-75">Em Revisão</p>
-                        </div>
-                        <div class="flex-shrink-0">
-                            <i class="fas fa-edit fa-2x opacity-75"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-3 col-md-6">
-            <div class="card bg-success text-white">
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="flex-grow-1">
-                            <h4 class="mb-0">{{ $proposicoes->where('status', 'aprovado_assinatura')->count() }}</h4>
-                            <p class="mb-0 opacity-75">Aprovadas Hoje</p>
-                        </div>
-                        <div class="flex-shrink-0">
-                            <i class="fas fa-check-circle fa-2x opacity-75"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-3 col-md-6">
-            <div class="card bg-danger text-white">
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="flex-grow-1">
-                            <h4 class="mb-0">{{ $proposicoes->where('status', 'devolvido_correcao')->count() }}</h4>
-                            <p class="mb-0 opacity-75">Devolvidas Hoje</p>
-                        </div>
-                        <div class="flex-shrink-0">
-                            <i class="fas fa-times-circle fa-2x opacity-75"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+                <!--end::Header-->
 
-    <!-- Filtros -->
-    <div class="card mb-4">
-        <div class="card-body">
-            <div class="row g-3">
-                <div class="col-md-3">
-                    <label class="form-label">Status</label>
-                    <select id="filtro-status" class="form-select">
-                        <option value="">Todos os status</option>
-                        <option value="enviado_legislativo">Aguardando Revisão</option>
-                        <option value="em_revisao">Em Revisão</option>
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">Tipo</label>
-                    <select id="filtro-tipo" class="form-select">
-                        <option value="">Todos os tipos</option>
-                        <option value="PL">Projeto de Lei</option>
-                        <option value="PLP">Projeto de Lei Complementar</option>
-                        <option value="PEC">Proposta de Emenda Constitucional</option>
-                        <option value="PDC">Projeto de Decreto Legislativo</option>
-                        <option value="PRC">Projeto de Resolução</option>
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">Autor</label>
-                    <input type="text" id="filtro-autor" class="form-control" placeholder="Nome do autor">
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">&nbsp;</label>
-                    <div>
-                        <button type="button" class="btn btn-primary" id="btn-filtrar">
-                            <i class="fas fa-search me-2"></i>Filtrar
-                        </button>
-                        <button type="button" class="btn btn-outline-secondary" id="btn-limpar">
-                            <i class="fas fa-times me-2"></i>Limpar
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+                <!--begin::Statistics-->
+                <div class="row g-5 g-xl-8 mb-5">
+                    <!--begin::Card 1-->
+                    <x-dashboard.card
+                        icon="ki-timer"
+                        iconClass="text-white"
+                        title="Aguardando Revisão"
+                        :value="$allProposicoes->where('status', 'enviado_legislativo')->count()"
+                        cardType="primary"
+                        :progress="($allProposicoes->count() > 0) ? ($allProposicoes->where('status', 'enviado_legislativo')->count() / $allProposicoes->count() * 100) : 0"
+                        colSize="col-xl-3"
+                    />
+                    <!--end::Card 1-->
 
-    <!-- Lista de Proposições -->
-    <div class="card">
-        <div class="card-header">
-            <h5 class="card-title mb-0">
-                <i class="fas fa-list me-2"></i>
-                Proposições para Revisão ({{ $proposicoes->total() }})
-            </h5>
-        </div>
-        <div class="card-body p-0">
-            @if($proposicoes->count() > 0)
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Proposição</th>
-                                <th>Autor</th>
-                                <th>Ementa</th>
-                                <th>Data Envio</th>
-                                <th>Status</th>
-                                <th>Prioridade</th>
-                                <th width="120">Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($proposicoes as $proposicao)
-                            <tr>
-                                <td>
-                                    <div>
-                                        <span class="badge bg-light text-dark me-2">{{ $proposicao->tipo }}</span>
-                                        <strong>{{ $proposicao->titulo ?? 'Sem título' }}</strong>
-                                        @if($proposicao->numero_temporario)
-                                            <br><small class="text-muted">Nº {{ $proposicao->numero_temporario }}</small>
+                    <!--begin::Card 2-->
+                    <x-dashboard.card
+                        icon="ki-document"
+                        iconClass="text-white"
+                        title="Em Revisão"
+                        :value="$allProposicoes->where('status', 'em_revisao')->count()"
+                        cardType="warning"
+                        :progress="($allProposicoes->count() > 0) ? ($allProposicoes->where('status', 'em_revisao')->count() / $allProposicoes->count() * 100) : 0"
+                        colSize="col-xl-3"
+                    />
+                    <!--end::Card 2-->
+
+                    <!--begin::Card 3-->
+                    <x-dashboard.card
+                        icon="ki-check-circle"
+                        iconClass="text-white"
+                        title="Total do Mês"
+                        :value="isset($estatisticas['total_mes']) ? $estatisticas['total_mes'] : 0"
+                        cardType="success"
+                        :progress="100"
+                        colSize="col-xl-3"
+                    />
+                    <!--end::Card 3-->
+
+                    <!--begin::Card 4-->
+                    <x-dashboard.card
+                        icon="ki-arrow-left"
+                        iconClass="text-white"
+                        title="Devolvidas"
+                        :value="$allProposicoes->where('status', 'retornado_legislativo')->count()"
+                        cardType="danger"
+                        :progress="($allProposicoes->count() > 0) ? ($allProposicoes->where('status', 'retornado_legislativo')->count() / $allProposicoes->count() * 100) : 0"
+                        colSize="col-xl-3"
+                    />
+                    <!--end::Card 4-->
+                </div>
+                <!--end::Statistics-->
+
+                <!--begin::Filters-->
+                <div class="card mb-5 mb-xl-8">
+                    <!--begin::Card body-->
+                    <div class="card-body">
+                        <!--begin::Compact form-->
+                        <div class="d-flex align-items-center">
+                            <!--begin::Input group-->
+                            <div class="position-relative w-md-400px me-md-2">
+                                <i class="ki-duotone ki-magnifier fs-3 text-gray-500 position-absolute top-50 translate-middle ms-6">
+                                    <span class="path1"></span>
+                                    <span class="path2"></span>
+                                </i>
+                                <input type="text" class="form-control form-control-solid ps-10" name="search" id="search-proposicoes" placeholder="Buscar proposições...">
+                            </div>
+                            <!--end::Input group-->
+                            <!--begin:Action-->
+                            <div class="d-flex align-items-center">
+                                <button type="button" class="btn btn-primary me-5" id="btn-buscar">Buscar</button>
+                                <a id="kt_horizontal_search_advanced_link" class="btn btn-link" data-bs-toggle="collapse" href="#kt_advanced_search_form">Busca Avançada</a>
+                            </div>
+                            <!--end:Action-->
+                        </div>
+                        <!--end::Compact form-->
+                        <!--begin::Advance form-->
+                        <div class="collapse" id="kt_advanced_search_form">
+                            <!--begin::Separator-->
+                            <div class="separator separator-dashed mt-9 mb-6"></div>
+                            <!--end::Separator-->
+                            <!--begin::Row-->
+                            <div class="row g-8">
+                                <!--begin::Col-->
+                                <div class="col-xxl-3 col-lg-4 col-md-6">
+                                    <label class="fs-6 form-label fw-bold text-gray-900">Status</label>
+                                    <select class="form-select form-select-solid" data-control="select2" data-placeholder="Selecione o status" id="filtro-status">
+                                        <option value="">Todos os status</option>
+                                        <option value="enviado_legislativo">Aguardando Revisão</option>
+                                        <option value="em_revisao">Em Revisão</option>
+                                    </select>
+                                </div>
+                                <!--end::Col-->
+                                <!--begin::Col-->
+                                <div class="col-xxl-3 col-lg-4 col-md-6">
+                                    <label class="fs-6 form-label fw-bold text-gray-900">Tipo</label>
+                                    <select class="form-select form-select-solid" data-control="select2" data-placeholder="Selecione o tipo" id="filtro-tipo">
+                                        <option value="">Todos os tipos</option>
+                                        <option value="PL">Projeto de Lei</option>
+                                        <option value="PLP">Projeto de Lei Complementar</option>
+                                        <option value="PEC">Proposta de Emenda Constitucional</option>
+                                        <option value="PDC">Projeto de Decreto Legislativo</option>
+                                        <option value="PRC">Projeto de Resolução</option>
+                                    </select>
+                                </div>
+                                <!--end::Col-->
+                                <!--begin::Col-->
+                                <div class="col-xxl-3 col-lg-4 col-md-6">
+                                    <label class="fs-6 form-label fw-bold text-gray-900">Autor</label>
+                                    <input type="text" class="form-control form-control-solid" id="filtro-autor" placeholder="Nome do autor">
+                                </div>
+                                <!--end::Col-->
+                            </div>
+                            <!--end::Row-->
+                            <!--begin::Row-->
+                            <div class="row g-8 mt-2">
+                                <!--begin::Col-->
+                                <div class="col-xxl-12">
+                                    <div class="text-end">
+                                        <button type="button" class="btn btn-light me-3" id="btn-limpar">Limpar</button>
+                                        <button type="button" class="btn btn-primary" id="btn-filtrar">
+                                            <span class="indicator-label">Filtrar</span>
+                                            <span class="indicator-progress">Aguarde...
+                                            <span class="spinner-border spinner-border-sm align-middle ms-2"></span></span>
+                                        </button>
+                                    </div>
+                                </div>
+                                <!--end::Col-->
+                            </div>
+                            <!--end::Row-->
+                        </div>
+                        <!--end::Advance form-->
+                    </div>
+                    <!--end::Card body-->
+                </div>
+                <!--end::Filters-->
+
+                <!--begin::Table-->
+                <div class="card">
+                    <!--begin::Card header-->
+                    <div class="card-header border-0 pt-6">
+                        <!--begin::Card title-->
+                        <div class="card-title">
+                            <!--begin::Title-->
+                            <h2 class="fw-bold">Proposições para Revisão</h2>
+                            <!--end::Title-->
+                        </div>
+                        <!--end::Card title-->
+                        <!--begin::Card toolbar-->
+                        <div class="card-toolbar">
+                            <!--begin::Toolbar-->
+                            <div class="d-flex justify-content-end" data-kt-proposicoes-table-toolbar="base">
+                                <!--begin::Info-->
+                                <span class="text-muted fs-7 fw-semibold me-4">Total: {{ $proposicoes->total() }} proposições</span>
+                                <!--end::Info-->
+                            </div>
+                            <!--end::Toolbar-->
+                        </div>
+                        <!--end::Card toolbar-->
+                    </div>
+                    <!--end::Card header-->
+                    <!--begin::Card body-->
+                    <div class="card-body pt-0">
+                        @if($proposicoes->count() > 0)
+                        <!--begin::Table-->
+                        <table class="table align-middle table-row-dashed fs-6 gy-5">
+                            <!--begin::Table head-->
+                            <thead>
+                                <!--begin::Table row-->
+                                <tr class="text-start text-gray-500 fw-bold fs-7 text-uppercase gs-0">
+                                    <th class="min-w-125px">Proposição</th>
+                                    <th class="min-w-125px">Autor</th>
+                                    <th class="min-w-200px">Ementa</th>
+                                    <th class="min-w-100px">Data Envio</th>
+                                    <th class="min-w-100px">Status</th>
+                                    <th class="text-end min-w-100px">Ações</th>
+                                </tr>
+                                <!--end::Table row-->
+                            </thead>
+                            <!--end::Table head-->
+                            <!--begin::Table body-->
+                            <tbody class="text-gray-600 fw-semibold">
+                                @foreach($proposicoes as $proposicao)
+                                <!--begin::Table row-->
+                                <tr>
+                                    <!--begin::Proposicao-->
+                                    <td>
+                                        <div class="d-flex flex-column">
+                                            <span class="badge badge-light-dark fs-7 fw-bold mb-1">{{ $proposicao->tipo }}</span>
+                                            <a href="{{ route('proposicoes.show', $proposicao) }}" class="text-gray-900 fw-bold text-hover-primary mb-1 fs-6">{{ $proposicao->titulo ?? 'Sem título' }}</a>
+                                            @if($proposicao->numero_temporario)
+                                            <span class="text-muted fw-semibold d-block fs-7">Nº {{ $proposicao->numero_temporario }}</span>
+                                            @endif
+                                        </div>
+                                    </td>
+                                    <!--end::Proposicao-->
+                                    <!--begin::Autor-->
+                                    <td>
+                                        <div class="d-flex flex-column">
+                                            <span class="text-gray-900 fw-bold fs-6">{{ $proposicao->autor->name }}</span>
+                                            <span class="text-muted fw-semibold d-block fs-7">{{ $proposicao->autor->cargo_atual ?? 'Parlamentar' }}</span>
+                                        </div>
+                                    </td>
+                                    <!--end::Autor-->
+                                    <!--begin::Ementa-->
+                                    <td>
+                                        <div class="text-gray-900 fw-semibold" data-bs-toggle="tooltip" data-bs-placement="top" title="{{ $proposicao->ementa }}">
+                                            {{ Str::limit($proposicao->ementa, 100) }}
+                                        </div>
+                                    </td>
+                                    <!--end::Ementa-->
+                                    <!--begin::Data-->
+                                    <td>
+                                        <div class="d-flex flex-column">
+                                            <span class="text-gray-900 fw-bold fs-6">{{ $proposicao->created_at->format('d/m/Y') }}</span>
+                                            <span class="text-muted fw-semibold d-block fs-7">{{ $proposicao->created_at->format('H:i') }}</span>
+                                        </div>
+                                    </td>
+                                    <!--end::Data-->
+                                    <!--begin::Status-->
+                                    <td>
+                                        @if($proposicao->status === 'enviado_legislativo')
+                                            <div class="badge badge-light-primary fw-bold">Aguardando Revisão</div>
+                                        @elseif($proposicao->status === 'em_revisao')
+                                            <div class="badge badge-light-warning fw-bold">Em Revisão</div>
                                         @endif
-                                    </div>
-                                </td>
-                                <td>
-                                    <div>
-                                        <strong>{{ $proposicao->autor->name }}</strong>
-                                        <br><small class="text-muted">{{ $proposicao->autor->cargo_atual ?? 'Parlamentar' }}</small>
-                                    </div>
-                                </td>
-                                <td>
-                                    <div class="text-truncate" style="max-width: 300px;" title="{{ $proposicao->ementa }}">
-                                        {{ $proposicao->ementa }}
-                                    </div>
-                                </td>
-                                <td>
-                                    <div>
-                                        {{ $proposicao->created_at->format('d/m/Y') }}
-                                        <br><small class="text-muted">{{ $proposicao->created_at->format('H:i') }}</small>
-                                    </div>
-                                </td>
-                                <td>
-                                    @if($proposicao->status === 'enviado_legislativo')
-                                        <span class="badge bg-primary">Aguardando Revisão</span>
-                                    @elseif($proposicao->status === 'em_revisao')
-                                        <span class="badge bg-warning">Em Revisão</span>
-                                        @if($proposicao->revisor_id === auth()->id())
-                                            <br><small class="text-success">Por você</small>
-                                        @else
-                                            <br><small class="text-muted">{{ $proposicao->revisor->name ?? 'Outro revisor' }}</small>
-                                        @endif
-                                    @endif
-                                </td>
-                                <td>
-                                    @if($proposicao->urgencia === 'urgentissima')
-                                        <span class="badge bg-danger">Urgentíssima</span>
-                                    @elseif($proposicao->urgencia === 'urgente')
-                                        <span class="badge bg-warning">Urgente</span>
-                                    @else
-                                        <span class="badge bg-secondary">Normal</span>
-                                    @endif
-                                </td>
-                                <td>
-                                    <div class="btn-group btn-group-sm">
-                                        <a href="{{ route('proposicoes.show', $proposicao) }}" 
-                                           class="btn btn-outline-info" title="Visualizar">
-                                            <i class="fas fa-eye"></i>
+                                    </td>
+                                    <!--end::Status-->
+                                    <!--begin::Action-->
+                                    <td class="text-end">
+                                        <a href="#" class="btn btn-sm btn-light btn-flex btn-center btn-active-light-primary" data-kt-menu-trigger="click" data-kt-menu-placement="bottom-end">
+                                            Ações
+                                            <i class="ki-duotone ki-down fs-5 ms-1"></i>
                                         </a>
-                                        @if($proposicao->status === 'enviado_legislativo' || 
-                                            ($proposicao->status === 'em_revisao' && $proposicao->revisor_id === auth()->id()))
-                                            <a href="{{ route('proposicoes.revisar.show', $proposicao) }}" 
-                                               class="btn btn-primary" title="Revisar">
-                                                <i class="fas fa-edit"></i>
-                                            </a>
-                                        @endif
+                                        <!--begin::Menu-->
+                                        <div class="menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-gray-600 menu-state-bg-light-primary fw-semibold fs-7 w-150px py-4" data-kt-menu="true">
+                                            <!--begin::Menu item-->
+                                            <div class="menu-item px-3">
+                                                <a href="{{ route('proposicoes.show', $proposicao) }}" class="menu-link px-3">
+                                                    <i class="ki-duotone ki-eye fs-4 me-2">
+                                                        <span class="path1"></span>
+                                                        <span class="path2"></span>
+                                                        <span class="path3"></span>
+                                                    </i>
+                                                    Visualizar
+                                                </a>
+                                            </div>
+                                            <!--end::Menu item-->
+                                            @if(auth()->user()->isLegislativo() && ($proposicao->status === 'enviado_legislativo' || $proposicao->status === 'em_revisao'))
+                                            <!--begin::Menu item-->
+                                            <div class="menu-item px-3">
+                                                <a href="{{ route('proposicoes.legislativo.editar', $proposicao) }}" class="menu-link px-3">
+                                                    <i class="ki-duotone ki-pencil fs-4 me-2">
+                                                        <span class="path1"></span>
+                                                        <span class="path2"></span>
+                                                    </i>
+                                                    Editar
+                                                </a>
+                                            </div>
+                                            <!--end::Menu item-->
+                                            @endif
+                                            @if(auth()->user()->isLegislativo() && ($proposicao->status === 'enviado_legislativo' || $proposicao->status === 'em_revisao'))
+                                            <!--begin::Menu item-->
+                                            <div class="menu-item px-3">
+                                                <a href="{{ route('proposicoes.revisar.show', $proposicao) }}" class="menu-link px-3">
+                                                    <i class="ki-duotone ki-check-square fs-4 me-2">
+                                                        <span class="path1"></span>
+                                                        <span class="path2"></span>
+                                                    </i>
+                                                    Revisar
+                                                </a>
+                                            </div>
+                                            <!--end::Menu item-->
+                                            @endif
+                                        </div>
+                                        <!--end::Menu-->
+                                    </td>
+                                    <!--end::Action-->
+                                </tr>
+                                <!--end::Table row-->
+                                @endforeach
+                            </tbody>
+                            <!--end::Table body-->
+                        </table>
+                        <!--end::Table-->
+                        <!--begin::Pagination-->
+                        <div class="d-flex flex-stack flex-wrap pt-10">
+                            <div class="fs-6 fw-semibold text-gray-700">
+                                Mostrando {{ $proposicoes->firstItem() }} a {{ $proposicoes->lastItem() }} de {{ $proposicoes->total() }} registros
+                            </div>
+                            {{ $proposicoes->links() }}
+                        </div>
+                        <!--end::Pagination-->
+                        @else
+                        <!--begin::No data-->
+                        <div class="text-center py-15">
+                            <i class="ki-duotone ki-document fs-5x text-muted mb-5">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                            </i>
+                            <h3 class="text-gray-600 fs-5 mb-3">Nenhuma proposição para revisão</h3>
+                            <div class="text-muted fs-7">Não há proposições aguardando análise técnica no momento.</div>
+                        </div>
+                        <!--end::No data-->
+                        @endif
+                    </div>
+                    <!--end::Card body-->
+                </div>
+                <!--end::Table-->
+                
+                <!--begin::Additional Stats-->
+                <div class="row g-5 g-xl-8 mt-5">
+                    <div class="col-xl-6">
+                        <!--begin::Chart Card-->
+                        <div class="card">
+                            <div class="card-header border-0">
+                                <h3 class="card-title align-items-start flex-column">
+                                    <span class="card-label fw-bold fs-3 mb-1">Proposições por Tipo</span>
+                                    <span class="text-muted fw-semibold fs-7">Distribuição das proposições em análise</span>
+                                </h3>
+                            </div>
+                            <div class="card-body">
+                                @if(isset($estatisticas['por_tipo']) && count($estatisticas['por_tipo']) > 0)
+                                    @foreach($estatisticas['por_tipo'] as $tipo => $total)
+                                        <div class="d-flex align-items-center mb-3">
+                                            <div class="bullet bg-primary me-3" style="width: 10px; height: 10px; border-radius: 50%;"></div>
+                                            <div class="flex-grow-1">
+                                                <span class="text-gray-800 fw-bold">{{ strtoupper($tipo) }}</span>
+                                                <span class="text-muted ms-2">({{ $total }} {{ $total == 1 ? 'proposição' : 'proposições' }})</span>
+                                            </div>
+                                            <span class="badge badge-light-primary">{{ $total }}</span>
+                                        </div>
+                                    @endforeach
+                                @else
+                                    <div class="text-center text-muted py-5">
+                                        <i class="ki-duotone ki-chart-pie-simple fs-3x mb-3">
+                                            <span class="path1"></span>
+                                            <span class="path2"></span>
+                                        </i>
+                                        <div>Nenhuma proposição em análise no momento</div>
                                     </div>
-                                </td>
-                            </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
+                                @endif
+                            </div>
+                        </div>
+                        <!--end::Chart Card-->
+                    </div>
+                    
+                    <div class="col-xl-6">
+                        <!--begin::Stats Card-->
+                        <div class="card">
+                            <div class="card-header border-0">
+                                <h3 class="card-title align-items-start flex-column">
+                                    <span class="card-label fw-bold fs-3 mb-1">Métricas de Desempenho</span>
+                                    <span class="text-muted fw-semibold fs-7">Indicadores de eficiência</span>
+                                </h3>
+                            </div>
+                            <div class="card-body">
+                                <!--begin::Item-->
+                                <div class="d-flex align-items-center bg-light-primary rounded p-5 mb-3">
+                                    <span class="svg-icon svg-icon-primary me-5">
+                                        <i class="ki-duotone ki-time fs-2x">
+                                            <span class="path1"></span>
+                                            <span class="path2"></span>
+                                        </i>
+                                    </span>
+                                    <div class="flex-grow-1 me-2">
+                                        <span class="fw-bold text-gray-800 fs-6">Tempo Médio de Revisão</span>
+                                        <span class="text-muted fw-semibold d-block fs-7">Média de horas para análise</span>
+                                    </div>
+                                    <span class="fw-bold text-primary py-1 px-3">
+                                        {{ isset($estatisticas['tempo_medio_revisao']) ? $estatisticas['tempo_medio_revisao'] . 'h' : 'N/A' }}
+                                    </span>
+                                </div>
+                                <!--end::Item-->
+                                
+                                <!--begin::Item-->
+                                <div class="d-flex align-items-center bg-light-warning rounded p-5 mb-3">
+                                    <span class="svg-icon svg-icon-warning me-5">
+                                        <i class="ki-duotone ki-flag fs-2x">
+                                            <span class="path1"></span>
+                                            <span class="path2"></span>
+                                        </i>
+                                    </span>
+                                    <div class="flex-grow-1 me-2">
+                                        <span class="fw-bold text-gray-800 fs-6">Proposições Urgentes</span>
+                                        <span class="text-muted fw-semibold d-block fs-7">Requerem atenção prioritária</span>
+                                    </div>
+                                    <span class="fw-bold text-warning py-1 px-3">
+                                        {{ isset($estatisticas['urgentes']) ? $estatisticas['urgentes'] : '0' }}
+                                    </span>
+                                </div>
+                                <!--end::Item-->
+                                
+                                <!--begin::Item-->
+                                <div class="d-flex align-items-center bg-light-success rounded p-5">
+                                    <span class="svg-icon svg-icon-success me-5">
+                                        <i class="ki-duotone ki-chart-line-up fs-2x">
+                                            <span class="path1"></span>
+                                            <span class="path2"></span>
+                                        </i>
+                                    </span>
+                                    <div class="flex-grow-1 me-2">
+                                        <span class="fw-bold text-gray-800 fs-6">Taxa de Conclusão</span>
+                                        <span class="text-muted fw-semibold d-block fs-7">Proposições finalizadas este mês</span>
+                                    </div>
+                                    <span class="fw-bold text-success py-1 px-3">
+                                        @php
+                                            $finalizadas = $allProposicoes->whereIn('status', ['aprovado_assinatura', 'devolvido_correcao', 'retornado_legislativo'])
+                                                ->filter(function($p) { return $p->updated_at->isCurrentMonth(); })
+                                                ->count();
+                                            $taxa = isset($estatisticas['total_mes']) && $estatisticas['total_mes'] > 0 
+                                                ? round(($finalizadas / $estatisticas['total_mes']) * 100) 
+                                                : 0;
+                                        @endphp
+                                        {{ $taxa }}%
+                                    </span>
+                                </div>
+                                <!--end::Item-->
+                            </div>
+                        </div>
+                        <!--end::Stats Card-->
+                    </div>
                 </div>
-
-                <!-- Paginação -->
-                <div class="card-footer">
-                    {{ $proposicoes->links() }}
-                </div>
-            @else
-                <div class="text-center py-5">
-                    <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
-                    <h5 class="text-muted">Nenhuma proposição para revisão</h5>
-                    <p class="text-muted">Não há proposições aguardando análise técnica no momento.</p>
-                </div>
-            @endif
+                <!--end::Additional Stats-->
+            </div>
+            <!--end::Col-->
         </div>
+        <!--end::Row-->
     </div>
+    <!--end::Container-->
 </div>
+<!--end::Post-->
 @endsection
 
 @push('scripts')
 <script>
 $(document).ready(function() {
-    // Filtros
+    // Initialize Select2
+    $('[data-control="select2"]').select2({
+        minimumResultsForSearch: -1
+    });
+
+    // Initialize tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    });
+
+    // Search functionality
+    $('#btn-buscar').on('click', function() {
+        const search = $('#search-proposicoes').val();
+        if (search) {
+            const params = new URLSearchParams(window.location.search);
+            params.set('search', search);
+            window.location.search = params.toString();
+        }
+    });
+
+    $('#search-proposicoes').on('keypress', function(e) {
+        if (e.which === 13) {
+            $('#btn-buscar').click();
+        }
+    });
+
+    // Advanced filters
     $('#btn-filtrar').on('click', function() {
         aplicarFiltros();
     });
 
     $('#btn-limpar').on('click', function() {
-        $('#filtro-status').val('');
-        $('#filtro-tipo').val('');
+        $('#filtro-status').val('').trigger('change');
+        $('#filtro-tipo').val('').trigger('change');
         $('#filtro-autor').val('');
+        $('#search-proposicoes').val('');
         aplicarFiltros();
-    });
-
-    // Enter para filtrar
-    $('#filtro-autor').on('keypress', function(e) {
-        if (e.which === 13) {
-            aplicarFiltros();
-        }
     });
 
     function aplicarFiltros() {
         const params = new URLSearchParams(window.location.search);
         
+        const search = $('#search-proposicoes').val();
         const status = $('#filtro-status').val();
         const tipo = $('#filtro-tipo').val();
         const autor = $('#filtro-autor').val();
+
+        if (search) params.set('search', search);
+        else params.delete('search');
 
         if (status) params.set('status', status);
         else params.delete('status');
@@ -279,44 +583,19 @@ $(document).ready(function() {
         window.location.search = params.toString();
     }
 
-    // Aplicar filtros da URL
+    // Apply filters from URL
     const urlParams = new URLSearchParams(window.location.search);
-    $('#filtro-status').val(urlParams.get('status') || '');
-    $('#filtro-tipo').val(urlParams.get('tipo') || '');
+    $('#search-proposicoes').val(urlParams.get('search') || '');
+    $('#filtro-status').val(urlParams.get('status') || '').trigger('change');
+    $('#filtro-tipo').val(urlParams.get('tipo') || '').trigger('change');
     $('#filtro-autor').val(urlParams.get('autor') || '');
 
-    // Auto-refresh a cada 30 segundos para status em tempo real
+    // Auto-refresh every 60 seconds for real-time status
     setInterval(function() {
         if (document.visibilityState === 'visible') {
             window.location.reload();
         }
-    }, 30000);
+    }, 60000);
 });
 </script>
-@endpush
-
-@push('styles')
-<style>
-.table td {
-    vertical-align: middle;
-}
-
-.text-truncate {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.btn-group-sm .btn {
-    padding: 0.25rem 0.5rem;
-}
-
-.card {
-    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-}
-
-.table-hover tbody tr:hover {
-    background-color: var(--bs-light);
-}
-</style>
 @endpush

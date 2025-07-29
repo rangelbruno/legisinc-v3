@@ -20,7 +20,10 @@ class Proposicao extends Model
         'ano',
         'modelo_id',
         'template_id',
-        'ultima_modificacao'
+        'ultima_modificacao',
+        'observacoes_edicao',
+        'observacoes_retorno',
+        'data_retorno_legislativo'
         // Campos temporariamente comentados até migração ser executada:
         // 'numero',
         // 'variaveis_template',
@@ -29,6 +32,7 @@ class Proposicao extends Model
 
     protected $casts = [
         'ultima_modificacao' => 'datetime',
+        'data_retorno_legislativo' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime'
         // 'variaveis_template' => 'array'

@@ -15,6 +15,7 @@ class VerifyCsrfToken extends Middleware
         'mock-api/*',
         'admin/parametros/ajax/*',
         'onlyoffice/*',
+        '*/onlyoffice/*',
     ];
     
 } 

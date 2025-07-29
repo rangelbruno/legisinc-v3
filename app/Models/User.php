@@ -187,13 +187,11 @@ class User extends Authenticatable
             $roles = [$roles];
         }
         
-        // For mock/demo purposes, check if user email indicates admin role
-        if ($this->email === 'admin@sistema.gov.br' || str_contains($this->email, 'admin') || $this->email === 'test@example.com') {
-            return in_array(self::PERFIL_ADMIN, $roles);
-        }
+        // Get user roles from fallback method
+        $userRoles = $this->getRoleNamesFallback();
         
-        // Return false for other roles when database is not available
-        return false;
+        // Check if any of the user's roles match the required roles
+        return $userRoles->intersect($roles)->isNotEmpty();
     }
     
     /**
@@ -300,8 +298,24 @@ class User extends Authenticatable
             return collect([self::PERFIL_ADMIN]);
         }
         
-        // Return empty collection for other users
-        return collect([]);
+        // Check if user name/email indicates legislativo role
+        if (str_contains(strtolower($this->name), 'legislativo') || 
+            str_contains(strtolower($this->name), 'servidor') ||
+            str_contains(strtolower($this->email), 'legislativo') ||
+            str_contains(strtolower($this->cargo_atual ?? ''), 'legislativo') ||
+            str_contains(strtolower($this->cargo_atual ?? ''), 'servidor')) {
+            return collect([self::PERFIL_LEGISLATIVO]);
+        }
+        
+        // Check if user name/email indicates parlamentar role
+        if (str_contains(strtolower($this->name), 'parlamentar') || 
+            str_contains(strtolower($this->cargo_atual ?? ''), 'parlamentar') ||
+            str_contains(strtolower($this->email), 'parlamentar')) {
+            return collect([self::PERFIL_PARLAMENTAR]);
+        }
+        
+        // Default to PUBLICO for unknown users
+        return collect(['PUBLICO']);
     }
     
     /**
