@@ -725,14 +725,231 @@ ${texto}
     }
 
     /**
+     * Mapear tipo de proposição para código
+     */
+    private function mapearTipoProposicao(string $tipo): string
+    {
+        $mapeamento = [
+            'Projeto de Lei' => 'projeto_lei_ordinaria',
+            'Projeto de Lei Ordinária' => 'projeto_lei_ordinaria',
+            'Moção' => 'mocao',
+            'Requerimento' => 'requerimento',
+            'Projeto de Decreto Legislativo' => 'projeto_decreto_legislativo',
+            'Indicação' => 'indicacao',
+            'Projeto de Resolução' => 'projeto_resolucao',
+            'Projeto de Lei Complementar' => 'projeto_lei_complementar'
+        ];
+        
+        return $mapeamento[$tipo] ?? $tipo;
+    }
+
+    /**
+     * Escapar caracteres especiais para RTF
+     */
+    private function escapeRtf(string $text): string
+    {
+        // Converter para UTF-8 se necessário
+        if (!mb_check_encoding($text, 'UTF-8')) {
+            $text = mb_convert_encoding($text, 'UTF-8', mb_detect_encoding($text));
+        }
+        
+        // Substituir caracteres especiais RTF
+        $text = str_replace('\\', '\\\\', $text);
+        $text = str_replace('{', '\\{', $text);
+        $text = str_replace('}', '\\}', $text);
+        
+        // Converter caracteres acentuados para códigos RTF
+        $replacements = [
+            'á' => "\\'e1", 'à' => "\\'e0", 'ã' => "\\'e3", 'â' => "\\'e2", 'ä' => "\\'e4",
+            'Á' => "\\'c1", 'À' => "\\'c0", 'Ã' => "\\'c3", 'Â' => "\\'c2", 'Ä' => "\\'c4",
+            'é' => "\\'e9", 'è' => "\\'e8", 'ê' => "\\'ea", 'ë' => "\\'eb",
+            'É' => "\\'c9", 'È' => "\\'c8", 'Ê' => "\\'ca", 'Ë' => "\\'cb",
+            'í' => "\\'ed", 'ì' => "\\'ec", 'î' => "\\'ee", 'ï' => "\\'ef",
+            'Í' => "\\'cd", 'Ì' => "\\'cc", 'Î' => "\\'ce", 'Ï' => "\\'cf",
+            'ó' => "\\'f3", 'ò' => "\\'f2", 'õ' => "\\'f5", 'ô' => "\\'f4", 'ö' => "\\'f6",
+            'Ó' => "\\'d3", 'Ò' => "\\'d2", 'Õ' => "\\'d5", 'Ô' => "\\'d4", 'Ö' => "\\'d6",
+            'ú' => "\\'fa", 'ù' => "\\'f9", 'û' => "\\'fb", 'ü' => "\\'fc",
+            'Ú' => "\\'da", 'Ù' => "\\'d9", 'Û' => "\\'db", 'Ü' => "\\'dc",
+            'ç' => "\\'e7", 'Ç' => "\\'c7",
+            'ñ' => "\\'f1", 'Ñ' => "\\'d1",
+            '°' => "\\'b0", 'º' => "\\'ba", 'ª' => "\\'aa"
+        ];
+        
+        return strtr($text, $replacements);
+    }
+
+    /**
+     * Gerar documento com template para proposição
+     */
+    private function gerarDocumentoComTemplate(\App\Models\Proposicao $proposicao)
+    {
+        try {
+            $template = $proposicao->template;
+            
+            // Verificar se o template tem arquivo
+            \Log::info('Verificando arquivo do template', [
+                'template_id' => $template->id,
+                'arquivo_path' => $template->arquivo_path,
+                'storage_path' => storage_path('app/' . $template->arquivo_path),
+                'file_exists_storage' => Storage::exists($template->arquivo_path),
+                'file_exists_direct' => file_exists(storage_path('app/' . $template->arquivo_path))
+            ]);
+            
+            if (!$template->arquivo_path) {
+                \Log::warning('Template sem caminho de arquivo', [
+                    'proposicao_id' => $proposicao->id,
+                    'template_id' => $template->id
+                ]);
+                return $this->gerarDocumentoRTFProposicao($proposicao);
+            }
+            
+            // Verificar diretamente se o arquivo existe
+            $caminhoCompleto = storage_path('app/' . $template->arquivo_path);
+            if (!file_exists($caminhoCompleto)) {
+                \Log::warning('Arquivo de template não encontrado', [
+                    'proposicao_id' => $proposicao->id,
+                    'template_id' => $template->id,
+                    'caminho' => $caminhoCompleto
+                ]);
+                return $this->gerarDocumentoRTFProposicao($proposicao);
+            }
+
+            // Carregar o conteúdo do template diretamente
+            $conteudoTemplate = file_get_contents($caminhoCompleto);
+            
+            \Log::info('Template carregado', [
+                'template_id' => $template->id,
+                'tamanho' => strlen($conteudoTemplate),
+                'preview' => substr($conteudoTemplate, 0, 100)
+            ]);
+            
+            // Preparar dados para substituição - sem processar caracteres especiais por enquanto
+            $dados = [
+                'numero_proposicao' => $proposicao->numero ?? 'A definir',
+                'ementa' => $proposicao->ementa ?? '',
+                'texto' => $proposicao->conteudo ?? '',
+                'autor_nome' => $proposicao->autor->name ?? '',
+                'autor_cargo' => $proposicao->autor->cargo ?? 'Vereador',
+                'data_atual' => now()->format('d/m/Y'),
+                'ano_atual' => now()->year,
+                'municipio' => config('app.municipio', 'São Paulo'),
+                'camara_nome' => config('app.camara_nome', 'Câmara Municipal'),
+            ];
+
+            // Reativar o código original com melhorias
+            // Substituir variáveis no template
+            $conteudoProcessado = $conteudoTemplate;
+            
+            \Log::info('Antes da substituição', [
+                'template_id' => $template->id,
+                'dados' => $dados,
+                'preview_antes' => substr($conteudoProcessado, 0, 500)
+            ]);
+            
+            foreach ($dados as $variavel => $valor) {
+                $variavelCompleta = '${' . $variavel . '}';
+                $antes = substr_count($conteudoProcessado, $variavelCompleta);
+                
+                // Escapar caracteres especiais do RTF para valores de texto
+                $valorEscapado = $this->escapeRtf($valor);
+                
+                // Usar as variáveis no formato ${variavel}
+                $conteudoProcessado = str_replace($variavelCompleta, $valorEscapado, $conteudoProcessado);
+                
+                $depois = substr_count($conteudoProcessado, $variavelCompleta);
+                
+                \Log::info('Substituição de variável', [
+                    'variavel' => $variavelCompleta,
+                    'valor_original' => $valor,
+                    'valor_escapado' => $valorEscapado,
+                    'ocorrencias_antes' => $antes,
+                    'ocorrencias_depois' => $depois,
+                    'substituido' => $antes - $depois
+                ]);
+            }
+            
+            \Log::info('Após substituição', [
+                'template_id' => $template->id,
+                'preview_depois' => substr($conteudoProcessado, 0, 500)
+            ]);
+
+            // Verificar a extensão do arquivo do template
+            $extensao = pathinfo($template->arquivo_path, PATHINFO_EXTENSION);
+            
+            if ($extensao === 'rtf') {
+                // Para RTF, retornar diretamente
+                $tempFile = tempnam(sys_get_temp_dir(), 'proposicao_') . '.rtf';
+                file_put_contents($tempFile, $conteudoProcessado);
+                
+                // Tentar converter para DOCX se possível
+                try {
+                    // Por enquanto, retornar como RTF mesmo
+                    // TODO: Implementar conversão RTF->DOCX preservando imagens
+                    return response()->download($tempFile, "proposicao_{$proposicao->id}.rtf")
+                        ->deleteFileAfterSend(true);
+                } catch (\Exception $e) {
+                    \Log::error('Erro ao processar documento', ['erro' => $e->getMessage()]);
+                    return response()->download($tempFile, "proposicao_{$proposicao->id}.rtf")
+                        ->deleteFileAfterSend(true);
+                }
+            } else {
+                // Para outros formatos, usar documento padrão
+                return $this->gerarDocumentoRTFProposicao($proposicao);
+            }
+            
+            /* CÓDIGO DESATIVADO TEMPORARIAMENTE PARA TESTE
+            // Substituir variáveis no template
+            $conteudoProcessado = $conteudoTemplate;
+            foreach ($dados as $variavel => $valor) {
+                $conteudoProcessado = str_replace('${' . $variavel . '}', $valor, $conteudoProcessado);
+            }
+            
+            \Log::info('Variáveis substituídas no template', [
+                'template_id' => $template->id,
+                'variaveis' => array_keys($dados)
+            ]);
+
+            // Verificar a extensão do arquivo do template
+            $extensao = pathinfo($template->arquivo_path, PATHINFO_EXTENSION);
+            
+            if ($extensao === 'rtf') {
+                // Para RTF, retornar diretamente
+                $tempFile = tempnam(sys_get_temp_dir(), 'proposicao_') . '.rtf';
+                file_put_contents($tempFile, $conteudoProcessado);
+                
+                return response()->download($tempFile, "proposicao_{$proposicao->id}.rtf")
+                    ->deleteFileAfterSend(true);
+            } else {
+                // Para outros formatos, tentar converter ou usar documento padrão
+                // Por enquanto, usar o documento padrão
+                return $this->gerarDocumentoRTFProposicao($proposicao);
+            }
+            */
+            
+        } catch (\Exception $e) {
+            \Log::error('Erro ao gerar documento com template', [
+                'proposicao_id' => $proposicao->id,
+                'error' => $e->getMessage()
+            ]);
+            
+            // Em caso de erro, usar documento padrão
+            return $this->gerarDocumentoRTFProposicao($proposicao);
+        }
+    }
+
+    /**
      * Gerar documento DOCX de uma proposição
      */
     public function gerarDocumentoProposicao(\App\Models\Proposicao $proposicao)
     {
+        // Carregar relacionamentos necessários
+        $proposicao->load(['template', 'autor']);
+        
         // Log do conteúdo da proposição para debug
         \Log::info('Gerando documento para proposição', [
             'proposicao_id' => $proposicao->id,
             'tipo' => $proposicao->tipo,
+            'template_id' => $proposicao->template_id,
             'ementa_length' => strlen($proposicao->ementa ?? ''),
             'conteudo_length' => strlen($proposicao->conteudo ?? ''),
             'has_conteudo' => !empty($proposicao->conteudo),
@@ -743,6 +960,59 @@ ${texto}
         if (!class_exists('\PhpOffice\PhpWord\PhpWord')) {
             // Se não existe, gerar documento RTF simples
             return $this->gerarDocumentoRTFProposicao($proposicao);
+        }
+
+        // Se a proposição tem um template associado, usar o documento do template como base
+        if ($proposicao->template_id && $proposicao->template) {
+            return $this->gerarDocumentoComTemplate($proposicao);
+        }
+        
+        // Tentar buscar template pelo tipo da proposição
+        \Log::info('Buscando template para tipo de proposição', [
+            'proposicao_id' => $proposicao->id,
+            'tipo' => $proposicao->tipo
+        ]);
+        
+        // Mapear tipos comuns para códigos
+        $tipoMapeado = $this->mapearTipoProposicao($proposicao->tipo);
+        
+        $tipoProposicao = \App\Models\TipoProposicao::where('codigo', $tipoMapeado)
+            ->orWhere('codigo', $proposicao->tipo)
+            ->orWhere('nome', $proposicao->tipo)
+            ->orWhere('nome', 'like', '%' . $proposicao->tipo . '%')
+            ->first();
+            
+        if ($tipoProposicao) {
+            \Log::info('Tipo de proposição encontrado', [
+                'tipo_id' => $tipoProposicao->id,
+                'codigo' => $tipoProposicao->codigo,
+                'nome' => $tipoProposicao->nome
+            ]);
+            
+            if ($tipoProposicao->templates()->exists()) {
+                $template = $tipoProposicao->templates()->where('ativo', true)->first();
+                if ($template) {
+                    \Log::info('Template encontrado para o tipo', [
+                        'template_id' => $template->id,
+                        'arquivo_path' => $template->arquivo_path
+                    ]);
+                    $proposicao->template = $template; // Associar temporariamente para uso
+                    return $this->gerarDocumentoComTemplate($proposicao);
+                } else {
+                    \Log::warning('Nenhum template ativo encontrado para o tipo', [
+                        'tipo_id' => $tipoProposicao->id
+                    ]);
+                }
+            } else {
+                \Log::warning('Tipo não possui templates', [
+                    'tipo_id' => $tipoProposicao->id,
+                    'tipo_nome' => $tipoProposicao->nome
+                ]);
+            }
+        } else {
+            \Log::warning('Tipo de proposição não encontrado', [
+                'tipo_buscado' => $proposicao->tipo
+            ]);
         }
 
         $phpWord = new \PhpOffice\PhpWord\PhpWord();

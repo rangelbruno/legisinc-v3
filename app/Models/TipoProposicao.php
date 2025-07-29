@@ -239,6 +239,14 @@ class TipoProposicao extends Model
     }
 
     /**
+     * Relacionamento com templates (plural)
+     */
+    public function templates()
+    {
+        return $this->hasMany(TipoProposicaoTemplate::class);
+    }
+
+    /**
      * Verificar se tipo possui template ativo
      */
     public function hasTemplate(): bool

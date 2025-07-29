@@ -198,20 +198,40 @@
                             </button>
                         </div>
                     @elseif($proposicao->status === 'enviado_legislativo')
-                        <div class="alert alert-info mb-3">
-                            <div class="d-flex align-items-center">
-                                <i class="fas fa-info-circle fs-2 text-info me-3"></i>
-                                <div>
-                                    <h6 class="alert-heading mb-1">Em Análise Legislativa</h6>
-                                    <p class="mb-0 small">Sua proposição está sendo analisada pelo Legislativo. Você será notificado quando houver atualizações.</p>
+                        @if(Auth::user()->isLegislativo())
+                            <div class="alert alert-warning mb-3">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-exclamation-triangle fs-2 text-warning me-3"></i>
+                                    <div>
+                                        <h6 class="alert-heading mb-1">Aguardando Revisão</h6>
+                                        <p class="mb-0 small">Esta proposição está aguardando revisão técnica do Legislativo.</p>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                        <div class="d-grid gap-2">
-                            <button class="btn btn-outline-info btn-sm" onclick="consultarStatus()">
-                                <i class="fas fa-search me-2"></i>Consultar Status
-                            </button>
-                        </div>
+                            <div class="d-grid gap-2">
+                                <a href="{{ route('proposicoes.onlyoffice.editor', $proposicao->id) }}" class="btn btn-primary">
+                                    <i class="fas fa-file-word me-2"></i>Revisar no Editor
+                                </a>
+                                <a href="{{ route('proposicoes.revisar.show', $proposicao->id) }}" class="btn btn-outline-secondary">
+                                    <i class="fas fa-clipboard-check me-2"></i>Análise Técnica
+                                </a>
+                            </div>
+                        @else
+                            <div class="alert alert-info mb-3">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-info-circle fs-2 text-info me-3"></i>
+                                    <div>
+                                        <h6 class="alert-heading mb-1">Em Análise Legislativa</h6>
+                                        <p class="mb-0 small">Sua proposição está sendo analisada pelo Legislativo. Você será notificado quando houver atualizações.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-outline-info btn-sm" onclick="consultarStatus()">
+                                    <i class="fas fa-search me-2"></i>Consultar Status
+                                </button>
+                            </div>
+                        @endif
                     @elseif(in_array($proposicao->status, ['aguardando_aprovacao_autor', 'devolvido_edicao']))
                         <div class="d-grid gap-2">
                             <button class="btn btn-success" onclick="aprovarEdicoes()">
@@ -248,26 +268,46 @@
                             </button>
                         </div>
                     @elseif(in_array($proposicao->status, ['analise', 'em_revisao']))
-                        <div class="alert alert-primary mb-3">
-                            <div class="d-flex align-items-center">
-                                <i class="fas fa-search-list fs-2 text-primary me-3"></i>
-                                <div>
-                                    <h6 class="alert-heading mb-1">
-                                        @if($proposicao->status === 'em_revisao')
-                                            Em Revisão Técnica
-                                        @else
-                                            Em Análise Legislativa
-                                        @endif
-                                    </h6>
-                                    <p class="mb-0 small">O Legislativo está fazendo a análise técnica da sua proposição. Aguarde o retorno.</p>
+                        @if(Auth::user()->isLegislativo())
+                            <div class="alert alert-warning mb-3">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-edit fs-2 text-warning me-3"></i>
+                                    <div>
+                                        <h6 class="alert-heading mb-1">Em Revisão Técnica</h6>
+                                        <p class="mb-0 small">Esta proposição está em processo de revisão pelo Legislativo.</p>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                        <div class="d-grid gap-2">
-                            <button class="btn btn-outline-primary btn-sm" onclick="consultarStatus()">
-                                <i class="fas fa-info-circle me-2"></i>Ver Detalhes
-                            </button>
-                        </div>
+                            <div class="d-grid gap-2">
+                                <a href="{{ route('proposicoes.onlyoffice.editor', $proposicao->id) }}" class="btn btn-primary">
+                                    <i class="fas fa-file-word me-2"></i>Continuar Revisão no Editor
+                                </a>
+                                <a href="{{ route('proposicoes.revisar.show', $proposicao->id) }}" class="btn btn-outline-secondary">
+                                    <i class="fas fa-clipboard-check me-2"></i>Análise Técnica
+                                </a>
+                            </div>
+                        @else
+                            <div class="alert alert-primary mb-3">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-search-list fs-2 text-primary me-3"></i>
+                                    <div>
+                                        <h6 class="alert-heading mb-1">
+                                            @if($proposicao->status === 'em_revisao')
+                                                Em Revisão Técnica
+                                            @else
+                                                Em Análise Legislativa
+                                            @endif
+                                        </h6>
+                                        <p class="mb-0 small">O Legislativo está fazendo a análise técnica da sua proposição. Aguarde o retorno.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-outline-primary btn-sm" onclick="consultarStatus()">
+                                    <i class="fas fa-info-circle me-2"></i>Ver Detalhes
+                                </button>
+                            </div>
+                        @endif
                     @elseif($proposicao->status === 'retornado')
                         <div class="alert alert-warning mb-3">
                             <i class="fas fa-undo me-2"></i>

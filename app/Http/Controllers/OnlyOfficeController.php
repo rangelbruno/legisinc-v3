@@ -92,7 +92,7 @@ class OnlyOfficeController extends Controller
             'type' => 'desktop',
             'documentType' => 'word',
             'document' => [
-                'fileType' => 'docx',
+                'fileType' => 'rtf',
                 'key' => $documentKey,
                 'title' => "Proposição {$proposicao->tipo} - {$proposicao->id}",
                 'url' => $documentUrl,
