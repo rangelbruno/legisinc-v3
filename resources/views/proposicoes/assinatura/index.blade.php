@@ -25,6 +25,35 @@
 .card-hover:hover i {
     color: var(--kt-primary) !important;
 }
+
+.dashboard-card-primary {
+    background: linear-gradient(135deg, #F1416C 0%, #e02454 100%) !important;
+    background-image: url("{{ asset('assets/media/patterns/vector-1.png') }}"), linear-gradient(135deg, #F1416C 0%, #e02454 100%) !important;
+    background-repeat: no-repeat !important;
+    background-size: contain, cover !important;
+    background-position: right center, center !important;
+}
+.dashboard-card-info {
+    background: linear-gradient(135deg, #7239EA 0%, #5a2bc4 100%) !important;
+    background-image: url("{{ asset('assets/media/patterns/vector-1.png') }}"), linear-gradient(135deg, #7239EA 0%, #5a2bc4 100%) !important;
+    background-repeat: no-repeat !important;
+    background-size: contain, cover !important;
+    background-position: right center, center !important;
+}
+.dashboard-card-success {
+    background: linear-gradient(135deg, #17C653 0%, #13a342 100%) !important;
+    background-image: url("{{ asset('assets/media/patterns/vector-1.png') }}"), linear-gradient(135deg, #17C653 0%, #13a342 100%) !important;
+    background-repeat: no-repeat !important;
+    background-size: contain, cover !important;
+    background-position: right center, center !important;
+}
+.dashboard-card-warning {
+    background: linear-gradient(135deg, #FFC700 0%, #e6b300 100%) !important;
+    background-image: url("{{ asset('assets/media/patterns/vector-1.png') }}"), linear-gradient(135deg, #FFC700 0%, #e6b300 100%) !important;
+    background-repeat: no-repeat !important;
+    background-size: contain, cover !important;
+    background-position: right center, center !important;
+}
 </style>
 
 <!--begin::Content wrapper-->
@@ -76,62 +105,100 @@
 
             <!-- Estatísticas Rápidas -->
             <!--begin::Row-->
-            <div class="row g-5 g-xl-8 mb-5 mb-xl-8">
+            <div class="row gy-5 gx-xl-8 mb-5 mb-xl-8">
                 <!--begin::Col-->
-                <div class="col-xl-4">
-                    <!--begin::Statistics Widget 5-->
-                    <div class="card bg-success hoverable card-xl-stretch mb-xl-8">
-                        <!--begin::Body-->
-                        <div class="card-body">
-                            <i class="ki-duotone ki-check-circle text-white fs-2x ms-n1">
-                                <span class="path1"></span>
-                                <span class="path2"></span>
-                            </i>
-                            <div class="text-white fw-bold fs-2 mb-2 mt-5">{{ $proposicoes->where('status', 'aprovado_assinatura')->count() }}</div>
-                            <div class="fw-semibold text-white opacity-75">Aguardando Assinatura</div>
+                <div class="col-xl-4 col-lg-6 col-md-6 col-sm-12">
+                    <div class="card card-flush h-100 mb-5 mb-xl-10 dashboard-card-success cursor-pointer" onclick="document.getElementById('aprovadas-tab').click()">
+                        <div class="card-header pt-5 pb-3">
+                            <div class="d-flex flex-center rounded-circle h-70px w-70px bg-white bg-opacity-20">
+                                <i class="ki-duotone ki-check-circle text-white fs-2x">
+                                    <span class="path1"></span>
+                                    <span class="path2"></span>
+                                </i>
+                            </div>
                         </div>
-                        <!--end::Body-->
+                        
+                        <div class="card-body d-flex flex-column justify-content-end pt-0">
+                            <div class="d-flex align-items-center mb-3">
+                                <span class="fs-2hx fw-bold text-white me-2">{{ $proposicoes->where('status', 'aprovado_assinatura')->count() }}</span>
+                                <span class="fs-6 fw-semibold text-white opacity-75">aprovadas</span>
+                            </div>
+                            
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <span class="fs-6 fw-bold text-white">Aguardando Assinatura</span>
+                                @php $percentAprovadas = $proposicoes->total() > 0 ? round(($proposicoes->where('status', 'aprovado_assinatura')->count() / $proposicoes->total()) * 100) : 0; @endphp
+                                <span class="badge badge-light-success fs-8">{{ $percentAprovadas }}%</span>
+                            </div>
+                            
+                            <div class="progress h-6px bg-white bg-opacity-50">
+                                <div class="progress-bar bg-white" style="width: {{ $percentAprovadas }}%"></div>
+                            </div>
+                        </div>
                     </div>
-                    <!--end::Statistics Widget 5-->
                 </div>
                 <!--end::Col-->
                 <!--begin::Col-->
-                <div class="col-xl-4">
-                    <!--begin::Statistics Widget 5-->
-                    <div class="card bg-warning hoverable card-xl-stretch mb-xl-8">
-                        <!--begin::Body-->
-                        <div class="card-body">
-                            <i class="ki-duotone ki-information text-white fs-2x ms-n1">
-                                <span class="path1"></span>
-                                <span class="path2"></span>
-                                <span class="path3"></span>
-                            </i>
-                            <div class="text-white fw-bold fs-2 mb-2 mt-5">{{ $proposicoes->where('status', 'devolvido_correcao')->count() }}</div>
-                            <div class="fw-semibold text-white opacity-75">Para Correção</div>
+                <div class="col-xl-4 col-lg-6 col-md-6 col-sm-12">
+                    <div class="card card-flush h-100 mb-5 mb-xl-10 dashboard-card-warning cursor-pointer" onclick="document.getElementById('devolvidas-tab').click()">
+                        <div class="card-header pt-5 pb-3">
+                            <div class="d-flex flex-center rounded-circle h-70px w-70px bg-white bg-opacity-20">
+                                <i class="ki-duotone ki-information text-white fs-2x">
+                                    <span class="path1"></span>
+                                    <span class="path2"></span>
+                                    <span class="path3"></span>
+                                </i>
+                            </div>
                         </div>
-                        <!--end::Body-->
+                        
+                        <div class="card-body d-flex flex-column justify-content-end pt-0">
+                            <div class="d-flex align-items-center mb-3">
+                                <span class="fs-2hx fw-bold text-white me-2">{{ $proposicoes->where('status', 'devolvido_correcao')->count() }}</span>
+                                <span class="fs-6 fw-semibold text-white opacity-75">devolvidas</span>
+                            </div>
+                            
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <span class="fs-6 fw-bold text-white">Para Correção</span>
+                                @php $percentDevolvidas = $proposicoes->total() > 0 ? round(($proposicoes->where('status', 'devolvido_correcao')->count() / $proposicoes->total()) * 100) : 0; @endphp
+                                <span class="badge badge-light-warning fs-8">{{ $percentDevolvidas }}%</span>
+                            </div>
+                            
+                            <div class="progress h-6px bg-white bg-opacity-50">
+                                <div class="progress-bar bg-white" style="width: {{ $percentDevolvidas }}%"></div>
+                            </div>
+                        </div>
                     </div>
-                    <!--end::Statistics Widget 5-->
                 </div>
                 <!--end::Col-->
                 <!--begin::Col-->
-                <div class="col-xl-4">
-                    <!--begin::Statistics Widget 5-->
-                    <div class="card bg-info hoverable card-xl-stretch mb-xl-8">
-                        <!--begin::Body-->
-                        <div class="card-body">
-                            <i class="ki-duotone ki-element-11 text-white fs-2x ms-n1">
-                                <span class="path1"></span>
-                                <span class="path2"></span>
-                                <span class="path3"></span>
-                                <span class="path4"></span>
-                            </i>
-                            <div class="text-white fw-bold fs-2 mb-2 mt-5">{{ $proposicoes->total() }}</div>
-                            <div class="fw-semibold text-white opacity-75">Total Pendente</div>
+                <div class="col-xl-4 col-lg-6 col-md-6 col-sm-12">
+                    <div class="card card-flush h-100 mb-5 mb-xl-10 dashboard-card-info cursor-pointer" onclick="window.location.href='{{ route('proposicoes.minhas-proposicoes') }}'">
+                        <div class="card-header pt-5 pb-3">
+                            <div class="d-flex flex-center rounded-circle h-70px w-70px bg-white bg-opacity-20">
+                                <i class="ki-duotone ki-element-11 text-white fs-2x">
+                                    <span class="path1"></span>
+                                    <span class="path2"></span>
+                                    <span class="path3"></span>
+                                    <span class="path4"></span>
+                                </i>
+                            </div>
                         </div>
-                        <!--end::Body-->
+                        
+                        <div class="card-body d-flex flex-column justify-content-end pt-0">
+                            <div class="d-flex align-items-center mb-3">
+                                <span class="fs-2hx fw-bold text-white me-2">{{ $proposicoes->total() }}</span>
+                                <span class="fs-6 fw-semibold text-white opacity-75">pendentes</span>
+                            </div>
+                            
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <span class="fs-6 fw-bold text-white">Total Pendente</span>
+                                <span class="badge badge-light-info fs-8">100%</span>
+                            </div>
+                            
+                            <div class="progress h-6px bg-white bg-opacity-50">
+                                <div class="progress-bar bg-white" style="width: 100%"></div>
+                            </div>
+                        </div>
                     </div>
-                    <!--end::Statistics Widget 5-->
                 </div>
                 <!--end::Col-->
             </div>
