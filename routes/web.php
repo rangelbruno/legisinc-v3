@@ -554,6 +554,10 @@ Route::prefix('proposicoes')->name('proposicoes.')->middleware(['auth', 'check.s
     
     // OnlyOffice para Legislativo
     Route::get('/{proposicao}/onlyoffice/editor', [App\Http\Controllers\OnlyOfficeController::class, 'editorLegislativo'])->name('onlyoffice.editor')->middleware('check.proposicao.permission');
+    
+    // OnlyOffice para Parlamentares
+    Route::get('/{proposicao}/onlyoffice/editor-parlamentar', [App\Http\Controllers\OnlyOfficeController::class, 'editorParlamentar'])->name('onlyoffice.editor-parlamentar');
+    
     Route::post('/{proposicao}/onlyoffice/callback/{documentKey}', [App\Http\Controllers\OnlyOfficeController::class, 'callback'])->name('onlyoffice.callback');
     Route::get('/revisar', [App\Http\Controllers\ProposicaoLegislativoController::class, 'index'])->name('revisar');
     Route::get('/{proposicao}/revisar', [App\Http\Controllers\ProposicaoLegislativoController::class, 'revisar'])->name('revisar.show');

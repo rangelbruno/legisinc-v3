@@ -213,4 +213,38 @@ class OnlyOfficeController extends Controller
             return response()->json(['error' => 1]);
         }
     }
+
+    /**
+     * Editor OnlyOffice para Parlamentares editarem suas próprias proposições
+     */
+    public function editorParlamentar(Proposicao $proposicao)
+    {
+        // Log do acesso
+        Log::info('OnlyOffice Editor Access - Parlamentar', [
+            'user_id' => Auth::id(),
+            'proposicao_id' => $proposicao->id
+        ]);
+        
+        $user = Auth::user();
+        
+        // Verificar se o usuário é o autor da proposição
+        if ($proposicao->autor_id !== $user->id) {
+            abort(403, 'Acesso negado. Você só pode editar suas próprias proposições.');
+        }
+
+        // Verificar se a proposição está em status editável pelo autor
+        $statusEditaveis = ['rascunho', 'em_edicao', 'salvando', 'devolvido_edicao', 'retornado_legislativo'];
+        if (!in_array($proposicao->status, $statusEditaveis)) {
+            return redirect()->route('proposicoes.minhas-proposicoes')
+                ->with('error', 'Esta proposição não está disponível para edição no momento.');
+        }
+
+        // Carregar relacionamentos necessários
+        $proposicao->load('autor');
+        
+        // Gerar configurações do OnlyOffice
+        $config = $this->generateOnlyOfficeConfig($proposicao);
+
+        return view('proposicoes.legislativo.onlyoffice-editor', compact('proposicao', 'config'));
+    }
 }

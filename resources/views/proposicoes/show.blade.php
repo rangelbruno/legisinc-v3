@@ -184,9 +184,12 @@
                             <button class="btn btn-success" onclick="enviarLegislativo()">
                                 <i class="fas fa-paper-plane me-2"></i>Enviar para Legislativo
                             </button>
-                            <a href="{{ route('proposicoes.editar-texto', $proposicao->id) }}" class="btn btn-outline-primary">
+                            <a href="{{ route('proposicoes.onlyoffice.editor-parlamentar', $proposicao->id) }}" class="btn btn-outline-primary">
                                 <i class="fas fa-edit me-2"></i>Continuar Editando
                             </a>
+                            <button type="button" class="btn btn-outline-danger" onclick="excluirProposicao()">
+                                <i class="fas fa-trash me-2"></i>Excluir Proposição
+                            </button>
                         </div>
                     @elseif($proposicao->status === 'enviado_legislativo')
                         <div class="alert alert-info mb-3">

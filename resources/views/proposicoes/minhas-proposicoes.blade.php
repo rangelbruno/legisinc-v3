@@ -217,6 +217,15 @@
                                                     Rascunho
                                                 </span>
                                                 @break
+                                            @case('salvando')
+                                                <span class="badge badge-info">
+                                                    <i class="ki-duotone ki-save fs-7 me-1">
+                                                        <span class="path1"></span>
+                                                        <span class="path2"></span>
+                                                    </i>
+                                                    Salvando
+                                                </span>
+                                                @break
                                             @case('analise')
                                                 <span class="badge badge-info">
                                                     <i class="ki-duotone ki-time fs-7 me-1">
@@ -326,52 +335,6 @@
                                             </i>
                                             Visualizar
                                         </a>
-                                        
-                                        @if($proposicao->status === 'rascunho')
-                                            <a href="{{ route('proposicoes.editar-texto', $proposicao->id) }}" 
-                                               class="btn btn-sm btn-primary ms-2">
-                                                <i class="ki-duotone ki-pencil fs-6 me-1">
-                                                    <span class="path1"></span>
-                                                    <span class="path2"></span>
-                                                </i>
-                                                Editar
-                                            </a>
-                                            
-                                            <button type="button" 
-                                                    class="btn btn-sm btn-light-danger ms-2"
-                                                    onclick="confirmarExclusaoProposicao({{ $proposicao->id }})">
-                                                <i class="ki-duotone ki-trash fs-6 me-1">
-                                                    <span class="path1"></span>
-                                                    <span class="path2"></span>
-                                                    <span class="path3"></span>
-                                                    <span class="path4"></span>
-                                                    <span class="path5"></span>
-                                                </i>
-                                                Excluir
-                                            </button>
-                                        @elseif(in_array($proposicao->status, ['aguardando_aprovacao_autor', 'devolvido_edicao']))
-                                            <a href="{{ route('proposicoes.editar-texto', $proposicao->id) }}" 
-                                               class="btn btn-sm btn-warning ms-2">
-                                                <i class="ki-duotone ki-check fs-6 me-1">
-                                                    <span class="path1"></span>
-                                                    <span class="path2"></span>
-                                                </i>
-                                                @if($proposicao->status === 'aguardando_aprovacao_autor')
-                                                    Aprovar Edições
-                                                @else
-                                                    Revisar Edições
-                                                @endif
-                                            </a>
-                                        @elseif($proposicao->status === 'retornado_legislativo')
-                                            <a href="{{ route('proposicoes.assinar', $proposicao->id) }}" 
-                                               class="btn btn-sm btn-success ms-2">
-                                                <i class="ki-duotone ki-check-square fs-6 me-1">
-                                                    <span class="path1"></span>
-                                                    <span class="path2"></span>
-                                                </i>
-                                                Assinar Proposição
-                                            </a>
-                                        @endif
                                     </td>
                                 </tr>
                             @endforeach
@@ -542,148 +505,5 @@ document.querySelector('[data-kt-proposicoes-table-filter="search"]').addEventLi
     });
 });
 
-// Função para confirmar exclusão de proposição
-function confirmarExclusaoProposicao(proposicaoId) {
-    Swal.fire({
-        title: 'Descartar Proposição?',
-        html: `<div class="text-center">
-                <i class="fas fa-exclamation-triangle text-warning fa-4x mb-3"></i>
-                <p class="text-muted">Esta ação <strong class="text-danger">não pode ser desfeita!</strong></p>
-                <div class="text-start small text-muted mt-3">
-                    <p class="mb-1"><i class="fas fa-times-circle text-danger me-1"></i> Todo conteúdo será perdido</p>
-                    <p class="mb-1"><i class="fas fa-times-circle text-danger me-1"></i> Arquivos serão removidos</p>
-                    <p class="mb-0"><i class="fas fa-times-circle text-danger me-1"></i> Histórico será excluído</p>
-                </div>
-               </div>`,
-        width: '400px',
-        icon: null,
-        showCancelButton: true,
-        confirmButtonText: '<i class="fas fa-trash me-1"></i>Descartar',
-        cancelButtonText: 'Cancelar',
-        confirmButtonColor: '#dc3545',
-        cancelButtonColor: '#6c757d',
-        customClass: {
-            popup: 'swal2-sm',
-            confirmButton: 'btn btn-danger btn-sm',
-            cancelButton: 'btn btn-secondary btn-sm'
-        },
-        reverseButtons: true,
-        focusCancel: true
-    }).then((result) => {
-        if (result.isConfirmed) {
-            // Mostrar loading
-            Swal.fire({
-                title: 'Excluindo Proposição...',
-                html: '<div class="text-center"><div class="spinner-border text-danger" role="status"><span class="visually-hidden">Carregando...</span></div></div>',
-                allowOutsideClick: false,
-                showConfirmButton: false,
-                willOpen: () => {
-                    Swal.showLoading();
-                }
-            });
-            
-            // Fazer requisição DELETE
-            fetch(`/proposicoes/${proposicaoId}`, {
-                method: 'DELETE',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify({
-                    _token: document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                })
-            })
-            .then(response => {
-                console.log('Response status:', response.status);
-                console.log('Response headers:', response.headers);
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                
-                return response.json();
-            })
-            .then(data => {
-                if (data.success) {
-                    Swal.fire({
-                        title: 'Proposição Descartada!',
-                        text: 'A proposição foi excluída com sucesso.',
-                        icon: 'success',
-                        confirmButtonText: 'OK',
-                        confirmButtonColor: '#28a745'
-                    }).then(() => {
-                        // Remover a linha da tabela
-                        document.querySelector(`tr[data-proposicao-id="${proposicaoId}"]`)?.remove();
-                        
-                        // Se não há mais proposições, recarregar a página para mostrar empty state
-                        if (document.querySelectorAll('tbody tr').length === 0) {
-                            window.location.reload();
-                        } else {
-                            // Atualizar contadores nos cards
-                            atualizarContadores();
-                        }
-                    });
-                } else {
-                    Swal.fire({
-                        title: 'Erro!',
-                        text: data.message || 'Erro ao excluir proposição.',
-                        icon: 'error',
-                        confirmButtonText: 'OK',
-                        confirmButtonColor: '#dc3545'
-                    });
-                }
-            })
-            .catch(error => {
-                console.error('Erro na requisição:', error);
-                
-                // Tentar extrair mensagem de erro se for uma resposta HTTP
-                if (error.message.includes('HTTP error')) {
-                    const status = error.message.match(/status: (\d+)/)?.[1];
-                    
-                    let errorMessage = 'Erro interno do servidor.';
-                    if (status === '400') {
-                        errorMessage = 'Requisição inválida. Verifique se a proposição pode ser excluída.';
-                    } else if (status === '403') {
-                        errorMessage = 'Você não tem permissão para excluir esta proposição.';
-                    } else if (status === '404') {
-                        errorMessage = 'Proposição não encontrada.';
-                    }
-                    
-                    Swal.fire({
-                        title: 'Erro!',
-                        text: errorMessage,
-                        icon: 'error',
-                        confirmButtonText: 'OK',
-                        confirmButtonColor: '#dc3545'
-                    });
-                } else {
-                    Swal.fire({
-                        title: 'Erro!',
-                        text: 'Erro de conexão. Tente novamente.',
-                        icon: 'error',
-                        confirmButtonText: 'OK',
-                        confirmButtonColor: '#dc3545'
-                    });
-                }
-            });
-        }
-    });
-}
-
-// Função para atualizar contadores após exclusão
-function atualizarContadores() {
-    const totalRows = document.querySelectorAll('tbody tr').length;
-    const rascunhoRows = document.querySelectorAll('tbody tr').length; // Simplificado - assumindo que só rascunhos podem ser excluídos
-    
-    // Atualizar cards de estatísticas
-    document.querySelectorAll('[data-stat="total"]').forEach(el => {
-        el.textContent = totalRows;
-    });
-    
-    document.querySelectorAll('[data-stat="rascunho"]').forEach(el => {
-        el.textContent = rascunhoRows;
-    });
-}
 </script>
 @endpush

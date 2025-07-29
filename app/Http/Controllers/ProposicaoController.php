@@ -817,8 +817,8 @@ class ProposicaoController extends Controller
             'current_user' => \Auth::id()
         ]);
         
-        // Permitir exclusão de rascunhos e proposições em edição
-        $statusPermitidos = ['rascunho', 'em_edicao'];
+        // Permitir exclusão de rascunhos, proposições em edição e salvando
+        $statusPermitidos = ['rascunho', 'em_edicao', 'salvando'];
         if (!in_array($proposicao->status, $statusPermitidos)) {
             \Log::warning('Tentativa de excluir proposição com status não permitido', [
                 'proposicao_id' => $proposicaoId,
@@ -828,7 +828,7 @@ class ProposicaoController extends Controller
             
             return response()->json([
                 'success' => false,
-                'message' => 'Apenas rascunhos e proposições em edição podem ser excluídas.'
+                'message' => 'Apenas rascunhos, proposições em edição e salvando podem ser excluídas.'
             ], 400);
         }
         
