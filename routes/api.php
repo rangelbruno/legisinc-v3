@@ -186,3 +186,8 @@ Route::post('onlyoffice/callback/{documentKey}', [App\Http\Controllers\OnlyOffic
 // Callback específico para proposições
 Route::post('onlyoffice/callback/proposicao/{proposicaoId}', [App\Http\Controllers\ProposicaoController::class, 'onlyOfficeCallback'])
      ->name('api.onlyoffice.callback.proposicao');
+
+// ===== NOTIFICATIONS API ROUTES =====
+Route::middleware(['web', 'auth'])->group(function () {
+    Route::get('/notifications', [App\Http\Controllers\Api\NotificationController::class, 'index'])->name('api.notifications.index');
+});

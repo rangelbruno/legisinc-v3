@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Facades\View;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -19,6 +20,13 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Registrar View Composer para notificações
+        View::composer([
+            'components.layouts.header',
+            'components.layouts.app',
+            'layouts.app'
+        ], \App\Http\View\Composers\NotificationComposer::class);
+
         // Registrar comandos Artisan do sistema de parâmetros
         if ($this->app->runningInConsole()) {
             $this->commands([

@@ -22,6 +22,162 @@
     <!--begin::Global Stylesheets Bundle(mandatory for all pages)-->
     <link href="{{ asset('assets/plugins/global/plugins.bundle.css') }}" rel="stylesheet">
     <link href="{{ asset('assets/css/style.bundle.css') }}" rel="stylesheet">
+    
+    <!--begin::Custom Notification Styles-->
+    <style>
+        /* Estilos customizados para notificações */
+        #kt_activities .timeline-item {
+            position: relative;
+            padding-bottom: 1.5rem;
+        }
+        
+        #kt_activities .timeline-item:not(:last-child) {
+            border-bottom: 1px solid #f1f1f2;
+            margin-bottom: 1.5rem;
+        }
+        
+        #kt_activities .timeline-content {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-left: 0.5rem;
+            border-left: 3px solid #e9ecef;
+            transition: all 0.2s ease;
+        }
+        
+        #kt_activities .timeline-content:hover {
+            background: #ffffff;
+            border-left-color: var(--kt-primary);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        
+        #kt_activities .timeline-icon {
+            position: relative;
+            z-index: 1;
+            margin-right: 0.75rem;
+            flex-shrink: 0;
+        }
+        
+        /* Estilos para botões de ação das notificações */
+        #kt_activities .btn-sm {
+            font-size: 0.75rem;
+            padding: 0.375rem 0.75rem;
+            line-height: 1.2;
+            border-radius: 6px;
+            font-weight: 500;
+            text-decoration: none;
+            transition: all 0.15s ease;
+        }
+        
+        #kt_activities .btn-sm:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        /* Cores específicas para botões de ação */
+        #kt_activities .btn-light-primary {
+            background-color: rgba(var(--kt-primary-rgb), 0.1);
+            border-color: rgba(var(--kt-primary-rgb), 0.2);
+            color: var(--kt-primary);
+        }
+        
+        #kt_activities .btn-light-success {
+            background-color: rgba(var(--kt-success-rgb), 0.1);
+            border-color: rgba(var(--kt-success-rgb), 0.2);
+            color: var(--kt-success);
+        }
+        
+        #kt_activities .btn-light-warning {
+            background-color: rgba(var(--kt-warning-rgb), 0.1);
+            border-color: rgba(var(--kt-warning-rgb), 0.2);
+            color: var(--kt-warning);
+        }
+        
+        #kt_activities .btn-light-danger {
+            background-color: rgba(var(--kt-danger-rgb), 0.1);
+            border-color: rgba(var(--kt-danger-rgb), 0.2);
+            color: var(--kt-danger);
+        }
+        
+        #kt_activities .btn-light-info {
+            background-color: rgba(var(--kt-info-rgb), 0.1);
+            border-color: rgba(var(--kt-info-rgb), 0.2);
+            color: var(--kt-info);
+        }
+        
+        /* Hover states */
+        #kt_activities .btn-light-primary:hover {
+            background-color: var(--kt-primary);
+            border-color: var(--kt-primary);
+            color: #ffffff;
+        }
+        
+        #kt_activities .btn-light-success:hover {
+            background-color: var(--kt-success);
+            border-color: var(--kt-success);
+            color: #ffffff;
+        }
+        
+        #kt_activities .btn-light-warning:hover {
+            background-color: var(--kt-warning);
+            border-color: var(--kt-warning);
+            color: #ffffff;
+        }
+        
+        #kt_activities .btn-light-danger:hover {
+            background-color: var(--kt-danger);
+            border-color: var(--kt-danger);
+            color: #ffffff;
+        }
+        
+        #kt_activities .btn-light-info:hover {
+            background-color: var(--kt-info);
+            border-color: var(--kt-info);
+            color: #ffffff;
+        }
+        
+        /* Botão de detalhes */
+        #kt_activities .btn-outline.btn-outline-dashed {
+            border-style: dashed;
+            border-width: 1px;
+        }
+        
+        #kt_activities .btn-outline.btn-outline-dashed:hover {
+            background-color: var(--kt-gray-100);
+            border-style: solid;
+            color: var(--kt-gray-700);
+        }
+        
+        /* Melhorias no header do drawer */
+        #kt_activities_header {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        /* Loading state melhorado */
+        #notifications-loading .spinner-border {
+            color: var(--kt-primary);
+        }
+        
+        /* Empty state melhorado */
+        #notifications-empty {
+            padding: 2rem 1rem;
+        }
+        
+        /* Responsividade */
+        @media (max-width: 768px) {
+            #kt_activities .timeline-content {
+                margin-left: 0.25rem;
+                padding: 0.75rem;
+            }
+            
+            #kt_activities .btn-sm {
+                font-size: 0.7rem;
+                padding: 0.25rem 0.5rem;
+            }
+        }
+    </style>
+    <!--end::Custom Notification Styles-->
 
 </head>
 <!--end::Head-->
@@ -2439,7 +2595,7 @@
                     this.showLoading();
                 }
 
-                const response = await fetch('/proposicoes/notificacoes', {
+                const response = await fetch('/api/notifications', {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',
@@ -2506,17 +2662,17 @@
                 const isLast = index === notifications.length - 1;
                 
                 html += `
-                    <div class="timeline-item">
-                        ${!isLast ? '<div class="timeline-line"></div>' : ''}
-                        <div class="timeline-icon symbol symbol-30px">
-                            <div class="symbol-label bg-light-${notification.cor}">
-                                <i class="${notification.icone} fs-4 text-${notification.cor}">
+                    <div class="timeline-item d-flex">
+                        <div class="timeline-icon symbol symbol-35px me-3">
+                            <div class="symbol-label bg-light-${notification.cor} border border-${notification.cor} border-dashed">
+                                <i class="${notification.icone} fs-5 text-${notification.cor}">
                                     <span class="path1"></span>
                                     <span class="path2"></span>
+                                    <span class="path3"></span>
                                 </i>
                             </div>
                         </div>
-                        <div class="timeline-content mb-7 mt-n1">
+                        <div class="timeline-content flex-grow-1">
                             <div class="pe-2 mb-3">
                                 <div class="fs-6 fw-semibold mb-1">${notification.titulo}</div>
                                 <div class="text-gray-700 fs-7 mb-2">${notification.descricao}</div>
@@ -2526,12 +2682,19 @@
                                     <span class="badge badge-light-${notification.cor} fs-8">${notification.tipo.replace('_', ' ')}</span>
                                 </div>
                             </div>
-                            <div class="d-flex gap-1">
-                                <a href="${notification.link_acao}" class="btn btn-xs btn-${notification.cor} flex-fill">
-                                    ${notification.acao_texto}
+                            <div class="d-flex gap-2 mt-3">
+                                <a href="${notification.link_acao}" class="btn btn-sm btn-${notification.cor} btn-light-${notification.cor} px-3 py-1 fs-8">
+                                    <i class="ki-duotone ki-arrow-right fs-8 me-1">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                    </i>${notification.acao_texto}
                                 </a>
-                                <a href="${notification.link}" class="btn btn-xs btn-light flex-fill">
-                                    Ver Detalhes
+                                <a href="${notification.link}" class="btn btn-sm btn-light btn-outline btn-outline-dashed px-3 py-1 fs-8 text-muted">
+                                    <i class="ki-duotone ki-eye fs-8 me-1">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                        <span class="path3"></span>
+                                    </i>Detalhes
                                 </a>
                             </div>
                         </div>

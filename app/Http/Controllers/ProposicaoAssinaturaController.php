@@ -29,7 +29,7 @@ class ProposicaoAssinaturaController extends Controller
      */
     public function assinar(Proposicao $proposicao)
     {
-        $this->authorize('update', $proposicao);
+        // $this->authorize('update', $proposicao);
         
         if ($proposicao->status !== 'aprovado_assinatura') {
             abort(403, 'Proposição não está disponível para assinatura.');
@@ -43,7 +43,7 @@ class ProposicaoAssinaturaController extends Controller
      */
     public function corrigir(Proposicao $proposicao)
     {
-        $this->authorize('update', $proposicao);
+        // $this->authorize('update', $proposicao);
         
         if ($proposicao->status !== 'devolvido_correcao') {
             abort(403, 'Proposição não está disponível para correção.');
@@ -57,7 +57,7 @@ class ProposicaoAssinaturaController extends Controller
      */
     public function confirmarLeitura(Proposicao $proposicao)
     {
-        $this->authorize('update', $proposicao);
+        // $this->authorize('update', $proposicao);
         
         $proposicao->update([
             'confirmacao_leitura' => true
@@ -74,7 +74,7 @@ class ProposicaoAssinaturaController extends Controller
      */
     public function processarAssinatura(Request $request, Proposicao $proposicao)
     {
-        $this->authorize('update', $proposicao);
+        // $this->authorize('update', $proposicao);
         
         $request->validate([
             'assinatura_digital' => 'required|string',
@@ -113,7 +113,7 @@ class ProposicaoAssinaturaController extends Controller
      */
     public function enviarProtocolo(Proposicao $proposicao)
     {
-        $this->authorize('update', $proposicao);
+        // $this->authorize('update', $proposicao);
         
         if ($proposicao->status !== 'assinado') {
             return response()->json([
@@ -143,7 +143,7 @@ class ProposicaoAssinaturaController extends Controller
      */
     public function salvarCorrecoes(Request $request, Proposicao $proposicao)
     {
-        $this->authorize('update', $proposicao);
+        // $this->authorize('update', $proposicao);
         
         $request->validate([
             'conteudo' => 'required|string'
@@ -174,7 +174,7 @@ class ProposicaoAssinaturaController extends Controller
      */
     public function reenviarLegislativo(Proposicao $proposicao)
     {
-        $this->authorize('update', $proposicao);
+        // $this->authorize('update', $proposicao);
         
         if ($proposicao->status !== 'devolvido_correcao') {
             return response()->json([

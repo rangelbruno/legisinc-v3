@@ -692,8 +692,10 @@
                                         <span class="path3"></span>
                                     </i>
                                     <!-- Indicador de notificação ativa -->
-                                    <span class="bullet bullet-dot bg-success h-6px w-6px position-absolute translate-middle top-0 start-50 animation-blink"
-                                          id="notification-dot" style="display: none;"></span>
+                                    @if($notificationCount > 0)
+                                        <span class="bullet bullet-dot {{ $hasUrgentNotifications ? 'bg-danger animation-blink' : 'bg-success' }} h-6px w-6px position-absolute translate-middle top-0 start-50"
+                                              id="notification-dot"></span>
+                                    @endif
                                 </div>
                                 <!--end::Drawer toggle-->
                             </div>
