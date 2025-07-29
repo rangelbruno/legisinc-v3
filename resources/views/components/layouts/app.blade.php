@@ -2638,10 +2638,12 @@
         }
 
         updateBadge(count) {
-            if (count > 0) {
-                this.notificationDot.style.display = 'block';
-            } else {
-                this.notificationDot.style.display = 'none';
+            if (this.notificationDot) {
+                if (count > 0) {
+                    this.notificationDot.style.display = 'block';
+                } else {
+                    this.notificationDot.style.display = 'none';
+                }
             }
         }
 
