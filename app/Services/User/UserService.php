@@ -289,6 +289,7 @@ class UserService
             User::PERFIL_LEGISLATIVO => 'Servidor Legislativo',
             User::PERFIL_PARLAMENTAR => 'Parlamentar',
             User::PERFIL_RELATOR => 'Relator',
+            User::PERFIL_PROTOCOLO => 'Protocolo',
             User::PERFIL_ASSESSOR => 'Assessor',
             User::PERFIL_CIDADAO_VERIFICADO => 'Cidadão Verificado',
             User::PERFIL_PUBLICO => 'Público',

@@ -291,17 +291,66 @@
                                     <!--end:Menu link-->
                                 </div>
                                 <!--end:Menu item-->
+                            </div>
+                            <!--end:Menu sub-->
+                        </div>
+                        @endif
+                        <!--end:Menu item-->
+                        <!--begin:Menu item - Protocolo (Submenu)-->
+                        @if(auth()->user()->isProtocolo() || auth()->user()->hasRole('PROTOCOLO') || auth()->user()->isAdmin())
+                        <div data-kt-menu-trigger="click" class="menu-item menu-accordion {{ request()->routeIs('proposicoes.protocolar*') || request()->routeIs('proposicoes.protocolos-hoje') || request()->routeIs('proposicoes.estatisticas-protocolo') ? 'here show' : '' }}">
+                            <!--begin:Menu link-->
+                            <span class="menu-link">
+                                <span class="menu-bullet">
+                                    <span class="bullet bullet-dot"></span>
+                                </span>
+                                <span class="menu-title">Protocolo</span>
+                                <span class="menu-arrow"></span>
+                            </span>
+                            <!--end:Menu link-->
+                            <!--begin:Menu sub-->
+                            <div class="menu-sub menu-sub-accordion {{ request()->routeIs('proposicoes.protocolar*') || request()->routeIs('proposicoes.protocolos-hoje') || request()->routeIs('proposicoes.estatisticas-protocolo') ? 'show' : '' }}">
                                 <!--begin:Menu item-->
+                                @if(\App\Models\ScreenPermission::userCanAccessRoute('proposicoes.protocolar'))
                                 <div class="menu-item">
                                     <!--begin:Menu link-->
-                                    <a class="menu-link {{ request()->routeIs('proposicoes.aguardando-protocolo') ? 'active' : '' }}" href="{{ route('proposicoes.aguardando-protocolo') }}">
+                                    <a class="menu-link {{ request()->routeIs('proposicoes.protocolar') ? 'active' : '' }}" href="{{ route('proposicoes.protocolar') }}">
                                         <span class="menu-bullet">
                                             <span class="bullet bullet-dot"></span>
                                         </span>
-                                        <span class="menu-title">Aguardando Protocolo</span>
+                                        <span class="menu-title">Protocolar</span>
                                     </a>
                                     <!--end:Menu link-->
                                 </div>
+                                @endif
+                                <!--end:Menu item-->
+                                <!--begin:Menu item-->
+                                @if(\App\Models\ScreenPermission::userCanAccessRoute('proposicoes.protocolos-hoje'))
+                                <div class="menu-item">
+                                    <!--begin:Menu link-->
+                                    <a class="menu-link {{ request()->routeIs('proposicoes.protocolos-hoje') ? 'active' : '' }}" href="{{ route('proposicoes.protocolos-hoje') }}">
+                                        <span class="menu-bullet">
+                                            <span class="bullet bullet-dot"></span>
+                                        </span>
+                                        <span class="menu-title">Protocolos Hoje</span>
+                                    </a>
+                                    <!--end:Menu link-->
+                                </div>
+                                @endif
+                                <!--end:Menu item-->
+                                <!--begin:Menu item-->
+                                @if(\App\Models\ScreenPermission::userCanAccessRoute('proposicoes.estatisticas-protocolo'))
+                                <div class="menu-item">
+                                    <!--begin:Menu link-->
+                                    <a class="menu-link {{ request()->routeIs('proposicoes.estatisticas-protocolo') ? 'active' : '' }}" href="{{ route('proposicoes.estatisticas-protocolo') }}">
+                                        <span class="menu-bullet">
+                                            <span class="bullet bullet-dot"></span>
+                                        </span>
+                                        <span class="menu-title">Estatísticas</span>
+                                    </a>
+                                    <!--end:Menu link-->
+                                </div>
+                                @endif
                                 <!--end:Menu item-->
                             </div>
                             <!--end:Menu sub-->
@@ -312,7 +361,7 @@
                 </div>
                 @endif
                 <!--end:Menu item-->
-                
+
                 <!--begin:Menu item - Sessões-->
                 @if(\App\Models\ScreenPermission::userCanAccessModule('sessoes'))
                 <div data-kt-menu-trigger="click" class="menu-item menu-accordion {{ request()->routeIs('admin.sessions.*') ? 'here show' : '' }}">

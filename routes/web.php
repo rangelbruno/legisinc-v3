@@ -520,31 +520,31 @@ Route::get('/debug-permissions', function() {
 Route::prefix('proposicoes')->name('proposicoes.')->middleware(['auth', 'check.screen.permission'])->group(function () {
     
     // ===== PARLAMENTAR - CRIAÇÃO =====
-    Route::get('/criar', [App\Http\Controllers\ProposicaoController::class, 'create'])->name('criar');
-    Route::post('/salvar-rascunho', [App\Http\Controllers\ProposicaoController::class, 'salvarRascunho'])->name('salvar-rascunho');
-    Route::get('/modelos/{tipo}', [App\Http\Controllers\ProposicaoController::class, 'buscarModelos'])->name('buscar-modelos');
-    Route::get('/{proposicao}/preencher-modelo/{modeloId}', [App\Http\Controllers\ProposicaoController::class, 'preencherModelo'])->name('preencher-modelo');
-    Route::post('/{proposicao}/gerar-texto', [App\Http\Controllers\ProposicaoController::class, 'gerarTexto'])->name('gerar-texto');
-    Route::get('/{proposicao}/editar-texto', [App\Http\Controllers\ProposicaoController::class, 'editarTexto'])->name('editar-texto');
-    Route::get('/{proposicao}/editar-onlyoffice/{template}', [App\Http\Controllers\ProposicaoController::class, 'editarOnlyOffice'])->name('editar-onlyoffice');
-    Route::get('/{proposicao}/preparar-edicao/{template}', [App\Http\Controllers\ProposicaoController::class, 'prepararEdicao'])->name('preparar-edicao');
-    Route::get('/{proposicao}/editor-completo/{template}', [App\Http\Controllers\ProposicaoController::class, 'editorCompleto'])->name('editor-completo');
+    Route::get('/criar', [App\Http\Controllers\ProposicaoController::class, 'create'])->name('criar')->middleware('check.parlamentar.access');
+    Route::post('/salvar-rascunho', [App\Http\Controllers\ProposicaoController::class, 'salvarRascunho'])->name('salvar-rascunho')->middleware('check.parlamentar.access');
+    Route::get('/modelos/{tipo}', [App\Http\Controllers\ProposicaoController::class, 'buscarModelos'])->name('buscar-modelos')->middleware('check.parlamentar.access');
+    Route::get('/{proposicao}/preencher-modelo/{modeloId}', [App\Http\Controllers\ProposicaoController::class, 'preencherModelo'])->name('preencher-modelo')->middleware('check.parlamentar.access');
+    Route::post('/{proposicao}/gerar-texto', [App\Http\Controllers\ProposicaoController::class, 'gerarTexto'])->name('gerar-texto')->middleware('check.parlamentar.access');
+    Route::get('/{proposicao}/editar-texto', [App\Http\Controllers\ProposicaoController::class, 'editarTexto'])->name('editar-texto')->middleware('check.parlamentar.access');
+    Route::get('/{proposicao}/editar-onlyoffice/{template}', [App\Http\Controllers\ProposicaoController::class, 'editarOnlyOffice'])->name('editar-onlyoffice')->middleware('check.parlamentar.access');
+    Route::get('/{proposicao}/preparar-edicao/{template}', [App\Http\Controllers\ProposicaoController::class, 'prepararEdicao'])->name('preparar-edicao')->middleware('check.parlamentar.access');
+    Route::get('/{proposicao}/editor-completo/{template}', [App\Http\Controllers\ProposicaoController::class, 'editorCompleto'])->name('editor-completo')->middleware('check.parlamentar.access');
     
     // Nova Arquitetura - Template Instance routes
-    Route::post('/{proposicao}/selecionar-template', [App\Http\Controllers\ProposicaoController::class, 'selecionarTemplate'])->name('selecionar-template');
-    Route::post('/{proposicao}/processar-template', [App\Http\Controllers\ProposicaoController::class, 'processarTemplateNovaArquitetura'])->name('processar-template');
-    Route::get('/{proposicao}/nova-arquitetura/{instance}', [App\Http\Controllers\ProposicaoController::class, 'editarOnlyOfficeNovaArquitetura'])->name('editar-onlyoffice-nova-arquitetura');
-    Route::get('/instance/{instance}/serve', [App\Http\Controllers\ProposicaoController::class, 'serveInstance'])->name('serve-instance');
-    Route::post('/{instance}/finalizar-edicao', [App\Http\Controllers\ProposicaoController::class, 'finalizarEdicaoInstance'])->name('finalizar-edicao-instance');
-    Route::post('/{proposicao}/salvar-dados-temporarios', [App\Http\Controllers\ProposicaoController::class, 'salvarDadosTemporarios'])->name('salvar-dados-temporarios');
-    Route::post('/{proposicao}/salvar-texto', [App\Http\Controllers\ProposicaoController::class, 'salvarTexto'])->name('salvar-texto');
-    Route::post('/{proposicao}/upload-anexo', [App\Http\Controllers\ProposicaoController::class, 'uploadAnexo'])->name('upload-anexo');
-    Route::delete('/{proposicao}/remover-anexo/{anexo}', [App\Http\Controllers\ProposicaoController::class, 'removerAnexo'])->name('remover-anexo');
+    Route::post('/{proposicao}/selecionar-template', [App\Http\Controllers\ProposicaoController::class, 'selecionarTemplate'])->name('selecionar-template')->middleware('check.parlamentar.access');
+    Route::post('/{proposicao}/processar-template', [App\Http\Controllers\ProposicaoController::class, 'processarTemplateNovaArquitetura'])->name('processar-template')->middleware('check.parlamentar.access');
+    Route::get('/{proposicao}/nova-arquitetura/{instance}', [App\Http\Controllers\ProposicaoController::class, 'editarOnlyOfficeNovaArquitetura'])->name('editar-onlyoffice-nova-arquitetura')->middleware('check.parlamentar.access');
+    Route::get('/instance/{instance}/serve', [App\Http\Controllers\ProposicaoController::class, 'serveInstance'])->name('serve-instance')->middleware('check.parlamentar.access');
+    Route::post('/{instance}/finalizar-edicao', [App\Http\Controllers\ProposicaoController::class, 'finalizarEdicaoInstance'])->name('finalizar-edicao-instance')->middleware('check.parlamentar.access');
+    Route::post('/{proposicao}/salvar-dados-temporarios', [App\Http\Controllers\ProposicaoController::class, 'salvarDadosTemporarios'])->name('salvar-dados-temporarios')->middleware('check.parlamentar.access');
+    Route::post('/{proposicao}/salvar-texto', [App\Http\Controllers\ProposicaoController::class, 'salvarTexto'])->name('salvar-texto')->middleware('check.parlamentar.access');
+    Route::post('/{proposicao}/upload-anexo', [App\Http\Controllers\ProposicaoController::class, 'uploadAnexo'])->name('upload-anexo')->middleware('check.parlamentar.access');
+    Route::delete('/{proposicao}/remover-anexo/{anexo}', [App\Http\Controllers\ProposicaoController::class, 'removerAnexo'])->name('remover-anexo')->middleware('check.parlamentar.access');
     Route::post('/{proposicao}/atualizar-status', [App\Http\Controllers\ProposicaoController::class, 'atualizarStatus'])->name('atualizar-status');
     Route::put('/{proposicao}/enviar-legislativo', [App\Http\Controllers\ProposicaoController::class, 'enviarLegislativo'])->name('enviar-legislativo');
     Route::post('/{proposicao}/retorno-legislativo', [App\Http\Controllers\ProposicaoController::class, 'retornoLegislativo'])->name('retorno-legislativo');
-    Route::post('/{proposicao}/assinar-documento', [App\Http\Controllers\ProposicaoController::class, 'assinarDocumento'])->name('assinar-documento');
-    Route::post('/{proposicao}/enviar-protocolo', [App\Http\Controllers\ProposicaoController::class, 'enviarProtocolo'])->name('enviar-protocolo');
+    Route::post('/{proposicao}/assinar-documento', [App\Http\Controllers\ProposicaoController::class, 'assinarDocumento'])->name('assinar-documento')->middleware('check.parlamentar.access');
+    Route::post('/{proposicao}/enviar-protocolo', [App\Http\Controllers\ProposicaoController::class, 'enviarProtocolo'])->name('enviar-protocolo')->middleware('check.parlamentar.access');
     
     // ===== LEGISLATIVO - REVISÃO =====
     Route::get('/legislativo', [App\Http\Controllers\ProposicaoLegislativoController::class, 'index'])->name('legislativo.index')->middleware('check.proposicao.permission');
@@ -568,7 +568,7 @@ Route::prefix('proposicoes')->name('proposicoes.')->middleware(['auth', 'check.s
     Route::get('/relatorio-legislativo/dados', [App\Http\Controllers\ProposicaoLegislativoController::class, 'dadosRelatorio'])->name('relatorio-legislativo.dados');
     Route::get('/relatorio-legislativo/pdf', [App\Http\Controllers\ProposicaoLegislativoController::class, 'relatorioPdf'])->name('relatorio-legislativo.pdf');
     Route::get('/relatorio-legislativo/excel', [App\Http\Controllers\ProposicaoLegislativoController::class, 'relatorioExcel'])->name('relatorio-legislativo.excel');
-    Route::get('/aguardando-protocolo', [App\Http\Controllers\ProposicaoLegislativoController::class, 'aguardandoProtocolo'])->name('aguardando-protocolo');
+    Route::get('/aguardando-protocolo', [App\Http\Controllers\ProposicaoLegislativoController::class, 'aguardandoProtocolo'])->name('aguardando-protocolo')->middleware('block.protocolo.access');
     
     // ===== PARLAMENTAR - ASSINATURA =====
     Route::get('/assinatura', [App\Http\Controllers\ProposicaoAssinaturaController::class, 'index'])->name('assinatura');
@@ -585,18 +585,19 @@ Route::prefix('proposicoes')->name('proposicoes.')->middleware(['auth', 'check.s
     Route::put('/{proposicao}/voltar-parlamentar', [App\Http\Controllers\ProposicaoController::class, 'voltarParaParlamentar'])->name('voltar-parlamentar');
     
     // Aprovar edições do legislativo (parlamentar)
-    Route::post('/{proposicao}/aprovar-edicoes-legislativo', [App\Http\Controllers\ProposicaoController::class, 'aprovarEdicoesLegislativo'])->name('aprovar-edicoes-legislativo');
+    Route::post('/{proposicao}/aprovar-edicoes-legislativo', [App\Http\Controllers\ProposicaoController::class, 'aprovarEdicoesLegislativo'])->name('aprovar-edicoes-legislativo')->middleware('check.parlamentar.access');
     
     // ===== PROTOCOLO =====
     Route::get('/protocolar', [App\Http\Controllers\ProposicaoProtocoloController::class, 'index'])->name('protocolar');
     Route::get('/{proposicao}/protocolar', [App\Http\Controllers\ProposicaoProtocoloController::class, 'protocolar'])->name('protocolar.show');
     Route::post('/{proposicao}/efetivar-protocolo', [App\Http\Controllers\ProposicaoProtocoloController::class, 'efetivarProtocolo'])->name('efetivar-protocolo');
+    Route::post('/{proposicao}/atribuir-numero-protocolo', [App\Http\Controllers\ProposicaoProtocoloController::class, 'atribuirNumeroProtocolo'])->name('atribuir-numero-protocolo');
     Route::get('/protocolos-hoje', [App\Http\Controllers\ProposicaoProtocoloController::class, 'protocolosHoje'])->name('protocolos-hoje');
     Route::get('/estatisticas-protocolo', [App\Http\Controllers\ProposicaoProtocoloController::class, 'estatisticas'])->name('estatisticas-protocolo');
     Route::put('/{proposicao}/iniciar-tramitacao', [App\Http\Controllers\ProposicaoProtocoloController::class, 'iniciarTramitacao'])->name('iniciar-tramitacao');
     
     // ===== GERAL =====
-    Route::get('/minhas-proposicoes', [App\Http\Controllers\ProposicaoController::class, 'minhasProposicoes'])->name('minhas-proposicoes');
+    Route::get('/minhas-proposicoes', [App\Http\Controllers\ProposicaoController::class, 'minhasProposicoes'])->name('minhas-proposicoes')->middleware('check.parlamentar.access');
     Route::get('/limpar-sessao-teste', [App\Http\Controllers\ProposicaoController::class, 'limparSessaoTeste'])->name('limpar-sessao-teste'); // Temporário para desenvolvimento
     Route::get('/{proposicao}/status', [App\Http\Controllers\ProposicaoController::class, 'statusTramitacao'])->name('status-tramitacao');
     Route::get('/notificacoes', [App\Http\Controllers\ProposicaoController::class, 'buscarNotificacoes'])->name('notificacoes');

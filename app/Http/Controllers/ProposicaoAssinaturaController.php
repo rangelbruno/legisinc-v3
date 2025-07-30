@@ -102,20 +102,25 @@ class ProposicaoAssinaturaController extends Controller
         //     'assinado'
         // );
 
+        // Enviar automaticamente para protocolo após assinatura
+        $proposicao->update([
+            'status' => 'enviado_protocolo'
+        ]);
+
         return response()->json([
             'success' => true,
-            'message' => 'Proposição assinada com sucesso!'
+            'message' => 'Proposição assinada e enviada para protocolo com sucesso!'
         ]);
     }
 
     /**
-     * Enviar proposição para protocolo
+     * Reenviar proposição para protocolo (caso necessário)
      */
     public function enviarProtocolo(Proposicao $proposicao)
     {
         // $this->authorize('update', $proposicao);
         
-        if ($proposicao->status !== 'assinado') {
+        if (!in_array($proposicao->status, ['assinado', 'protocolado'])) {
             return response()->json([
                 'success' => false,
                 'message' => 'Proposição deve estar assinada para ser enviada ao protocolo.'
@@ -128,14 +133,14 @@ class ProposicaoAssinaturaController extends Controller
 
         // TODO: Implementar sistema de tramitação quando disponível
         // $proposicao->adicionarTramitacao(
-        //     'Enviado para protocolo',
-        //     'assinado',
+        //     'Reenviado para protocolo',
+        //     $proposicao->status,
         //     'enviado_protocolo'
         // );
 
         return response()->json([
             'success' => true,
-            'message' => 'Proposição enviada para protocolo!'
+            'message' => 'Proposição reenviada para protocolo!'
         ]);
     }
 

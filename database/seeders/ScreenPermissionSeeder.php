@@ -211,25 +211,69 @@ class ScreenPermissionSeeder extends Seeder
             // Dashboard sempre habilitado
             [
                 'role_name' => 'PROTOCOLO',
-                'screen_route' => 'dashboard.index',
+                'screen_route' => 'dashboard',
                 'screen_name' => 'Painel Principal',
                 'screen_module' => 'dashboard',
                 'can_access' => true,
             ],
             
-            // Projetos - pode visualizar e criar
+            // Proposições - Telas específicas do protocolo
             [
                 'role_name' => 'PROTOCOLO',
-                'screen_route' => 'projetos.index',
-                'screen_name' => 'Listar Projetos',
-                'screen_module' => 'projetos',
+                'screen_route' => 'proposicoes.aguardando-protocolo',
+                'screen_name' => 'Aguardando Protocolo',
+                'screen_module' => 'proposicoes',
                 'can_access' => true,
             ],
             [
                 'role_name' => 'PROTOCOLO',
-                'screen_route' => 'projetos.create',
-                'screen_name' => 'Criar Projeto',
-                'screen_module' => 'projetos',
+                'screen_route' => 'proposicoes.protocolar',
+                'screen_name' => 'Protocolar',
+                'screen_module' => 'proposicoes',
+                'can_access' => true,
+            ],
+            [
+                'role_name' => 'PROTOCOLO',
+                'screen_route' => 'proposicoes.protocolar.show',
+                'screen_name' => 'Protocolar Proposição',
+                'screen_module' => 'proposicoes',
+                'can_access' => true,
+            ],
+            [
+                'role_name' => 'PROTOCOLO',
+                'screen_route' => 'proposicoes.efetivar-protocolo',
+                'screen_name' => 'Efetivar Protocolo',
+                'screen_module' => 'proposicoes',
+                'can_access' => true,
+            ],
+            [
+                'role_name' => 'PROTOCOLO',
+                'screen_route' => 'proposicoes.protocolos-hoje',
+                'screen_name' => 'Protocolos Hoje',
+                'screen_module' => 'proposicoes',
+                'can_access' => true,
+            ],
+            [
+                'role_name' => 'PROTOCOLO',
+                'screen_route' => 'proposicoes.estatisticas-protocolo',
+                'screen_name' => 'Estatísticas Protocolo',
+                'screen_module' => 'proposicoes',
+                'can_access' => true,
+            ],
+            [
+                'role_name' => 'PROTOCOLO',
+                'screen_route' => 'proposicoes.iniciar-tramitacao',
+                'screen_name' => 'Iniciar Tramitação',
+                'screen_module' => 'proposicoes',
+                'can_access' => true,
+            ],
+            
+            // Parlamentares - pode visualizar (necessário para contexto)
+            [
+                'role_name' => 'PROTOCOLO',
+                'screen_route' => 'parlamentares.index',
+                'screen_name' => 'Listar Parlamentares',
+                'screen_module' => 'parlamentares',
                 'can_access' => true,
             ],
             

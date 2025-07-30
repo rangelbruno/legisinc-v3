@@ -29,7 +29,14 @@ class Proposicao extends Model
         'certificado_digital',
         'data_assinatura',
         'ip_assinatura',
-        'data_aprovacao_autor'
+        'data_aprovacao_autor',
+        // Campos de protocolo
+        'numero_protocolo',
+        'data_protocolo',
+        'funcionario_protocolo_id',
+        'comissoes_destino',
+        'observacoes_protocolo',
+        'verificacoes_realizadas'
         // Campos temporariamente comentados até migração ser executada:
         // 'numero',
         // 'variaveis_template',
@@ -41,9 +48,12 @@ class Proposicao extends Model
         'data_retorno_legislativo' => 'datetime',
         'data_assinatura' => 'datetime',
         'data_aprovacao_autor' => 'datetime',
+        'data_protocolo' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
-        'confirmacao_leitura' => 'boolean'
+        'confirmacao_leitura' => 'boolean',
+        'comissoes_destino' => 'array',
+        'verificacoes_realizadas' => 'array'
         // 'variaveis_template' => 'array'
     ];
 
@@ -60,6 +70,11 @@ class Proposicao extends Model
     public function tipoProposicao(): BelongsTo
     {
         return $this->belongsTo(TipoProposicao::class, 'tipo', 'codigo');
+    }
+
+    public function funcionarioProtocolo(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'funcionario_protocolo_id');
     }
 
     /**

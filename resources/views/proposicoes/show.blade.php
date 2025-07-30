@@ -353,12 +353,20 @@
                     @elseif($proposicao->status === 'assinado')
                         <div class="alert alert-success mb-3">
                             <i class="fas fa-signature me-2"></i>
-                            <strong>Assinado:</strong> Documento assinado digitalmente.
+                            <strong>{{ $proposicao->numero_protocolo ? 'Assinado e Protocolado' : 'Assinado' }}:</strong> 
+                            {{ $proposicao->numero_protocolo ? 'Protocolo: ' . $proposicao->numero_protocolo : 'Documento assinado digitalmente.' }}
                         </div>
                         <div class="d-grid gap-2">
-                            <button class="btn btn-primary" onclick="enviarParaProtocolo()">
-                                <i class="fas fa-file-signature me-2"></i>Enviar para Protocolo
-                            </button>
+                            @if(Auth::user()->perfil === 'PROTOCOLO' && !$proposicao->numero_protocolo)
+                                <button class="btn btn-success" onclick="atribuirNumeroProtocolo()">
+                                    <i class="fas fa-hashtag me-2"></i>Atribuir Número de Protocolo
+                                </button>
+                                <hr class="my-2">
+                            @elseif(Auth::user()->perfil !== 'PROTOCOLO' && !$proposicao->numero_protocolo)
+                                <button class="btn btn-primary" onclick="enviarParaProtocolo()">
+                                    <i class="fas fa-file-signature me-2"></i>Enviar para Protocolo
+                                </button>
+                            @endif
                             <button class="btn btn-outline-primary btn-sm" onclick="baixarDocumento()">
                                 <i class="fas fa-download me-2"></i>Baixar Documento Assinado
                             </button>
@@ -366,9 +374,16 @@
                     @elseif($proposicao->status === 'enviado_protocolo')
                         <div class="alert alert-info mb-3">
                             <i class="fas fa-file-signature me-2"></i>
-                            <strong>Protocolado:</strong> Documento enviado para protocolo oficial.
+                            <strong>{{ $proposicao->numero_protocolo ? 'Protocolado' : 'Aguardando Protocolo' }}:</strong> 
+                            {{ $proposicao->numero_protocolo ? 'Protocolo: ' . $proposicao->numero_protocolo : 'Documento enviado para protocolo oficial.' }}
                         </div>
                         <div class="d-grid gap-2">
+                            @if(Auth::user()->perfil === 'PROTOCOLO' && !$proposicao->numero_protocolo)
+                                <button class="btn btn-success" onclick="atribuirNumeroProtocolo()">
+                                    <i class="fas fa-hashtag me-2"></i>Atribuir Número de Protocolo
+                                </button>
+                                <hr class="my-2">
+                            @endif
                             <button class="btn btn-outline-info btn-sm" onclick="consultarProtocolo()">
                                 <i class="fas fa-search me-2"></i>Consultar Protocolo
                             </button>
@@ -1865,7 +1880,7 @@ function consultarProtocolo() {
                     <p class="mb-1"><strong>Proposição:</strong> {{ $proposicao->tipo }} #{{ $proposicao->id }}</p>
                     <p class="mb-1"><strong>Autor:</strong> {{ $proposicao->autor->name }}</p>
                     <p class="mb-1"><strong>Data de Envio:</strong> {{ $proposicao->updated_at ? $proposicao->updated_at->format('d/m/Y H:i') : 'N/A' }}</p>
-                    <p class="mb-0"><strong>Status:</strong> Aguardando processamento no protocolo</p>
+                    <p class="mb-0"><strong>Status:</strong> {{ $proposicao->numero_protocolo ? 'Protocolado: ' . $proposicao->numero_protocolo : 'Aguardando processamento no protocolo' }}</p>
                 </div>
                 <p class="text-muted small">O número de protocolo será gerado pelo sistema de protocolo oficial da Câmara.</p>
                </div>`,
@@ -1873,6 +1888,155 @@ function consultarProtocolo() {
         icon: null,
         confirmButtonText: 'Fechar',
         confirmButtonColor: '#6c757d'
+    });
+}
+
+function atribuirNumeroProtocolo() {
+    Swal.fire({
+        title: 'Atribuir Número de Protocolo',
+        html: `<div class="text-start">
+                <p class="mb-3">Escolha como atribuir o número de protocolo para esta proposição:</p>
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="radio" name="tipoNumero" id="numeroAutomatico" value="automatico" checked>
+                    <label class="form-check-label" for="numeroAutomatico">
+                        <strong>Número Automático</strong><br>
+                        <small class="text-muted">Sistema gerará o próximo número disponível (Recomendado)</small>
+                    </label>
+                </div>
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="radio" name="tipoNumero" id="numeroManual" value="manual">
+                    <label class="form-check-label" for="numeroManual">
+                        <strong>Número Manual</strong><br>
+                        <small class="text-muted">Inserir número específico</small>
+                    </label>
+                </div>
+                <div id="campoNumeroManual" class="d-none">
+                    <label for="numeroProtocoloManual" class="form-label">Número do Protocolo:</label>
+                    <input type="text" class="form-control" id="numeroProtocoloManual" placeholder="Ex: {{ $proposicao->tipo }}/{{ date('Y') }}/0001">
+                    <small class="text-muted">Formato: TIPO/ANO/SEQUENCIAL (ex: PL/{{ date('Y') }}/0001)</small>
+                </div>
+               </div>`,
+        width: '500px',
+        icon: null,
+        showCancelButton: true,
+        confirmButtonText: 'Atribuir Número',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#28a745',
+        cancelButtonColor: '#6c757d',
+        customClass: {
+            confirmButton: 'btn btn-success',
+            cancelButton: 'btn btn-secondary'
+        },
+        didOpen: () => {
+            // Mostrar/ocultar campo manual
+            document.querySelectorAll('input[name="tipoNumero"]').forEach(radio => {
+                radio.addEventListener('change', function() {
+                    const campoManual = document.getElementById('campoNumeroManual');
+                    if (this.value === 'manual') {
+                        campoManual.classList.remove('d-none');
+                    } else {
+                        campoManual.classList.add('d-none');
+                    }
+                });
+            });
+        },
+        preConfirm: () => {
+            const tipoSelecionado = document.querySelector('input[name="tipoNumero"]:checked').value;
+            let numeroManual = '';
+            
+            if (tipoSelecionado === 'manual') {
+                numeroManual = document.getElementById('numeroProtocoloManual').value.trim();
+                if (!numeroManual) {
+                    Swal.showValidationMessage('Digite o número do protocolo');
+                    return false;
+                }
+                // Validar formato
+                const formatoValido = /^[A-Z]{2,3}\/\d{4}\/\d{4}$/.test(numeroManual);
+                if (!formatoValido) {
+                    Swal.showValidationMessage('Formato inválido. Use: TIPO/ANO/SEQUENCIAL (ex: PL/2025/0001)');
+                    return false;
+                }
+            }
+            
+            return {
+                tipo: tipoSelecionado,
+                numero: numeroManual
+            };
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            const dados = result.value;
+            
+            // Mostrar loading
+            Swal.fire({
+                title: 'Atribuindo Número...',
+                html: '<div class="text-center"><div class="spinner-border text-success" role="status"><span class="visually-hidden">Carregando...</span></div><p class="mt-2 mb-0">Processando atribuição do número de protocolo...</p></div>',
+                allowOutsideClick: false,
+                showConfirmButton: false,
+                willOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            $.ajax({
+                url: `{{ route('proposicoes.atribuir-numero-protocolo', $proposicao) }}`,
+                method: 'POST',
+                data: {
+                    _token: $('meta[name="csrf-token"]').attr('content'),
+                    tipo_numeracao: dados.tipo,
+                    numero_protocolo: dados.numero
+                },
+                success: function(response) {
+                    if (response.success) {
+                        Swal.fire({
+                            title: 'Número Atribuído com Sucesso!',
+                            html: `<div class="text-center">
+                                    <i class="fas fa-check-circle text-success fa-4x mb-3"></i>
+                                    <p>Número de protocolo: <strong class="text-primary">${response.numero_protocolo}</strong></p>
+                                    <p class="text-muted">Protocolo atribuído em ${response.data_protocolo}</p>
+                                   </div>`,
+                            icon: null,
+                            confirmButtonText: 'OK',
+                            confirmButtonColor: '#28a745'
+                        }).then(() => {
+                            location.reload();
+                        });
+                    } else {
+                        Swal.fire({
+                            title: 'Erro!',
+                            text: response.message || 'Erro ao atribuir número de protocolo',
+                            icon: 'error',
+                            confirmButtonText: 'OK',
+                            confirmButtonColor: '#dc3545'
+                        });
+                    }
+                },
+                error: function(xhr) {
+                    console.error('Erro:', xhr);
+                    let message = 'Erro ao atribuir número de protocolo. Tente novamente.';
+                    
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        message = xhr.responseJSON.message;
+                    } else if (xhr.status === 422 && xhr.responseJSON && xhr.responseJSON.errors) {
+                        // Erros de validação
+                        const errors = Object.values(xhr.responseJSON.errors).flat();
+                        message = errors.join(', ');
+                    } else if (xhr.status === 403) {
+                        message = 'Você não tem permissão para atribuir números de protocolo.';
+                    } else if (xhr.status === 404) {
+                        message = 'Proposição não encontrada.';
+                    }
+                    
+                    Swal.fire({
+                        title: 'Erro!',
+                        text: message,
+                        icon: 'error',
+                        confirmButtonText: 'OK',
+                        confirmButtonColor: '#dc3545'
+                    });
+                }
+            });
+        }
     });
 }
 </script>

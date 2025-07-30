@@ -50,7 +50,7 @@ Adicione este CSS na seção `<style>` da sua view:
 ```css
 .dashboard-card-primary {
     background: linear-gradient(135deg, #F1416C 0%, #e02454 100%) !important;
-    background-image: url("{{ asset('assets/media/patterns/vector-1.png') }}"), linear-gradient(135deg, #F1416C 0%, #e02454 100%) !important;
+    background-image: url("/assets/media/patterns/vector-1.png"), linear-gradient(135deg, #F1416C 0%, #e02454 100%) !important;
     background-repeat: no-repeat !important;
     background-size: contain, cover !important;
     background-position: right center, center !important;
@@ -58,7 +58,7 @@ Adicione este CSS na seção `<style>` da sua view:
 
 .dashboard-card-info {
     background: linear-gradient(135deg, #7239EA 0%, #5a2bc4 100%) !important;
-    background-image: url("{{ asset('assets/media/patterns/vector-1.png') }}"), linear-gradient(135deg, #7239EA 0%, #5a2bc4 100%) !important;
+    background-image: url("/assets/media/patterns/vector-1.png"), linear-gradient(135deg, #7239EA 0%, #5a2bc4 100%) !important;
     background-repeat: no-repeat !important;
     background-size: contain, cover !important;
     background-position: right center, center !important;
@@ -66,7 +66,7 @@ Adicione este CSS na seção `<style>` da sua view:
 
 .dashboard-card-success {
     background: linear-gradient(135deg, #17C653 0%, #13a342 100%) !important;
-    background-image: url("{{ asset('assets/media/patterns/vector-1.png') }}"), linear-gradient(135deg, #17C653 0%, #13a342 100%) !important;
+    background-image: url("/assets/media/patterns/vector-1.png"), linear-gradient(135deg, #17C653 0%, #13a342 100%) !important;
     background-repeat: no-repeat !important;
     background-size: contain, cover !important;
     background-position: right center, center !important;
@@ -74,7 +74,7 @@ Adicione este CSS na seção `<style>` da sua view:
 
 .dashboard-card-warning {
     background: linear-gradient(135deg, #FFC700 0%, #e6b300 100%) !important;
-    background-image: url("{{ asset('assets/media/patterns/vector-1.png') }}"), linear-gradient(135deg, #FFC700 0%, #e6b300 100%) !important;
+    background-image: url("/assets/media/patterns/vector-1.png"), linear-gradient(135deg, #FFC700 0%, #e6b300 100%) !important;
     background-repeat: no-repeat !important;
     background-size: contain, cover !important;
     background-position: right center, center !important;
@@ -150,6 +150,7 @@ Adicione este CSS na seção `<style>` da sua view:
 2. **Use !important** - Necessário para sobrescrever estilos do template
 3. **Paths dos ícones** - Verifique se todos os `<span class="pathX">` estão incluídos
 4. **Imagem de fundo** - Certifique-se que `vector-1.png` existe em `assets/media/patterns/`
+5. **❗ IMPORTANTE: URLs de Asset** - Use caminhos diretos `/assets/media/patterns/vector-1.png` em vez de `{{ asset() }}` dentro do CSS para evitar problemas de renderização
 
 ### ✅ Boas Práticas
 1. **Consistência** - Use sempre as mesmas cores para os mesmos tipos de dados

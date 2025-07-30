@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-// use App\Models\Projeto; // REMOVED - migrated to Proposições
+use App\Models\Proposicao;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -13,7 +13,7 @@ class ProposicaoProtocoloController extends Controller
      */
     public function index()
     {
-        $proposicoes = Projeto::where('status', 'enviado_protocolo')
+        $proposicoes = Proposicao::where('status', 'enviado_protocolo')
             ->with(['autor'])
             ->orderBy('created_at', 'asc')
             ->paginate(15);
@@ -24,9 +24,9 @@ class ProposicaoProtocoloController extends Controller
     /**
      * Tela de protocolação da proposição
      */
-    public function protocolar(Projeto $proposicao)
+    public function protocolar(Proposicao $proposicao)
     {
-        if ($proposicao->status !== 'enviado_protocolo') {
+        if (!in_array($proposicao->status, ['enviado_protocolo', 'assinado'])) {
             abort(403, 'Proposição não está disponível para protocolo.');
         }
 
@@ -48,7 +48,7 @@ class ProposicaoProtocoloController extends Controller
     /**
      * Efetivar protocolo da proposição
      */
-    public function efetivarProtocolo(Request $request, Projeto $proposicao)
+    public function efetivarProtocolo(Request $request, Proposicao $proposicao)
     {
         $request->validate([
             'comissoes_destino' => 'required|array|min:1',
@@ -56,7 +56,7 @@ class ProposicaoProtocoloController extends Controller
             'observacoes_protocolo' => 'nullable|string',
         ]);
 
-        if ($proposicao->status !== 'enviado_protocolo') {
+        if (!in_array($proposicao->status, ['enviado_protocolo', 'assinado'])) {
             return response()->json([
                 'success' => false,
                 'message' => 'Proposição não está disponível para protocolo.'
@@ -91,12 +91,13 @@ class ProposicaoProtocoloController extends Controller
             'verificacoes_realizadas' => $verificacoes,
         ]);
 
-        $proposicao->adicionarTramitacao(
-            'Proposição protocolada - Nº ' . $numeroProtocolo,
-            'enviado_protocolo',
-            'protocolado',
-            'Distribuída para: ' . implode(', ', $request->comissoes_destino)
-        );
+        // TODO: Implementar sistema de tramitação quando disponível
+        // $proposicao->adicionarTramitacao(
+        //     'Proposição protocolada - Nº ' . $numeroProtocolo,
+        //     'enviado_protocolo',
+        //     'protocolado',
+        //     'Distribuída para: ' . implode(', ', $request->comissoes_destino)
+        // );
 
         return response()->json([
             'success' => true,
@@ -110,7 +111,7 @@ class ProposicaoProtocoloController extends Controller
      */
     public function protocolosHoje()
     {
-        $proposicoes = Projeto::where('status', 'protocolado')
+        $proposicoes = Proposicao::where('status', 'protocolado')
             ->whereDate('data_protocolo', today())
             ->with(['autor', 'funcionarioProtocolo'])
             ->orderBy('data_protocolo', 'desc')
@@ -125,21 +126,21 @@ class ProposicaoProtocoloController extends Controller
     public function estatisticas()
     {
         $estatisticas = [
-            'aguardando_protocolo' => Projeto::where('status', 'enviado_protocolo')->count(),
-            'protocoladas_hoje' => Projeto::where('status', 'protocolado')
+            'aguardando_protocolo' => Proposicao::where('status', 'enviado_protocolo')->count(),
+            'protocoladas_hoje' => Proposicao::where('status', 'protocolado')
                 ->whereDate('data_protocolo', today())
                 ->count(),
-            'protocoladas_mes' => Projeto::where('status', 'protocolado')
+            'protocoladas_mes' => Proposicao::where('status', 'protocolado')
                 ->whereMonth('data_protocolo', now()->month)
                 ->whereYear('data_protocolo', now()->year)
                 ->count(),
-            'por_funcionario_mes' => Projeto::where('funcionario_protocolo_id', Auth::id())
+            'por_funcionario_mes' => Proposicao::where('funcionario_protocolo_id', Auth::id())
                 ->whereMonth('data_protocolo', now()->month)
                 ->whereYear('data_protocolo', now()->year)
                 ->count(),
         ];
 
-        $ultimos_protocolos = Projeto::where('funcionario_protocolo_id', Auth::id())
+        $ultimos_protocolos = Proposicao::where('funcionario_protocolo_id', Auth::id())
             ->where('status', 'protocolado')
             ->with(['autor'])
             ->orderBy('data_protocolo', 'desc')
@@ -155,7 +156,7 @@ class ProposicaoProtocoloController extends Controller
     private function gerarNumeroProtocolo(): string
     {
         $ano = date('Y');
-        $ultimoNumero = Projeto::where('numero_protocolo', 'like', $ano . '%')
+        $ultimoNumero = Proposicao::where('numero_protocolo', 'like', $ano . '%')
             ->orderBy('numero_protocolo', 'desc')
             ->value('numero_protocolo');
 
@@ -204,7 +205,7 @@ class ProposicaoProtocoloController extends Controller
     /**
      * Realizar verificações automáticas
      */
-    private function realizarVerificacoes(Projeto $proposicao): array
+    private function realizarVerificacoes(Proposicao $proposicao): array
     {
         $verificacoes = [
             'documento_assinado' => !empty($proposicao->assinatura_digital),
@@ -220,9 +221,68 @@ class ProposicaoProtocoloController extends Controller
     }
 
     /**
+     * Atribuir número de protocolo a uma proposição
+     */
+    public function atribuirNumeroProtocolo(Request $request, Proposicao $proposicao)
+    {
+        $request->validate([
+            'tipo_numeracao' => 'required|in:automatico,manual',
+            'numero_protocolo' => 'required_if:tipo_numeracao,manual|string|nullable',
+        ]);
+
+        if (!in_array($proposicao->status, ['enviado_protocolo', 'assinado'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Proposição deve estar assinada ou enviada para protocolo para receber número.'
+            ], 400);
+        }
+
+        if ($proposicao->numero_protocolo) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Esta proposição já possui um número de protocolo: ' . $proposicao->numero_protocolo
+            ], 400);
+        }
+
+        try {
+            $numeroService = new \App\Services\ProposicaoNumeroService();
+            
+            if ($request->tipo_numeracao === 'automatico') {
+                $numeroProtocolo = $numeroService->atribuirNumeroAutomatico($proposicao);
+            } else {
+                $numeroService->atribuirNumeroManual($proposicao, $request->numero_protocolo);
+                $numeroProtocolo = $request->numero_protocolo;
+            }
+
+            // Atualizar status para protocolado
+            $proposicao->update([
+                'status' => 'protocolado'
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'numero_protocolo' => $numeroProtocolo,
+                'data_protocolo' => $proposicao->fresh()->data_protocolo->format('d/m/Y H:i'),
+                'message' => 'Número de protocolo atribuído com sucesso!'
+            ]);
+
+        } catch (\InvalidArgumentException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erro interno. Tente novamente.'
+            ], 500);
+        }
+    }
+
+    /**
      * Iniciar tramitação da proposição protocolada
      */
-    public function iniciarTramitacao(Projeto $proposicao)
+    public function iniciarTramitacao(Proposicao $proposicao)
     {
         if ($proposicao->status !== 'protocolado') {
             return response()->json([
@@ -235,11 +295,12 @@ class ProposicaoProtocoloController extends Controller
             'status' => 'em_tramitacao'
         ]);
 
-        $proposicao->adicionarTramitacao(
-            'Iniciada tramitação nas comissões',
-            'protocolado',
-            'em_tramitacao'
-        );
+        // TODO: Implementar sistema de tramitação quando disponível
+        // $proposicao->adicionarTramitacao(
+        //     'Iniciada tramitação nas comissões',
+        //     'protocolado',
+        //     'em_tramitacao'
+        // );
 
         return response()->json([
             'success' => true,

@@ -285,6 +285,14 @@ class ScreenPermission extends Model
                 $protocoloRoutes = [
                     'dashboard',
                     'admin.sessions.index',
+                    'proposicoes.aguardando-protocolo',
+                    'proposicoes.protocolar',
+                    'proposicoes.protocolar.show',
+                    'proposicoes.efetivar-protocolo',
+                    'proposicoes.protocolos-hoje',
+                    'proposicoes.estatisticas-protocolo',
+                    'proposicoes.iniciar-tramitacao',
+                    'parlamentares.index',
                 ];
                 return in_array($route, $protocoloRoutes);
             
