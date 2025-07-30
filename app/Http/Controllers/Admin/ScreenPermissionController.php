@@ -33,12 +33,19 @@ class ScreenPermissionController extends Controller
             Log::info('Roles count: ' . $data['roles']->count());
             Log::info('Current permissions: ' . json_encode($data['current']));
             
+            // Adicionar informações sobre configurações padrão
+            $roleStatuses = [];
+            foreach ($data['roles'] as $role) {
+                $roleStatuses[$role['name']] = $this->permissionService->getRoleConfigurationStatus($role['name']);
+            }
+
             return view('admin.screen-permissions.dynamic', [
                 'modules' => $data['modules'],
                 'roles' => $data['roles'],
                 'defaults' => $data['defaults'],
                 'current' => $data['current'],
-                'statistics' => $data['statistics']
+                'statistics' => $data['statistics'],
+                'roleStatuses' => $roleStatuses
             ]);
             
         } catch (\Exception $e) {
@@ -194,13 +201,19 @@ class ScreenPermissionController extends Controller
             
             Log::info('Permissions retrieved: ' . $permissions->count() . ' items');
             
-            $permissionRoutes = $permissions->pluck('screen_route')->toArray();
+            // Retornar apenas as rotas que têm can_access = true como array simples
+            $activeRoutes = [];
+            foreach ($permissions as $route => $permission) {
+                if ($permission->can_access) {
+                    $activeRoutes[] = $permission->screen_route;
+                }
+            }
             
-            Log::info('Permission routes: ' . json_encode($permissionRoutes));
+            Log::info('Active routes: ' . json_encode($activeRoutes));
             
             return response()->json([
                 'success' => true,
-                'permissions' => $permissionRoutes
+                'permissions' => $activeRoutes
             ]);
 
         } catch (\Exception $e) {
@@ -243,6 +256,63 @@ class ScreenPermissionController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Erro ao testar permissões: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Aplicar configuração padrão para um role específico
+     */
+    public function applyDefault(Request $request): JsonResponse
+    {
+        $request->validate([
+            'role' => 'required|string'
+        ]);
+
+        try {
+            $roleName = $request->input('role');
+            
+            Log::info('Aplicando configuração padrão para role: ' . $roleName);
+            
+            // Aplicar permissões padrão
+            $success = $this->permissionService->applyDefaultPermissions($roleName);
+            
+            if ($success) {
+                // Buscar as permissões aplicadas para retornar
+                $permissions = $this->permissionService->getRolePermissions($roleName);
+                $permissionArray = [];
+                
+                foreach ($permissions as $permission) {
+                    if ($permission->can_access) {
+                        $permissionArray[$permission->screen_route] = true;
+                    }
+                }
+                
+                Log::info('Configuração padrão aplicada com sucesso', [
+                    'role' => $roleName,
+                    'permissions_count' => count($permissionArray)
+                ]);
+                
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Configuração padrão aplicada com sucesso!',
+                    'permissions' => $permissionArray,
+                    'is_default' => true
+                ]);
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Erro ao aplicar configuração padrão'
+                ], 500);
+            }
+            
+        } catch (\Exception $e) {
+            Log::error('Erro ao aplicar configuração padrão: ' . $e->getMessage());
+            Log::error('Stack trace: ' . $e->getTraceAsString());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Erro ao aplicar configuração padrão: ' . $e->getMessage()
             ], 500);
         }
     }

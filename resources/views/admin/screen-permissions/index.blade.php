@@ -112,47 +112,127 @@
                 <!--begin::Card body-->
                 <div class="card-body py-4">
                     
-                    <!-- Estatísticas do Cache -->
-                    @if(isset($cacheStats))
+                    <!-- Estatísticas do Sistema - Dashboard Cards -->
                     <div class="row g-5 mb-6">
-                        <div class="col-xl-3 col-md-6">
-                            <div class="card card-flush h-xl-100">
-                                <div class="card-body text-center">
-                                    <div class="text-gray-800 fw-bold fs-2hx">{{ $cacheStats['hit_ratio'] ?? 0 }}%</div>
-                                    <div class="text-gray-400 fw-semibold fs-6">Cache Hit Ratio</div>
-                                    <div class="text-gray-500 fs-8">{{ $cacheStats['hits'] ?? 0 }}/{{ $cacheStats['total'] ?? 0 }}</div>
+                        <div class="col-xl-3 col-lg-6 col-md-6 col-sm-12">
+                            <div class="card card-flush h-100 mb-5 mb-xl-10 dashboard-card-info cursor-pointer">
+                                <div class="card-header pt-5 pb-3">
+                                    <div class="d-flex flex-center rounded-circle h-70px w-70px bg-white bg-opacity-20">
+                                        <i class="ki-duotone ki-chart-simple text-white fs-2x">
+                                            <span class="path1"></span>
+                                            <span class="path2"></span>
+                                            <span class="path3"></span>
+                                            <span class="path4"></span>
+                                        </i>
+                                    </div>
+                                </div>
+                                
+                                <div class="card-body d-flex flex-column justify-content-end pt-0">
+                                    <div class="d-flex align-items-center mb-3">
+                                        <span class="fs-2hx fw-bold text-white me-2">{{ $cacheStats['hit_ratio'] ?? 0 }}%</span>
+                                        <span class="fs-6 fw-semibold text-white opacity-75">hits</span>
+                                    </div>
+                                    
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <span class="fs-6 fw-bold text-white">Cache Hit Ratio</span>
+                                        <span class="badge badge-light-info fs-8">{{ $cacheStats['hits'] ?? 0 }}/{{ $cacheStats['total'] ?? 0 }}</span>
+                                    </div>
+                                    
+                                    <div class="progress h-6px bg-white bg-opacity-50">
+                                        <div class="progress-bar bg-white" style="width: {{ $cacheStats['hit_ratio'] ?? 0 }}%"></div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                        <div class="col-xl-3 col-md-6">
-                            <div class="card card-flush h-xl-100">
-                                <div class="card-body text-center">
-                                    <div class="text-gray-800 fw-bold fs-2hx">{{ $statistics['total_permissions'] ?? 0 }}</div>
-                                    <div class="text-gray-400 fw-semibold fs-6">Total Permissões</div>
-                                    <div class="text-gray-500 fs-8">Configuradas no Sistema</div>
+                        
+                        <div class="col-xl-3 col-lg-6 col-md-6 col-sm-12">
+                            <div class="card card-flush h-100 mb-5 mb-xl-10 dashboard-card-primary cursor-pointer">
+                                <div class="card-header pt-5 pb-3">
+                                    <div class="d-flex flex-center rounded-circle h-70px w-70px bg-white bg-opacity-20">
+                                        <i class="ki-duotone ki-security-user text-white fs-2x">
+                                            <span class="path1"></span>
+                                            <span class="path2"></span>
+                                        </i>
+                                    </div>
+                                </div>
+                                
+                                <div class="card-body d-flex flex-column justify-content-end pt-0">
+                                    <div class="d-flex align-items-center mb-3">
+                                        <span class="fs-2hx fw-bold text-white me-2">{{ $statistics['total_permissions'] ?? 0 }}</span>
+                                        <span class="fs-6 fw-semibold text-white opacity-75">total</span>
+                                    </div>
+                                    
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <span class="fs-6 fw-bold text-white">Total Permissões</span>
+                                        <span class="badge badge-light-primary fs-8">100%</span>
+                                    </div>
+                                    
+                                    <div class="progress h-6px bg-white bg-opacity-50">
+                                        <div class="progress-bar bg-white" style="width: 100%"></div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                        <div class="col-xl-3 col-md-6">
-                            <div class="card card-flush h-xl-100">
-                                <div class="card-body text-center">
-                                    <div class="text-gray-800 fw-bold fs-2hx">{{ $statistics['active_permissions'] ?? 0 }}</div>
-                                    <div class="text-gray-400 fw-semibold fs-6">Permissões Ativas</div>
-                                    <div class="text-gray-500 fs-8">Telas Liberadas</div>
+                        
+                        <div class="col-xl-3 col-lg-6 col-md-6 col-sm-12">
+                            <div class="card card-flush h-100 mb-5 mb-xl-10 dashboard-card-success cursor-pointer">
+                                <div class="card-header pt-5 pb-3">
+                                    <div class="d-flex flex-center rounded-circle h-70px w-70px bg-white bg-opacity-20">
+                                        <i class="ki-duotone ki-check-circle text-white fs-2x">
+                                            <span class="path1"></span>
+                                            <span class="path2"></span>
+                                        </i>
+                                    </div>
+                                </div>
+                                
+                                <div class="card-body d-flex flex-column justify-content-end pt-0">
+                                    <div class="d-flex align-items-center mb-3">
+                                        <span class="fs-2hx fw-bold text-white me-2">{{ $statistics['active_permissions'] ?? 0 }}</span>
+                                        <span class="fs-6 fw-semibold text-white opacity-75">ativas</span>
+                                    </div>
+                                    
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <span class="fs-6 fw-bold text-white">Permissões Ativas</span>
+                                        <span class="badge badge-light-success fs-8">{{ round((($statistics['active_permissions'] ?? 0) / max(($statistics['total_permissions'] ?? 1), 1)) * 100) }}%</span>
+                                    </div>
+                                    
+                                    <div class="progress h-6px bg-white bg-opacity-50">
+                                        <div class="progress-bar bg-white" style="width: {{ round((($statistics['active_permissions'] ?? 0) / max(($statistics['total_permissions'] ?? 1), 1)) * 100) }}%"></div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                        <div class="col-xl-3 col-md-6">
-                            <div class="card card-flush h-xl-100">
-                                <div class="card-body text-center">
-                                    <div class="text-gray-800 fw-bold fs-2hx">{{ $statistics['coverage_percentage'] ?? 0 }}%</div>
-                                    <div class="text-gray-400 fw-semibold fs-6">Cobertura</div>
-                                    <div class="text-gray-500 fs-8">Perfis Configurados</div>
+                        
+                        <div class="col-xl-3 col-lg-6 col-md-6 col-sm-12">
+                            <div class="card card-flush h-100 mb-5 mb-xl-10 dashboard-card-warning cursor-pointer">
+                                <div class="card-header pt-5 pb-3">
+                                    <div class="d-flex flex-center rounded-circle h-70px w-70px bg-white bg-opacity-20">
+                                        <i class="ki-duotone ki-chart-pie-4 text-white fs-2x">
+                                            <span class="path1"></span>
+                                            <span class="path2"></span>
+                                            <span class="path3"></span>
+                                        </i>
+                                    </div>
+                                </div>
+                                
+                                <div class="card-body d-flex flex-column justify-content-end pt-0">
+                                    <div class="d-flex align-items-center mb-3">
+                                        <span class="fs-2hx fw-bold text-white me-2">{{ $statistics['coverage_percentage'] ?? 0 }}%</span>
+                                        <span class="fs-6 fw-semibold text-white opacity-75">cobertura</span>
+                                    </div>
+                                    
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <span class="fs-6 fw-bold text-white">Perfis Configurados</span>
+                                        <span class="badge badge-light-warning fs-8">{{ $statistics['coverage_percentage'] ?? 0 }}%</span>
+                                    </div>
+                                    
+                                    <div class="progress h-6px bg-white bg-opacity-50">
+                                        <div class="progress-bar bg-white" style="width: {{ $statistics['coverage_percentage'] ?? 0 }}%"></div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    @endif
 
                     <!-- Informações do Perfil Selecionado -->
                     <div id="role-info" class="d-none mb-6">
@@ -257,6 +337,23 @@
 <!--end::Content wrapper-->
 
 <style>
+/* Dashboard Cards */
+.dashboard-card-primary {
+    background: linear-gradient(135deg, #F1416C 0%, #e02454 100%) !important;
+}
+
+.dashboard-card-info {
+    background: linear-gradient(135deg, #7239EA 0%, #5a2bc4 100%) !important;
+}
+
+.dashboard-card-success {
+    background: linear-gradient(135deg, #17C653 0%, #13a342 100%) !important;
+}
+
+.dashboard-card-warning {
+    background: linear-gradient(135deg, #FFC700 0%, #e6b300 100%) !important;
+}
+
 .permission-card-container {
     flex: 1 1 380px;
     max-width: 420px;
@@ -556,8 +653,10 @@ document.addEventListener('DOMContentLoaded', function() {
         fetch(`/admin/screen-permissions/role/${role}`)
             .then(response => response.json())
             .then(data => {
+                console.log('Resposta da API:', data);
                 if (data.success) {
                     currentPermissions = data.permissions || {};
+                    console.log('Permissões carregadas:', currentPermissions);
                     
                     // Garantir que Dashboard sempre esteja nas permissões para todos os perfis
                     if (!currentPermissions.dashboard) {
@@ -575,7 +674,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         });
                     }
                     
+                    console.log('Antes de updatePermissionsUI');
                     updatePermissionsUI();
+                    console.log('Depois de updatePermissionsUI');
                 } else {
                     showNotification('Erro ao carregar permissões', 'error');
                 }
@@ -585,6 +686,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 showNotification('Erro de comunicação', 'error');
             })
             .finally(() => {
+                console.log('Finally - hideLoading');
                 hideLoading();
             });
     }

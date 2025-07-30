@@ -52,47 +52,197 @@ class RouteDiscoveryService
     {
         return [
             'ADMIN' => [
-                'description' => 'Administrador do sistema - Acesso total',
-                'default_access' => 'all', // all, none, custom
+                'description' => 'Administrador do sistema - Acesso total a todas as funcionalidades',
+                'level' => 8,
+                'color' => 'danger',
+                'default_access' => 'all',
                 'permissions' => [] // Vazio = todas as permissões
             ],
-            'PARLAMENTAR' => [
-                'description' => 'Parlamentar - Criação e acompanhamento de proposições',
+            
+            'LEGISLATIVO' => [
+                'description' => 'Servidor Legislativo - Gestão completa do processo legislativo',
+                'level' => 7,
+                'color' => 'primary',
                 'default_access' => 'custom',
                 'permissions' => [
-                    'dashboard' => true,
-                    'proposicoes.create' => true,
+                    // Core
+                    'dashboard.index' => true,
+                    'profile.edit' => true,
+                    
+                    // Proposições - Fluxo Legislativo
                     'proposicoes.index' => true,
                     'proposicoes.show' => true,
+                    'proposicoes.create' => true,
                     'proposicoes.edit' => true,
-                    'proposicoes.assinatura.index' => true,
-                    'proposicoes.assinatura.assinar' => true,
-                    'profile.edit' => true,
-                ]
-            ],
-            'LEGISLATIVO' => [
-                'description' => 'Setor Legislativo - Revisão e análise de proposições',
-                'default_access' => 'custom',
-                'permissions' => [
-                    'dashboard' => true,
                     'proposicoes.legislativo.index' => true,
                     'proposicoes.legislativo.revisar' => true,
                     'proposicoes.legislativo.aprovar' => true,
                     'proposicoes.legislativo.devolver' => true,
-                    'proposicoes.show' => true,
-                    'profile.edit' => true,
+                    'proposicoes.assinatura.index' => true,
+                    'proposicoes.protocolo.index' => true,
+                    
+                    // Usuários (Limitado)
+                    'usuarios.index' => true,
+                    'usuarios.show' => true,
+                    
+                    // Partidos
+                    'partidos.index' => true,
+                    'partidos.show' => true,
+                    'partidos.create' => true,
+                    'partidos.edit' => true,
+                    
+                    // Relatórios
+                    'relatorios.index' => true,
+                    'relatorios.proposicoes' => true,
+                    'relatorios.tramitacao' => true,
                 ]
             ],
-            'PROTOCOLO' => [
-                'description' => 'Setor de Protocolo - Protocolo e distribuição',
+            
+            'PARLAMENTAR' => [
+                'description' => 'Parlamentar - Criação e acompanhamento de proposições próprias',
+                'level' => 6,
+                'color' => 'success',
                 'default_access' => 'custom',
                 'permissions' => [
-                    'dashboard' => true,
+                    // Core
+                    'dashboard.index' => true,
+                    'profile.edit' => true,
+                    
+                    // Proposições - Próprias
+                    'proposicoes.index' => true, // Apenas suas proposições
+                    'proposicoes.show' => true,
+                    'proposicoes.create' => true,
+                    'proposicoes.edit' => true, // Apenas suas proposições
+                    'proposicoes.assinatura.index' => true,
+                    'proposicoes.assinatura.assinar' => true,
+                    
+                    // Consultas
+                    'partidos.index' => true,
+                    'partidos.show' => true,
+                    'usuarios.index' => true, // Apenas parlamentares
+                    'usuarios.show' => true,
+                    
+                    // Relatórios (Limitado)
+                    'relatorios.proposicoes' => true, // Apenas suas proposições
+                ]
+            ],
+            
+            'RELATOR' => [
+                'description' => 'Relator - Análise e relatoria de proposições atribuídas',
+                'level' => 5,
+                'color' => 'warning',
+                'default_access' => 'custom',
+                'permissions' => [
+                    // Core
+                    'dashboard.index' => true,
+                    'profile.edit' => true,
+                    
+                    // Proposições - Relatoria
+                    'proposicoes.index' => true,
+                    'proposicoes.show' => true,
+                    'proposicoes.relator.index' => true,
+                    'proposicoes.relator.parecer' => true,
+                    'proposicoes.relator.aprovar' => true,
+                    'proposicoes.relator.rejeitar' => true,
+                    
+                    // Consultas
+                    'usuarios.index' => true,
+                    'usuarios.show' => true,
+                    'partidos.index' => true,
+                    'partidos.show' => true,
+                    
+                    // Relatórios
+                    'relatorios.relatoria' => true,
+                ]
+            ],
+            
+            'PROTOCOLO' => [
+                'description' => 'Setor de Protocolo - Controle de entrada e distribuição',
+                'level' => 4,
+                'color' => 'dark',
+                'default_access' => 'custom',
+                'permissions' => [
+                    // Core
+                    'dashboard.index' => true,
+                    'profile.edit' => true,
+                    
+                    // Protocolo
                     'proposicoes.protocolo.index' => true,
                     'proposicoes.protocolo.protocolar' => true,
                     'proposicoes.protocolo.distribuir' => true,
+                    'proposicoes.protocolo.numerar' => true,
+                    
+                    // Consultas
+                    'proposicoes.index' => true, // Apenas para protocolo
                     'proposicoes.show' => true,
+                    'usuarios.index' => true,
+                    'usuarios.show' => true,
+                    
+                    // Relatórios
+                    'relatorios.protocolo' => true,
+                    'relatorios.tramitacao' => true,
+                ]
+            ],
+            
+            'ASSESSOR' => [
+                'description' => 'Assessor - Suporte aos parlamentares na criação de proposições',
+                'level' => 3,
+                'color' => 'info',
+                'default_access' => 'custom',
+                'permissions' => [
+                    // Core
+                    'dashboard.index' => true,
                     'profile.edit' => true,
+                    
+                    // Proposições - Suporte
+                    'proposicoes.index' => true, // Limitado ao parlamentar assessorado
+                    'proposicoes.show' => true,
+                    'proposicoes.create' => true, // Em nome do parlamentar
+                    'proposicoes.edit' => true, // Limitado
+                    
+                    // Consultas
+                    'usuarios.index' => true,
+                    'usuarios.show' => true,
+                    'partidos.index' => true,
+                    'partidos.show' => true,
+                ]
+            ],
+            
+            'CIDADAO_VERIFICADO' => [
+                'description' => 'Cidadão Verificado - Consulta e acompanhamento de proposições',
+                'level' => 2,
+                'color' => 'light-primary',
+                'default_access' => 'custom',
+                'permissions' => [
+                    // Core
+                    'dashboard.index' => true,
+                    'profile.edit' => true,
+                    
+                    // Consultas Públicas
+                    'proposicoes.index' => true, // Apenas públicas
+                    'proposicoes.show' => true, // Apenas públicas
+                    'usuarios.index' => true, // Apenas parlamentares
+                    'usuarios.show' => true, // Apenas parlamentares
+                    'partidos.index' => true,
+                    'partidos.show' => true,
+                    
+                    // Participação
+                    'proposicoes.comentar' => true,
+                    'proposicoes.favoritar' => true,
+                ]
+            ],
+            
+            'PUBLICO' => [
+                'description' => 'Acesso Público - Consulta básica sem autenticação',
+                'level' => 1,
+                'color' => 'light',
+                'default_access' => 'custom',
+                'permissions' => [
+                    // Apenas consultas públicas básicas
+                    'proposicoes.index' => true, // Apenas públicas/aprovadas
+                    'proposicoes.show' => true, // Apenas públicas/aprovadas
+                    'usuarios.index' => true, // Apenas parlamentares
+                    'partidos.index' => true,
                 ]
             ]
         ];

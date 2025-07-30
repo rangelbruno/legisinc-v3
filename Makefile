@@ -78,6 +78,20 @@ clean-all: ## Remove todos os containers, volumes e imagens
 	docker-compose -f $(COMPOSE_DEV_FILE) down --volumes --remove-orphans
 	docker system prune -a --volumes
 
+# Comandos de banco de dados
+db-reset: ## Reseta o banco de dados (dropa, recria migrations e seeders)
+	docker exec $(APP_CONTAINER) php artisan migrate:fresh --seed
+
+db-fresh: ## Reseta o banco de dados sem seeders
+	docker exec $(APP_CONTAINER) php artisan migrate:fresh
+
+# Comandos de teste
+test-users: ## Cria usuários de teste no sistema
+	docker exec $(APP_CONTAINER) php artisan test:create-users
+
+test-users-clear: ## Remove todos os usuários de teste e recria
+	docker exec $(APP_CONTAINER) php artisan test:create-users --clear
+
 # Comandos de cache
 cache-clear: ## Limpa todos os caches
 	docker exec -it $(APP_CONTAINER) php artisan cache:clear

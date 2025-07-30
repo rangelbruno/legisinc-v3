@@ -52,10 +52,16 @@ class DynamicPermissionService
             // Limpar permissões existentes do role na tabela screen_permissions
             ScreenPermission::where('role_name', $roleName)->delete();
             
-            // Salvar novas permissões
+            // Salvar novas permissões - APENAS as que têm acesso true
             foreach ($permissions as $routeName => $hasAccess) {
-                if ($hasAccess) {
+                // Log para debug
+                \Log::info("Processing permission for {$roleName}: {$routeName} = " . json_encode($hasAccess));
+                
+                // Só salvar se realmente tem acesso
+                if ($hasAccess === true || $hasAccess === 1 || $hasAccess === '1' || $hasAccess === 'true') {
                     $routeData = $this->findRouteData($routeName);
+                    
+                    \Log::info("Creating permission for {$roleName}: {$routeName} with can_access=true");
                     
                     ScreenPermission::create([
                         'role_name' => $roleName,
@@ -67,6 +73,8 @@ class DynamicPermissionService
                         'can_edit' => $this->shouldHaveEditPermission($routeName),
                         'can_delete' => $this->shouldHaveDeletePermission($routeName),
                     ]);
+                } else {
+                    \Log::info("Skipping permission for {$roleName}: {$routeName} (hasAccess = " . json_encode($hasAccess) . ")");
                 }
             }
             
@@ -135,19 +143,97 @@ class DynamicPermissionService
     }
     
     /**
+     * Verificar se um role está usando configuração padrão
+     */
+    public function isRoleUsingDefaults(string $roleName): bool
+    {
+        $defaults = $this->routeService->getDefaultPermissionsByRole();
+        
+        if (!isset($defaults[$roleName])) {
+            return false;
+        }
+        
+        $roleDefaults = $defaults[$roleName];
+        $currentPermissions = ScreenPermission::where('role_name', $roleName)->get();
+        
+        // Se não há permissões, considera como padrão (será aplicado automaticamente)
+        if ($currentPermissions->isEmpty()) {
+            return true;
+        }
+        
+        // Se o role tem acesso total, verificar se todas as rotas estão habilitadas
+        if ($roleDefaults['default_access'] === 'all') {
+            $allRoutes = $this->routeService->discoverWebRoutes();
+            $activePermissions = $currentPermissions->where('can_access', true)->count();
+            return $activePermissions >= count($allRoutes) * 0.9; // 90% como margem de tolerância
+        }
+        
+        // Se é configuração customizada, comparar permissões específicas
+        if ($roleDefaults['default_access'] === 'custom') {
+            $defaultPermissions = $roleDefaults['permissions'];
+            $currentActive = $currentPermissions->where('can_access', true)->pluck('screen_route')->toArray();
+            
+            // Verificar se as permissões ativas correspondem às padrão
+            $defaultRoutes = array_keys($defaultPermissions);
+            $matchingRoutes = array_intersect($defaultRoutes, $currentActive);
+            
+            // Considera padrão se 90% das rotas padrão estão ativas
+            return count($matchingRoutes) >= count($defaultRoutes) * 0.9;
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Obter informações sobre o status da configuração de um role
+     */
+    public function getRoleConfigurationStatus(string $roleName): array
+    {
+        $defaults = $this->routeService->getDefaultPermissionsByRole();
+        $isUsingDefaults = $this->isRoleUsingDefaults($roleName);
+        $permissions = ScreenPermission::where('role_name', $roleName)->get();
+        
+        return [
+            'role_name' => $roleName,
+            'is_using_defaults' => $isUsingDefaults,
+            'has_configuration' => $permissions->isNotEmpty(),
+            'active_permissions_count' => $permissions->where('can_access', true)->count(),
+            'total_permissions_count' => $permissions->count(),
+            'default_config' => $defaults[$roleName] ?? null,
+            'last_modified' => $permissions->max('updated_at'),
+        ];
+    }
+    
+    /**
      * Obter permissões atuais de um role
      */
     public function getRolePermissions(string $roleName): Collection
     {
         \Log::info('DynamicPermissionService::getRolePermissions called for role: ' . $roleName);
         
-        $permissions = ScreenPermission::where('role_name', $roleName)
-            ->where('can_access', true)
-            ->get();
-            
-        \Log::info('Found permissions count: ' . $permissions->count());
-        \Log::info('Permissions: ' . $permissions->toJson());
+        // Buscar todas as permissões do role
+        $permissions = ScreenPermission::where('role_name', $roleName)->get();
         
+        \Log::info('Found permissions count: ' . $permissions->count());
+        
+        // Se não há permissões, aplicar padrões automaticamente
+        if ($permissions->isEmpty()) {
+            \Log::info('No permissions found for role: ' . $roleName . '. Applying defaults.');
+            $this->applyDefaultPermissions($roleName);
+            
+            // Buscar novamente após aplicar os padrões
+            $permissions = ScreenPermission::where('role_name', $roleName)->get();
+            \Log::info('After applying defaults, found permissions count: ' . $permissions->count());
+        }
+        
+        // Debug: verificar valores reais
+        foreach ($permissions as $index => $permission) {
+            $canAccess = $permission->can_access;
+            \Log::info("Permission #{$index}: {$permission->screen_route} - can_access value: " . json_encode($canAccess) . " (type: " . gettype($canAccess) . ")");
+        }
+        
+        // Retornar TODAS as permissões do role, não apenas as ativas
+        // O frontend irá verificar o campo can_access
         return $permissions->keyBy('screen_route');
     }
     
@@ -294,9 +380,13 @@ class DynamicPermissionService
     {
         $labels = [
             'ADMIN' => 'Administrador',
+            'LEGISLATIVO' => 'Servidor Legislativo',
             'PARLAMENTAR' => 'Parlamentar',
-            'LEGISLATIVO' => 'Legislativo',
-            'PROTOCOLO' => 'Protocolo'
+            'RELATOR' => 'Relator',
+            'PROTOCOLO' => 'Protocolo',
+            'ASSESSOR' => 'Assessor',
+            'CIDADAO_VERIFICADO' => 'Cidadão Verificado',
+            'PUBLICO' => 'Público'
         ];
         
         return $labels[$roleName] ?? $roleName;
@@ -356,9 +446,14 @@ class DynamicPermissionService
      */
     private function clearPermissionCache(): void
     {
-        // Limpar cache sem usar tags (compatível com file driver)
-        Cache::forget('permissions_structure');
-        Cache::forget('user_permissions');
-        app()->make(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        try {
+            // Limpar cache sem usar tags (compatível com file driver)
+            Cache::forget('permissions_structure');
+            Cache::forget('user_permissions');
+            app()->make(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        } catch (\Exception $e) {
+            // Se falhar ao limpar cache, apenas logar o erro mas continuar
+            \Log::warning('Não foi possível limpar o cache de permissões: ' . $e->getMessage());
+        }
     }
 }

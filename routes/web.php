@@ -254,6 +254,7 @@ Route::prefix('admin/screen-permissions')->name('admin.screen-permissions.')->mi
     // Novas rotas dinâmicas
     Route::post('/save', [App\Http\Controllers\Admin\ScreenPermissionController::class, 'saveRolePermissions'])->name('save');
     Route::post('/apply-defaults', [App\Http\Controllers\Admin\ScreenPermissionController::class, 'applyDefaults'])->name('apply-defaults');
+    Route::post('/apply-default', [App\Http\Controllers\Admin\ScreenPermissionController::class, 'applyDefault'])->name('apply-default');
     Route::post('/initialize', [App\Http\Controllers\Admin\ScreenPermissionController::class, 'initializeSystem'])->name('initialize');
     Route::get('/role/{role}', [App\Http\Controllers\Admin\ScreenPermissionController::class, 'getRolePermissions'])->name('get-role-permissions');
     Route::post('/test-user', [App\Http\Controllers\Admin\ScreenPermissionController::class, 'testUserPermissions'])->name('test-user');
@@ -802,5 +803,13 @@ Route::prefix('admin')->middleware(['auth', 'check.screen.permission'])->group(f
          ->name('admin.system-diagnostic.table');
     Route::post('system-diagnostic/fix-permissions', [App\Http\Controllers\Admin\SystemDiagnosticController::class, 'fixPermissions'])
          ->name('admin.system-diagnostic.fix-permissions');
+});
+
+// Test Module routes (protected with auth)
+Route::prefix('tests')->name('tests.')->middleware('auth')->group(function () {
+    Route::get('/', [App\Http\Controllers\TestController::class, 'index'])->name('index');
+    Route::post('/create-users', [App\Http\Controllers\TestController::class, 'createTestUsers'])->name('create-users');
+    Route::get('/list-users', [App\Http\Controllers\TestController::class, 'listTestUsers'])->name('list-users');
+    Route::delete('/clear-users', [App\Http\Controllers\TestController::class, 'clearTestUsers'])->name('clear-users');
 });
 

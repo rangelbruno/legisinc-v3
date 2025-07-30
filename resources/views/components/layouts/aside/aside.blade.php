@@ -606,6 +606,16 @@
                         @endif
                         @if(auth()->user()->isAdmin())
                         <div class="menu-item">
+                            <a class="menu-link {{ request()->routeIs('tests.*') ? 'active' : '' }}" href="{{ route('tests.index') }}">
+                                <span class="menu-bullet">
+                                    <span class="bullet bullet-dot"></span>
+                                </span>
+                                <span class="menu-title">Módulo de Testes</span>
+                            </a>
+                        </div>
+                        @endif
+                        @if(auth()->user()->isAdmin())
+                        <div class="menu-item">
                             <a class="menu-link {{ request()->routeIs('admin.screen-permissions.*') ? 'active' : '' }}" href="{{ route('admin.screen-permissions.index') }}">
                                 <span class="menu-bullet">
                                     <span class="bullet bullet-dot"></span>

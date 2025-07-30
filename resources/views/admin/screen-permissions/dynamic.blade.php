@@ -59,71 +59,122 @@
 
             <!--begin::Statistics-->
             <div class="row g-5 g-xl-8 mb-xl-8">
-                <div class="col-xl-3">
-                    <div class="card card-xl-stretch mb-xl-8">
-                        <div class="card-body d-flex align-items-center pt-3 pb-0">
-                            <div class="d-flex flex-column flex-grow-1 py-2 py-lg-13 me-2">
-                                <a href="#" class="fw-bold text-dark fs-4 mb-2 text-hover-primary">
-                                    {{ $statistics['total_routes'] }}
-                                </a>
-                                <div class="fw-semibold text-muted fs-5">Rotas Detectadas</div>
+                <div class="col-xl-3 col-lg-6 col-md-6 col-sm-12">
+                    <div class="card card-flush h-100 mb-5 mb-xl-10 dashboard-card-info cursor-pointer">
+                        <div class="card-header pt-5 pb-3">
+                            <div class="d-flex flex-center rounded-circle h-70px w-70px bg-white bg-opacity-20">
+                                <i class="ki-duotone ki-route text-white fs-2x">
+                                    <span class="path1"></span>
+                                    <span class="path2"></span>
+                                </i>
                             </div>
-                            <i class="ki-duotone ki-route fs-4x opacity-30">
-                                <span class="path1"></span>
-                                <span class="path2"></span>
-                            </i>
+                        </div>
+                        
+                        <div class="card-body d-flex flex-column justify-content-end pt-0">
+                            <div class="d-flex align-items-center mb-3">
+                                <span class="fs-2hx fw-bold text-white me-2">{{ $statistics['total_routes'] }}</span>
+                                <span class="fs-6 fw-semibold text-white opacity-75">rotas</span>
+                            </div>
+                            
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <span class="fs-6 fw-bold text-white">Rotas Detectadas</span>
+                                <span class="badge badge-light-info fs-8">100%</span>
+                            </div>
+                            
+                            <div class="progress h-6px bg-white bg-opacity-50">
+                                <div class="progress-bar bg-white" style="width: 100%"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
-                <div class="col-xl-3">
-                    <div class="card card-xl-stretch mb-xl-8">
-                        <div class="card-body d-flex align-items-center pt-3 pb-0">
-                            <div class="d-flex flex-column flex-grow-1 py-2 py-lg-13 me-2">
-                                <a href="#" class="fw-bold text-dark fs-4 mb-2 text-hover-primary">
-                                    {{ $statistics['active_permissions'] }}
-                                </a>
-                                <div class="fw-semibold text-muted fs-5">Permissões Ativas</div>
+                
+                <div class="col-xl-3 col-lg-6 col-md-6 col-sm-12">
+                    <div class="card card-flush h-100 mb-5 mb-xl-10 dashboard-card-success cursor-pointer">
+                        <div class="card-header pt-5 pb-3">
+                            <div class="d-flex flex-center rounded-circle h-70px w-70px bg-white bg-opacity-20">
+                                <i class="ki-duotone ki-check-circle text-white fs-2x">
+                                    <span class="path1"></span>
+                                    <span class="path2"></span>
+                                </i>
                             </div>
-                            <i class="ki-duotone ki-check-circle fs-4x opacity-30">
-                                <span class="path1"></span>
-                                <span class="path2"></span>
-                            </i>
+                        </div>
+                        
+                        <div class="card-body d-flex flex-column justify-content-end pt-0">
+                            <div class="d-flex align-items-center mb-3">
+                                <span class="fs-2hx fw-bold text-white me-2">{{ $statistics['active_permissions'] }}</span>
+                                <span class="fs-6 fw-semibold text-white opacity-75">ativas</span>
+                            </div>
+                            
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <span class="fs-6 fw-bold text-white">Permissões Ativas</span>
+                                <span class="badge badge-light-success fs-8">{{ round((($statistics['active_permissions'] ?? 0) / max(($statistics['total_routes'] ?? 1), 1)) * 100) }}%</span>
+                            </div>
+                            
+                            <div class="progress h-6px bg-white bg-opacity-50">
+                                <div class="progress-bar bg-white" style="width: {{ round((($statistics['active_permissions'] ?? 0) / max(($statistics['total_routes'] ?? 1), 1)) * 100) }}%"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
-                <div class="col-xl-3">
-                    <div class="card card-xl-stretch mb-xl-8">
-                        <div class="card-body d-flex align-items-center pt-3 pb-0">
-                            <div class="d-flex flex-column flex-grow-1 py-2 py-lg-13 me-2">
-                                <a href="#" class="fw-bold text-dark fs-4 mb-2 text-hover-primary">
-                                    {{ $roles->count() }}
-                                </a>
-                                <div class="fw-semibold text-muted fs-5">Tipos de Usuário</div>
+                
+                <div class="col-xl-3 col-lg-6 col-md-6 col-sm-12">
+                    <div class="card card-flush h-100 mb-5 mb-xl-10 dashboard-card-primary cursor-pointer">
+                        <div class="card-header pt-5 pb-3">
+                            <div class="d-flex flex-center rounded-circle h-70px w-70px bg-white bg-opacity-20">
+                                <i class="ki-duotone ki-profile-user text-white fs-2x">
+                                    <span class="path1"></span>
+                                    <span class="path2"></span>
+                                    <span class="path3"></span>
+                                    <span class="path4"></span>
+                                </i>
                             </div>
-                            <i class="ki-duotone ki-profile-user fs-4x opacity-30">
-                                <span class="path1"></span>
-                                <span class="path2"></span>
-                                <span class="path3"></span>
-                                <span class="path4"></span>
-                            </i>
+                        </div>
+                        
+                        <div class="card-body d-flex flex-column justify-content-end pt-0">
+                            <div class="d-flex align-items-center mb-3">
+                                <span class="fs-2hx fw-bold text-white me-2">{{ $roles->count() }}</span>
+                                <span class="fs-6 fw-semibold text-white opacity-75">tipos</span>
+                            </div>
+                            
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <span class="fs-6 fw-bold text-white">Tipos de Usuário</span>
+                                <span class="badge badge-light-primary fs-8">100%</span>
+                            </div>
+                            
+                            <div class="progress h-6px bg-white bg-opacity-50">
+                                <div class="progress-bar bg-white" style="width: 100%"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
-                <div class="col-xl-3">
-                    <div class="card card-xl-stretch mb-xl-8">
-                        <div class="card-body d-flex align-items-center pt-3 pb-0">
-                            <div class="d-flex flex-column flex-grow-1 py-2 py-lg-13 me-2">
-                                <a href="#" class="fw-bold text-dark fs-4 mb-2 text-hover-primary">
-                                    {{ $statistics['coverage_percentage'] }}%
-                                </a>
-                                <div class="fw-semibold text-muted fs-5">Cobertura</div>
+                
+                <div class="col-xl-3 col-lg-6 col-md-6 col-sm-12">
+                    <div class="card card-flush h-100 mb-5 mb-xl-10 dashboard-card-warning cursor-pointer">
+                        <div class="card-header pt-5 pb-3">
+                            <div class="d-flex flex-center rounded-circle h-70px w-70px bg-white bg-opacity-20">
+                                <i class="ki-duotone ki-chart-simple text-white fs-2x">
+                                    <span class="path1"></span>
+                                    <span class="path2"></span>
+                                    <span class="path3"></span>
+                                    <span class="path4"></span>
+                                </i>
                             </div>
-                            <i class="ki-duotone ki-chart-simple fs-4x opacity-30">
-                                <span class="path1"></span>
-                                <span class="path2"></span>
-                                <span class="path3"></span>
-                                <span class="path4"></span>
-                            </i>
+                        </div>
+                        
+                        <div class="card-body d-flex flex-column justify-content-end pt-0">
+                            <div class="d-flex align-items-center mb-3">
+                                <span class="fs-2hx fw-bold text-white me-2">{{ $statistics['coverage_percentage'] }}%</span>
+                                <span class="fs-6 fw-semibold text-white opacity-75">cobertura</span>
+                            </div>
+                            
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <span class="fs-6 fw-bold text-white">Cobertura</span>
+                                <span class="badge badge-light-warning fs-8">{{ $statistics['coverage_percentage'] }}%</span>
+                            </div>
+                            
+                            <div class="progress h-6px bg-white bg-opacity-50">
+                                <div class="progress-bar bg-white" style="width: {{ $statistics['coverage_percentage'] }}%"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -194,7 +245,39 @@
                                     @php
                                         $currentPermissions = $current[$role['name']] ?? [];
                                         $permissionCount = count($currentPermissions);
+                                        $status = $roleStatuses[$role['name']] ?? null;
+                                        $isUsingDefaults = $status['is_using_defaults'] ?? false;
+                                        $hasConfiguration = $status['has_configuration'] ?? false;
                                     @endphp
+                                    
+                                    <!-- Status Badge -->
+                                    <div class="mb-3">
+                                        @if($isUsingDefaults)
+                                            <span class="badge badge-light-success fs-8">
+                                                <i class="ki-duotone ki-check-circle fs-6 me-1">
+                                                    <span class="path1"></span>
+                                                    <span class="path2"></span>
+                                                </i>
+                                                Configuração Padrão
+                                            </span>
+                                        @elseif($hasConfiguration)
+                                            <span class="badge badge-light-warning fs-8">
+                                                <i class="ki-duotone ki-pencil fs-6 me-1">
+                                                    <span class="path1"></span>
+                                                    <span class="path2"></span>
+                                                </i>
+                                                Personalizado
+                                            </span>
+                                        @else
+                                            <span class="badge badge-light-secondary fs-8">
+                                                <i class="ki-duotone ki-setting-2 fs-6 me-1">
+                                                    <span class="path1"></span>
+                                                    <span class="path2"></span>
+                                                </i>
+                                                Não Configurado
+                                            </span>
+                                        @endif
+                                    </div>
                                     
                                     <div class="d-flex align-items-center flex-wrap d-grid gap-2">
                                         <div class="d-flex align-items-center me-5 mb-2">
@@ -208,7 +291,7 @@
                                             </div>
                                             <div class="d-flex flex-column">
                                                 <div class="fw-bold fs-6">{{ $permissionCount }}</div>
-                                                <div class="fs-7 text-muted">Permissões</div>
+                                                <div class="fs-7 text-muted">Permissões Ativas</div>
                                             </div>
                                         </div>
                                     </div>
@@ -260,6 +343,13 @@
                     </div>
                     <div class="card-toolbar">
                         <div class="d-flex justify-content-end gap-3">
+                            <button id="apply-default-btn" class="btn btn-sm fw-bold btn-success">
+                                <i class="ki-duotone ki-setting-4 fs-2">
+                                    <span class="path1"></span>
+                                    <span class="path2"></span>
+                                </i>
+                                Aplicar Padrão
+                            </button>
                             <button id="save-permissions-btn" class="btn btn-sm fw-bold btn-primary">
                                 <i class="ki-duotone ki-check fs-2">
                                     <span class="path1"></span>
@@ -278,68 +368,109 @@
                     </div>
                 </div>
                 <div class="card-body py-4">
+                    <!-- Informações do Tipo de Usuário Selecionado -->
+                    <div class="alert alert-primary d-flex align-items-center p-5 mb-6">
+                        <i class="ki-duotone ki-information-5 fs-2hx text-primary me-4">
+                            <span class="path1"></span>
+                            <span class="path2"></span>
+                            <span class="path3"></span>
+                        </i>
+                        <div class="d-flex flex-column">
+                            <h5 class="mb-1">Configurando Permissões</h5>
+                            <span id="user-type-info">Selecione as telas que este tipo de usuário poderá acessar. Apenas as telas marcadas aparecerão no menu lateral.</span>
+                        </div>
+                    </div>
+
+                    <!-- Alert para Configuração Padrão -->
+                    <div id="default-config-alert" class="alert alert-success d-none align-items-center p-5 mb-6">
+                        <i class="ki-duotone ki-setting-4 fs-2hx text-success me-4">
+                            <span class="path1"></span>
+                            <span class="path2"></span>
+                        </i>
+                        <div class="d-flex flex-column">
+                            <h5 class="mb-1">Configuração Padrão Aplicada</h5>
+                            <span id="default-config-info">As permissões padrão para este tipo de usuário foram aplicadas. Você pode personalizar conforme necessário.</span>
+                        </div>
+                        <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+                    </div>
+
+                    <!-- Alert para Permissões Customizadas -->
+                    <div id="custom-config-alert" class="alert alert-warning d-none align-items-center p-5 mb-6">
+                        <i class="ki-duotone ki-pencil fs-2hx text-warning me-4">
+                            <span class="path1"></span>
+                            <span class="path2"></span>
+                        </i>
+                        <div class="d-flex flex-column">
+                            <h5 class="mb-1">Configuração Personalizada</h5>
+                            <span>Este tipo de usuário possui permissões personalizadas que diferem do padrão do sistema.</span>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-light-warning ms-3" id="view-default-btn">
+                            <i class="ki-duotone ki-eye fs-5">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                                <span class="path3"></span>
+                            </i>
+                            Ver Padrão
+                        </button>
+                    </div>
+
                     <div id="modules-container">
                         @foreach($modules as $moduleKey => $module)
                         <div class="card card-flush mb-6 module-card" data-module="{{ $moduleKey }}">
-                            <div class="card-header">
+                            <div class="card-header bg-light-primary">
                                 <div class="card-title">
                                     <div class="d-flex align-items-center">
-                                        <i class="ki-duotone ki-element-11 fs-2hx text-primary me-3">
-                                            <span class="path1"></span>
-                                            <span class="path2"></span>
-                                            <span class="path3"></span>
-                                            <span class="path4"></span>
-                                        </i>
+                                        <div class="symbol symbol-50px me-3">
+                                            <span class="symbol-label bg-primary text-white fw-bold">
+                                                <i class="ki-duotone ki-element-11 fs-2hx">
+                                                    <span class="path1"></span>
+                                                    <span class="path2"></span>
+                                                    <span class="path3"></span>
+                                                    <span class="path4"></span>
+                                                </i>
+                                            </span>
+                                        </div>
                                         <div class="d-flex flex-column">
-                                            <div class="fw-bold text-gray-800 fs-5">{{ $module['name'] }}</div>
-                                            <div class="fs-7 fw-semibold text-muted">
-                                                <span class="active-count">0</span>/<span class="total-count">{{ $module['routes']->count() }}</span> ativas
+                                            <div class="fw-bold text-gray-800 fs-4">{{ $module['name'] }}</div>
+                                            <div class="fs-6 fw-semibold text-muted">
+                                                <span class="active-count">0</span> de <span class="total-count">{{ $module['routes']->count() }}</span> telas habilitadas
                                             </div>
                                         </div>
                                     </div>
                                 </div>
                                 <div class="card-toolbar">
-                                    <button class="btn btn-sm btn-light btn-active-light-primary toggle-all-btn" data-module="{{ $moduleKey }}">
-                                        <i class="ki-duotone ki-check-square fs-2">
-                                            <span class="path1"></span>
-                                            <span class="path2"></span>
-                                            <span class="path3"></span>
-                                        </i>
-                                        Marcar Todas
-                                    </button>
+                                    <div class="d-flex gap-2">
+                                        <button class="btn btn-sm btn-light-success toggle-all-btn" data-module="{{ $moduleKey }}">
+                                            <i class="ki-duotone ki-check-square fs-2">
+                                                <span class="path1"></span>
+                                                <span class="path2"></span>
+                                                <span class="path3"></span>
+                                            </i>
+                                            Habilitar Todas
+                                        </button>
+                                        <button class="btn btn-sm btn-light-danger clear-all-btn" data-module="{{ $moduleKey }}">
+                                            <i class="ki-duotone ki-cross-square fs-2">
+                                                <span class="path1"></span>
+                                                <span class="path2"></span>
+                                            </i>
+                                            Desabilitar Todas
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="card-body pt-0">
-                                <div class="table-responsive">
-                                    <table class="table table-row-dashed table-row-gray-300 align-middle gs-0 gy-4">
-                                        <thead>
-                                            <tr class="fw-bold text-muted">
-                                                <th class="min-w-150px">Tela</th>
-                                                <th class="min-w-140px">Rota</th>
-                                                <th class="min-w-100px text-end">Acesso</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            @foreach($module['routes'] as $routeKey => $route)
-                                            <tr>
-                                                <td>
-                                                    <div class="d-flex align-items-center">
-                                                        <div class="d-flex flex-column">
-                                                            <span class="text-dark fw-bold text-hover-primary fs-6">
-                                                                {{ $route['name'] }}
-                                                            </span>
-                                                            <span class="text-muted fw-semibold text-muted d-block fs-7">
-                                                                {{ $route['action'] ?? 'Visualizar' }}
-                                                            </span>
-                                                        </div>
+                            <div class="card-body py-6">
+                                <!-- Lista de Telas em Cards -->
+                                <div class="row g-5">
+                                    @foreach($module['routes'] as $routeKey => $route)
+                                    <div class="col-lg-6 col-xl-4">
+                                        <div class="card card-custom screen-permission-card" data-route="{{ $routeKey }}">
+                                            <div class="card-body p-5">
+                                                <div class="d-flex justify-content-between align-items-start mb-4">
+                                                    <div class="flex-grow-1 me-4">
+                                                        <h6 class="fw-bold text-gray-800 mb-2">{{ $route['name'] }}</h6>
+                                                        <p class="text-muted fs-7 mb-3">{{ $route['action'] ?? 'Visualizar tela' }}</p>
+                                                        <span class="badge badge-light-info fs-8">{{ $routeKey }}</span>
                                                     </div>
-                                                </td>
-                                                <td>
-                                                    <span class="text-muted fw-semibold text-muted d-block fs-7">
-                                                        {{ $routeKey }}
-                                                    </span>
-                                                </td>
-                                                <td class="text-end">
                                                     <div class="form-check form-switch form-check-custom form-check-solid">
                                                         <input class="form-check-input permission-switch" 
                                                                type="checkbox" 
@@ -348,11 +479,14 @@
                                                                data-module="{{ $moduleKey }}">
                                                         <label class="form-check-label" for="perm-{{ str_replace('.', '-', $routeKey) }}"></label>
                                                     </div>
-                                                </td>
-                                            </tr>
-                                            @endforeach
-                                        </tbody>
-                                    </table>
+                                                </div>
+                                                <div class="permission-status pt-2 border-top border-gray-200">
+                                                    <span class="badge badge-light-secondary fs-8 permission-status-badge">Desabilitado</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    @endforeach
                                 </div>
                             </div>
                         </div>
@@ -411,7 +545,147 @@
 </div>
 <!--end::Content wrapper-->
 
+<!-- Floating Save Button -->
+<div id="floating-save-btn" class="floating-save-button d-none">
+    <button class="btn btn-primary btn-lg shadow-lg" id="floating-save-permissions" data-bs-toggle="tooltip" data-bs-placement="left" title="Salvar todas as alterações">
+        <i class="ki-duotone ki-check fs-1">
+            <span class="path1"></span>
+            <span class="path2"></span>
+        </i>
+        <span class="d-none d-md-inline ms-2">Salvar Alterações</span>
+    </button>
+</div>
+
 <style>
+/* Dashboard Cards */
+.dashboard-card-primary {
+    background: linear-gradient(135deg, #F1416C 0%, #e02454 100%) !important;
+    background-image: url("/assets/media/patterns/vector-1.png"), linear-gradient(135deg, #F1416C 0%, #e02454 100%) !important;
+    background-repeat: no-repeat !important;
+    background-size: contain, cover !important;
+    background-position: right center, center !important;
+}
+
+.dashboard-card-info {
+    background: linear-gradient(135deg, #7239EA 0%, #5a2bc4 100%) !important;
+    background-image: url("/assets/media/patterns/vector-1.png"), linear-gradient(135deg, #7239EA 0%, #5a2bc4 100%) !important;
+    background-repeat: no-repeat !important;
+    background-size: contain, cover !important;
+    background-position: right center, center !important;
+}
+
+.dashboard-card-success {
+    background: linear-gradient(135deg, #17C653 0%, #13a342 100%) !important;
+    background-image: url("/assets/media/patterns/vector-1.png"), linear-gradient(135deg, #17C653 0%, #13a342 100%) !important;
+    background-repeat: no-repeat !important;
+    background-size: contain, cover !important;
+    background-position: right center, center !important;
+}
+
+.dashboard-card-warning {
+    background: linear-gradient(135deg, #FFC700 0%, #e6b300 100%) !important;
+    background-image: url("/assets/media/patterns/vector-1.png"), linear-gradient(135deg, #FFC700 0%, #e6b300 100%) !important;
+    background-repeat: no-repeat !important;
+    background-size: contain, cover !important;
+    background-position: right center, center !important;
+}
+
+/* Floating Save Button */
+.floating-save-button {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    z-index: 1050;
+    animation: float-in 0.3s ease-out;
+}
+
+.floating-save-button button {
+    border-radius: 50px;
+    padding: 15px 25px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    border: none;
+    transition: all 0.3s ease;
+}
+
+.floating-save-button button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.2);
+}
+
+@keyframes float-in {
+    from {
+        opacity: 0;
+        transform: translateY(60px) scale(0.8);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* Screen Permission Cards */
+.screen-permission-card {
+    transition: all 0.3s ease;
+    border: 1px solid #e4e6ef;
+    cursor: pointer;
+}
+
+.screen-permission-card:hover {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+}
+
+.screen-permission-card.enabled {
+    border-color: #17c653;
+    background-color: #f8fff9;
+}
+
+.screen-permission-card.enabled .permission-status-badge {
+    background-color: #d4edda !important;
+    color: #155724 !important;
+}
+
+.screen-permission-card .permission-status-badge {
+    transition: all 0.3s ease;
+}
+
+/* Module Cards */
+.module-card {
+    border: 2px solid transparent;
+    transition: all 0.3s ease;
+    margin-bottom: 2rem;
+}
+
+.module-card:hover {
+    border-color: #e1f0ff;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+}
+
+.module-card .card-header {
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.module-card .card-body {
+    padding: 2rem;
+}
+
+/* Enhanced Form Switches */
+.permission-switch {
+    width: 3rem !important;
+    height: 1.5rem !important;
+    cursor: pointer;
+}
+
+.permission-switch:checked {
+    background-color: #17c653 !important;
+    border-color: #17c653 !important;
+}
+
+.permission-switch:focus {
+    box-shadow: 0 0 0 3px rgba(23, 198, 83, 0.1) !important;
+}
+
 .role-card {
     transition: all 0.3s ease;
 }
@@ -545,6 +819,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const closePanelBtn = document.getElementById('close-panel-btn');
     const initializeBtn = document.getElementById('initialize-btn');
     const testUserBtn = document.getElementById('test-user-btn');
+    const floatingBtn = document.getElementById('floating-save-btn');
+    const floatingSaveBtn = document.getElementById('floating-save-permissions');
+    const applyDefaultBtn = document.getElementById('apply-default-btn');
+    const viewDefaultBtn = document.getElementById('view-default-btn');
+    const defaultAlert = document.getElementById('default-config-alert');
+    const customAlert = document.getElementById('custom-config-alert');
     
     console.log('Elementos encontrados:');
     console.log('permissionPanel:', permissionPanel);
@@ -656,7 +936,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 showAlert('Erro de comunicação ao carregar permissões', 'danger');
             })
             .finally(() => {
-                showLoading(false);
+                hideLoading();
             });
     }
 
@@ -847,7 +1127,7 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .finally(() => {
             console.log('Finalizando processo de salvamento...');
-            showLoading(false);
+            hideLoading();
         });
     }
 
@@ -903,7 +1183,7 @@ document.addEventListener('DOMContentLoaded', function() {
             showAlert('Erro de comunicação ao aplicar permissões padrão.', 'danger');
         })
         .finally(() => {
-            showLoading(false);
+            hideLoading();
         });
     }
 
@@ -941,7 +1221,7 @@ document.addEventListener('DOMContentLoaded', function() {
             showAlert('Erro de comunicação ao inicializar o sistema.', 'danger');
         })
         .finally(() => {
-            showLoading(false);
+            hideLoading();
         });
     }
 
@@ -976,7 +1256,7 @@ document.addEventListener('DOMContentLoaded', function() {
             showAlert('Erro de comunicação ao testar usuário', 'danger');
         })
         .finally(() => {
-            showLoading(false);
+            hideLoading();
         });
     }
 
@@ -1123,6 +1403,313 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Log para debug (sem usar alertContainer que causa loops)
         console.log(`Toast ${type}: ${message}`);
+    }
+
+    // Floating Save Button Controls
+    function updateFloatingButton() {
+        if (hasChanges && currentRole && floatingBtn) {
+            floatingBtn.classList.remove('d-none');
+        } else if (floatingBtn) {
+            floatingBtn.classList.add('d-none');
+        }
+    }
+
+    // Show/hide floating button on scroll
+    function handleScroll() {
+        if (!floatingBtn) return;
+        
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        const panelTop = permissionPanel ? permissionPanel.offsetTop : 500;
+        
+        if (scrollTop > panelTop + 200 && hasChanges && currentRole) {
+            floatingBtn.classList.remove('d-none');
+        } else {
+            floatingBtn.classList.add('d-none');
+        }
+    }
+
+    // Enhanced permission card interactions
+    function updatePermissionCardVisuals() {
+        document.querySelectorAll('.screen-permission-card').forEach(card => {
+            const route = card.dataset.route;
+            const switch_ = card.querySelector('.permission-switch');
+            const badge = card.querySelector('.permission-status-badge');
+            
+            if (switch_ && switch_.checked) {
+                card.classList.add('enabled');
+                if (badge) {
+                    badge.textContent = 'Habilitado';
+                    badge.className = 'badge badge-light-success fs-8 permission-status-badge';
+                }
+            } else {
+                card.classList.remove('enabled');
+                if (badge) {
+                    badge.textContent = 'Desabilitado';
+                    badge.className = 'badge badge-light-secondary fs-8 permission-status-badge';
+                }
+            }
+        });
+    }
+
+    // Clear all permissions in a module
+    document.querySelectorAll('.clear-all-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const module = e.target.closest('button').dataset.module;
+            const switches = document.querySelectorAll(`[data-module="${module}"] .permission-switch`);
+            
+            switches.forEach(sw => {
+                if (currentRole === 'ADMIN') return;
+                if (sw.dataset.route === 'dashboard.index') {
+                    sw.checked = true; // Dashboard always enabled
+                    return;
+                }
+                
+                sw.checked = false;
+                const route = sw.dataset.route;
+                delete currentPermissions[route];
+            });
+            
+            updateModuleCounts();
+            updatePermissionCardVisuals();
+            hasChanges = true;
+            updateFloatingButton();
+        });
+    });
+
+    // Update existing toggle-all button functionality
+    document.querySelectorAll('.toggle-all-btn').forEach(btn => {
+        const originalHandler = btn.onclick;
+        btn.addEventListener('click', () => {
+            setTimeout(() => {
+                updatePermissionCardVisuals();
+                updateFloatingButton();
+            }, 100);
+        });
+    });
+
+    // Click on card to toggle permission
+    document.querySelectorAll('.screen-permission-card').forEach(card => {
+        card.addEventListener('click', (e) => {
+            if (e.target.type === 'checkbox') return; // Don't double-trigger
+            
+            const switch_ = card.querySelector('.permission-switch');
+            if (switch_ && !switch_.disabled) {
+                switch_.click();
+            }
+        });
+    });
+
+    // Floating save button click
+    if (floatingSaveBtn) {
+        floatingSaveBtn.addEventListener('click', () => {
+            if (saveBtn) {
+                saveBtn.click();
+            }
+        });
+    }
+
+    // Add scroll listener
+    window.addEventListener('scroll', handleScroll);
+
+    // Update card visuals when permissions change
+    document.addEventListener('change', (e) => {
+        if (e.target.classList.contains('permission-switch')) {
+            setTimeout(() => {
+                updatePermissionCardVisuals();
+                updateFloatingButton();
+            }, 50);
+        }
+    });
+
+    // Initialize tooltips for floating button
+    if (typeof bootstrap !== 'undefined' && floatingSaveBtn) {
+        new bootstrap.Tooltip(floatingSaveBtn);
+    }
+
+    // Apply Default Permissions
+    if (applyDefaultBtn) {
+        applyDefaultBtn.addEventListener('click', async () => {
+            if (!currentRole) {
+                showAlert('Selecione um tipo de usuário primeiro', 'warning');
+                return;
+            }
+
+            const confirmed = await Swal.fire({
+                title: 'Aplicar Configuração Padrão?',
+                text: `Isso irá aplicar as permissões padrão para ${currentRole}. As configurações atuais serão substituídas.`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#17c653',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Sim, aplicar padrão',
+                cancelButtonText: 'Cancelar'
+            });
+
+            if (!confirmed.isConfirmed) return;
+
+            try {
+                showLoading('Aplicando configuração padrão...');
+                
+                const response = await fetch('/admin/screen-permissions/apply-default', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    },
+                    body: JSON.stringify({
+                        role: currentRole
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Update current permissions
+                    currentPermissions = data.permissions || {};
+                    
+                    // Update UI
+                    updatePermissionSwitches();
+                    updatePermissionCardVisuals();
+                    updateModuleCounts();
+                    
+                    // Show success alert
+                    showDefaultConfigAlert(true);
+                    showAlert('Configuração padrão aplicada com sucesso!', 'success');
+                    
+                    hasChanges = false;
+                } else {
+                    showAlert(data.message || 'Erro ao aplicar configuração padrão', 'error');
+                }
+            } catch (error) {
+                console.error('Error applying default config:', error);
+                showAlert('Erro de comunicação', 'error');
+            } finally {
+                hideLoading();
+            }
+        });
+    }
+
+    // View Default Permissions (Preview)
+    if (viewDefaultBtn) {
+        viewDefaultBtn.addEventListener('click', () => {
+            if (!currentRole) return;
+            
+            // Show modal with default permissions preview
+            showDefaultPermissionsModal(currentRole);
+        });
+    }
+
+    // Functions for managing default configurations
+    function showDefaultConfigAlert(isDefault) {
+        hideAllConfigAlerts();
+        
+        if (isDefault) {
+            defaultAlert?.classList.remove('d-none');
+            defaultAlert?.classList.add('d-flex');
+        } else {
+            customAlert?.classList.remove('d-none');
+            customAlert?.classList.add('d-flex');
+        }
+    }
+
+    function hideAllConfigAlerts() {
+        defaultAlert?.classList.add('d-none');
+        defaultAlert?.classList.remove('d-flex');
+        customAlert?.classList.add('d-none');
+        customAlert?.classList.remove('d-flex');
+    }
+
+    function updatePermissionSwitches() {
+        // Clear all switches first
+        document.querySelectorAll('.permission-switch').forEach(sw => {
+            sw.checked = false;
+        });
+
+        // Set permissions based on current permissions
+        Object.entries(currentPermissions).forEach(([route, hasAccess]) => {
+            if (hasAccess) {
+                const switch_ = document.querySelector(`[data-route="${route}"]`);
+                if (switch_) {
+                    switch_.checked = true;
+                }
+            }
+        });
+    }
+
+    function showDefaultPermissionsModal(roleName) {
+        const roleDefaults = defaults[roleName];
+        if (!roleDefaults) return;
+
+        let permissionsList = '';
+        if (roleDefaults.default_access === 'all') {
+            permissionsList = '<p class="text-success"><i class="ki-duotone ki-check-circle me-2"><span class="path1"></span><span class="path2"></span></i>Acesso total a todas as funcionalidades</p>';
+        } else {
+            const permissions = roleDefaults.permissions || {};
+            Object.entries(permissions).forEach(([route, hasAccess]) => {
+                if (hasAccess) {
+                    const routeData = findRouteData(route);
+                    const routeName = routeData ? routeData.name : route;
+                    permissionsList += `<div class="d-flex align-items-center mb-2">
+                        <i class="ki-duotone ki-check-circle text-success me-3 fs-5"><span class="path1"></span><span class="path2"></span></i>
+                        <span>${routeName}</span>
+                    </div>`;
+                }
+            });
+        }
+
+        Swal.fire({
+            title: `Permissões Padrão - ${roleDefaults.description || roleName}`,
+            html: `
+                <div class="text-start">
+                    <p class="text-muted mb-4">${roleDefaults.description}</p>
+                    <h6 class="fw-bold mb-3">Telas Habilitadas:</h6>
+                    <div class="max-h-400px overflow-auto">
+                        ${permissionsList}
+                    </div>
+                </div>
+            `,
+            width: '600px',
+            confirmButtonText: 'Fechar',
+            customClass: {
+                popup: 'text-start'
+            }
+        });
+    }
+
+    function findRouteData(routeName) {
+        for (const module of Object.values(modules)) {
+            if (module.routes && module.routes[routeName]) {
+                return {
+                    name: module.routes[routeName].name || routeName,
+                    module: module.name
+                };
+            }
+        }
+        return null;
+    }
+
+    function showLoading(messageOrBool = 'Carregando...') {
+        // Compatibilidade com chamadas antigas que passavam boolean
+        const message = typeof messageOrBool === 'boolean' ? 'Carregando...' : messageOrBool;
+        
+        if (messageOrBool === false) {
+            hideLoading();
+            return;
+        }
+        
+        Swal.fire({
+            title: message,
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            showConfirmButton: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+    }
+
+    function hideLoading() {
+        Swal.close();
     }
 });
 </script>
