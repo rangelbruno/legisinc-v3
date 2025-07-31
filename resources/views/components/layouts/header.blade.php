@@ -822,21 +822,21 @@
                                     <div class="menu-item px-3">
                                         <div class="menu-content d-flex align-items-center px-3">
                                             <!--begin::Avatar-->
-                                            <div class="symbol symbol-50px me-5">
-                                                <div class="symbol-label fs-3 fw-bold text-white bg-{{ auth()->user()->getCorPerfil() }}">
+                                            <div class="symbol symbol-40px symbol-md-50px me-3 me-md-5">
+                                                <div class="symbol-label fs-4 fs-md-3 fw-bold text-white bg-{{ auth()->user()->getCorPerfil() }}">
                                                     {{ auth()->user()->avatar }}
                                                 </div>
                                             </div>
                                             <!--end::Avatar-->
                                             <!--begin::Username-->
-                                            <div class="d-flex flex-column">
-                                                <div class="fw-bold d-flex align-items-center fs-5">
-                                                    {{ auth()->user()->name }}
-                                                    <span class="badge badge-light-{{ auth()->user()->getCorPerfil() }} fw-bold fs-8 px-2 py-1 ms-2">
+                                            <div class="d-flex flex-column flex-grow-1 pe-0 min-w-0">
+                                                <div class="fw-bold d-flex flex-wrap align-items-center fs-6 fs-md-5 gap-1">
+                                                    <span class="text-truncate" style="max-width: 120px;" data-bs-toggle="tooltip" data-bs-placement="top" title="{{ auth()->user()->name }}">{{ auth()->user()->name }}</span>
+                                                    <span class="badge badge-light-{{ auth()->user()->getCorPerfil() }} fw-bold fs-8 px-2 py-1">
                                                         {{ auth()->user()->getPerfilFormatado() }}
                                                     </span>
                                                 </div>
-                                                <a href="#" class="fw-semibold text-muted text-hover-primary fs-7">
+                                                <a href="#" class="fw-semibold text-muted text-hover-primary fs-8 fs-md-7 text-truncate">
                                                     {{ auth()->user()->email }}
                                                 </a>
                                             </div>

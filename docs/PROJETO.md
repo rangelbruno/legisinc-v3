@@ -20,26 +20,34 @@ O **LegisInc** é um sistema de gestão legislativa desenvolvido com Laravel 12 
 #### PHP (Composer)
 ```json
 {
-    "laravel/framework": "^12.0",
-    "laravel/tinker": "^2.10.1",
-    "spatie/laravel-permission": "^6.20",
+    "php": "^8.2",
+    "barryvdh/laravel-dompdf": "*",
     "doctrine/dbal": "*",
-    "phpoffice/phpword": "*"
+    "firebase/php-jwt": "^6.11",
+    "laravel/framework": "^12.0",
+    "laravel/sanctum": "*",
+    "laravel/tinker": "^2.10.1",
+    "phpoffice/phpword": "^1.3",
+    "spatie/laravel-permission": "^6.20"
 }
 ```
 
 #### Node.js (NPM)
 ```json
 {
-    "@tailwindcss/vite": "^4.0.0",
-    "axios": "^1.8.2",
-    "concurrently": "^9.0.1",
-    "laravel-vite-plugin": "^1.2.0",
-    "tailwindcss": "^4.0.0",
-    "vite": "^6.2.4",
     "@tiptap/core": "^2.10.0",
-    "@tiptap/starter-kit": "^2.10.0",
+    "@tiptap/extension-character-count": "^2.10.0",
+    "@tiptap/extension-collaboration": "^2.10.0",
+    "@tiptap/extension-collaboration-cursor": "^2.10.0",
     "@tiptap/extension-table": "^2.10.0",
+    "@tiptap/extension-table-cell": "^2.10.0",
+    "@tiptap/extension-table-header": "^2.10.0",
+    "@tiptap/extension-table-row": "^2.10.0",
+    "@tiptap/extension-underline": "^2.25.0",
+    "@tiptap/pm": "^2.10.0",
+    "@tiptap/starter-kit": "^2.10.0",
+    "y-indexeddb": "^9.0.12",
+    "y-websocket": "^1.5.0",
     "yjs": "^13.6.18"
 }
 ```
@@ -275,13 +283,16 @@ Configuração de serviços externos incluindo:
   - Interface otimizada e responsiva
 
 ### 12. Sistema de Documentos Avançado ✅
-- **Localização**: `app/Http/Controllers/DocumentoController.php`, `resources/views/documentos/`
+- **Localização**: `app/Http/Controllers/Documento/`, `app/Services/Documento/`, `resources/views/documentos/`
 - **Funcionalidades**:
   - Editor de texto avançado com TipTap
+  - Editor OnlyOffice integrado para documentos Word/Excel/PowerPoint
   - Download funcional de documentos do viewer
   - Download de documentos após edição
   - Sistema de controle de versões
   - Gestão integrada de arquivos
+  - Colaboração em tempo real
+  - Sistema de templates avançado
 - **Arquitetura**:
   - Controllers especializados para cada nível da hierarquia
   - Service Layer robusto com separação de responsabilidades
@@ -294,6 +305,20 @@ Configuração de serviços externos incluindo:
   - `/api/parametros-modular/campos/*` - Gestão de campos
   - `/api/parametros-modular/valores/*` - Gestão de valores
   - Endpoints especiais para validação, configuração e cache
+
+### 13. Sistema OnlyOffice Integrado ✅
+- **Localização**: `app/Http/Controllers/OnlyOffice/`, `app/Services/OnlyOffice/`, `config/onlyoffice.php`
+- **Funcionalidades**:
+  - Editor de documentos Word, Excel e PowerPoint integrado
+  - Colaboração em tempo real com múltiplos usuários
+  - Controle de versões automático e manual
+  - Integração completa com sistema de templates
+  - API completa para gestão de documentos
+  - Sistema de callbacks para sincronização
+  - Configuração flexível e segura
+  - Suporte a edição standalone e embarcada
+  - Sistema de permissões granulares
+  - Monitoramento e diagnóstico avançado
 
 ## Configuração do Desenvolvimento
 
@@ -548,14 +573,14 @@ Este documento será atualizado conforme o desenvolvimento do projeto progride. 
    - JavaScript robusto com tratamento de erros diferenciado
 
 ### Próximas Implementações 🔄
-1. **Sessões Plenárias**: Controle de sessões, atas, presenças, pauta inteligente
-2. **Sistema de Votação**: Votação eletrônica segura, resultados em tempo real, histórico
-3. **Transparência e Engajamento**: Portal cidadão, participação pública, radar legislativo
-4. **Analytics e Inteligência**: Dashboards avançados, relatórios consolidados, estatísticas parlamentares
-5. **APIs e Integrações**: Developer portal, API management, webhooks
-6. **Notificações e Comunicação**: Sistema unificado multi-canal, alertas inteligentes
-7. **Segurança e Compliance**: Security center, auditoria avançada, LGPD compliance
-8. **Blockchain e Auditoria**: Trilha de auditoria distribuída, smart contracts
+1. **Sessões Plenárias**: Controle de sessões, atas digitais, presenças, pauta inteligente
+2. **Sistema de Votação**: Votação eletrônica segura, resultados em tempo real, histórico completo
+3. **Analytics e Business Intelligence**: Dashboards executivos, relatórios consolidados, estatísticas parlamentares
+4. **Sistema de Notificações**: Notificações push, email, SMS, alertas inteligentes por contexto
+5. **Transparência e Engajamento**: Portal cidadão, participação pública, radar legislativo
+6. **APIs e Integrações**: Developer portal, API management, webhooks, integrações externas
+7. **Segurança e Compliance**: Security center, auditoria avançada, LGPD compliance, backup automatizado
+8. **Módulo Mobile**: Aplicativo mobile nativo para iOS e Android com funcionalidades offline
 
 ## Comandos Úteis
 
@@ -597,13 +622,43 @@ make logs                  # Ver logs
 
 ---
 
-**Última atualização**: 2025-07-27
+**Última atualização**: 2025-07-31
 **Versão do Laravel**: 12.0
-**Status**: 9 módulos core implementados (35% do total), **migração completa de Projetos para Proposições**, Mesa Diretora, Partidos Políticos e Sistema de Documentos implementados, estrutura base completa, sistema de parâmetros modulares funcional, APIs reais funcionando, documentação completa, workflow legislativo correto implementado, sistema estável e consolidado, pronto para implementação de módulos de negócio avançados
+**Status**: 10 módulos core implementados (40% do total), **migração completa de Projetos para Proposições**, Mesa Diretora, Partidos Políticos, Sistema de Documentos e OnlyOffice implementados, estrutura base completa, sistema de parâmetros modulares funcional, APIs reais funcionando, documentação completa, workflow legislativo correto implementado, sistema estável e consolidado, pronto para implementação de módulos de negócio avançados
 
 ---
 
-## 🆕 Changelog Recente (2025-07-23)
+## 🆕 Changelog Recente (2025-07-31)
+
+### Novas Implementações dos Últimos Dias ✅
+
+#### Sistema OnlyOffice Completo (2025-07-29 a 2025-07-31)
+- ✅ **Integração Completa**: Editor OnlyOffice totalmente funcional para Word, Excel e PowerPoint
+- ✅ **Colaboração em Tempo Real**: Múltiplos usuários podem editar simultaneamente
+- ✅ **Sistema de Callbacks**: Sincronização automática de alterações
+- ✅ **Controle de Versões**: Versionamento automático e manual de documentos
+- ✅ **API Robusta**: Endpoints para gestão completa de documentos
+- ✅ **Sistema de Permissões**: Controle granular de acesso e edição
+- ✅ **Editor Standalone**: Modo de edição em tela cheia
+- ✅ **Monitoramento**: Scripts de diagnóstico e monitoramento
+- ✅ **Configuração Flexível**: Sistema de configuração adaptável
+
+#### Melhorias no Sistema de Proposições (2025-07-29 a 2025-07-31)
+- ✅ **Integração OnlyOffice**: Edição de proposições com OnlyOffice
+- ✅ **Templates Avançados**: Sistema de templates com variáveis
+- ✅ **Workflow Aprimorado**: Fluxo de aprovação e assinatura otimizado
+- ✅ **Campos Legislativos**: Novos campos para processo legislativo
+- ✅ **Sistema de Protocolo**: Protocolo automatizado com numeração
+
+#### Dashboard Inteligente (2025-07-30)
+- ✅ **Dashboards Especializados**: Dashboards específicos por perfil de usuário
+- ✅ **Cards Interativos**: Sistema de cards com estatísticas em tempo real
+- ✅ **Métricas Avançadas**: Indicadores de performance e produtividade
+- ✅ **Interface Responsiva**: Design otimizado para todos os dispositivos
+
+---
+
+## 🆕 Changelog Anterior (2025-07-23)
 
 ### Novas Implementações dos Últimos Dias ✅
 
@@ -785,11 +840,11 @@ O sistema antigo de "Projetos" não seguia corretamente o processo legislativo p
 
 ---
 
-## 🔄 Status Atual do Sistema (2025-07-27)
+## 🔄 Status Atual do Sistema (2025-07-31)
 
-### Sistema Consolidado e Estável
+### Sistema Consolidado e Estável com OnlyOffice
 
-O LegisInc encontra-se em um estado **estável e consolidado** após as implementações recentes. Todos os 9 módulos core estão funcionando perfeitamente, incluindo as adições mais recentes de Mesa Diretora, Partidos Políticos e Sistema de Documentos avançado. O sistema está pronto para a próxima fase de desenvolvimento focada em Sessões Plenárias.
+O LegisInc encontra-se em um estado **altamente estável e consolidado** após as implementações recentes. Todos os 10 módulos core estão funcionando perfeitamente, incluindo a nova integração completa com OnlyOffice para edição colaborativa de documentos. O sistema de proposições agora conta com edição profissional de documentos e o dashboard foi aprimorado com métricas inteligentes. O sistema está pronto para a próxima fase de desenvolvimento focada em Sessões Plenárias e Sistema de Votação.
 
 ### Indicadores de Qualidade
 
@@ -805,17 +860,26 @@ O LegisInc encontra-se em um estado **estável e consolidado** após as implemen
 2. ✅ **Gestão de Usuários** - CRUD completo com permissões granulares  
 3. ✅ **Gestão de Parlamentares** - Interface completa com busca avançada e integração com partidos
 4. ✅ **Gestão de Comissões** - Sistema de comissões permanentes e temporárias
-5. ✅ **Sistema de Proposições** - Workflow legislativo completo implementado
+5. ✅ **Sistema de Proposições** - Workflow legislativo completo implementado com OnlyOffice
 6. ✅ **Sistema de Parâmetros Modulares** - Configuração hierárquica funcional
 7. ✅ **Mesa Diretora** - CRUD completo para gestão organizacional
 8. ✅ **Partidos Políticos** - Sistema completo com integração parlamentar
 9. ✅ **Sistema de Documentos** - Editor avançado com download e versionamento
+10. ✅ **Sistema OnlyOffice** - Editor completo com colaboração em tempo real
 
-### Próximo Marco: Sessões Plenárias
+### Próximo Marco: Sessões Plenárias e Votação
 
-O próximo módulo a ser implementado é o **Sistema de Sessões Plenárias**, que incluirá:
+Os próximos módulos a serem implementados são **Sistema de Sessões Plenárias** e **Sistema de Votação**, que incluirão:
+
+**Sessões Plenárias:**
 - Controle de sessões ordinárias e extraordinárias
-- Sistema de atas digitais
-- Controle de presença automatizado  
-- Gestão inteligente de pauta
-- Integração com sistema de votação
+- Sistema de atas digitais integrado com OnlyOffice
+- Controle de presença automatizado com biometria
+- Gestão inteligente de pauta com drag-and-drop
+- Streaming e gravação de sessões
+
+**Sistema de Votação:**
+- Votação eletrônica segura e criptografada
+- Resultados em tempo real com dashboard
+- Histórico completo de votações
+- Integração com sistema de sessões
