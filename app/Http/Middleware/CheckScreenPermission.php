@@ -81,8 +81,8 @@ class CheckScreenPermission
             // Se não encontrou a rota específica, verificar se tem acesso ao módulo
             $moduleAccess = ScreenPermission::userCanAccessModule($this->getModuleFromScreen($screen));
             
-            // Para parlamentares, permitir criar projetos se tem acesso ao módulo projetos
-            if ($roleName === 'PARLAMENTAR' && $screen === 'projetos' && $action === 'create' && $moduleAccess) {
+            // Para parlamentares, permitir criar projetos/proposições se tem acesso ao módulo
+            if ($roleName === 'PARLAMENTAR' && ($screen === 'projetos' || $screen === 'proposicoes') && $action === 'create' && $moduleAccess) {
                 return true;
             }
             
@@ -115,6 +115,7 @@ class CheckScreenPermission
                 $allowedScreens = [
                     'parlamentares' => ['view'],
                     'projetos' => ['view', 'create', 'edit'], // Parlamentar pode criar e editar projetos
+                    'proposicoes' => ['view', 'create', 'edit'], // Parlamentar pode criar e editar proposições
                     'comissoes' => ['view'],
                     'sessoes' => ['view', 'create'],
                 ];
@@ -125,6 +126,7 @@ class CheckScreenPermission
                 $allowedScreens = [
                     'parlamentares' => ['view'],
                     'projetos' => ['view', 'create', 'edit'], // Relator pode criar e editar projetos
+                    'proposicoes' => ['view', 'create', 'edit'], // Relator pode criar e editar proposições
                     'comissoes' => ['view'],
                     'sessoes' => ['view'],
                 ];
@@ -134,6 +136,7 @@ class CheckScreenPermission
             case 'PROTOCOLO':
                 $allowedScreens = [
                     'projetos' => ['view', 'create'],
+                    'proposicoes' => ['view', 'create'],
                     'sessoes' => ['view', 'create'],
                 ];
                 
@@ -143,6 +146,7 @@ class CheckScreenPermission
                 $allowedScreens = [
                     'parlamentares' => ['view'],
                     'projetos' => ['view'],
+                    'proposicoes' => ['view'],
                     'comissoes' => ['view'],
                     'sessoes' => ['view'],
                 ];
@@ -185,8 +189,8 @@ class CheckScreenPermission
             return 'unknown';
         }
 
-        // Remover sufixos comuns (.store, .update, .destroy, etc.)
-        $screen = preg_replace('/\.(store|update|destroy|show)$/', '', $routeName);
+        // Remover sufixos comuns (.store, .update, .destroy, .create, .criar, etc.)
+        $screen = preg_replace('/\.(store|update|destroy|show|create|criar|edit|index)$/', '', $routeName);
         
         return $screen;
     }

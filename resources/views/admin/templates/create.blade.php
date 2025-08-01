@@ -73,6 +73,24 @@
                             <div class="text-muted fs-7 mt-2">
                                 Escolha o tipo de proposição para o qual deseja criar um template.
                             </div>
+                            
+                            <!-- Link para criar novo tipo -->
+                            <div class="notice d-flex bg-light-primary rounded border-primary border border-dashed p-6 mt-4">
+                                <i class="ki-duotone ki-information-5 fs-2 text-primary me-4">
+                                    <span class="path1"></span>
+                                    <span class="path2"></span>
+                                    <span class="path3"></span>
+                                </i>
+                                <div class="d-flex flex-stack flex-grow-1">
+                                    <div class="fw-semibold">
+                                        <div class="fs-6 text-gray-700">Não encontrou o tipo de proposição que procura?</div>
+                                        <a href="{{ route('admin.tipo-proposicoes.create') }}" class="btn btn-sm btn-light-primary mt-2">
+                                            <i class="ki-duotone ki-plus fs-3"></i>
+                                            Criar Novo Tipo de Proposição
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         <!--end::Input group-->
 
@@ -223,6 +241,20 @@ document.addEventListener('DOMContentLoaded', function() {
     const substituirGroup = document.getElementById('substituir_existente_group');
     const substituirCheckbox = document.getElementById('substituir_existente');
     const form = document.getElementById('kt_create_template_form');
+    
+    // Configurar Select2 com template customizado para "no results"
+    $(tipoSelect).select2({
+        placeholder: "Selecione um tipo de proposição",
+        allowClear: true,
+        language: {
+            noResults: function() {
+                return $('<span>Nenhum tipo de proposição encontrado. <a href="{{ route("admin.tipo-proposicoes.create") }}" class="text-primary fw-bold">Clique aqui para criar um novo tipo</a></span>');
+            }
+        },
+        escapeMarkup: function(markup) {
+            return markup;
+        }
+    });
     
     // Mostrar/ocultar opção de substituir baseado na seleção
     tipoSelect.addEventListener('change', function() {

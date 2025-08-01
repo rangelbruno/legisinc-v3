@@ -353,8 +353,8 @@ class OnlyOfficeService
         $nomeArquivo = "template_{$template->tipo_proposicao_id}.rtf";
         $path = "templates/{$nomeArquivo}";
         
-        // Conteúdo mínimo de um RTF (documento vazio válido)
-        $conteudoVazio = $this->criarDocumentoVazio($template);
+        // Conteúdo com imagem padrão do cabeçalho
+        $conteudoVazio = $this->criarDocumentoComCabecalho($template);
         
         // Salvar no storage público padrão
         Storage::put($path, $conteudoVazio);
@@ -372,7 +372,7 @@ class OnlyOfficeService
     /**
      * Criar um documento DOCX vazio válido
      */
-    private function criarDocumentoVazio(TipoProposicaoTemplate $template): string
+    private function criarDocumentoComCabecalho(TipoProposicaoTemplate $template): string
     {
         // Usar template básico do storage se existir, senão criar um simples
         $templateBasico = storage_path('app/templates/template_base.docx');
@@ -381,14 +381,14 @@ class OnlyOfficeService
             return file_get_contents($templateBasico);
         }
         
-        // Criar conteúdo básico de um documento Word
-        return $this->gerarDocumentoWordVazio($template);
+        // Criar conteúdo básico de um documento Word com cabeçalho
+        return $this->gerarDocumentoWordComCabecalho($template);
     }
 
     /**
-     * Gerar estrutura básica de um documento Word
+     * Gerar estrutura básica de um documento Word com cabeçalho
      */
-    private function gerarDocumentoWordVazio(TipoProposicaoTemplate $template): string
+    private function gerarDocumentoWordComCabecalho(TipoProposicaoTemplate $template): string
     {
         // Tentar usar um arquivo RTF base existente primeiro
         $possiveisArquivos = [
@@ -406,10 +406,12 @@ class OnlyOfficeService
             }
         }
         
-        // Se não encontrar arquivo base, criar um RTF válido
+        // Se não encontrar arquivo base, criar um RTF válido com referência à imagem do cabeçalho
         $conteudo = "{\rtf1\ansi\deff0";
         $conteudo .= "{\fonttbl{\f0 Times New Roman;}}";
         $conteudo .= "\f0\fs24";
+        $conteudo .= "\par\par"; // Espaço para a imagem do cabeçalho
+        $conteudo .= "{\b Imagem do Cabe\'e7alho:} \${imagem_cabecalho}\par\par";
         $conteudo .= "Template: " . $template->tipoProposicao->nome . "\par\par";
         $conteudo .= "Adicione aqui o conte\'fado do seu template usando vari\'e1veis como:\par";
         $conteudo .= "- \${ementa}\par";
@@ -418,7 +420,7 @@ class OnlyOfficeService
         $conteudo .= "- \${numero_proposicao}\par\par";
         $conteudo .= "}";
         
-        \Log::info('Criando template RTF básico', ['template_id' => $template->id]);
+        \Log::info('Criando template RTF básico com cabeçalho', ['template_id' => $template->id]);
         return $conteudo;
     }
 

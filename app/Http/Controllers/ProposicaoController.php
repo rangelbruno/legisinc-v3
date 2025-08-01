@@ -18,7 +18,7 @@ class ProposicaoController extends Controller
     public function create()
     {
         // Verificar se é usuário do Legislativo - eles não podem criar proposições
-        if (auth()->user()->isLegislativo()) {
+        if (auth()->user()->isLegislativo() && !auth()->user()->isParlamentar()) {
             return redirect()->route('proposicoes.legislativo.index')
                 ->with('warning', 'Usuários do Legislativo não podem criar proposições. Acesse as proposições enviadas para análise.');
         }
@@ -550,7 +550,7 @@ class ProposicaoController extends Controller
     public function minhasProposicoes()
     {
         // Verificar se é usuário do Legislativo - eles não podem acessar esta página
-        if (auth()->user()->isLegislativo()) {
+        if (auth()->user()->isLegislativo() && !auth()->user()->isParlamentar()) {
             return redirect()->route('proposicoes.legislativo.index')
                 ->with('warning', 'Usuários do Legislativo devem acessar as proposições pela área do Legislativo.');
         }

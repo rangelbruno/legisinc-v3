@@ -23,8 +23,8 @@ class CheckParlamentarAccess
 
         $user = Auth::user();
 
-        // Verificar se o usuário tem perfil de parlamentar
-        if ($user->perfil !== 'PARLAMENTAR') {
+        // Verificar se o usuário tem role de parlamentar usando Spatie Permission
+        if (!$user->hasRole('PARLAMENTAR')) {
             // Se for requisição AJAX, retornar JSON
             if ($request->expectsJson()) {
                 return response()->json([

@@ -40,7 +40,10 @@ class TemplateProcessorService
         'nome_camara' => 'Nome da câmara',
         'endereco_camara' => 'Endereço da câmara',
         'legislatura_atual' => 'Legislatura atual',
-        'sessao_legislativa' => 'Sessão legislativa atual'
+        'sessao_legislativa' => 'Sessão legislativa atual',
+        
+        // Imagens padrão
+        'imagem_cabecalho' => 'Imagem padrão do cabeçalho'
     ];
 
     private array $editableVariables = [
@@ -193,7 +196,10 @@ class TemplateProcessorService
             'nome_camara' => config('app.nome_camara', 'Câmara Municipal'),
             'endereco_camara' => config('app.endereco_camara', 'Endereço da Câmara'),
             'legislatura_atual' => config('app.legislatura', '2021-2024'),
-            'sessao_legislativa' => $agora->format('Y')
+            'sessao_legislativa' => $agora->format('Y'),
+            
+            // Imagens padrão
+            'imagem_cabecalho' => asset('template/cabecalho.png')
         ];
     }
 
@@ -357,7 +363,10 @@ class TemplateProcessorService
                 'nome_camara' => 'Câmara Municipal de São Paulo',
                 'endereco_camara' => 'Viaduto Jacareí, 100 - Bela Vista',
                 'legislatura_atual' => '2021-2024',
-                'sessao_legislativa' => $agora->format('Y')
+                'sessao_legislativa' => $agora->format('Y'),
+                
+                // Imagens padrão
+                'imagem_cabecalho' => asset('template/cabecalho.png')
             ],
             [
                 'ementa' => 'Dispõe sobre exemplo de proposição legislativa',
@@ -377,7 +386,7 @@ class TemplateProcessorService
      */
     private function getTemplateBasico(string $tipoNome): string
     {
-        return "# ${tipo_proposicao} Nº ${numero_proposicao}
+        return '# ${tipo_proposicao} Nº ${numero_proposicao}
 
 **Data:** ${data}
 **Autor:** ${nome_parlamentar} - ${cargo_parlamentar}
@@ -394,6 +403,6 @@ ${justificativa}
 
 ---
 ${nome_camara}
-${data_extenso}";
+${data_extenso}';
     }
 }

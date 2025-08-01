@@ -615,6 +615,13 @@ Route::prefix('onlyoffice')->name('onlyoffice.')->group(function () {
     Route::post('/callback/proposicao/{proposicao}', [App\Http\Controllers\ProposicaoController::class, 'onlyOfficeCallback'])->name('callback.proposicao');
 });
 
+// IMAGE UPLOAD ROUTES
+Route::prefix('images')->name('images.')->middleware('auth')->group(function () {
+    Route::post('/upload/template', [App\Http\Controllers\ImageUploadController::class, 'uploadTemplateImage'])->name('upload.template');
+    Route::post('/upload/proposicao/{proposicao}', [App\Http\Controllers\ImageUploadController::class, 'uploadProposicaoImage'])->name('upload.proposicao');
+    Route::post('/upload/multiple', [App\Http\Controllers\ImageUploadController::class, 'uploadMultiple'])->name('upload.multiple');
+});
+
 // OnlyOffice download route for Legislativo (sem autenticação para acesso do servidor OnlyOffice)
 Route::get('/proposicoes/{proposicao}/onlyoffice/download', [App\Http\Controllers\OnlyOfficeController::class, 'download'])->name('proposicoes.onlyoffice.download');
 

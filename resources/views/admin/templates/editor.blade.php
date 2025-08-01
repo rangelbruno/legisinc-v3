@@ -351,6 +351,27 @@
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         }
         
+        /* Estilo especial para botão de imagem */
+        .variable-btn.bg-light-primary {
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            border-color: #2196f3;
+        }
+        
+        .variable-btn.bg-light-primary:hover {
+            background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
+            border-color: #1976d2;
+            color: white;
+            box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3);
+        }
+        
+        .variable-btn.bg-light-primary .var-name {
+            color: #1565c0;
+        }
+        
+        .variable-btn.bg-light-primary:hover .var-name {
+            color: white;
+        }
+        
         /* Categoria de variáveis */
         .variable-category {
             margin-bottom: 1.5rem;
@@ -639,6 +660,23 @@
                         <button type="button" onclick="inserirVariavel('${sessao_legislativa}')" class="btn variable-btn">
                             <span class="var-name">${sessao_legislativa}</span>
                             <span class="var-desc">Sessão legislativa</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Imagens e Mídia -->
+                <div class="variable-category">
+                    <div class="variable-category-title">
+                        <i class="ki-duotone ki-picture">
+                            <span class="path1"></span>
+                            <span class="path2"></span>
+                        </i>
+                        IMAGENS & MÍDIA
+                    </div>
+                    <div class="variable-items">
+                        <button type="button" onclick="inserirImagemCabecalho()" class="btn variable-btn bg-light-primary">
+                            <span class="var-name">${imagem_cabecalho}</span>
+                            <span class="var-desc">Inserir imagem padrão do cabeçalho</span>
                         </button>
                     </div>
                 </div>
@@ -942,7 +980,9 @@ Tem certeza que deseja sair?`;
         
         // Função para inserir template exemplo
         function inserirTemplateExemplo() {
-            const templateExemplo = `MOÇÃO Nº \${numero_proposicao}
+            const templateExemplo = `\${imagem_cabecalho}
+
+MOÇÃO Nº \${numero_proposicao}
 
 Autor: \${autor_nome}
 Cargo: \${cargo_parlamentar}
@@ -974,6 +1014,28 @@ Assinatura do Autor`;
                 });
             } else {
                 copiarTextoFallback(templateExemplo);
+            }
+        }
+        
+        // Função para inserir imagem do cabeçalho
+        function inserirImagemCabecalho() {
+            console.log('🖼️ Inserindo imagem do cabeçalho');
+            
+            // Criar estrutura HTML/RTF para a imagem
+            const imagemCabecalho = `\${imagem_cabecalho}`;
+            
+            // Copiar para área de transferência
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(imagemCabecalho).then(() => {
+                    showCopyNotification('Variável da imagem do cabeçalho');
+                    showToast('Variável copiada! Cole no início do documento para adicionar o cabeçalho padrão.', 'success', 4000);
+                }).catch((err) => {
+                    console.error('Erro ao copiar:', err);
+                    copiarTextoFallback(imagemCabecalho);
+                });
+            } else {
+                copiarTextoFallback(imagemCabecalho);
+                showToast('Variável copiada! Cole no início do documento para adicionar o cabeçalho padrão.', 'success', 4000);
             }
         }
 

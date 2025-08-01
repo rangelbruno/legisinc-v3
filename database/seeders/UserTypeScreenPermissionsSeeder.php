@@ -44,6 +44,8 @@ class UserTypeScreenPermissionsSeeder extends Seeder
             ['route' => 'proposicoes.edit', 'name' => 'Editar Proposição', 'module' => 'proposicoes'],
             ['route' => 'proposicoes.criar', 'name' => 'Nova Proposição', 'module' => 'proposicoes'],
             ['route' => 'proposicoes.minhas-proposicoes', 'name' => 'Minhas Proposições', 'module' => 'proposicoes'],
+            ['route' => 'proposicoes.salvar-rascunho', 'name' => 'Salvar Rascunho', 'module' => 'proposicoes'],
+            ['route' => 'proposicoes.buscar-modelos', 'name' => 'Buscar Modelos', 'module' => 'proposicoes'],
             
             // Assinatura - Processo de assinatura
             ['route' => 'proposicoes.assinatura', 'name' => 'Assinar Proposições', 'module' => 'proposicoes'],
