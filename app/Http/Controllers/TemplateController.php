@@ -157,11 +157,14 @@ class TemplateController extends Controller
         $config['editorConfig']['customization']['autosave'] = true; // Manter autosave habilitado
         
         // Adicionar callback URL correta com document_key versionado
-        $config['editorConfig']['callbackUrl'] = str_replace(
-            'http://localhost:8001', 
-            'http://host.docker.internal:8001', 
-            route('api.onlyoffice.callback', $config['document']['key'])
-        );
+        $callbackUrl = route('api.onlyoffice.callback', $config['document']['key']);
+        
+        // Ajustar URL para comunicação entre containers (igual ao OnlyOfficeController)
+        if (config('app.env') === 'local') {
+            $callbackUrl = str_replace(['http://localhost:8001', 'http://127.0.0.1:8001'], 'http://legisinc-app', $callbackUrl);
+        }
+        
+        $config['editorConfig']['callbackUrl'] = $callbackUrl;
 
         return view('admin.templates.editor', [
             'tipo' => $tipo,
@@ -209,11 +212,57 @@ class TemplateController extends Controller
         // Gerar nome do arquivo baseado no tipo de proposição
         $nomeArquivo = \Illuminate\Support\Str::slug($template->tipoProposicao->nome) . '.rtf';
         
-        // Retornar arquivo sem cache
+        // Verificar se o arquivo precisa de correção de encoding antes do download
+        $conteudoArquivo = Storage::get($template->arquivo_path);
+        
+        // Se contém caracteres mal codificados comuns, tentar corrigir
+        if (strpos($conteudoArquivo, 'MunicÃ­pio') !== false || 
+            strpos($conteudoArquivo, 'SÃ£o Paulo') !== false ||
+            strpos($conteudoArquivo, 'relaÃ§Ã£o') !== false) {
+            
+            \Log::info('Arquivo contém encoding incorreto, corrigindo antes do download', [
+                'template_id' => $template->id,
+                'path' => $template->arquivo_path
+            ]);
+            
+            // Aplicar correções básicas
+            $correcoes = [
+                'MunicÃ­pio' => 'Município',
+                'SÃ£o Paulo' => 'São Paulo',
+                'relaÃ§Ã£o' => 'relação',
+                'posiÃ§Ã£o' => 'posição',
+                'funÃ§Ã£o' => 'função',
+                'criaÃ§Ã£o' => 'criação',
+                'legislaÃ§Ã£o' => 'legislação',
+                'aprovaÃ§Ã£o' => 'aprovação'
+            ];
+            
+            $conteudoCorrigido = str_replace(array_keys($correcoes), array_values($correcoes), $conteudoArquivo);
+            
+            // Criar arquivo temporário com conteúdo corrigido
+            $tempFile = tempnam(sys_get_temp_dir(), 'template_fixed_') . '.rtf';
+            file_put_contents($tempFile, $conteudoCorrigido);
+            
+            return response()->download(
+                $tempFile,
+                $nomeArquivo,
+                [
+                    'Cache-Control' => 'no-cache, no-store, must-revalidate',
+                    'Content-Type' => 'application/rtf; charset=UTF-8',
+                    'Content-Disposition' => 'attachment; filename*=UTF-8\'\'' . rawurlencode($nomeArquivo)
+                ]
+            )->deleteFileAfterSend(true);
+        }
+        
+        // Retornar arquivo normal com headers adequados para UTF-8
         return response()->download(
             Storage::path($template->arquivo_path), 
             $nomeArquivo,
-            ['Cache-Control' => 'no-cache, no-store, must-revalidate']
+            [
+                'Cache-Control' => 'no-cache, no-store, must-revalidate',
+                'Content-Type' => 'application/rtf; charset=UTF-8',
+                'Content-Disposition' => 'attachment; filename*=UTF-8\'\'' . rawurlencode($nomeArquivo)
+            ]
         );
     }
 

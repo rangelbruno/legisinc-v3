@@ -61,9 +61,10 @@ class OnlyOfficeService
             'documentType' => 'word',
             'editorConfig' => [
                 'mode' => 'edit',
-                'callbackUrl' => str_replace('http://localhost:8001', 'http://host.docker.internal:8001', route('api.onlyoffice.callback', $template->document_key)),
+                'callbackUrl' => $this->ajustarCallbackUrl(route('api.onlyoffice.callback', $template->document_key)),
                 'createUrl' => route('api.templates.download', $template->id),
                 'lang' => 'pt-BR',
+                'region' => 'pt-BR',
                 'customization' => [
                     'autosave' => true, // Habilitar autosave para garantir salvamento
                     'autosaveType' => 0, // 0 = strict mode
@@ -116,8 +117,10 @@ class OnlyOfficeService
             'document_key' => $documentKey,
             'status' => $status,
             'has_url' => isset($data['url']),
+            'url' => $data['url'] ?? null,
             'users' => $data['users'] ?? [],
-            'actions' => $data['actions'] ?? []
+            'actions' => $data['actions'] ?? [],
+            'full_data' => $data
         ]);
         
         // Implementar lock para evitar processamento concorrente
@@ -162,7 +165,9 @@ class OnlyOfficeService
         } catch (\Exception $e) {
             \Log::error('Erro no processamento do callback', [
                 'document_key' => $documentKey,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'data' => $data
             ]);
             
             // Garantir liberação do lock em caso de erro
@@ -183,24 +188,54 @@ class OnlyOfficeService
             // Usar URL interna entre containers Docker (mais rápido)
             $urlOtimizada = str_replace($this->serverUrl, $this->internalUrl, $url);
             
-            // Download direto com timeout reduzido
-            $response = Http::timeout(5)->get($urlOtimizada);
+            // Download direto com timeout aumentado
+            $response = Http::timeout(30)->get($urlOtimizada);
             
             if (!$response->successful()) {
-                // Fallback rápido apenas se necessário
-                $response = Http::timeout(5)->get($url);
+                // Fallback com timeout maior se necessário
+                \Log::warning('Tentando URL fallback após falha', [
+                    'url_otimizada' => $urlOtimizada,
+                    'url_original' => $url,
+                    'status' => $response->status()
+                ]);
+                $response = Http::timeout(30)->get($url);
             }
             
             if (!$response || !$response->successful()) {
                 \Log::error('OnlyOffice callback - falha no download', [
                     'template_id' => $template->id,
-                    'url' => $url
+                    'url' => $url,
+                    'url_otimizada' => $urlOtimizada,
+                    'response_status' => $response ? $response->status() : 'null_response',
+                    'response_body' => $response ? $response->body() : 'null_response'
                 ]);
                 return;
             }
 
             // Validar e possivelmente combinar conteúdo do template
             $conteudo = $response->body();
+            
+            // Verificar se o arquivo não está vazio ou corrompido
+            if (empty($conteudo) || strlen($conteudo) < 50) {
+                \Log::error('OnlyOffice callback - conteúdo inválido ou vazio', [
+                    'template_id' => $template->id,
+                    'url' => $url,
+                    'content_length' => strlen($conteudo),
+                    'content_preview' => substr($conteudo, 0, 100)
+                ]);
+                return;
+            }
+            
+            // Verificar se é realmente um arquivo RTF
+            if (!str_starts_with($conteudo, '{\rtf')) {
+                \Log::error('OnlyOffice callback - arquivo não é RTF válido', [
+                    'template_id' => $template->id,
+                    'url' => $url,
+                    'content_start' => substr($conteudo, 0, 50)
+                ]);
+                return;
+            }
+            
             $conteudoFinal = $this->prepararConteudoTemplate($conteudo, $template);
             
             if (!$conteudoFinal) {
@@ -222,14 +257,21 @@ class OnlyOfficeService
             $this->backupTemplateAtual($template);
             
             // Usar transação para garantir atomicidade e performance
-            \DB::transaction(function() use ($template, $path, $response) {
-                // Salvar no storage padrão (público)
-                $saved = Storage::put($path, $response->body());
+            \DB::transaction(function() use ($template, $path, $conteudo) {
+                // Garantir que o conteúdo está em UTF-8 e correto para RTF
+                $conteudoCorrigido = $this->corrigirEncodingRTF($conteudo);
                 
-                \Log::info('Arquivo salvo no storage', [
+                // Corrigir encoding adicional para exibição no OnlyOffice
+                $conteudoCorrigido = $this->corrigirEncodingParaExibicao($conteudoCorrigido);
+                
+                // Salvar no storage padrão (público)
+                $saved = Storage::put($path, $conteudoCorrigido);
+                
+                \Log::info('Arquivo salvo no storage com encoding corrigido', [
                     'path' => $path,
                     'saved' => $saved,
-                    'size' => strlen($response->body())
+                    'size_original' => strlen($conteudo),
+                    'size_corrigido' => strlen($conteudoCorrigido)
                 ]);
                 
                 // Forçar refresh do modelo para evitar cache
@@ -265,7 +307,9 @@ class OnlyOfficeService
             
         } catch (\Exception $e) {
             \Log::error('OnlyOffice callback error', [
+                'template_id' => $template->id,
                 'document_key' => $template->document_key,
+                'url' => $url,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
@@ -407,13 +451,14 @@ class OnlyOfficeService
         }
         
         // Se não encontrar arquivo base, criar um RTF válido com referência à imagem do cabeçalho
-        $conteudo = "{\rtf1\ansi\deff0";
-        $conteudo .= "{\fonttbl{\f0 Times New Roman;}}";
-        $conteudo .= "\f0\fs24";
+        $conteudo = "{\rtf1\ansi\ansicpg1252\deff0\deflang1046";
+        $conteudo .= "{\fonttbl{\f0\froman\fcharset0 Times New Roman;}}";
+        $conteudo .= "{\colortbl;\red0\green0\blue0;}";
+        $conteudo .= "\viewkind4\uc1\pard\cf1\f0\fs24";
         $conteudo .= "\par\par"; // Espaço para a imagem do cabeçalho
-        $conteudo .= "{\b Imagem do Cabe\'e7alho:} \${imagem_cabecalho}\par\par";
-        $conteudo .= "Template: " . $template->tipoProposicao->nome . "\par\par";
-        $conteudo .= "Adicione aqui o conte\'fado do seu template usando vari\'e1veis como:\par";
+        $conteudo .= "{\b Imagem do Cabe\\'e7alho:} \${imagem_cabecalho}\par\par";
+        $conteudo .= "Template: " . $this->converterParaRTF($template->tipoProposicao->nome) . "\par\par";
+        $conteudo .= "Adicione aqui o conte\\'fado do seu template usando vari\\'e1veis como:\par";
         $conteudo .= "- \${ementa}\par";
         $conteudo .= "- \${autor_nome}\par";
         $conteudo .= "- \${data_atual}\par";
@@ -422,6 +467,44 @@ class OnlyOfficeService
         
         \Log::info('Criando template RTF básico com cabeçalho', ['template_id' => $template->id]);
         return $conteudo;
+    }
+    
+    /**
+     * Converter texto UTF-8 para códigos RTF
+     */
+    private function converterParaRTF(string $texto): string
+    {
+        // Mapear caracteres acentuados para códigos RTF
+        $mapeamento = [
+            'á' => "\\'e1",
+            'à' => "\\'e0", 
+            'â' => "\\'e2",
+            'ã' => "\\'e3",
+            'é' => "\\'e9",
+            'ê' => "\\'ea",
+            'í' => "\\'ed",
+            'ó' => "\\'f3",
+            'ô' => "\\'f4",
+            'õ' => "\\'f5",
+            'ú' => "\\'fa",
+            'ü' => "\\'fc",
+            'ç' => "\\'e7",
+            'Á' => "\\'c1",
+            'À' => "\\'c0",
+            'Â' => "\\'c2", 
+            'Ã' => "\\'c3",
+            'É' => "\\'c9",
+            'Ê' => "\\'ca",
+            'Í' => "\\'cd",
+            'Ó' => "\\'d3",
+            'Ô' => "\\'d4",
+            'Õ' => "\\'d5",
+            'Ú' => "\\'da",
+            'Ü' => "\\'dc",
+            'Ç' => "\\'c7",
+        ];
+        
+        return str_replace(array_keys($mapeamento), array_values($mapeamento), $texto);
     }
 
     /**
@@ -484,6 +567,11 @@ class OnlyOfficeService
      */
     private function prepararConteudoTemplate(string $conteudo, TipoProposicaoTemplate $template): ?string
     {
+        // Garantir encoding UTF-8
+        if (!mb_check_encoding($conteudo, 'UTF-8')) {
+            $conteudo = mb_convert_encoding($conteudo, 'UTF-8', 'auto');
+        }
+        
         // Verificar se o conteúdo atual tem variáveis
         $temVariaveis = preg_match('/\$\{[^}]+\}/', $conteudo);
         
@@ -496,14 +584,15 @@ class OnlyOfficeService
             return $conteudo;
         }
         
-        // Se não tem variáveis, mas tem conteúdo significativo (imagens), tentar combinar
-        if (strlen($conteudo) > 100000) {
-            \Log::info('Template sem variáveis mas com conteúdo significativo - tentando combinar', [
+        // Se não tem variáveis, mas tem conteúdo significativo, PRESERVAR o conteúdo do usuário
+        if (strlen($conteudo) > 1000) {
+            \Log::info('Template sem variáveis mas com conteúdo significativo - PRESERVANDO conteúdo do usuário', [
                 'template_id' => $template->id,
                 'tamanho_conteudo' => strlen($conteudo)
             ]);
             
-            return $this->combinarImagemComVariaveis($conteudo, $template);
+            // PRESERVAR o conteúdo editado pelo usuário, não substituir
+            return $conteudo;
         }
         
         // Conteúdo muito pequeno e sem variáveis - rejeitar
@@ -743,6 +832,211 @@ ${texto}
         ];
         
         return $mapeamento[$tipo] ?? $tipo;
+    }
+
+    /**
+     * Corrigir encoding RTF para UTF-8 correto
+     */
+    private function corrigirEncodingRTF(string $conteudoRTF): string
+    {
+        // Detectar se o conteúdo é RTF
+        if (strpos($conteudoRTF, '{\rtf') === false) {
+            return $conteudoRTF; // Não é RTF, retornar como está
+        }
+        
+        \Log::info('Corrigindo encoding RTF - OnlyOffice salvou caracteres UTF-8 em RTF', [
+            'tamanho_original' => strlen($conteudoRTF),
+            'preview_original' => substr($conteudoRTF, 0, 200)
+        ]);
+        
+        // O OnlyOffice está salvando bytes UTF-8 diretamente no RTF
+        // Precisamos converter esses bytes para códigos RTF apropriados
+        $conteudoCorrigido = $conteudoRTF;
+        
+        // Corrigir bytes UTF-8 específicos que aparecem no RTF
+        $correcoesBinarias = [
+            // í (C3 AD em UTF-8) -> \'ed em RTF
+            "\xC3\xAD" => "\\'ed",
+            // ã (C3 A3 em UTF-8) -> \'e3 em RTF  
+            "\xC3\xA3" => "\\'e3",
+            // â (C3 A2 em UTF-8) -> \'e2 em RTF
+            "\xC3\xA2" => "\\'e2",
+            // á (C3 A1 em UTF-8) -> \'e1 em RTF
+            "\xC3\xA1" => "\\'e1",
+            // à (C3 A0 em UTF-8) -> \'e0 em RTF
+            "\xC3\xA0" => "\\'e0",
+            // é (C3 A9 em UTF-8) -> \'e9 em RTF
+            "\xC3\xA9" => "\\'e9",
+            // ê (C3 AA em UTF-8) -> \'ea em RTF
+            "\xC3\xAA" => "\\'ea",
+            // ó (C3 B3 em UTF-8) -> \'f3 em RTF
+            "\xC3\xB3" => "\\'f3",
+            // ô (C3 B4 em UTF-8) -> \'f4 em RTF
+            "\xC3\xB4" => "\\'f4",
+            // õ (C3 B5 em UTF-8) -> \'f5 em RTF
+            "\xC3\xB5" => "\\'f5",
+            // ú (C3 BA em UTF-8) -> \'fa em RTF
+            "\xC3\xBA" => "\\'fa",
+            // ç (C3 A7 em UTF-8) -> \'e7 em RTF
+            "\xC3\xA7" => "\\'e7",
+            // Maiúsculas
+            // Í (C3 8D em UTF-8) -> \'cd em RTF
+            "\xC3\x8D" => "\\'cd",
+            // Ã (C3 83 em UTF-8) -> \'c3 em RTF
+            "\xC3\x83" => "\\'c3",
+            // Â (C3 82 em UTF-8) -> \'c2 em RTF
+            "\xC3\x82" => "\\'c2",
+            // Á (C3 81 em UTF-8) -> \'c1 em RTF
+            "\xC3\x81" => "\\'c1",
+            // À (C3 80 em UTF-8) -> \'c0 em RTF
+            "\xC3\x80" => "\\'c0",
+            // É (C3 89 em UTF-8) -> \'c9 em RTF
+            "\xC3\x89" => "\\'c9",
+            // Ê (C3 8A em UTF-8) -> \'ca em RTF
+            "\xC3\x8A" => "\\'ca",
+            // Ó (C3 93 em UTF-8) -> \'d3 em RTF
+            "\xC3\x93" => "\\'d3",
+            // Ô (C3 94 em UTF-8) -> \'d4 em RTF
+            "\xC3\x94" => "\\'d4",
+            // Õ (C3 95 em UTF-8) -> \'d5 em RTF
+            "\xC3\x95" => "\\'d5",
+            // Ú (C3 9A em UTF-8) -> \'da em RTF
+            "\xC3\x9A" => "\\'da",
+            // Ç (C3 87 em UTF-8) -> \'c7 em RTF
+            "\xC3\x87" => "\\'c7",
+        ];
+        
+        foreach ($correcoesBinarias as $utf8Bytes => $rtfCode) {
+            $antes = substr_count($conteudoCorrigido, $utf8Bytes);
+            $conteudoCorrigido = str_replace($utf8Bytes, $rtfCode, $conteudoCorrigido);
+            $depois = substr_count($conteudoCorrigido, $utf8Bytes);
+            
+            if ($antes > $depois) {
+                \Log::info("Corrigido: $antes ocorrências de bytes UTF-8 para códigos RTF", [
+                    'utf8_hex' => bin2hex($utf8Bytes),
+                    'rtf_code' => $rtfCode
+                ]);
+            }
+        }
+        
+        \Log::info('Encoding RTF corrigido - bytes UTF-8 convertidos para códigos RTF', [
+            'tamanho_final' => strlen($conteudoCorrigido),
+            'preview_final' => substr($conteudoCorrigido, 0, 200)
+        ]);
+        
+        return $conteudoCorrigido;
+    }
+    
+    /**
+     * Codificar caracteres UTF-8 para códigos RTF apropriados
+     */
+    private function codificarUTF8ParaRTF(string $texto): string
+    {
+        // Esta função garante que caracteres UTF-8 sejam corretamente codificados no RTF
+        
+        // Primeiro, vamos processar caractere por caractere
+        $resultado = '';
+        $comprimento = mb_strlen($texto, 'UTF-8');
+        
+        for ($i = 0; $i < $comprimento; $i++) {
+            $char = mb_substr($texto, $i, 1, 'UTF-8');
+            
+            // Se é ASCII básico, manter como está
+            if (ord($char) < 128 && ord($char) > 31) {
+                $resultado .= $char;
+            } 
+            // Se é caractere de controle ou não-ASCII, converter para código RTF
+            else {
+                $codigo = $this->obterCodigoRTF($char);
+                if ($codigo) {
+                    $resultado .= $codigo;
+                } else {
+                    // Se não tem mapeamento específico, usar código genérico
+                    $resultado .= $char; // Manter original por enquanto
+                }
+            }
+        }
+        
+        return $resultado;
+    }
+    
+    /**
+     * Obter código RTF para caractere específico
+     */
+    private function obterCodigoRTF(string $char): ?string
+    {
+        $mapeamento = [
+            'á' => "\\'e1", 'à' => "\\'e0", 'ã' => "\\'e3", 'â' => "\\'e2", 'ä' => "\\'e4",
+            'Á' => "\\'c1", 'À' => "\\'c0", 'Ã' => "\\'c3", 'Â' => "\\'c2", 'Ä' => "\\'c4",
+            'é' => "\\'e9", 'è' => "\\'e8", 'ê' => "\\'ea", 'ë' => "\\'eb",
+            'É' => "\\'c9", 'È' => "\\'c8", 'Ê' => "\\'ca", 'Ë' => "\\'cb",
+            'í' => "\\'ed", 'ì' => "\\'ec", 'î' => "\\'ee", 'ï' => "\\'ef",
+            'Í' => "\\'cd", 'Ì' => "\\'cc", 'Î' => "\\'ce", 'Ï' => "\\'cf",
+            'ó' => "\\'f3", 'ò' => "\\'f2", 'õ' => "\\'f5", 'ô' => "\\'f4", 'ö' => "\\'f6",
+            'Ó' => "\\'d3", 'Ò' => "\\'d2", 'Õ' => "\\'d5", 'Ô' => "\\'d4", 'Ö' => "\\'d6",
+            'ú' => "\\'fa", 'ù' => "\\'f9", 'û' => "\\'fb", 'ü' => "\\'fc",
+            'Ú' => "\\'da", 'Ù' => "\\'d9", 'Û' => "\\'db", 'Ü' => "\\'dc",
+            'ç' => "\\'e7", 'Ç' => "\\'c7",
+            'ñ' => "\\'f1", 'Ñ' => "\\'d1",
+            '°' => "\\'b0", 'º' => "\\'ba", 'ª' => "\\'aa"
+        ];
+        
+        return $mapeamento[$char] ?? null;
+    }
+    
+    /**
+     * Corrigir encoding para exibição correta no OnlyOffice
+     * 
+     * O OnlyOffice às vezes interpreta códigos RTF de forma incorreta,
+     * causando double encoding. Este método tenta corrigir isso.
+     */
+    private function corrigirEncodingParaExibicao(string $conteudoRTF): string
+    {
+        \Log::info('Aplicando correção adicional de encoding para OnlyOffice', [
+            'tamanho_original' => strlen($conteudoRTF),
+            'preview' => substr($conteudoRTF, 0, 200)
+        ]);
+        
+        // Se não é RTF, não fazer nada
+        if (strpos($conteudoRTF, '{\rtf') === false) {
+            return $conteudoRTF;
+        }
+        
+        $conteudoCorrigido = $conteudoRTF;
+        
+        // Estratégia: substituir códigos RTF por UTF-8 direto para algumas situações
+        // onde o OnlyOffice interpreta melhor UTF-8 do que códigos RTF
+        
+        // Primeiro vamos tentar manter apenas os códigos RTF mais essenciais
+        // e deixar o OnlyOffice processar o resto como UTF-8
+        
+        $substituicoes = [
+            // Se encontrarmos padrões problemáticos, vamos corrigi-los
+            "\\'ed" => "í",  // í volta para UTF-8 
+            "\\'e3" => "ã",  // ã volta para UTF-8
+            "\\'e2" => "â",  // â volta para UTF-8  
+            "\\'e7" => "ç",  // ç volta para UTF-8
+            "\\'c7" => "Ç",  // Ç volta para UTF-8
+            "\\'c3" => "Ã",  // Ã volta para UTF-8
+        ];
+        
+        foreach ($substituicoes as $rtfCode => $utf8Char) {
+            $antes = substr_count($conteudoCorrigido, $rtfCode);
+            $conteudoCorrigido = str_replace($rtfCode, $utf8Char, $conteudoCorrigido);
+            $depois = substr_count($conteudoCorrigido, $rtfCode);
+            
+            if ($antes > $depois) {
+                \Log::info("Substituição RTF->UTF8: {$rtfCode} -> {$utf8Char}", [
+                    'ocorrencias' => ($antes - $depois)
+                ]);
+            }
+        }
+        
+        \Log::info('Correção de encoding para OnlyOffice aplicada', [
+            'tamanho_final' => strlen($conteudoCorrigido)
+        ]);
+        
+        return $conteudoCorrigido;
     }
 
     /**
@@ -1216,10 +1510,10 @@ Status: " . ucfirst(str_replace('_', ' ', $proposicao->status)) . "\par
             try {
                 $originalUrl = $data['url'];
                 
-                // Ajustar URL para comunicação entre containers
+                // Converter URL do OnlyOffice para acesso entre containers
                 $urlOtimizada = $originalUrl;
                 if (config('app.env') === 'local') {
-                    // Converter localhost:8080 para nome do container OnlyOffice
+                    // Laravel precisa acessar OnlyOffice usando nome do container
                     $urlOtimizada = str_replace(['http://localhost:8080', 'http://127.0.0.1:8080'], 'http://legisinc-onlyoffice', $originalUrl);
                 }
                 
@@ -1310,5 +1604,17 @@ Status: " . ucfirst(str_replace('_', ' ', $proposicao->status)) . "\par
         } finally {
             unlink($tempFile);
         }
+    }
+
+    /**
+     * Ajustar callback URL para comunicação entre containers
+     */
+    private function ajustarCallbackUrl(string $callbackUrl): string
+    {
+        if (config('app.env') === 'local') {
+            return str_replace(['http://localhost:8001', 'http://127.0.0.1:8001'], 'http://legisinc-app', $callbackUrl);
+        }
+        
+        return $callbackUrl;
     }
 }

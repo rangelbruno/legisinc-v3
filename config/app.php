@@ -123,4 +123,18 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Configurações da Câmara Municipal
+    |--------------------------------------------------------------------------
+    |
+    | Configurações específicas da câmara municipal para uso nos templates
+    | e documentos gerados pelo sistema.
+    |
+    */
+
+    'municipio' => env('APP_MUNICIPIO', 'São Paulo'),
+    'nome_camara' => env('APP_NOME_CAMARA', 'Câmara Municipal'),
+    'endereco_camara' => env('APP_ENDERECO_CAMARA', 'Endereço da Câmara'),
+
 ];

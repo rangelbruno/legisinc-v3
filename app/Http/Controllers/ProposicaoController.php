@@ -1908,7 +1908,13 @@ ${texto}
      */
     private function criarArquivoDocx($texto)
     {
-        // Limpar quebras de linha
+        // Verificar se o texto já é RTF (já processado pelo TemplateProcessorService)
+        if (strpos($texto, '{\rtf') !== false) {
+            // Texto já está em formato RTF completo, retornar como está
+            return $texto;
+        }
+        
+        // Texto é simples, precisa ser convertido para RTF
         $textoLimpo = str_replace(["\r\n", "\r"], "\n", $texto);
         
         // Converter UTF-8 para RTF
@@ -1964,6 +1970,12 @@ ${texto}
             }
             
             $conteudo = \Storage::disk('public')->get($pathArquivo);
+            
+            // Aplicar correção de encoding se o arquivo contém RTF
+            // TEMPORARIAMENTE DESABILITADO - causando triple encoding
+            // if (strpos($conteudo, '{\rtf') !== false) {
+            //     $conteudo = $this->corrigirEncodingParaOnlyOffice($conteudo);
+            // }
             
             // Determinar MIME type baseado na extensão
             $extensao = pathinfo($arquivo, PATHINFO_EXTENSION);
@@ -2390,6 +2402,68 @@ ${texto}
             'success' => true,
             'message' => 'Proposição retornada do legislativo'
         ]);
+    }
+
+    /**
+     * Corrigir encoding para exibição correta no OnlyOffice
+     */
+    private function corrigirEncodingParaOnlyOffice(string $conteudoRTF): string
+    {
+        \Log::info('Aplicando correção de encoding para OnlyOffice no serveFile', [
+            'tamanho_original' => strlen($conteudoRTF),
+            'preview' => substr($conteudoRTF, 0, 100)
+        ]);
+        
+        $conteudoCorrigido = $conteudoRTF;
+        
+        // Substituir códigos RTF e Unicode por UTF-8 para melhor interpretação no OnlyOffice
+        $substituicoes = [
+            // Códigos RTF tradicionais
+            "\\'ed" => "í",  // í
+            "\\'e3" => "ã",  // ã
+            "\\'e2" => "â",  // â  
+            "\\'e7" => "ç",  // ç
+            "\\'c7" => "Ç",  // Ç
+            "\\'c3" => "Ã",  // Ã
+            "\\'e1" => "á",  // á
+            "\\'e9" => "é",  // é
+            "\\'f3" => "ó",  // ó
+            "\\'fa" => "ú",  // ú
+            
+            // Códigos Unicode do OnlyOffice
+            "\\u237*" => "í",   // í em Unicode RTF
+            "\\u227*" => "ã",   // ã em Unicode RTF
+            "\\u226*" => "â",   // â em Unicode RTF
+            "\\u231*" => "ç",   // ç em Unicode RTF
+            "\\u199*" => "Ç",   // Ç em Unicode RTF
+            "\\u195*" => "Ã",   // Ã em Unicode RTF
+            "\\u225*" => "á",   // á em Unicode RTF
+            "\\u233*" => "é",   // é em Unicode RTF
+            "\\u243*" => "ó",   // ó em Unicode RTF
+            "\\u250*" => "ú",   // ú em Unicode RTF
+        ];
+        
+        $totalCorrecoes = 0;
+        foreach ($substituicoes as $rtfCode => $utf8Char) {
+            $antes = substr_count($conteudoCorrigido, $rtfCode);
+            $conteudoCorrigido = str_replace($rtfCode, $utf8Char, $conteudoCorrigido);
+            $depois = substr_count($conteudoCorrigido, $rtfCode);
+            
+            if ($antes > $depois) {
+                $correcoes = $antes - $depois;
+                $totalCorrecoes += $correcoes;
+                \Log::info("Correção RTF->UTF8 aplicada: {$rtfCode} -> {$utf8Char}", [
+                    'ocorrencias' => $correcoes
+                ]);
+            }
+        }
+        
+        \Log::info('Correção de encoding para OnlyOffice concluída', [
+            'total_correcoes' => $totalCorrecoes,
+            'tamanho_final' => strlen($conteudoCorrigido)
+        ]);
+        
+        return $conteudoCorrigido;
     }
 
     /**

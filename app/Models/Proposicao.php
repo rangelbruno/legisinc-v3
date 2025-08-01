@@ -209,6 +209,24 @@ class Proposicao extends Model
     }
 
     /**
+     * Obter cor do status para exibição
+     */
+    public function getStatusColor(): string
+    {
+        return match($this->status) {
+            'rascunho', 'em_edicao' => 'warning',
+            'enviado_legislativo' => 'info',
+            'aprovado_legislativo', 'aprovado_assinatura' => 'success',
+            'devolvido_correcao', 'retornado_legislativo' => 'danger',
+            'protocolado' => 'primary',
+            'assinado' => 'success',
+            'em_tramitacao' => 'info',
+            'arquivado' => 'secondary',
+            default => 'secondary'
+        };
+    }
+
+    /**
      * Boot do model
      */
     protected static function boot()

@@ -180,8 +180,7 @@ Route::prefix('templates')->group(function () {
          ->name('api.templates.extrair-variaveis');
 });
 
-Route::post('onlyoffice/callback/{documentKey}', [App\Http\Controllers\OnlyOfficeController::class, 'callback'])
-     ->name('api.onlyoffice.callback');
+// Route duplicada removida - usar a rota correta no grupo onlyoffice acima
 
 // Callback específico para proposições
 Route::post('onlyoffice/callback/proposicao/{proposicaoId}', [App\Http\Controllers\ProposicaoController::class, 'onlyOfficeCallback'])

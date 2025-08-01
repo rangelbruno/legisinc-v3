@@ -145,8 +145,21 @@ class TemplateProcessorService
      */
     private function substituirVariaveis(string $conteudo, array $variaveis): string
     {
+        // Verificar se é conteúdo RTF
+        $isRTF = strpos($conteudo, '{\rtf') !== false;
+        
         foreach ($variaveis as $variavel => $valor) {
             $placeholder = '${' . $variavel . '}';
+            
+            // Se é conteúdo RTF, aplicar conversão apropriada
+            if ($isRTF) {
+                // Primeiro, corrigir caracteres mal codificados comuns
+                $valor = $this->corrigirCaracteresMalCodificados($valor);
+                
+                // Depois converter para códigos RTF se necessário
+                $valor = $this->converterParaRTF($valor);
+            }
+            
             $conteudo = str_replace($placeholder, $valor, $conteudo);
         }
         
@@ -154,6 +167,87 @@ class TemplateProcessorService
         $conteudo = preg_replace('/\$\{([a-zA-Z_][a-zA-Z0-9_]*)\}/', '[${$1}]', $conteudo);
         
         return $conteudo;
+    }
+    
+    /**
+     * Corrigir caracteres mal codificados comuns
+     */
+    private function corrigirCaracteresMalCodificados(string $texto): string
+    {
+        // Corrigir padrões comuns de dupla codificação UTF-8
+        $correcoes = [
+            // Problemas comuns de dupla codificação
+            'MunicÃ­pio' => 'Município',
+            'SÃ£o Paulo' => 'São Paulo',
+            'CÃ¢mara' => 'Câmara',
+            'relaÃ§Ã£o' => 'relação',
+            'posiÃ§Ã£o' => 'posição',
+            'funÃ§Ã£o' => 'função',
+            'criaÃ§Ã£o' => 'criação',
+            'legislaÃ§Ã£o' => 'legislação',
+            'aprovaÃ§Ã£o' => 'aprovação',
+            'situaÃ§Ã£o' => 'situação',
+            'informaÃ§Ã£o' => 'informação',
+            'descriÃ§Ã£o' => 'descrição',
+            'conclusÃ£o' => 'conclusão',
+            'populaÃ§Ã£o' => 'população',
+            'administraÃ§Ã£o' => 'administração',
+            
+            // Outros padrões comuns
+            'nÃ£o' => 'não',
+            'tambÃ©m' => 'também',
+            'atà ' => 'até',
+            'histÃ³ria' => 'história',
+            'memÃ³ria' => 'memória',
+            'territÃ³rio' => 'território',
+            'obrigatÃ³rio' => 'obrigatório',
+            'necessÃ¡rio' => 'necessário',
+            'primÃ¡rio' => 'primário',
+            'secundÃ¡rio' => 'secundário',
+            'temporÃ¡rio' => 'temporário',
+            'ordinÃ¡rio' => 'ordinário',
+            'extraordinÃ¡rio' => 'extraordinário'
+        ];
+        
+        return str_replace(array_keys($correcoes), array_values($correcoes), $texto);
+    }
+    
+    /**
+     * Converter texto UTF-8 para códigos RTF
+     */
+    private function converterParaRTF(string $texto): string
+    {
+        // Mapear caracteres acentuados para códigos RTF
+        $mapeamento = [
+            'á' => "\\'e1",
+            'à' => "\\'e0", 
+            'â' => "\\'e2",
+            'ã' => "\\'e3",
+            'é' => "\\'e9",
+            'ê' => "\\'ea",
+            'í' => "\\'ed",
+            'ó' => "\\'f3",
+            'ô' => "\\'f4",
+            'õ' => "\\'f5",
+            'ú' => "\\'fa",
+            'ü' => "\\'fc",
+            'ç' => "\\'e7",
+            'Á' => "\\'c1",
+            'À' => "\\'c0",
+            'Â' => "\\'c2", 
+            'Ã' => "\\'c3",
+            'É' => "\\'c9",
+            'Ê' => "\\'ca",
+            'Í' => "\\'cd",
+            'Ó' => "\\'d3",
+            'Ô' => "\\'d4",
+            'Õ' => "\\'d5",
+            'Ú' => "\\'da",
+            'Ü' => "\\'dc",
+            'Ç' => "\\'c7",
+        ];
+        
+        return str_replace(array_keys($mapeamento), array_values($mapeamento), $texto);
     }
 
     /**
@@ -234,11 +328,8 @@ class TemplateProcessorService
             }
             
             if ($conteudo) {
-                // Se é RTF, extrair texto simples
-                if (Str::endsWith($template->arquivo_path, '.rtf')) {
-                    return $this->extrairTextoRTF($conteudo);
-                }
-                
+                // Para RTF do OnlyOffice, retornar diretamente sem processamento
+                // O arquivo já contém as variáveis no formato correto
                 return $conteudo;
             }
         }
@@ -252,13 +343,64 @@ class TemplateProcessorService
      */
     private function extrairTextoRTF(string $conteudoRTF): string
     {
-        // Remover códigos RTF básicos
-        $texto = preg_replace('/\{\\\\.*?\}/', '', $conteudoRTF);
-        $texto = preg_replace('/\\\\[a-z]+[0-9]*\s?/', '', $texto);
-        $texto = str_replace(['\\par', '\\'], ['', ''], $texto);
-        $texto = preg_replace('/\s+/', ' ', $texto);
+        // Para RTF do OnlyOffice, não fazer conversão de encoding - retornar como está
+        // O RTF já contém as variáveis corretas e deve ser processado diretamente
+        return $conteudoRTF;
+    }
+    
+    /**
+     * Processar caracteres especiais do RTF
+     */
+    private function processarCaracteresEspeciaisRTF(string $texto): string
+    {
+        // Mapear códigos RTF comuns para caracteres UTF-8
+        $mapeamento = [
+            "\\'e1" => 'á',
+            "\\'e0" => 'à',
+            "\\'e2" => 'â',
+            "\\'e3" => 'ã',
+            "\\'e9" => 'é',
+            "\\'ea" => 'ê',
+            "\\'ed" => 'í',
+            "\\'f3" => 'ó',
+            "\\'f4" => 'ô',
+            "\\'f5" => 'õ',
+            "\\'fa" => 'ú',
+            "\\'fc" => 'ü',
+            "\\'e7" => 'ç',
+            "\\'c1" => 'Á',
+            "\\'c0" => 'À',
+            "\\'c2" => 'Â',
+            "\\'c3" => 'Ã',
+            "\\'c9" => 'É',
+            "\\'ca" => 'Ê',
+            "\\'cd" => 'Í',
+            "\\'d3" => 'Ó',
+            "\\'d4" => 'Ô',
+            "\\'d5" => 'Õ',
+            "\\'da" => 'Ú',
+            "\\'dc" => 'Ü',
+            "\\'c7" => 'Ç',
+        ];
         
-        return trim($texto);
+        foreach ($mapeamento as $rtf => $utf8) {
+            $texto = str_replace($rtf, $utf8, $texto);
+        }
+        
+        // Processar códigos hexadecimais (\\'XX)
+        $texto = preg_replace_callback("/\\\\'([a-fA-F0-9]{2})/", function($matches) {
+            $hex = $matches[1];
+            $decimal = hexdec($hex);
+            
+            // Converter para UTF-8 baseado na codificação Windows-1252/ISO-8859-1
+            if ($decimal >= 128) {
+                return mb_convert_encoding(chr($decimal), 'UTF-8', 'Windows-1252');
+            }
+            
+            return chr($decimal);
+        }, $texto);
+        
+        return $texto;
     }
 
     /**
