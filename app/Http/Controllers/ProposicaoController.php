@@ -1006,7 +1006,7 @@ class ProposicaoController extends Controller
         try {
             // Definir nome do arquivo da proposição (usar DOCX)
             $templateIdForFile = $template ? $template->id : 'blank';
-            $nomeArquivo = "proposicao_{$proposicaoId}_template_{$templateIdForFile}.docx";
+            $nomeArquivo = "proposicao_{$proposicaoId}_template_{$templateIdForFile}.rtf";
             $pathDestino = "proposicoes/{$nomeArquivo}";
             $pathCompleto = storage_path('app/public/' . $pathDestino);
             
@@ -1126,6 +1126,11 @@ class ProposicaoController extends Controller
                 
                 // Salvar arquivo processado
                 \Storage::disk('public')->put($pathDestino, $conteudoProcessado);
+                
+                // MANTER COMO RTF para preservar formatação - OnlyOffice trabalha bem com RTF
+                // A conversão para DOCX estava removendo toda formatação
+                $pathCompleto = storage_path('app/public/' . $pathDestino);
+                // $this->converterRTFParaDOCX($pathCompleto); // Comentado para preservar formatação
                 
                 \Log::info('Template processado com variáveis substituídas', [
                     'template_path' => $template->arquivo_path,
@@ -1590,17 +1595,27 @@ ${texto}
         $variaveisNormaisEncontradas = array_unique($variaveisNoTemplate);
         
         // Também buscar variáveis codificadas em Unicode (formato OnlyOffice) 
-        // Mas apenas se não existir versão normal da mesma variável
-        // Exemplo: \u36*\u116*\u101*\u120*\u116*\u111* = $texto
-        if (preg_match_all('/\\\\u36\*([\\\\u\d\*]+)/', $conteudoRTF, $unicodeMatches)) {
+        // Padrão: sequências que começam com \u36* ($ em Unicode) seguidas de \u123* ({ em Unicode)
+        // Exemplo: \u36*\u123*\u116*\u105*\u112*\u111*... = ${tipo_...
+        if (preg_match_all('/\\\\u36\*\\\\u123\*(?:\\\\u\d+\*)+\\\\u125\*/', $conteudoRTF, $unicodeMatches)) {
+            \Log::info('Variáveis Unicode encontradas', [
+                'quantidade' => count($unicodeMatches[0]),
+                'sequencias' => array_slice($unicodeMatches[0], 0, 3) // Log primeiras 3
+            ]);
+            
             foreach ($unicodeMatches[0] as $unicodeSequence) {
-                // Decodificar sequência Unicode para texto
-                $decoded = $this->decodificarSequenciaUnicode($unicodeSequence);
-                if ($decoded && strpos($decoded, '$') === 0) {
-                    // Extrair nome da variável (remover $ e possíveis {})
-                    $nomeVariavel = str_replace(['$', '{', '}'], '', $decoded);
+                // Decodificar sequência Unicode completa para texto
+                $decoded = $this->decodificarUnicodeRTF($unicodeSequence);
+                \Log::info('Decodificação Unicode', [
+                    'sequencia' => substr($unicodeSequence, 0, 100) . '...',
+                    'decodificado' => $decoded
+                ]);
+                
+                if ($decoded && strpos($decoded, '${') === 0 && substr($decoded, -1) === '}') {
+                    // Extrair nome da variável (remover ${ e })
+                    $nomeVariavel = substr($decoded, 2, -1);
                     if ($nomeVariavel && !in_array($nomeVariavel, $variaveisNormaisEncontradas)) {
-                        // Só adicionar se não existe versão normal da mesma variável
+                        \Log::info('Variável Unicode adicionada', ['variavel' => $nomeVariavel]);
                         $variaveisNoTemplate[] = $nomeVariavel;
                     }
                 }
@@ -1641,7 +1656,7 @@ ${texto}
             ];
             
             // Adicionar placeholder para formato Unicode apenas se não há versão normal
-            $unicodePlaceholder = $this->codificarVariavelParaUnicode('$' . $variavel);
+            $unicodePlaceholder = $this->codificarVariavelParaUnicode('${' . $variavel . '}');
             if ($unicodePlaceholder && strpos($conteudoProcessado, $unicodePlaceholder) !== false) {
                 // Verificar se não existe versão normal da mesma variável
                 $temVersaoNormal = false;
@@ -1673,8 +1688,9 @@ ${texto}
                     $conteudoProcessado = str_replace($placeholder, $valorRtf, $conteudoProcessado);
                     $depois = substr_count($conteudoProcessado, $placeholder);
                 } else {
-                    // Substituição normal
-                    $conteudoProcessado = str_replace($placeholder, $valor, $conteudoProcessado);
+                    // Substituição normal - converter valor para RTF para evitar problemas de encoding
+                    $valorRtf = $this->converterUtf8ParaRtf($valor);
+                    $conteudoProcessado = str_replace($placeholder, $valorRtf, $conteudoProcessado);
                     $depois = substr_count($conteudoProcessado, $placeholder);
                 }
                 
@@ -2073,7 +2089,7 @@ ${texto}
                             $templateId = str_replace('template_', '', $templateId);
                         }
                         
-                        $nomeArquivo = "proposicao_{$proposicaoId}_template_{$templateId}.docx";
+                        $nomeArquivo = "proposicao_{$proposicaoId}_template_{$templateId}.rtf";
                         $pathDestino = "proposicoes/{$nomeArquivo}";
                         
                         // Salvar arquivo atualizado
@@ -2870,5 +2886,708 @@ ${texto}
                 'message' => 'Erro interno do servidor. Tente novamente.'
             ], 500);
         }
+    }
+
+    /**
+     * Converter texto UTF-8 para códigos RTF
+     */
+    private function converterUtf8ParaRtf($texto)
+    {
+        \Log::info('Convertendo UTF-8 para RTF escape sequences', [
+            'texto_original' => $texto,
+            'length' => strlen($texto),
+            'bytes' => bin2hex($texto)
+        ]);
+
+        // Primeiro, limpar qualquer corrupção existente e normalizar para UTF-8 limpo
+        $textoLimpo = $this->limparTextoCorrupto($texto);
+        
+        \Log::info('Texto após limpeza', [
+            'texto_limpo' => $textoLimpo,
+            'bytes_limpos' => bin2hex($textoLimpo)
+        ]);
+
+        // Converter para RTF escape sequences (o arquivo será convertido para DOCX depois)
+        $mapeamento = [
+            'á' => "\\'e1", 'à' => "\\'e0", 'â' => "\\'e2", 'ã' => "\\'e3",
+            'é' => "\\'e9", 'ê' => "\\'ea", 'í' => "\\'ed",
+            'ó' => "\\'f3", 'ô' => "\\'f4", 'õ' => "\\'f5",
+            'ú' => "\\'fa", 'ç' => "\\'e7",
+            'Á' => "\\'c1", 'À' => "\\'c0", 'Â' => "\\'c2", 'Ã' => "\\'c3",
+            'É' => "\\'c9", 'Ê' => "\\'ca", 'Í' => "\\'cd",
+            'Ó' => "\\'d3", 'Ô' => "\\'d4", 'Õ' => "\\'d5",
+            'Ú' => "\\'da", 'Ç' => "\\'c7"
+        ];
+
+        $textoRtf = $textoLimpo;
+        foreach ($mapeamento as $utf8 => $rtf) {
+            $textoRtf = str_replace($utf8, $rtf, $textoRtf);
+        }
+
+        \Log::info('Conversão UTF-8 para RTF finalizada', [
+            'texto_convertido' => $textoRtf
+        ]);
+
+        return $textoRtf;
+    }
+
+    /**
+     * Limpar texto corrupto e normalizar para UTF-8
+     */
+    private function limparTextoCorrupto($texto)
+    {
+        // Detectar e corrigir sequências corruptas conhecidas
+        $correcoes = [
+            'SÃ£o' => 'São',
+            'SÃ£' => 'Sã',
+            'Municí­pio' => 'Município',
+            'Munic­pio' => 'Município',
+            'ProposiÃ§Ã£o' => 'Proposição',
+            'C‚mara' => 'Câmara',
+            'CÃ¢mara' => 'Câmara',
+            'aÃ§Ã£o' => 'ação',
+            'oÃ§Ã£o' => 'oção'
+        ];
+
+        $textoLimpo = $texto;
+        foreach ($correcoes as $corrupto => $correto) {
+            $textoLimpo = str_replace($corrupto, $correto, $textoLimpo);
+        }
+
+        // Normalizar para UTF-8 NFC (forma canônica)
+        if (function_exists('normalizer_normalize')) {
+            $textoLimpo = normalizer_normalize($textoLimpo, \Normalizer::FORM_C);
+        }
+
+        return $textoLimpo;
+    }
+
+    /**
+     * Processar template DOCX XML (novo formato sem problemas de encoding)
+     */
+    private function processarTemplateDOCX($proposicaoId, $template, $pathDestino)
+    {
+        try {
+            $proposicao = Proposicao::find($proposicaoId);
+            
+            // Buscar variáveis preenchidas pelo parlamentar da sessão
+            $variaveisPreenchidas = session('proposicao_' . $proposicaoId . '_variaveis_template', []);
+            
+            // Se não há variáveis na sessão, usar as da proposição
+            if (empty($variaveisPreenchidas)) {
+                $variaveisPreenchidas = [
+                    'ementa' => $proposicao->ementa,
+                    'texto' => $proposicao->conteudo,
+                    'conteudo' => $proposicao->conteudo
+                ];
+            }
+
+            \Log::info('Processando template DOCX XML', [
+                'proposicao_id' => $proposicaoId,
+                'template_id' => $template->id,
+                'variaveis_preenchidas' => $variaveisPreenchidas
+            ]);
+
+            // Carregar template XML
+            $templatePath = storage_path('app/private/' . $template->arquivo_path);
+            if (!file_exists($templatePath)) {
+                throw new \Exception("Template DOCX XML não encontrado: " . $templatePath);
+            }
+
+            $templateXML = file_get_contents($templatePath);
+            
+            // Preparar variáveis do sistema
+            $user = \Auth::user();
+            $agora = \Carbon\Carbon::now();
+            
+            $variaveis = [
+                'data' => $agora->format('d/m/Y'),
+                'data_atual' => $agora->format('d/m/Y'),
+                'data_extenso' => $this->formatarDataExtenso($agora),
+                'numero_proposicao' => $this->gerarNumeroProposicao($proposicao),
+                'tipo_proposicao' => $proposicao->tipo_formatado ?? 'Projeto de Lei Ordinária',
+                'autor_nome' => $proposicao->autor->name ?? $user->name ?? 'Autor',
+                'municipio' => config('app.municipio', 'São Paulo'),
+                'nome_camara' => config('app.nome_camara', 'Câmara Municipal'),
+                'ementa' => $variaveisPreenchidas['ementa'] ?? 'Ementa da proposição',
+                'texto' => $variaveisPreenchidas['texto'] ?? 'Texto da proposição'
+            ];
+
+            // Substituir variáveis no XML (sem conversão de encoding!)
+            $xmlProcessado = $templateXML;
+            foreach ($variaveis as $variavel => $valor) {
+                // Escapar caracteres XML mas manter UTF-8
+                $valorEscapado = htmlspecialchars($valor, ENT_XML1, 'UTF-8');
+                $xmlProcessado = str_replace('${' . $variavel . '}', $valorEscapado, $xmlProcessado);
+            }
+
+            // Criar estrutura DOCX
+            $this->criarDOCXDeXML($xmlProcessado, storage_path('app/public/' . $pathDestino));
+
+            \Log::info('Template DOCX processado com sucesso', [
+                'template_path' => $template->arquivo_path,
+                'proposicao_path' => $pathDestino,
+                'arquivo_existe' => file_exists(storage_path('app/public/' . $pathDestino))
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Erro ao processar template DOCX', [
+                'error' => $e->getMessage(),
+                'proposicao_id' => $proposicaoId,
+                'template_id' => $template->id
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Criar arquivo DOCX a partir de XML do documento
+     */
+    private function criarDOCXDeXML($documentXML, $outputPath)
+    {
+        // Criar arquivo ZIP temporário
+        $zip = new \ZipArchive();
+        $tempZip = tempnam(sys_get_temp_dir(), 'docx_');
+        
+        if ($zip->open($tempZip, \ZipArchive::CREATE) !== TRUE) {
+            throw new \Exception("Não foi possível criar arquivo DOCX");
+        }
+
+        // Estrutura mínima DOCX
+        $zip->addFromString('[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+    <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+    <Default Extension="xml" ContentType="application/xml"/>
+    <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+</Types>');
+
+        $zip->addFromString('_rels/.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+    <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+</Relationships>');
+
+        $zip->addFromString('word/_rels/document.xml.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+</Relationships>');
+
+        // Adicionar o documento principal
+        $zip->addFromString('word/document.xml', $documentXML);
+
+        $zip->close();
+
+        // Mover arquivo para destino final
+        if (!rename($tempZip, $outputPath)) {
+            unlink($tempZip);
+            throw new \Exception("Não foi possível mover arquivo DOCX para destino");
+        }
+
+        \Log::info('Arquivo DOCX criado com sucesso', [
+            'output_path' => $outputPath,
+            'file_size' => filesize($outputPath)
+        ]);
+    }
+
+    /**
+     * Converter arquivo RTF para DOCX real usando comando externo
+     * Isso resolve problemas de encoding que o OnlyOffice tem com RTF
+     */
+    private function converterRTFParaDOCX($rtfPath)
+    {
+        try {
+            \Log::info('Iniciando conversão RTF para DOCX', [
+                'rtf_path' => $rtfPath,
+                'file_exists' => file_exists($rtfPath),
+                'file_size' => file_exists($rtfPath) ? filesize($rtfPath) : 0
+            ]);
+
+            // Verificar se arquivo RTF existe
+            if (!file_exists($rtfPath)) {
+                throw new \Exception("Arquivo RTF não encontrado: " . $rtfPath);
+            }
+
+            // Criar arquivo temporário para a conversão
+            $tempDir = sys_get_temp_dir();
+            $tempRtf = $tempDir . '/' . uniqid('rtf_') . '.rtf';
+            $tempDocx = $tempDir . '/' . uniqid('docx_') . '.docx';
+
+            // Copiar arquivo original para temporário
+            copy($rtfPath, $tempRtf);
+
+            // Tentar conversão usando pandoc (se disponível)
+            $pandocCmd = "pandoc '$tempRtf' -o '$tempDocx' 2>&1";
+            $pandocOutput = [];
+            $pandocReturn = 0;
+            exec($pandocCmd, $pandocOutput, $pandocReturn);
+
+            if ($pandocReturn === 0 && file_exists($tempDocx)) {
+                // Conversão com pandoc foi bem-sucedida
+                copy($tempDocx, $rtfPath);
+                unlink($tempRtf);
+                unlink($tempDocx);
+                
+                \Log::info('Conversão RTF para DOCX bem-sucedida usando pandoc', [
+                    'new_file_size' => filesize($rtfPath)
+                ]);
+                return;
+            }
+
+            // Se pandoc não funcionou, usar LibreOffice
+            $libreofficeCmd = "libreoffice --headless --convert-to docx --outdir '$tempDir' '$tempRtf' 2>&1";
+            $libreOutput = [];
+            $libreReturn = 0;
+            exec($libreofficeCmd, $libreOutput, $libreReturn);
+
+            // O LibreOffice gera arquivo com nome baseado no input
+            $expectedDocx = $tempDir . '/' . pathinfo($tempRtf, PATHINFO_FILENAME) . '.docx';
+
+            if (file_exists($expectedDocx)) {
+                // Conversão com LibreOffice foi bem-sucedida
+                copy($expectedDocx, $rtfPath);
+                unlink($tempRtf);
+                unlink($expectedDocx);
+                
+                \Log::info('Conversão RTF para DOCX bem-sucedida usando LibreOffice', [
+                    'new_file_size' => filesize($rtfPath)
+                ]);
+                return;
+            }
+
+            // Se ambos falharam, usar conversão manual simples
+            $this->converterRTFParaDOCXManual($rtfPath);
+
+        } catch (\Exception $e) {
+            \Log::warning('Falha na conversão RTF para DOCX', [
+                'error' => $e->getMessage(),
+                'rtf_path' => $rtfPath
+            ]);
+            
+            // Se conversão falhar, manter arquivo original
+            // O OnlyOffice pode ainda conseguir abrir, mesmo com problemas de encoding
+        }
+    }
+
+    /**
+     * Conversão manual de RTF para formato mais simples
+     */
+    private function converterRTFParaDOCXManual($rtfPath)
+    {
+        try {
+            $rtfContent = file_get_contents($rtfPath);
+            
+            // Extrair texto básico do RTF removendo códigos de formatação
+            $texto = $this->extrairTextoDoRTF($rtfContent);
+            
+            // Criar DOCX simples com o texto extraído
+            $this->criarDOCXSimples($texto, $rtfPath);
+            
+            \Log::info('Conversão RTF para DOCX manual bem-sucedida', [
+                'new_file_size' => filesize($rtfPath)
+            ]);
+            
+        } catch (\Exception $e) {
+            \Log::error('Falha na conversão manual RTF para DOCX', [
+                'error' => $e->getMessage()
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Decodificar sequências Unicode RTF (\u123*) para caracteres
+     */
+    private function decodificarUnicodeRTF($rtfContent)
+    {
+        // Decodificar sequências Unicode como \u36*\u123*\u116*... para texto
+        return preg_replace_callback('/(?:\\\\u(\d+)\*)+/', function($matches) {
+            $fullMatch = $matches[0];
+            $texto = '';
+            
+            // Extrair todos os números Unicode da sequência
+            if (preg_match_all('/\\\\u(\d+)\*/', $fullMatch, $unicodeMatches)) {
+                foreach ($unicodeMatches[1] as $unicode) {
+                    $char = chr((int)$unicode);
+                    $texto .= $char;
+                }
+            }
+            
+            return $texto;
+        }, $rtfContent);
+    }
+
+    /**
+     * Extrair texto básico do RTF removendo códigos de formatação
+     */
+    private function extrairTextoDoRTF($rtfContent)
+    {
+        \Log::info('Iniciando extração de texto do RTF', [
+            'tamanho_original' => strlen($rtfContent),
+            'preview' => substr($rtfContent, 0, 200)
+        ]);
+
+        // ETAPA 0: Decodificar sequências Unicode RTF primeiro
+        $texto = $this->decodificarUnicodeRTF($rtfContent);
+        \Log::info('Após decodificação Unicode', [
+            'preview_decodificado' => substr($texto, 0, 200)
+        ]);
+        
+        // ETAPA 1: Converter RTF escape sequences para UTF-8 primeiro
+        $escapeSequences = [
+            "\\'e1" => 'á', "\\'e0" => 'à', "\\'e2" => 'â', "\\'e3" => 'ã',
+            "\\'e9" => 'é', "\\'ea" => 'ê', "\\'ed" => 'í',
+            "\\'f3" => 'ó', "\\'f4" => 'ô', "\\'f5" => 'õ',
+            "\\'fa" => 'ú', "\\'e7" => 'ç',
+            "\\'c1" => 'Á', "\\'c0" => 'À', "\\'c2" => 'Â', "\\'c3" => 'Ã',
+            "\\'c9" => 'É', "\\'ca" => 'Ê', "\\'cd" => 'Í',
+            "\\'d3" => 'Ó', "\\'d4" => 'Ô', "\\'d5" => 'Õ',
+            "\\'da" => 'Ú', "\\'c7" => 'Ç'
+        ];
+        
+        foreach ($escapeSequences as $rtf => $utf8) {
+            $texto = str_replace($rtf, $utf8, $texto);
+        }
+        
+        // ETAPA 2: Converter sequências Unicode RTF (\u123*)
+        $texto = preg_replace_callback('/\\\\u(\d+)\*/', function($matches) {
+            $codepoint = intval($matches[1]);
+            if ($codepoint < 128) {
+                return chr($codepoint);
+            } else {
+                return mb_chr($codepoint, 'UTF-8');
+            }
+        }, $texto);
+        
+        // ETAPA 3: Remover definitivamente grupos de definições (fonttbl, colortbl, stylesheet)
+        // Estes grupos contêm apenas definições, não conteúdo do documento
+        $texto = preg_replace('/\{\\\\fonttbl.*?\}/s', '', $texto);
+        $texto = preg_replace('/\{\\\\colortbl.*?\}/s', '', $texto);  
+        $texto = preg_replace('/\{\\\\stylesheet.*?\}/s', '', $texto);
+        $texto = preg_replace('/\{\\\\[*]\\\\[^{}]*\}/s', '', $texto);
+        
+        \Log::info('Após remoção de definições de estilo', [
+            'tamanho_apos_limpeza' => strlen($texto),
+            'preview_apos_limpeza' => substr($texto, 0, 300)
+        ]);
+        
+        // ETAPA 4: Extrair o corpo do documento (após as definições de página)
+        if (preg_match('/\\\\paperw.*$/s', $texto, $matches)) {
+            $corpoDocumento = $matches[0];
+            \Log::info('Corpo do documento extraído', [
+                'tamanho_corpo' => strlen($corpoDocumento),
+                'preview_corpo' => substr($corpoDocumento, 0, 300)
+            ]);
+            
+            $texto = $corpoDocumento;
+        } else {
+            \Log::warning('Não foi possível encontrar o corpo do documento com \\paperw, usando texto completo');
+        }
+        
+        // ETAPA 4: Remover códigos de formatação mas preservar texto
+        $patterns = [
+            '/\\\\pard[^\\\\]*/',                        // Remove paragraph definitions
+            '/\\\\plain[^\\\\]*/',                       // Remove plain text definitions
+            '/\\\\s\d+[^\\\\]*/',                        // Remove style references
+            '/\\\\itap\d+/',                             // Remove table info
+            '/\\\\q[lcr]/',                              // Remove alignment
+            '/\\\\sb\d+/',                               // Remove space before
+            '/\\\\sa\d+/',                               // Remove space after
+            '/\\\\sl\d+/',                               // Remove line spacing
+            '/\\\\slmult\d+/',                           // Remove line spacing multiplier
+            '/\\\\f\d+/',                                // Remove font references
+            '/\\\\fs\d+/',                               // Remove font size
+            '/\\\\b\d*/',                                // Remove bold
+            '/\\\\par/',                                 // Remove paragraph breaks (replace with space)
+        ];
+        
+        foreach ($patterns as $pattern) {
+            $texto = preg_replace($pattern, ' ', $texto);
+        }
+        
+        // ETAPA 6: Extrair conteúdo de texto real de forma mais agressiva
+        $fragmentosTexto = [];
+        
+        // Estratégia 1: Buscar texto dentro de chaves (mais provável de ser conteúdo)
+        if (preg_match_all('/\{([^{}]*[a-zA-ZÀ-ÿ\s][^{}]*)\}/u', $texto, $matches)) {
+            foreach ($matches[1] as $fragmento) {
+                $fragmento = trim($fragmento);
+                // Filtrar apenas texto real, não comandos RTF
+                if (strlen($fragmento) > 5 && 
+                    !preg_match('/^\\\\/', $fragmento) &&                    // Não começa com comando RTF
+                    !preg_match('/^[0-9\s\-\*]+$/', $fragmento) &&          // Não é só números/símbolos
+                    !preg_match('/^[a-z]+\d*\s*$/', $fragmento) &&          // Não é comando sem \
+                    preg_match('/[a-zA-ZÀ-ÿ]{3,}/', $fragmento)) {          // Contém palavras reais
+                    
+                    // Limpar comandos RTF restantes do fragmento
+                    $fragmentoLimpo = preg_replace('/\\\\[a-z]+\d*\s*/', ' ', $fragmento);
+                    $fragmentoLimpo = preg_replace('/\s+/', ' ', $fragmentoLimpo);
+                    $fragmentoLimpo = trim($fragmentoLimpo);
+                    
+                    if (strlen($fragmentoLimpo) > 3) {
+                        $fragmentosTexto[] = $fragmentoLimpo;
+                    }
+                }
+            }
+        }
+        
+        // Estratégia 2: Se não achou nada nas chaves, buscar texto livre
+        if (empty($fragmentosTexto)) {
+            // Buscar sequências de texto que não sejam comandos RTF
+            if (preg_match_all('/(?:^|[^\\\\])\s*([a-zA-ZÀ-ÿ][^\\\\{}\n\r]*)/u', $texto, $matches)) {
+                foreach ($matches[1] as $fragmento) {
+                    $fragmento = trim($fragmento);
+                    if (strlen($fragmento) > 10 && 
+                        !preg_match('/^[0-9\s\-\*]+$/', $fragmento) &&
+                        preg_match('/[a-zA-ZÀ-ÿ]{3,}/', $fragmento)) {
+                        $fragmentosTexto[] = $fragmento;
+                    }
+                }
+            }
+        }
+        
+        // Aplicar resultado
+        if (!empty($fragmentosTexto)) {
+            $texto = implode(' ', $fragmentosTexto);
+            \Log::info('Fragmentos de texto extraídos', [
+                'quantidade' => count($fragmentosTexto),
+                'fragmentos' => array_slice($fragmentosTexto, 0, 3), // Log apenas os primeiros 3
+                'preview' => substr($texto, 0, 200)
+            ]);
+        } else {
+            \Log::warning('Nenhum fragmento de texto encontrado, mantendo texto processado');
+        }
+        
+        // ETAPA 5: Limpeza final
+        $texto = str_replace(['{', '}'], '', $texto);
+        $texto = preg_replace('/\s+/', ' ', $texto);
+        $texto = trim($texto);
+        
+        // Se ainda está pequeno demais, usar estratégia mais agressiva
+        if (strlen($texto) < 50) {
+            \Log::warning('Extração de texto resultou em texto muito pequeno, usando fallback mais inteligente');
+            $texto = $this->extrairTextoRTFInteligente($rtfContent);
+        }
+        
+        \Log::info('Extração de texto do RTF finalizada', [
+            'tamanho_resultado' => strlen($texto),
+            'preview_resultado' => substr($texto, 0, 200)
+        ]);
+        
+        return $texto;
+    }
+    
+    /**
+     * Extração inteligente de texto RTF (fallback melhorado)
+     */
+    private function extrairTextoRTFInteligente($rtfContent)
+    {
+        \Log::info('Usando extração RTF inteligente focada em conteúdo com escape sequences');
+        
+        $texto = $rtfContent;
+        
+        // ETAPA 1: Converter RTF escape sequences para UTF-8 primeiro
+        $escapeSequences = [
+            "\\'e1" => 'á', "\\'e0" => 'à', "\\'e2" => 'â', "\\'e3" => 'ã',
+            "\\'e9" => 'é', "\\'ea" => 'ê', "\\'ed" => 'í',
+            "\\'f3" => 'ó', "\\'f4" => 'ô', "\\'f5" => 'õ',
+            "\\'fa" => 'ú', "\\'e7" => 'ç',
+            "\\'c1" => 'Á', "\\'c0" => 'À', "\\'c2" => 'Â', "\\'c3" => 'Ã',
+            "\\'c9" => 'É', "\\'ca" => 'Ê', "\\'cd" => 'Í',
+            "\\'d3" => 'Ó', "\\'d4" => 'Ô', "\\'d5" => 'Õ',
+            "\\'da" => 'Ú', "\\'c7" => 'Ç'
+        ];
+        
+        foreach ($escapeSequences as $rtf => $utf8) {
+            $texto = str_replace($rtf, $utf8, $texto);
+        }
+        
+        // ETAPA 2: Buscar especificamente o corpo do documento
+        if (preg_match('/\\\\paperw.*$/s', $texto, $matches)) {
+            $corpoDocumento = $matches[0];
+            $texto = $corpoDocumento;
+            \Log::info('Corpo extraído para fallback inteligente', [
+                'tamanho_corpo' => strlen($corpoDocumento)
+            ]);
+        }
+        
+        // ETAPA 3: Buscar texto dentro de chaves que contenha palavras reais 
+        $fragmentosTexto = [];
+        if (preg_match_all('/\{([^{}]*[a-zA-ZÀ-ÿ]{3,}[^{}]*)\}/u', $texto, $matches)) {
+            foreach ($matches[1] as $fragmento) {
+                // Limpar códigos RTF do fragmento
+                $fragmentoLimpo = preg_replace('/\\\\[a-z]+\d*\s*/', ' ', $fragmento);
+                $fragmentoLimpo = trim($fragmentoLimpo);
+                
+                // Manter apenas fragmentos com conteúdo significativo
+                if (strlen($fragmentoLimpo) > 10 && 
+                    preg_match('/[a-zA-ZÀ-ÿ]{4,}/', $fragmentoLimpo) &&
+                    !preg_match('/^[0-9\s\-\*]+$/', $fragmentoLimpo)) {
+                    $fragmentosTexto[] = $fragmentoLimpo;
+                }
+            }
+        }
+        
+        // ETAPA 4: Se não achou nada nas chaves, buscar texto livre no corpo
+        if (empty($fragmentosTexto)) {
+            // Buscar sequências longas de texto com palavras portuguesas
+            if (preg_match_all('/([a-zA-ZÀ-ÿ][^\\\\{}\n\r]{15,})/u', $texto, $matches)) {
+                foreach ($matches[1] as $sequencia) {
+                    $sequencia = trim($sequencia);
+                    if (strlen($sequencia) > 15 && 
+                        preg_match('/[a-zA-ZÀ-ÿ]{4,}/', $sequencia)) {
+                        $fragmentosTexto[] = $sequencia;
+                    }
+                }
+            }
+        }
+        
+        // Combinar fragmentos encontrados
+        if (!empty($fragmentosTexto)) {
+            $resultado = implode(' ', $fragmentosTexto);
+            $resultado = preg_replace('/\s+/', ' ', $resultado);
+            $resultado = trim($resultado);
+            
+            \Log::info('Extração RTF inteligente finalizada', [
+                'fragmentos_encontrados' => count($fragmentosTexto),
+                'tamanho_resultado' => strlen($resultado),
+                'preview' => substr($resultado, 0, 150)
+            ]);
+            
+            return $resultado;
+        }
+        
+        // Se tudo falhar, usar método simples original
+        return $this->extrairTextoRTFSimples($rtfContent);
+    }
+    
+    /**
+     * Extração simples de texto RTF (fallback) - APENAS TEXTO LIMPO
+     */
+    private function extrairTextoRTFSimples($rtfContent)
+    {
+        \Log::info('Usando extração RTF ultra-simplificada - apenas texto limpo');
+        
+        // ETAPA 0: Decodificar sequências Unicode RTF primeiro
+        $texto = $this->decodificarUnicodeRTF($rtfContent);
+        \Log::info('Unicode decodificado na extração simples', [
+            'preview' => substr($texto, 0, 200)
+        ]);
+        
+        // ETAPA 1: Converter escape sequences RTF para UTF-8
+        $escapeSequences = [
+            "\\'e1" => 'á', "\\'e0" => 'à', "\\'e2" => 'â', "\\'e3" => 'ã',
+            "\\'e9" => 'é', "\\'ea" => 'ê', "\\'ed" => 'í',
+            "\\'f3" => 'ó', "\\'f4" => 'ô', "\\'f5" => 'õ',
+            "\\'fa" => 'ú', "\\'e7" => 'ç',
+            "\\'c1" => 'Á', "\\'c0" => 'À', "\\'c2" => 'Â', "\\'c3" => 'Ã',
+            "\\'c9" => 'É', "\\'ca" => 'Ê', "\\'cd" => 'Í',
+            "\\'d3" => 'Ó', "\\'d4" => 'Ô', "\\'d5" => 'Õ',
+            "\\'da" => 'Ú', "\\'c7" => 'Ç'
+        ];
+        
+        foreach ($escapeSequences as $rtf => $utf8) {
+            $texto = str_replace($rtf, $utf8, $texto);
+        }
+        
+        // ETAPA 2: Buscar APENAS o corpo do documento
+        if (preg_match('/\\\\paperw.*$/s', $texto, $matches)) {
+            $texto = $matches[0];
+        }
+        
+        // ETAPA 3: REMOVER COMPLETAMENTE todos os códigos RTF (mas preservar variáveis ${...})
+        $texto = preg_replace('/\{\\\\[^{}]*\}/', ' ', $texto);  // Remove grupos RTF entre chaves (que começam com \)
+        $texto = preg_replace('/\\\\[a-zA-Z]+\d*/', ' ', $texto);  // Remove comandos RTF
+        $texto = preg_replace('/\\\\[^a-zA-Z0-9]/', ' ', $texto);  // Remove escapes
+        $texto = str_replace(['\\'], ' ', $texto);  // Remove chars especiais (mas manter { } para variáveis)
+        
+        // ETAPA 4: Extrair variáveis e palavras individuais (mais permissivo)
+        $fragmentos = [];
+        
+        // Primeiro, extrair variáveis do template (${...})
+        if (preg_match_all('/\$\{[^}]+\}/', $texto, $variableMatches)) {
+            $fragmentos = array_merge($fragmentos, $variableMatches[0]);
+        }
+        
+        // Depois, extrair palavras em português
+        if (preg_match_all('/[a-zA-ZÀ-ÿ]+/', $texto, $wordMatches)) {
+            // Lista de palavras do sistema para filtrar
+            $palavrasProibidas = ['Application', 'Document', 'System', 'Windows', 'File', 'Edit', 'View', 'Insert', 'Format', 'Tools', 'Help'];
+            
+            $palavrasValidas = array_filter($wordMatches[0], function($palavra) use ($palavrasProibidas) {
+                $palavra = trim($palavra);
+                return strlen($palavra) >= 3 &&  // Pelo menos 3 caracteres
+                       !preg_match('/^[0-9]+$/', $palavra) &&  // Não é só números
+                       !preg_match('/^[A-Z]{1,3}$/', $palavra) &&  // Não é só siglas curtas
+                       !in_array(ucfirst(strtolower($palavra)), $palavrasProibidas) &&  // Não é palavra do sistema
+                       preg_match('/[a-zA-ZÀ-ÿ]/', $palavra);  // Contém letras válidas
+            });
+            
+            $fragmentos = array_merge($fragmentos, $palavrasValidas);
+        }
+        
+        if (!empty($fragmentos)) {
+            $palavrasValidas = $fragmentos;
+            
+            if (!empty($palavrasValidas)) {
+                $texto = implode(' ', $palavrasValidas);
+                \Log::info('Palavras válidas extraídas', [
+                    'quantidade' => count($palavrasValidas),
+                    'palavras' => array_slice($palavrasValidas, 0, 10) // Log primeiras 10
+                ]);
+            }
+        }
+        
+        // ETAPA 5: Se não achou nada com filtro português, usar filtro mais amplo
+        if (strlen(trim($texto)) < 10) {
+            // Reset e buscar qualquer sequência de letras
+            $texto = $rtfContent;
+            
+            // Aplicar conversões básicas
+            foreach ($escapeSequences as $rtf => $utf8) {
+                $texto = str_replace($rtf, $utf8, $texto);
+            }
+            
+            // Remover códigos e extrair apenas texto
+            $texto = preg_replace('/\\\\[a-zA-Z]+\d*/', ' ', $texto);
+            $texto = preg_replace('/[{}\\\\]/', ' ', $texto);
+            
+            if (preg_match_all('/[a-zA-ZÀ-ÿ\s]{10,}/', $texto, $matches)) {
+                $frasesLongas = array_filter($matches[0], function($frase) {
+                    return strlen(trim($frase)) > 10;
+                });
+                
+                if (!empty($frasesLongas)) {
+                    $texto = implode(' ', $frasesLongas);
+                }
+            }
+        }
+        
+        // ETAPA 6: Limpeza final
+        $texto = preg_replace('/\s+/', ' ', $texto);
+        $texto = trim($texto);
+        
+        \Log::info('Extração RTF ultra-simplificada finalizada', [
+            'tamanho_resultado' => strlen($texto),
+            'preview' => substr($texto, 0, 200)
+        ]);
+        
+        return $texto;
+    }
+
+    /**
+     * Criar DOCX simples com texto limpo
+     */
+    private function criarDOCXSimples($texto, $outputPath)
+    {
+        $documentXML = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+    <w:body>
+        <w:p>
+            <w:r>
+                <w:t>' . htmlspecialchars($texto, ENT_XML1, 'UTF-8') . '</w:t>
+            </w:r>
+        </w:p>
+    </w:body>
+</w:document>';
+
+        $this->criarDOCXDeXML($documentXML, $outputPath);
     }
 }

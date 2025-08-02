@@ -89,6 +89,11 @@ services:
       - DB_PWD=123456
       - REDIS_SERVER_HOST=redis
       - REDIS_SERVER_PORT=6379
+      - DOCUMENT_SERVER_REGION=pt-BR
+      - DOCUMENT_SERVER_LOCALE=pt_BR.UTF-8
+      - LC_ALL=pt_BR.UTF-8
+      - LANG=pt_BR.UTF-8
+      - LANGUAGE=pt_BR:pt:en
     ports:
       - "8080:80"
     volumes:

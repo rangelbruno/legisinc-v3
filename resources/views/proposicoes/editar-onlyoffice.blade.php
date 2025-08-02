@@ -303,6 +303,7 @@
                 "editorConfig": {
                     "mode": "edit",
                     "lang": "pt-BR",
+                    "region": "pt-BR", 
                     "callbackUrl": "http://host.docker.internal:8001/api/onlyoffice/callback/proposicao/{{ $proposicao->id ?? 1 }}",
                     "user": {
                         "id": "{{ auth()->id() }}",
@@ -313,6 +314,10 @@
                         "about": false,
                         "feedback": false,
                         "forcesave": true,
+                        "spellcheck": {
+                            "mode": true,
+                            "lang": ["pt-BR"]
+                        },
                         "goback": {
                             "blank": false,
                             "text": "Voltar às Proposições",
