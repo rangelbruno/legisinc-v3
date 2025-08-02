@@ -254,14 +254,23 @@ class TemplateController extends Controller
             )->deleteFileAfterSend(true);
         }
         
-        // Retornar arquivo normal com headers adequados para UTF-8
+        // Detectar tipo de arquivo e definir Content-Type apropriado
+        $extension = pathinfo($template->arquivo_path, PATHINFO_EXTENSION);
+        $contentType = match($extension) {
+            'txt' => 'text/plain; charset=utf-8',
+            'rtf' => 'application/rtf',
+            'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            default => 'application/octet-stream'
+        };
+        
+        // Retornar arquivo com headers corretos
         return response()->download(
             Storage::path($template->arquivo_path), 
             $nomeArquivo,
             [
                 'Cache-Control' => 'no-cache, no-store, must-revalidate',
-                'Content-Type' => 'application/rtf; charset=UTF-8',
-                'Content-Disposition' => 'attachment; filename*=UTF-8\'\'' . rawurlencode($nomeArquivo)
+                'Content-Type' => $contentType,
+                'Content-Disposition' => 'attachment; filename="' . $nomeArquivo . '"'
             ]
         );
     }

@@ -40,12 +40,21 @@ class OnlyOfficeService
             'original_key' => $template->document_key
         ]);
         
+        // Detectar tipo de arquivo pelo caminho
+        $fileExtension = pathinfo($template->arquivo_path, PATHINFO_EXTENSION);
+        $fileType = $fileExtension === 'txt' ? 'txt' : 'rtf';
+        $documentType = $fileExtension === 'txt' ? 'text' : 'word';
+        
         $config = [
             'document' => [
-                'fileType' => 'rtf',
+                'fileType' => $fileType,
                 'key' => $documentKeyWithVersion,
                 'title' => $template->getNomeTemplate(),
                 'url' => $downloadUrl,
+                'info' => [
+                    'owner' => auth()->user()->name ?? 'Sistema',
+                    'uploaded' => $template->updated_at->format('d/m/Y H:i:s')
+                ],
                 'permissions' => [
                     'comment' => true,
                     'copy' => true,
@@ -58,7 +67,7 @@ class OnlyOfficeService
                     'chat' => false,
                 ]
             ],
-            'documentType' => 'word',
+            'documentType' => $documentType,
             'editorConfig' => [
                 'mode' => 'edit',
                 'callbackUrl' => $this->ajustarCallbackUrl(route('api.onlyoffice.callback', $template->document_key)),
@@ -74,6 +83,9 @@ class OnlyOfficeService
                     'hideRightMenu' => false,
                     'feedback' => [
                         'visible' => false
+                    ],
+                    'goback' => [
+                        'url' => route('templates.index')
                     ]
                 ],
                 'coEditing' => [
@@ -185,20 +197,43 @@ class OnlyOfficeService
     private function salvarTemplate(TipoProposicaoTemplate $template, string $url): void
     {
         try {
-            // Usar URL interna entre containers Docker (mais rápido)
-            $urlOtimizada = str_replace($this->serverUrl, $this->internalUrl, $url);
+            // Corrigir URL do OnlyOffice para usar nome correto do container
+            $urlCorrigida = str_replace([
+                'onlyoffice-documentserver',
+                'localhost:8080'
+            ], 'legisinc-onlyoffice', $url);
+            
+            // Se a URL ainda contém localhost, substituir pela URL interna
+            if (strpos($urlCorrigida, 'localhost') !== false) {
+                $urlCorrigida = str_replace('http://localhost:8080', 'http://legisinc-onlyoffice', $urlCorrigida);
+            }
+            
+            \Log::info('Tentando baixar arquivo do OnlyOffice', [
+                'url_original' => $url,
+                'url_corrigida' => $urlCorrigida
+            ]);
             
             // Download direto com timeout aumentado
-            $response = Http::timeout(30)->get($urlOtimizada);
+            $response = Http::timeout(30)->get($urlCorrigida);
             
             if (!$response->successful()) {
-                // Fallback com timeout maior se necessário
-                \Log::warning('Tentando URL fallback após falha', [
-                    'url_otimizada' => $urlOtimizada,
-                    'url_original' => $url,
-                    'status' => $response->status()
-                ]);
-                $response = Http::timeout(30)->get($url);
+                // Fallback tentando outras variações de URL
+                $urlsFallback = [
+                    str_replace('http://localhost:8080', 'http://127.0.0.1:8080', $url),
+                    $url // URL original como último recurso
+                ];
+                
+                foreach ($urlsFallback as $urlFallback) {
+                    \Log::warning('Tentando URL fallback', [
+                        'url_fallback' => $urlFallback,
+                        'status_anterior' => $response->status()
+                    ]);
+                    
+                    $response = Http::timeout(30)->get($urlFallback);
+                    if ($response->successful()) {
+                        break;
+                    }
+                }
             }
             
             if (!$response || !$response->successful()) {
