@@ -685,7 +685,7 @@
                         "rightMenu": true,
                         "toolbar": true,
                         "statusBar": true,
-                        "autosave": true
+                        "autosave": false
                     },
                     "plugins": {
                         "autostart": [],
@@ -865,28 +865,48 @@ OnlyOffice Server: http://localhost:8080
                 `;
                 btnSalvar.disabled = true;
                 
-                // IMPORTANTE: Forçar o OnlyOffice a salvar o documento imediatamente
+                // IMPORTANTE: Forçar o OnlyOffice a salvar o documento
                 try {
-                    docEditor.requestSave();
-                    console.log("requestSave() chamado com sucesso");
+                    console.log("Verificando métodos disponíveis do docEditor:", Object.getOwnPropertyNames(docEditor));
                     
-                    // Timeout de segurança - se OnlyOffice não responder em 10 segundos
+                    // Tentar diferentes métodos de salvamento
+                    if (typeof docEditor.requestSave === 'function') {
+                        console.log("Usando requestSave()");
+                        docEditor.requestSave();
+                    } else if (typeof docEditor.save === 'function') {
+                        console.log("Usando save()");
+                        docEditor.save();
+                    } else if (typeof docEditor.forceSave === 'function') {
+                        console.log("Usando forceSave()");
+                        docEditor.forceSave();
+                    } else {
+                        console.log("Métodos de salvamento disponíveis:", 
+                            Object.getOwnPropertyNames(docEditor).filter(name => 
+                                name.toLowerCase().includes('save')
+                            )
+                        );
+                        throw new Error("Nenhum método de salvamento encontrado");
+                    }
+                    
+                    console.log("Método de salvamento chamado com sucesso");
+                    
+                    // Timeout de segurança - se OnlyOffice não responder em 15 segundos
                     saveTimeout = setTimeout(function() {
-                        console.warn("Timeout ao salvar - OnlyOffice não respondeu");
+                        console.warn("Timeout ao salvar - OnlyOffice não respondeu em 15s");
                         isSaving = false;
                         btnSalvar.innerHTML = `
                             <i class="ki-duotone ki-cross fs-2">
                                 <span class="path1"></span>
                                 <span class="path2"></span>
                             </i>
-                            Erro ao salvar
+                            Timeout
                         `;
-                        btnSalvar.className = 'btn btn-sm btn-danger';
+                        btnSalvar.className = 'btn btn-sm btn-warning';
                         btnSalvar.disabled = false;
                         
-                        Toast.error('Erro ao salvar', 'Timeout - tente novamente', 5000);
+                        Toast.warning('Salvamento demorado', 'O documento pode estar sendo salvo automaticamente. Aguarde um momento.', 8000);
                         
-                        // Voltar ao estado normal após 3 segundos
+                        // Voltar ao estado normal após 5 segundos
                         setTimeout(function() {
                             btnSalvar.innerHTML = `
                                 <i class="ki-duotone ki-save fs-2">
@@ -896,11 +916,11 @@ OnlyOffice Server: http://localhost:8080
                                 Salvar*
                             `;
                             btnSalvar.className = 'btn btn-sm btn-success';
-                        }, 3000);
-                    }, 10000);
+                        }, 5000);
+                    }, 15000);
                     
                 } catch (error) {
-                    console.error("Erro ao chamar requestSave():", error);
+                    console.error("Erro ao chamar método de salvamento:", error);
                     isSaving = false;
                     btnSalvar.innerHTML = `
                         <i class="ki-duotone ki-cross fs-2">
@@ -912,7 +932,7 @@ OnlyOffice Server: http://localhost:8080
                     btnSalvar.className = 'btn btn-sm btn-danger';
                     btnSalvar.disabled = false;
                     
-                    SwitchAlert.show('error', 'Erro ao salvar', 'Não foi possível salvar o documento. Tente novamente.');
+                    SwitchAlert.show('error', 'Erro ao salvar', `Método de salvamento não disponível: ${error.message}`);
                 }
             } else if (isSaving) {
                 Toast.warning('Salvamento em andamento', 'Aguarde o salvamento atual terminar.');
