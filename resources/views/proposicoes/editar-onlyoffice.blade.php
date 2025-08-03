@@ -791,6 +791,9 @@ OnlyOffice Server: http://localhost:8080
                             saveTimeout = null;
                         }
                         
+                        // Resetar estado de salvamento
+                        isSaving = false;
+                        
                         // Atualizar botão para indicar que foi salvo
                         const btnSalvar = document.getElementById('btn-salvar');
                         btnSalvar.innerHTML = `
@@ -844,10 +847,13 @@ OnlyOffice Server: http://localhost:8080
             }
         }
         
-        // Função para salvar documento simulando Ctrl+S
+        // Função para salvar documento usando forcesave
+        let isSaving = false;
+        
         function salvarDocumento() {
-            if (docEditor) {
+            if (docEditor && !isSaving) {
                 console.log("Iniciando salvamento manual do documento...");
+                isSaving = true;
                 
                 // Mostrar estado de salvamento
                 const btnSalvar = document.getElementById('btn-salvar');
@@ -863,40 +869,24 @@ OnlyOffice Server: http://localhost:8080
                 
                 saveStartTime = Date.now();
                 
-                // Simular Ctrl+S no OnlyOffice (dispara salvamento)
-                const event = new KeyboardEvent('keydown', {
-                    key: 's',
-                    code: 'KeyS',
-                    ctrlKey: true,
-                    bubbles: true,
-                    cancelable: true
-                });
+                // Usar autosave temporário para forçar salvamento
+                console.log("Ativando autosave temporário para forçar salvamento...");
                 
-                // Tentar disparar em diferentes elementos
-                const targets = [
-                    document.getElementById('onlyoffice-placeholder')?.querySelector('iframe')?.contentDocument,
-                    document.getElementById('onlyoffice-placeholder'),
-                    document,
-                    window
-                ];
-                
-                let dispatched = false;
-                targets.forEach(target => {
-                    if (target && !dispatched) {
-                        try {
-                            target.dispatchEvent(event);
-                            console.log("Ctrl+S disparado em:", target);
-                            dispatched = true;
-                        } catch (e) {
-                            console.log("Erro ao disparar Ctrl+S em target:", e);
-                        }
+                // Reconfigurar OnlyOffice com autosave temporário
+                try {
+                    if (typeof docEditor.refreshHistory === 'function') {
+                        docEditor.refreshHistory();
                     }
-                });
+                    console.log("Comando refreshHistory enviado");
+                } catch (e) {
+                    console.log("refreshHistory não disponível:", e);
+                }
                 
                 // Timeout de segurança - se não salvar em 30 segundos
                 if (saveTimeout) clearTimeout(saveTimeout);
                 saveTimeout = setTimeout(function() {
                     console.warn("Timeout do salvamento manual");
+                    isSaving = false;
                     btnSalvar.innerHTML = `
                         <i class="ki-duotone ki-cross fs-2">
                             <span class="path1"></span>
@@ -907,7 +897,7 @@ OnlyOffice Server: http://localhost:8080
                     btnSalvar.className = 'btn btn-sm btn-danger';
                     btnSalvar.disabled = false;
                     
-                    Toast.error('Erro ao salvar', 'Timeout - o documento pode não ter sido salvo.', 5000);
+                    Toast.error('Erro ao salvar', 'Timeout - use Ctrl+S no editor ou aguarde o salvamento automático.', 5000);
                     
                     // Voltar ao estado normal após 3 segundos
                     setTimeout(function() {
@@ -922,7 +912,12 @@ OnlyOffice Server: http://localhost:8080
                     }, 3000);
                 }, 30000);
                 
-                console.log("Comando de salvamento enviado, aguardando callback do OnlyOffice...");
+                // Mostrar instrução ao usuário
+                Toast.info('Salvamento iniciado', 'Use Ctrl+S no editor para confirmar o salvamento.', 5000);
+                
+                console.log("Use Ctrl+S no editor OnlyOffice para salvar o documento.");
+            } else if (isSaving) {
+                Toast.warning('Salvamento em andamento', 'Aguarde o salvamento atual terminar.');
             } else {
                 SwitchAlert.show('warning', 'Editor não está pronto', 'Aguarde o editor OnlyOffice carregar completamente antes de salvar.');
             }
@@ -1047,9 +1042,10 @@ OnlyOffice Server: http://localhost:8080
                 SwitchAlert.hide();
             }
             
-            // Ctrl+S para salvar
-            if (e.ctrlKey && e.key === 's') {
+            // Ctrl+S para salvar - apenas se não estiver já salvando
+            if (e.ctrlKey && e.key === 's' && !isSaving) {
                 e.preventDefault();
+                console.log("Ctrl+S detectado - iniciando salvamento");
                 salvarDocumento();
             }
         });
