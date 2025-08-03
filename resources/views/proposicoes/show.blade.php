@@ -177,6 +177,9 @@
                             <a href="{{ route('proposicoes.editar-texto', $proposicao->id) }}" class="btn btn-primary">
                                 <i class="fas fa-edit me-2"></i>Editar Proposição
                             </a>
+                            <button class="btn btn-success" onclick="enviarParaLegislativo()">
+                                <i class="fas fa-paper-plane me-2"></i>Enviar para o Legislativo
+                            </button>
                             <button class="btn btn-outline-danger" onclick="excluirProposicao()">
                                 <i class="fas fa-trash me-2"></i>Excluir Rascunho
                             </button>
