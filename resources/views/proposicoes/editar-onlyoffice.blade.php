@@ -661,6 +661,8 @@
                         "about": false,
                         "feedback": false,
                         "forcesave": true,
+                        "autosave": true,
+                        "autosaveType": 1,
                         "spellcheck": {
                             "mode": true,
                             "lang": ["pt-BR"]
@@ -684,8 +686,11 @@
                         "leftMenu": true,
                         "rightMenu": true,
                         "toolbar": true,
-                        "statusBar": true,
-                        "autosave": true
+                        "statusBar": true
+                    },
+                    "autosave": {
+                        "enabled": true,
+                        "timeout": 3000
                     },
                     "plugins": {
                         "autostart": [],
@@ -721,7 +726,25 @@
                             `;
                             saveStatus.className = 'btn btn-sm btn-warning';
                             updateUnsavedState(true);
+                            saveStartTime = Date.now();
                             Toast.info('Documento modificado', 'Salvamento automático em andamento...', 3000);
+                            
+                            // Timeout de segurança - se não salvar em 2 minutos, assumir que foi salvo
+                            if (saveTimeout) clearTimeout(saveTimeout);
+                            saveTimeout = setTimeout(function() {
+                                const elapsed = Math.round((Date.now() - saveStartTime) / 1000);
+                                console.log(`Timeout do salvamento após ${elapsed}s - assumindo que foi salvo automaticamente`);
+                                saveStatus.innerHTML = `
+                                    <i class="ki-duotone ki-check fs-2">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                    </i>
+                                    Salvo (timeout ${elapsed}s)
+                                `;
+                                saveStatus.className = 'btn btn-sm btn-secondary';
+                                updateUnsavedState(false);
+                                Toast.warning('Timeout do salvamento', `Assumindo que foi salvo após ${elapsed}s.`, 5000);
+                            }, 120000); // 2 minutos
                         }
                     },
                     "onError": function(event) {
@@ -786,6 +809,12 @@ OnlyOffice Server: http://localhost:8080
                     "onSave": function(event) {
                         console.log("OnlyOffice onSave event - documento salvo automaticamente:", event);
                         
+                        // Limpar timeout de segurança
+                        if (saveTimeout) {
+                            clearTimeout(saveTimeout);
+                            saveTimeout = null;
+                        }
+                        
                         // Atualizar status para indicar que foi salvo
                         const saveStatus = document.getElementById('save-status');
                         saveStatus.innerHTML = `
@@ -798,8 +827,10 @@ OnlyOffice Server: http://localhost:8080
                         saveStatus.className = 'btn btn-sm btn-success';
                         
                         // AGORA SIM - documento realmente salvo pelo OnlyOffice
+                        const elapsed = saveStartTime ? Math.round((Date.now() - saveStartTime) / 1000) : 0;
+                        console.log(`Documento salvo em ${elapsed}s`);
                         updateUnsavedState(false);
-                        Toast.success('Documento salvo', 'Suas alterações foram salvas automaticamente!', 3000);
+                        Toast.success('Documento salvo', `Suas alterações foram salvas automaticamente em ${elapsed}s!`, 4000);
                         
                         // Voltar ao estado normal após 5 segundos
                         setTimeout(function() {
@@ -908,6 +939,8 @@ OnlyOffice Server: http://localhost:8080
         // Variável para controlar se deve mostrar aviso ao sair
         let hasUnsavedChanges = false;
         let preventUnload = false;
+        let saveTimeout = null;
+        let saveStartTime = null;
         
         // Atualizar estado de alterações não salvas
         function updateUnsavedState(hasChanges) {
