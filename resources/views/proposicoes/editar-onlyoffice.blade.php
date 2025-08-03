@@ -784,7 +784,17 @@ OnlyOffice Server: http://localhost:8080
                         console.log("Salvamento requisitado pelo usuário");
                     },
                     "onSave": function(event) {
-                        console.log("Documento salvo com sucesso:", event);
+                        console.log("OnlyOffice onSave event:", event);
+                        
+                        // Limpar timeout de segurança
+                        if (saveTimeout) {
+                            clearTimeout(saveTimeout);
+                            saveTimeout = null;
+                        }
+                        
+                        // Resetar estado de salvamento
+                        isSaving = false;
+                        
                         // Atualizar botão para indicar que foi salvo
                         const btnSalvar = document.getElementById('btn-salvar');
                         btnSalvar.innerHTML = `
@@ -795,7 +805,9 @@ OnlyOffice Server: http://localhost:8080
                             Salvo!
                         `;
                         btnSalvar.className = 'btn btn-sm btn-success';
+                        btnSalvar.disabled = false;
                         
+                        // AGORA SIM - documento realmente salvo pelo OnlyOffice
                         updateUnsavedState(false);
                         Toast.success('Documento salvo', 'Suas alterações foram salvas com sucesso!', 3000);
                         
@@ -833,9 +845,14 @@ OnlyOffice Server: http://localhost:8080
             }
         }
         
+        // Estado do salvamento
+        let isSaving = false;
+        let saveTimeout = null;
+        
         function salvarDocumento() {
-            if (docEditor) {
+            if (docEditor && !isSaving) {
                 console.log("Forçando salvamento do documento...");
+                isSaving = true;
                 
                 // Mostrar mensagem de salvamento
                 const btnSalvar = document.getElementById('btn-salvar');
@@ -849,49 +866,70 @@ OnlyOffice Server: http://localhost:8080
                 btnSalvar.disabled = true;
                 
                 // IMPORTANTE: Forçar o OnlyOffice a salvar o documento imediatamente
-                // Usar o método requestSave() da API do OnlyOffice
                 try {
-                    // Chamar o método de salvamento forçado do OnlyOffice
                     docEditor.requestSave();
                     console.log("requestSave() chamado com sucesso");
-                } catch (error) {
-                    console.error("Erro ao chamar requestSave():", error);
-                }
-                
-                // Aguardar um pouco e mostrar feedback de sucesso
-                setTimeout(function() {
-                    btnSalvar.innerHTML = `
-                        <i class="ki-duotone ki-check fs-2">
-                            <span class="path1"></span>
-                            <span class="path2"></span>
-                        </i>
-                        Salvo!
-                    `;
-                    btnSalvar.className = 'btn btn-sm btn-success';
-                    btnSalvar.disabled = false;
                     
-                    // Resetar estado de alterações não salvas
-                    updateUnsavedState(false);
-                    
-                    // Voltar ao estado normal após mais 2 segundos
-                    setTimeout(function() {
+                    // Timeout de segurança - se OnlyOffice não responder em 10 segundos
+                    saveTimeout = setTimeout(function() {
+                        console.warn("Timeout ao salvar - OnlyOffice não respondeu");
+                        isSaving = false;
                         btnSalvar.innerHTML = `
-                            <i class="ki-duotone ki-save fs-2">
+                            <i class="ki-duotone ki-cross fs-2">
                                 <span class="path1"></span>
                                 <span class="path2"></span>
                             </i>
-                            Salvar
+                            Erro ao salvar
                         `;
-                        btnSalvar.className = 'btn btn-sm btn-primary';
-                    }, 2000);
-                }, 1500);
+                        btnSalvar.className = 'btn btn-sm btn-danger';
+                        btnSalvar.disabled = false;
+                        
+                        Toast.error('Erro ao salvar', 'Timeout - tente novamente', 5000);
+                        
+                        // Voltar ao estado normal após 3 segundos
+                        setTimeout(function() {
+                            btnSalvar.innerHTML = `
+                                <i class="ki-duotone ki-save fs-2">
+                                    <span class="path1"></span>
+                                    <span class="path2"></span>
+                                </i>
+                                Salvar*
+                            `;
+                            btnSalvar.className = 'btn btn-sm btn-success';
+                        }, 3000);
+                    }, 10000);
+                    
+                } catch (error) {
+                    console.error("Erro ao chamar requestSave():", error);
+                    isSaving = false;
+                    btnSalvar.innerHTML = `
+                        <i class="ki-duotone ki-cross fs-2">
+                            <span class="path1"></span>
+                            <span class="path2"></span>
+                        </i>
+                        Erro
+                    `;
+                    btnSalvar.className = 'btn btn-sm btn-danger';
+                    btnSalvar.disabled = false;
+                    
+                    SwitchAlert.show('error', 'Erro ao salvar', 'Não foi possível salvar o documento. Tente novamente.');
+                }
+            } else if (isSaving) {
+                Toast.warning('Salvamento em andamento', 'Aguarde o salvamento atual terminar.');
             } else {
                 SwitchAlert.show('warning', 'Editor não está pronto', 'Aguarde o editor OnlyOffice carregar completamente antes de salvar.');
             }
         }
         
         function fecharAba() {
-            console.log('fecharAba called, hasUnsavedChanges:', hasUnsavedChanges);
+            console.log('fecharAba called, hasUnsavedChanges:', hasUnsavedChanges, 'isSaving:', isSaving);
+            
+            // Se está salvando, avisar para aguardar
+            if (isSaving) {
+                SwitchAlert.show('warning', 'Salvamento em andamento', 'Aguarde o documento ser salvo antes de fechar o editor.');
+                return;
+            }
+            
             // Verificar se há alterações não salvas
             if (hasUnsavedChanges) {
                 SwitchAlert.confirm(
@@ -1015,7 +1053,15 @@ OnlyOffice Server: http://localhost:8080
         document.addEventListener('click', function(e) {
             const link = e.target.closest('a');
             if (link) {
-                console.log('Link clicked, hasUnsavedChanges:', hasUnsavedChanges, 'preventUnload:', preventUnload);
+                console.log('Link clicked, hasUnsavedChanges:', hasUnsavedChanges, 'isSaving:', isSaving, 'preventUnload:', preventUnload);
+                
+                // Se está salvando, impedir navegação
+                if (isSaving && !preventUnload) {
+                    e.preventDefault();
+                    SwitchAlert.show('warning', 'Salvamento em andamento', 'Aguarde o documento ser salvo antes de navegar.');
+                    return;
+                }
+                
                 if (hasUnsavedChanges && !preventUnload) {
                     // Verificar se não é um link para download ou externo
                     const href = link.getAttribute('href');
