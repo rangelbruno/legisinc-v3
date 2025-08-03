@@ -441,13 +441,13 @@
             
             <!--begin::Actions-->
             <div class="editor-actions">
-                <div id="save-status" class="btn btn-sm btn-secondary" style="cursor: default;">
-                    <i class="ki-duotone ki-check fs-2">
+                <button id="btn-salvar" class="btn btn-sm btn-primary" onclick="salvarDocumento()">
+                    <i class="ki-duotone ki-save fs-2">
                         <span class="path1"></span>
                         <span class="path2"></span>
                     </i>
-                    Salvo automaticamente
-                </div>
+                    Salvar
+                </button>
                 <button id="btn-fechar" class="btn btn-sm btn-secondary" onclick="fecharAba()">
                     <i class="ki-duotone ki-cross fs-2">
                         <span class="path1"></span>
@@ -661,8 +661,6 @@
                         "about": false,
                         "feedback": false,
                         "forcesave": true,
-                        "autosave": true,
-                        "autosaveType": 1,
                         "spellcheck": {
                             "mode": true,
                             "lang": ["pt-BR"]
@@ -688,10 +686,6 @@
                         "toolbar": true,
                         "statusBar": true
                     },
-                    "autosave": {
-                        "enabled": true,
-                        "timeout": 3000
-                    },
                     "plugins": {
                         "autostart": [],
                         "pluginsData": []
@@ -716,35 +710,17 @@
                         console.log("Estado do documento alterado:", event);
                         // Documento foi modificado
                         if (event.data) {
-                            const saveStatus = document.getElementById('save-status');
-                            saveStatus.innerHTML = `
-                                <i class="ki-duotone ki-loading fs-2">
+                            const btnSalvar = document.getElementById('btn-salvar');
+                            btnSalvar.innerHTML = `
+                                <i class="ki-duotone ki-save fs-2">
                                     <span class="path1"></span>
                                     <span class="path2"></span>
                                 </i>
-                                Salvando...
+                                Salvar*
                             `;
-                            saveStatus.className = 'btn btn-sm btn-warning';
+                            btnSalvar.className = 'btn btn-sm btn-success';
                             updateUnsavedState(true);
-                            saveStartTime = Date.now();
-                            Toast.info('Documento modificado', 'Salvamento automático em andamento...', 3000);
-                            
-                            // Timeout de segurança - se não salvar em 2 minutos, assumir que foi salvo
-                            if (saveTimeout) clearTimeout(saveTimeout);
-                            saveTimeout = setTimeout(function() {
-                                const elapsed = Math.round((Date.now() - saveStartTime) / 1000);
-                                console.log(`Timeout do salvamento após ${elapsed}s - assumindo que foi salvo automaticamente`);
-                                saveStatus.innerHTML = `
-                                    <i class="ki-duotone ki-check fs-2">
-                                        <span class="path1"></span>
-                                        <span class="path2"></span>
-                                    </i>
-                                    Salvo (timeout ${elapsed}s)
-                                `;
-                                saveStatus.className = 'btn btn-sm btn-secondary';
-                                updateUnsavedState(false);
-                                Toast.warning('Timeout do salvamento', `Assumindo que foi salvo após ${elapsed}s.`, 5000);
-                            }, 120000); // 2 minutos
+                            Toast.info('Documento modificado', 'Clique em "Salvar" para salvar as alterações.', 3000);
                         }
                     },
                     "onError": function(event) {
@@ -807,7 +783,7 @@ OnlyOffice Server: http://localhost:8080
                         console.log("Salvamento requisitado pelo usuário");
                     },
                     "onSave": function(event) {
-                        console.log("OnlyOffice onSave event - documento salvo automaticamente:", event);
+                        console.log("OnlyOffice onSave event - documento salvo:", event);
                         
                         // Limpar timeout de segurança
                         if (saveTimeout) {
@@ -815,34 +791,35 @@ OnlyOffice Server: http://localhost:8080
                             saveTimeout = null;
                         }
                         
-                        // Atualizar status para indicar que foi salvo
-                        const saveStatus = document.getElementById('save-status');
-                        saveStatus.innerHTML = `
+                        // Atualizar botão para indicar que foi salvo
+                        const btnSalvar = document.getElementById('btn-salvar');
+                        btnSalvar.innerHTML = `
                             <i class="ki-duotone ki-check fs-2">
                                 <span class="path1"></span>
                                 <span class="path2"></span>
                             </i>
-                            Salvo automaticamente
+                            Salvo!
                         `;
-                        saveStatus.className = 'btn btn-sm btn-success';
+                        btnSalvar.className = 'btn btn-sm btn-success';
+                        btnSalvar.disabled = false;
                         
                         // AGORA SIM - documento realmente salvo pelo OnlyOffice
                         const elapsed = saveStartTime ? Math.round((Date.now() - saveStartTime) / 1000) : 0;
                         console.log(`Documento salvo em ${elapsed}s`);
                         updateUnsavedState(false);
-                        Toast.success('Documento salvo', `Suas alterações foram salvas automaticamente em ${elapsed}s!`, 4000);
+                        Toast.success('Documento salvo', `Suas alterações foram salvas com sucesso em ${elapsed}s!`, 4000);
                         
-                        // Voltar ao estado normal após 5 segundos
+                        // Voltar ao estado normal após 3 segundos
                         setTimeout(function() {
-                            saveStatus.innerHTML = `
-                                <i class="ki-duotone ki-check fs-2">
+                            btnSalvar.innerHTML = `
+                                <i class="ki-duotone ki-save fs-2">
                                     <span class="path1"></span>
                                     <span class="path2"></span>
                                 </i>
-                                Salvo automaticamente
+                                Salvar
                             `;
-                            saveStatus.className = 'btn btn-sm btn-secondary';
-                        }, 5000);
+                            btnSalvar.className = 'btn btn-sm btn-primary';
+                        }, 3000);
                     }
                 }
             };
@@ -867,13 +844,98 @@ OnlyOffice Server: http://localhost:8080
             }
         }
         
-        // OnlyOffice usa salvamento automático - não precisamos de função manual
+        // Função para salvar documento simulando Ctrl+S
+        function salvarDocumento() {
+            if (docEditor) {
+                console.log("Iniciando salvamento manual do documento...");
+                
+                // Mostrar estado de salvamento
+                const btnSalvar = document.getElementById('btn-salvar');
+                btnSalvar.innerHTML = `
+                    <i class="ki-duotone ki-loading fs-2">
+                        <span class="path1"></span>
+                        <span class="path2"></span>
+                    </i>
+                    Salvando...
+                `;
+                btnSalvar.className = 'btn btn-sm btn-warning';
+                btnSalvar.disabled = true;
+                
+                saveStartTime = Date.now();
+                
+                // Simular Ctrl+S no OnlyOffice (dispara salvamento)
+                const event = new KeyboardEvent('keydown', {
+                    key: 's',
+                    code: 'KeyS',
+                    ctrlKey: true,
+                    bubbles: true,
+                    cancelable: true
+                });
+                
+                // Tentar disparar em diferentes elementos
+                const targets = [
+                    document.getElementById('onlyoffice-placeholder')?.querySelector('iframe')?.contentDocument,
+                    document.getElementById('onlyoffice-placeholder'),
+                    document,
+                    window
+                ];
+                
+                let dispatched = false;
+                targets.forEach(target => {
+                    if (target && !dispatched) {
+                        try {
+                            target.dispatchEvent(event);
+                            console.log("Ctrl+S disparado em:", target);
+                            dispatched = true;
+                        } catch (e) {
+                            console.log("Erro ao disparar Ctrl+S em target:", e);
+                        }
+                    }
+                });
+                
+                // Timeout de segurança - se não salvar em 30 segundos
+                if (saveTimeout) clearTimeout(saveTimeout);
+                saveTimeout = setTimeout(function() {
+                    console.warn("Timeout do salvamento manual");
+                    btnSalvar.innerHTML = `
+                        <i class="ki-duotone ki-cross fs-2">
+                            <span class="path1"></span>
+                            <span class="path2"></span>
+                        </i>
+                        Erro
+                    `;
+                    btnSalvar.className = 'btn btn-sm btn-danger';
+                    btnSalvar.disabled = false;
+                    
+                    Toast.error('Erro ao salvar', 'Timeout - o documento pode não ter sido salvo.', 5000);
+                    
+                    // Voltar ao estado normal após 3 segundos
+                    setTimeout(function() {
+                        btnSalvar.innerHTML = `
+                            <i class="ki-duotone ki-save fs-2">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                            </i>
+                            Salvar*
+                        `;
+                        btnSalvar.className = 'btn btn-sm btn-success';
+                    }, 3000);
+                }, 30000);
+                
+                console.log("Comando de salvamento enviado, aguardando callback do OnlyOffice...");
+            } else {
+                SwitchAlert.show('warning', 'Editor não está pronto', 'Aguarde o editor OnlyOffice carregar completamente antes de salvar.');
+            }
+        }
         
         function fecharAba() {
             console.log('fecharAba called, hasUnsavedChanges:', hasUnsavedChanges);
             
-            // Verificar se há alterações não salvas
-            if (hasUnsavedChanges) {
+            // Verificar se há alterações não salvas pelo estado do botão
+            const btnSalvar = document.getElementById('btn-salvar');
+            const hasUnsavedByButton = btnSalvar && btnSalvar.innerHTML.includes('*');
+            
+            if (hasUnsavedChanges || hasUnsavedByButton) {
                 SwitchAlert.confirm(
                     'Sair do site?',
                     'As alterações que você fez talvez não sejam salvas.',
@@ -978,11 +1040,17 @@ OnlyOffice Server: http://localhost:8080
         // Prevenir saída sem salvar - desabilitado para usar switch alert
         // window.addEventListener('beforeunload', interceptNavigation);
         
-        // Keyboard shortcuts for switch alert
+        // Keyboard shortcuts for switch alert and save
         document.addEventListener('keydown', function(e) {
             const overlay = document.getElementById('switch-alert-overlay');
             if (e.key === 'Escape' && overlay.style.display === 'flex') {
                 SwitchAlert.hide();
+            }
+            
+            // Ctrl+S para salvar
+            if (e.ctrlKey && e.key === 's') {
+                e.preventDefault();
+                salvarDocumento();
             }
         });
         
