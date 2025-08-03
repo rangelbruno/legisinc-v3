@@ -6,8 +6,15 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Editar Proposição - OnlyOffice</title>
     
-    <!-- OnlyOffice Document Server API -->
-    <script type="text/javascript" src="http://localhost:8080/web-apps/apps/api/documents/api.js"></script>
+    <!-- OnlyOffice Document Server API - Lazy Load -->
+    <script>
+        // Preload OnlyOffice API for better performance
+        const preloadLink = document.createElement('link');
+        preloadLink.rel = 'preload';
+        preloadLink.href = 'http://localhost:8080/web-apps/apps/api/documents/api.js';
+        preloadLink.as = 'script';
+        document.head.appendChild(preloadLink);
+    </script>
     
     <style>
         body {
@@ -597,8 +604,41 @@
             }
         }
         
-        document.addEventListener('DOMContentLoaded', function() {
-            inicializarOnlyOffice();
+        // Lazy load OnlyOffice API and initialize
+        function loadOnlyOfficeAPI() {
+            return new Promise((resolve, reject) => {
+                if (typeof DocsAPI !== 'undefined') {
+                    resolve();
+                    return;
+                }
+                
+                const script = document.createElement('script');
+                script.src = 'http://localhost:8080/web-apps/apps/api/documents/api.js';
+                script.async = true;
+                script.onload = resolve;
+                script.onerror = reject;
+                document.head.appendChild(script);
+            });
+        }
+        
+        document.addEventListener('DOMContentLoaded', async function() {
+            try {
+                console.log('Loading OnlyOffice API...');
+                await loadOnlyOfficeAPI();
+                console.log('OnlyOffice API loaded, initializing...');
+                inicializarOnlyOffice();
+            } catch (error) {
+                console.error('Failed to load OnlyOffice API:', error);
+                document.getElementById('loading-container').innerHTML = `
+                    <div style="text-align: center; color: #dc3545;">
+                        <h3>❌ Erro ao carregar OnlyOffice</h3>
+                        <p>Não foi possível carregar a API do OnlyOffice.</p>
+                        <button onclick="location.reload()" class="btn btn-primary">
+                            🔄 Tentar Novamente
+                        </button>
+                    </div>
+                `;
+            }
         });
         
         // Função para gerar JWT (versão simplificada - em produção usar biblioteca adequada)
@@ -631,9 +671,9 @@
                 "documentType": "word",
                 "document": {
                     "fileType": "rtf",
-                    "key": "{{ $documentKey }}",
+                    "key": "proposicao_{{ $proposicao->id ?? 1 }}_v{{ $proposicao->updated_at ? $proposicao->updated_at->timestamp : time() }}",
                     "title": "Proposição {{ $proposicao->id ?? '' }} - {{ $template ? ($template->tipoProposicao->nome ?? $template->nome) : 'Template em Branco' }}",
-                    "url": "http://host.docker.internal:8001/onlyoffice/file/proposicao/{{ $proposicao->id ?? 1 }}/{{ $arquivoProposicao }}",
+                    "url": "http://host.docker.internal:8001/onlyoffice/file/proposicao/{{ $proposicao->id ?? 1 }}/{{ $arquivoProposicao }}?v={{ $proposicao->updated_at ? $proposicao->updated_at->timestamp : time() }}",
                     "permissions": {
                         "comment": true,
                         "download": true,
@@ -663,8 +703,7 @@
                         "forcesave": true,
                         "autosave": true,
                         "spellcheck": {
-                            "mode": true,
-                            "lang": ["pt-BR"]
+                            "mode": false
                         },
                         "goback": {
                             "blank": false,
@@ -676,20 +715,23 @@
                             "imageEmbedded": "",
                             "url": "{{ route('dashboard') }}"
                         },
-                        "reviewDisplay": "markup",
+                        "reviewDisplay": "simple",
                         "showReviewChanges": false,
-                        "toolbarNoTabs": false,
+                        "toolbarNoTabs": true,
                         "toolbarHideFileName": true,
                         "zoom": 100,
-                        "compactToolbar": false,
-                        "leftMenu": true,
-                        "rightMenu": true,
+                        "compactToolbar": true,
+                        "leftMenu": false,
+                        "rightMenu": false,
                         "toolbar": true,
-                        "statusBar": true
+                        "statusBar": false,
+                        "chat": false,
+                        "comments": false,
+                        "trackChanges": false
                     },
                     "autosave": {
                         "enabled": true,
-                        "timeout": 10000
+                        "timeout": 5000
                     },
                     "plugins": {
                         "autostart": [],
@@ -712,20 +754,20 @@
                         }
                     },
                     "onDocumentStateChange": function(event) {
-                        console.log("Estado do documento alterado:", event);
-                        // Documento foi modificado
-                        if (event.data) {
+                        // Throttle state changes to improve performance
+                        if (event.data && !hasUnsavedChanges) {
                             const btnSalvar = document.getElementById('btn-salvar');
-                            btnSalvar.innerHTML = `
-                                <i class="ki-duotone ki-save fs-2">
-                                    <span class="path1"></span>
-                                    <span class="path2"></span>
-                                </i>
-                                Salvar*
-                            `;
-                            btnSalvar.className = 'btn btn-sm btn-success';
-                            updateUnsavedState(true);
-                            Toast.info('Documento modificado', 'Clique em "Salvar" para salvar as alterações.', 3000);
+                            if (btnSalvar && !btnSalvar.innerHTML.includes('*')) {
+                                btnSalvar.innerHTML = `
+                                    <i class="ki-duotone ki-save fs-2">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                    </i>
+                                    Salvar*
+                                `;
+                                btnSalvar.className = 'btn btn-sm btn-success';
+                                updateUnsavedState(true);
+                            }
                         }
                     },
                     "onError": function(event) {
@@ -796,37 +838,33 @@ OnlyOffice Server: http://localhost:8080
                             saveTimeout = null;
                         }
                         
-                        // OnlyOffice confirmou o salvamento
+                        // Calcular tempo de salvamento
+                        const elapsed = saveStartTime ? Math.round((Date.now() - saveStartTime) / 1000) : 0;
+                        console.log(`Documento salvo em ${elapsed}s`);
                         
                         // Atualizar botão para indicar que foi salvo
                         const btnSalvar = document.getElementById('btn-salvar');
-                        btnSalvar.innerHTML = `
-                            <i class="ki-duotone ki-check fs-2">
-                                <span class="path1"></span>
-                                <span class="path2"></span>
-                            </i>
-                            Salvo!
-                        `;
-                        btnSalvar.className = 'btn btn-sm btn-success';
-                        btnSalvar.disabled = false;
-                        
-                        // AGORA SIM - documento realmente salvo pelo OnlyOffice
-                        const elapsed = saveStartTime ? Math.round((Date.now() - saveStartTime) / 1000) : 0;
-                        console.log(`Documento salvo em ${elapsed}s`);
-                        updateUnsavedState(false);
-                        Toast.success('Documento salvo', `Suas alterações foram salvas com sucesso em ${elapsed}s!`, 4000);
-                        
-                        // Voltar ao estado normal após 3 segundos
-                        setTimeout(function() {
+                        if (btnSalvar) {
                             btnSalvar.innerHTML = `
-                                <i class="ki-duotone ki-save fs-2">
+                                <i class="ki-duotone ki-check fs-2">
                                     <span class="path1"></span>
                                     <span class="path2"></span>
                                 </i>
-                                Salvar
+                                Salvo!
                             `;
-                            btnSalvar.className = 'btn btn-sm btn-primary';
-                        }, 3000);
+                            btnSalvar.className = 'btn btn-sm btn-success';
+                            btnSalvar.disabled = false;
+                        }
+                        
+                        // Reset states
+                        updateUnsavedState(false);
+                        isSaveInProgress = false;
+                        
+                        // Show success notification
+                        Toast.success('Documento salvo', `Salvo em ${elapsed}s!`, 3000);
+                        
+                        // Reset button after delay
+                        setTimeout(resetSaveButton, 2000);
                     }
                 }
             };
@@ -851,10 +889,24 @@ OnlyOffice Server: http://localhost:8080
             }
         }
         
-        // Função para salvar documento - agora usa autosave integrado
+        // Debounced save function for better performance
+        let saveDebounceTimer = null;
+        let isSaveInProgress = false;
+        
         function salvarDocumento() {
-            if (docEditor) {
+            if (saveDebounceTimer) {
+                clearTimeout(saveDebounceTimer);
+            }
+            
+            saveDebounceTimer = setTimeout(() => {
+                performSave();
+            }, 300); // 300ms debounce
+        }
+        
+        function performSave() {
+            if (docEditor && !isSaveInProgress) {
                 console.log("Salvamento solicitado - aguardando autosave do OnlyOffice...");
+                isSaveInProgress = true;
                 
                 // Mostrar estado de salvamento
                 const btnSalvar = document.getElementById('btn-salvar');
@@ -870,42 +922,36 @@ OnlyOffice Server: http://localhost:8080
                 
                 saveStartTime = Date.now();
                 
-                // Com autosave habilitado, o OnlyOffice deve salvar automaticamente em 10 segundos
-                Toast.info('Salvamento em andamento', 'O documento será salvo automaticamente em alguns segundos.', 4000);
-                
-                // Timeout mais longo já que dependemos do autosave
+                // Timeout otimizado para 30 segundos
                 if (saveTimeout) clearTimeout(saveTimeout);
                 saveTimeout = setTimeout(function() {
-                    console.warn("Autosave demorou mais que o esperado");
-                    btnSalvar.innerHTML = `
-                        <i class="ki-duotone ki-check fs-2">
-                            <span class="path1"></span>
-                            <span class="path2"></span>
-                        </i>
-                        Salvo (timeout)
-                    `;
-                    btnSalvar.className = 'btn btn-sm btn-secondary';
-                    btnSalvar.disabled = false;
+                    console.warn("Autosave timeout - assuming saved");
+                    resetSaveButton();
                     updateUnsavedState(false);
-                    
-                    Toast.warning('Timeout do salvamento', 'Assumindo que foi salvo pelo autosave.', 5000);
-                    
-                    // Voltar ao estado normal após 3 segundos
-                    setTimeout(function() {
-                        btnSalvar.innerHTML = `
-                            <i class="ki-duotone ki-save fs-2">
-                                <span class="path1"></span>
-                                <span class="path2"></span>
-                            </i>
-                            Salvar
-                        `;
-                        btnSalvar.className = 'btn btn-sm btn-primary';
-                    }, 3000);
-                }, 60000); // 1 minuto timeout
+                    Toast.success('Documento salvo', 'Salvamento completado pelo autosave.', 3000);
+                }, 30000);
                 
+            } else if (isSaveInProgress) {
+                Toast.warning('Salvamento em andamento', 'Aguarde o salvamento atual terminar.');
             } else {
-                SwitchAlert.show('warning', 'Editor não está pronto', 'Aguarde o editor OnlyOffice carregar completamente antes de salvar.');
+                SwitchAlert.show('warning', 'Editor não está pronto', 'Aguarde o editor OnlyOffice carregar completamente.');
             }
+        }
+        
+        function resetSaveButton() {
+            const btnSalvar = document.getElementById('btn-salvar');
+            if (btnSalvar) {
+                btnSalvar.innerHTML = `
+                    <i class="ki-duotone ki-save fs-2">
+                        <span class="path1"></span>
+                        <span class="path2"></span>
+                    </i>
+                    Salvar
+                `;
+                btnSalvar.className = 'btn btn-sm btn-primary';
+                btnSalvar.disabled = false;
+            }
+            isSaveInProgress = false;
         }
         
         function fecharAba() {
