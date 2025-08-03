@@ -117,6 +117,42 @@ class OnlyOfficeService
     }
 
     /**
+     * Obter MIME type baseado na extensão do arquivo
+     */
+    private function getMimeType(string $extensao): string
+    {
+        $mimeTypes = [
+            'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'doc' => 'application/msword',
+            'rtf' => 'application/rtf',
+            'txt' => 'text/plain',
+            'pdf' => 'application/pdf'
+        ];
+        
+        return $mimeTypes[strtolower($extensao)] ?? 'application/octet-stream';
+    }
+
+    /**
+     * Atualizar arquivo_path da proposição
+     */
+    private function atualizarArquivoPathProposicao(\App\Models\Proposicao $proposicao, string $arquivoPath): void
+    {
+        try {
+            $proposicao->update(['arquivo_path' => $arquivoPath]);
+            \Log::info('arquivo_path atualizado para proposição', [
+                'proposicao_id' => $proposicao->id,
+                'arquivo_path' => $arquivoPath
+            ]);
+        } catch (\Exception $e) {
+            \Log::warning('Erro ao atualizar arquivo_path da proposição', [
+                'proposicao_id' => $proposicao->id,
+                'arquivo_path' => $arquivoPath,
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
      * Callback do ONLYOFFICE (auto-save)
      */
     public function processarCallback(string $documentKey, array $data): array
@@ -413,9 +449,11 @@ class OnlyOfficeService
     private function mapearDadosProposicao(array $dados): array
     {
         $autor = User::find($dados['autor_id']);
+        $proposicaoId = $dados['id'] ?? 1;
+        $ano = $dados['ano'] ?? date('Y');
         
         return [
-            'numero_proposicao' => $dados['numero'] ?? 'A definir',
+            'numero_proposicao' => sprintf('%04d/%d', $proposicaoId, $ano),
             'ementa' => $dados['ementa'],
             'texto' => $dados['texto'],
             'autor_nome' => $autor->name,
@@ -1087,6 +1125,14 @@ ${texto}
      */
     private function escapeRtf(string $text): string
     {
+        // Log para debug (apenas para textos com acentos)
+        if (preg_match('/[áàãâéèêíìîóòõôúùûçÁÀÃÂÉÈÊÍÌÎÓÒÕÔÚÙÛÇ]/', $text)) {
+            \Log::info('Codificando texto para Unicode RTF', [
+                'texto_original' => mb_substr($text, 0, 100),
+                'length' => mb_strlen($text, 'UTF-8')
+            ]);
+        }
+        
         // Converter para UTF-8 se necessário
         if (!mb_check_encoding($text, 'UTF-8')) {
             $text = mb_convert_encoding($text, 'UTF-8', mb_detect_encoding($text));
@@ -1097,24 +1143,35 @@ ${texto}
         $text = str_replace('{', '\\{', $text);
         $text = str_replace('}', '\\}', $text);
         
-        // Converter caracteres acentuados para códigos RTF
-        $replacements = [
-            'á' => "\\'e1", 'à' => "\\'e0", 'ã' => "\\'e3", 'â' => "\\'e2", 'ä' => "\\'e4",
-            'Á' => "\\'c1", 'À' => "\\'c0", 'Ã' => "\\'c3", 'Â' => "\\'c2", 'Ä' => "\\'c4",
-            'é' => "\\'e9", 'è' => "\\'e8", 'ê' => "\\'ea", 'ë' => "\\'eb",
-            'É' => "\\'c9", 'È' => "\\'c8", 'Ê' => "\\'ca", 'Ë' => "\\'cb",
-            'í' => "\\'ed", 'ì' => "\\'ec", 'î' => "\\'ee", 'ï' => "\\'ef",
-            'Í' => "\\'cd", 'Ì' => "\\'cc", 'Î' => "\\'ce", 'Ï' => "\\'cf",
-            'ó' => "\\'f3", 'ò' => "\\'f2", 'õ' => "\\'f5", 'ô' => "\\'f4", 'ö' => "\\'f6",
-            'Ó' => "\\'d3", 'Ò' => "\\'d2", 'Õ' => "\\'d5", 'Ô' => "\\'d4", 'Ö' => "\\'d6",
-            'ú' => "\\'fa", 'ù' => "\\'f9", 'û' => "\\'fb", 'ü' => "\\'fc",
-            'Ú' => "\\'da", 'Ù' => "\\'d9", 'Û' => "\\'db", 'Ü' => "\\'dc",
-            'ç' => "\\'e7", 'Ç' => "\\'c7",
-            'ñ' => "\\'f1", 'Ñ' => "\\'d1",
-            '°' => "\\'b0", 'º' => "\\'ba", 'ª' => "\\'aa"
-        ];
+        // Converter caracteres UTF-8 para Unicode RTF usando mb_ functions
+        $resultado = '';
+        $length = mb_strlen($text, 'UTF-8');
+        $caracteresConvertidos = 0;
         
-        return strtr($text, $replacements);
+        for ($i = 0; $i < $length; $i++) {
+            $char = mb_substr($text, $i, 1, 'UTF-8');
+            $codepoint = mb_ord($char, 'UTF-8');
+            
+            if ($codepoint > 127) {
+                // Caracteres não-ASCII: converter para \uN* 
+                $resultado .= '\\u' . $codepoint . '*';
+                $caracteresConvertidos++;
+            } else {
+                // Caracteres ASCII: manter como estão
+                $resultado .= $char;
+            }
+        }
+        
+        // Log resultado (apenas para textos com acentos)
+        if ($caracteresConvertidos > 0) {
+            \Log::info('Texto codificado para Unicode RTF', [
+                'amostra_resultado' => mb_substr($resultado, 0, 100),
+                'tamanho_final' => mb_strlen($resultado),
+                'caracteres_convertidos' => $caracteresConvertidos
+            ]);
+        }
+        
+        return $resultado;
     }
 
     /**
@@ -1164,7 +1221,7 @@ ${texto}
             
             // Preparar dados para substituição - sem processar caracteres especiais por enquanto
             $dados = [
-                'numero_proposicao' => $proposicao->numero ?? 'A definir',
+                'numero_proposicao' => sprintf('%04d/%d', $proposicao->id, $proposicao->ano ?? date('Y')),
                 'ementa' => $proposicao->ementa ?? '',
                 'texto' => $proposicao->conteudo ?? '',
                 'autor_nome' => $proposicao->autor->name ?? '',
@@ -1289,11 +1346,54 @@ ${texto}
             'proposicao_id' => $proposicao->id,
             'tipo' => $proposicao->tipo,
             'template_id' => $proposicao->template_id,
+            'arquivo_path' => $proposicao->arquivo_path,
             'ementa_length' => strlen($proposicao->ementa ?? ''),
             'conteudo_length' => strlen($proposicao->conteudo ?? ''),
             'has_conteudo' => !empty($proposicao->conteudo),
             'conteudo_preview' => $proposicao->conteudo ? substr(strip_tags($proposicao->conteudo), 0, 100) : 'VAZIO'
         ]);
+        
+        // PRIMEIRO: Verificar se a proposição já tem um arquivo salvo (documento editado anteriormente)
+        $arquivoSalvo = null;
+        
+        // Verificar se tem arquivo_path definido
+        if ($proposicao->arquivo_path && Storage::exists($proposicao->arquivo_path)) {
+            $arquivoSalvo = $proposicao->arquivo_path;
+        }
+        
+        // Se não tem arquivo_path, procurar por arquivo padrão do parlamentar
+        if (!$arquivoSalvo && $proposicao->template_id) {
+            $nomeArquivoPadrao = "proposicoes/proposicao_{$proposicao->id}_template_{$proposicao->template_id}.rtf";
+            if (Storage::disk('public')->exists($nomeArquivoPadrao)) {
+                $arquivoSalvo = $nomeArquivoPadrao;
+                $this->atualizarArquivoPathProposicao($proposicao, $nomeArquivoPadrao);
+            }
+        }
+        
+        if ($arquivoSalvo) {
+            \Log::info('Usando arquivo salvo da proposição', [
+                'proposicao_id' => $proposicao->id,
+                'arquivo_path' => $arquivoSalvo
+            ]);
+            
+            // Determinar o caminho completo baseado no storage usado
+            $caminhoCompleto = $arquivoSalvo;
+            if (strpos($arquivoSalvo, 'proposicoes/') === 0) {
+                // Arquivo está no storage public
+                $caminhoCompleto = storage_path('app/public/' . $arquivoSalvo);
+            } else {
+                // Arquivo está no storage padrão
+                $caminhoCompleto = storage_path('app/' . $arquivoSalvo);
+            }
+            
+            if (file_exists($caminhoCompleto)) {
+                $extensao = pathinfo($arquivoSalvo, PATHINFO_EXTENSION);
+                $nomeArquivo = "proposicao_{$proposicao->id}.{$extensao}";
+                
+                return response()->download($caminhoCompleto, $nomeArquivo)
+                    ->header('Content-Type', $this->getMimeType($extensao));
+            }
+        }
         
         // Verificar se existe PHPWord
         if (!class_exists('\PhpOffice\PhpWord\PhpWord')) {
@@ -1579,18 +1679,30 @@ Status: " . ucfirst(str_replace('_', ' ', $proposicao->status)) . "\par
                     return ['error' => 1];
                 }
 
+                // Salvar arquivo completo na storage
+                $nomeArquivo = "proposicoes/proposicao_{$proposicao->id}_" . time() . ".rtf";
+                
+                // Garantir que o diretório existe
+                if (!Storage::exists('proposicoes')) {
+                    Storage::makeDirectory('proposicoes');
+                }
+                
+                Storage::put($nomeArquivo, $response->body());
+                
                 // Extrair conteúdo do documento
                 $conteudo = $this->extrairConteudoDocumento($response->body());
                 
                 // Atualizar proposição
                 $proposicao->update([
                     'conteudo' => $conteudo,
+                    'arquivo_path' => $nomeArquivo,
                     'ultima_modificacao' => now(),
                     'modificado_por' => auth()->id()
                 ]);
                 
                 \Log::info('Proposição atualizada com sucesso via OnlyOffice', [
                     'proposicao_id' => $proposicao->id,
+                    'arquivo_path' => $nomeArquivo,
                     'conteudo_length' => strlen($conteudo)
                 ]);
                 

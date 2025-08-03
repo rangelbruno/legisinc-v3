@@ -332,7 +332,7 @@
                                             @if(auth()->user()->isLegislativo() && ($proposicao->status === 'enviado_legislativo' || $proposicao->status === 'em_revisao'))
                                             <!--begin::Menu item-->
                                             <div class="menu-item px-3">
-                                                <a href="{{ route('proposicoes.legislativo.editar', $proposicao) }}" class="menu-link px-3">
+                                                <a href="/proposicoes/{{ $proposicao->id }}/onlyoffice/editor" class="menu-link px-3">
                                                     <i class="ki-duotone ki-pencil fs-4 me-2">
                                                         <span class="path1"></span>
                                                         <span class="path2"></span>

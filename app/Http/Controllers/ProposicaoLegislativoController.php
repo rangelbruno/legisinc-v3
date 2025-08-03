@@ -117,14 +117,14 @@ class ProposicaoLegislativoController extends Controller
      */
     public function editar(Proposicao $proposicao)
     {
-        if (!in_array($proposicao->status, ['enviado_legislativo', 'em_revisao', 'editado_legislativo'])) {
+        if (!in_array($proposicao->status, ['enviado_legislativo', 'em_revisao'])) {
             abort(403, 'Proposição não está disponível para edição.');
         }
 
-        // Marcar como editado pelo legislativo se ainda não estiver
-        if ($proposicao->status !== 'editado_legislativo') {
+        // Marcar como em revisão se ainda não estiver
+        if ($proposicao->status === 'enviado_legislativo') {
             $proposicao->update([
-                'status' => 'editado_legislativo'
+                'status' => 'em_revisao'
             ]);
         }
 
@@ -147,7 +147,7 @@ class ProposicaoLegislativoController extends Controller
             'conteudo' => $request->conteudo,
             'observacoes_edicao' => $request->observacoes_edicao,
             'ultima_modificacao' => now(),
-            'status' => 'editado_legislativo'
+            'status' => 'em_revisao'
         ]);
 
         return response()->json([
