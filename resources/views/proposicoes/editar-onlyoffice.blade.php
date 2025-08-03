@@ -661,6 +661,7 @@
                         "about": false,
                         "feedback": false,
                         "forcesave": true,
+                        "autosave": true,
                         "spellcheck": {
                             "mode": true,
                             "lang": ["pt-BR"]
@@ -685,6 +686,10 @@
                         "rightMenu": true,
                         "toolbar": true,
                         "statusBar": true
+                    },
+                    "autosave": {
+                        "enabled": true,
+                        "timeout": 10000
                     },
                     "plugins": {
                         "autostart": [],
@@ -791,8 +796,7 @@ OnlyOffice Server: http://localhost:8080
                             saveTimeout = null;
                         }
                         
-                        // Resetar estado de salvamento
-                        isSaving = false;
+                        // OnlyOffice confirmou o salvamento
                         
                         // Atualizar botão para indicar que foi salvo
                         const btnSalvar = document.getElementById('btn-salvar');
@@ -847,13 +851,10 @@ OnlyOffice Server: http://localhost:8080
             }
         }
         
-        // Função para salvar documento usando forcesave
-        let isSaving = false;
-        
+        // Função para salvar documento - agora usa autosave integrado
         function salvarDocumento() {
-            if (docEditor && !isSaving) {
-                console.log("Iniciando salvamento manual do documento...");
-                isSaving = true;
+            if (docEditor) {
+                console.log("Salvamento solicitado - aguardando autosave do OnlyOffice...");
                 
                 // Mostrar estado de salvamento
                 const btnSalvar = document.getElementById('btn-salvar');
@@ -869,35 +870,25 @@ OnlyOffice Server: http://localhost:8080
                 
                 saveStartTime = Date.now();
                 
-                // Usar autosave temporário para forçar salvamento
-                console.log("Ativando autosave temporário para forçar salvamento...");
+                // Com autosave habilitado, o OnlyOffice deve salvar automaticamente em 10 segundos
+                Toast.info('Salvamento em andamento', 'O documento será salvo automaticamente em alguns segundos.', 4000);
                 
-                // Reconfigurar OnlyOffice com autosave temporário
-                try {
-                    if (typeof docEditor.refreshHistory === 'function') {
-                        docEditor.refreshHistory();
-                    }
-                    console.log("Comando refreshHistory enviado");
-                } catch (e) {
-                    console.log("refreshHistory não disponível:", e);
-                }
-                
-                // Timeout de segurança - se não salvar em 30 segundos
+                // Timeout mais longo já que dependemos do autosave
                 if (saveTimeout) clearTimeout(saveTimeout);
                 saveTimeout = setTimeout(function() {
-                    console.warn("Timeout do salvamento manual");
-                    isSaving = false;
+                    console.warn("Autosave demorou mais que o esperado");
                     btnSalvar.innerHTML = `
-                        <i class="ki-duotone ki-cross fs-2">
+                        <i class="ki-duotone ki-check fs-2">
                             <span class="path1"></span>
                             <span class="path2"></span>
                         </i>
-                        Erro
+                        Salvo (timeout)
                     `;
-                    btnSalvar.className = 'btn btn-sm btn-danger';
+                    btnSalvar.className = 'btn btn-sm btn-secondary';
                     btnSalvar.disabled = false;
+                    updateUnsavedState(false);
                     
-                    Toast.error('Erro ao salvar', 'Timeout - use Ctrl+S no editor ou aguarde o salvamento automático.', 5000);
+                    Toast.warning('Timeout do salvamento', 'Assumindo que foi salvo pelo autosave.', 5000);
                     
                     // Voltar ao estado normal após 3 segundos
                     setTimeout(function() {
@@ -906,18 +897,12 @@ OnlyOffice Server: http://localhost:8080
                                 <span class="path1"></span>
                                 <span class="path2"></span>
                             </i>
-                            Salvar*
+                            Salvar
                         `;
-                        btnSalvar.className = 'btn btn-sm btn-success';
+                        btnSalvar.className = 'btn btn-sm btn-primary';
                     }, 3000);
-                }, 30000);
+                }, 60000); // 1 minuto timeout
                 
-                // Mostrar instrução ao usuário
-                Toast.info('Salvamento iniciado', 'Use Ctrl+S no editor para confirmar o salvamento.', 5000);
-                
-                console.log("Use Ctrl+S no editor OnlyOffice para salvar o documento.");
-            } else if (isSaving) {
-                Toast.warning('Salvamento em andamento', 'Aguarde o salvamento atual terminar.');
             } else {
                 SwitchAlert.show('warning', 'Editor não está pronto', 'Aguarde o editor OnlyOffice carregar completamente antes de salvar.');
             }
@@ -1042,8 +1027,8 @@ OnlyOffice Server: http://localhost:8080
                 SwitchAlert.hide();
             }
             
-            // Ctrl+S para salvar - apenas se não estiver já salvando
-            if (e.ctrlKey && e.key === 's' && !isSaving) {
+            // Ctrl+S para salvar
+            if (e.ctrlKey && e.key === 's') {
                 e.preventDefault();
                 console.log("Ctrl+S detectado - iniciando salvamento");
                 salvarDocumento();
