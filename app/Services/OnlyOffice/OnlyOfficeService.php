@@ -71,10 +71,18 @@ class OnlyOfficeService
             'editorConfig' => [
                 'mode' => 'edit',
                 'callbackUrl' => $this->ajustarCallbackUrl(route('api.onlyoffice.callback', $template->document_key)),
-                'createUrl' => route('api.templates.download', $template->id),
                 'lang' => 'pt-BR',
                 'region' => 'pt-BR',
+                'user' => [
+                    'id' => (string) auth()->id(),
+                    'name' => auth()->user()->name ?? 'Sistema',
+                    'group' => 'administrators'
+                ],
                 'customization' => [
+                    'spellcheck' => [
+                        'mode' => true,
+                        'lang' => ['pt-BR']
+                    ],
                     'autosave' => true, // Habilitar autosave para garantir salvamento
                     'autosaveType' => 0, // 0 = strict mode
                     'forcesave' => true, // Permitir salvamento manual

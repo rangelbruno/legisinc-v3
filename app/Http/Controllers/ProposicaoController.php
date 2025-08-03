@@ -1834,6 +1834,11 @@ ${texto}
     private function codificarTextoParaUnicode($texto)
     {
         try {
+            \Log::info('Codificando texto para Unicode RTF', [
+                'texto_original' => mb_substr($texto, 0, 100),
+                'length' => mb_strlen($texto, 'UTF-8')
+            ]);
+            
             // Para texto longo, usar formato misto: caracteres especiais em Unicode, texto normal como está
             $textoProcessado = '';
             $chunks = explode("\n", $texto); // Preservar quebras de linha
@@ -1843,25 +1848,31 @@ ${texto}
                     $textoProcessado .= '\\par '; // Quebra de linha em RTF
                 }
                 
-                // Para cada chunk, processar caracteres especiais
-                for ($i = 0; $i < strlen($chunk); $i++) {
-                    $char = $chunk[$i];
-                    $codigo = ord($char);
+                // Para cada chunk, processar caracteres especiais usando mb_* functions para UTF-8
+                $length = mb_strlen($chunk, 'UTF-8');
+                for ($i = 0; $i < $length; $i++) {
+                    $char = mb_substr($chunk, $i, 1, 'UTF-8');
+                    $codepoint = mb_ord($char, 'UTF-8');
                     
                     // Converter apenas caracteres especiais para Unicode, manter ASCII normal
-                    if ($codigo > 127) {
-                        $textoProcessado .= '\\u' . $codigo . '*';
+                    if ($codepoint > 127) {
+                        $textoProcessado .= '\\u' . $codepoint . '*';
                     } else {
                         $textoProcessado .= $char;
                     }
                 }
             }
             
+            \Log::info('Texto codificado para Unicode RTF', [
+                'amostra_resultado' => mb_substr($textoProcessado, 0, 200),
+                'tamanho_final' => strlen($textoProcessado)
+            ]);
+            
             return $textoProcessado;
             
         } catch (\Exception $e) {
             \Log::warning('Erro ao codificar texto para Unicode RTF', [
-                'texto_inicio' => substr($texto, 0, 50) . '...',
+                'texto_inicio' => mb_substr($texto, 0, 50) . '...',
                 'error' => $e->getMessage()
             ]);
             return $texto; // Fallback para texto original
@@ -2000,7 +2011,7 @@ ${texto}
                     $mimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
                     break;
                 case 'rtf':
-                    $mimeType = 'application/rtf';
+                    $mimeType = 'application/rtf; charset=utf-8';
                     break;
                 case 'txt':
                     $mimeType = 'text/plain; charset=utf-8';
@@ -2893,7 +2904,7 @@ ${texto}
      */
     private function converterUtf8ParaRtf($texto)
     {
-        \Log::info('Convertendo UTF-8 para RTF escape sequences', [
+        \Log::info('Convertendo UTF-8 para RTF Unicode sequences', [
             'texto_original' => $texto,
             'length' => strlen($texto),
             'bytes' => bin2hex($texto)
@@ -2907,28 +2918,28 @@ ${texto}
             'bytes_limpos' => bin2hex($textoLimpo)
         ]);
 
-        // Converter para RTF escape sequences (o arquivo será convertido para DOCX depois)
-        $mapeamento = [
-            'á' => "\\'e1", 'à' => "\\'e0", 'â' => "\\'e2", 'ã' => "\\'e3",
-            'é' => "\\'e9", 'ê' => "\\'ea", 'í' => "\\'ed",
-            'ó' => "\\'f3", 'ô' => "\\'f4", 'õ' => "\\'f5",
-            'ú' => "\\'fa", 'ç' => "\\'e7",
-            'Á' => "\\'c1", 'À' => "\\'c0", 'Â' => "\\'c2", 'Ã' => "\\'c3",
-            'É' => "\\'c9", 'Ê' => "\\'ca", 'Í' => "\\'cd",
-            'Ó' => "\\'d3", 'Ô' => "\\'d4", 'Õ' => "\\'d5",
-            'Ú' => "\\'da", 'Ç' => "\\'c7"
-        ];
-
-        $textoRtf = $textoLimpo;
-        foreach ($mapeamento as $utf8 => $rtf) {
-            $textoRtf = str_replace($utf8, $rtf, $textoRtf);
+        // Converter caracteres UTF-8 para sequências Unicode RTF
+        $resultado = '';
+        $length = mb_strlen($textoLimpo, 'UTF-8');
+        
+        for ($i = 0; $i < $length; $i++) {
+            $char = mb_substr($textoLimpo, $i, 1, 'UTF-8');
+            $codepoint = mb_ord($char, 'UTF-8');
+            
+            if ($codepoint > 127) {
+                // Converter para escape Unicode RTF
+                $resultado .= '\u' . $codepoint . '*';
+            } else {
+                $resultado .= $char;
+            }
         }
-
-        \Log::info('Conversão UTF-8 para RTF finalizada', [
-            'texto_convertido' => $textoRtf
+        
+        \Log::info('UTF-8 convertido para RTF Unicode', [
+            'texto_final' => $resultado,
+            'caracteres_convertidos' => $length - strlen(preg_replace('/[^\x00-\x7F]/', '', $textoLimpo))
         ]);
 
-        return $textoRtf;
+        return $resultado;
     }
 
     /**

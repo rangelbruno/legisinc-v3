@@ -42,15 +42,17 @@ O projeto Legisinc utiliza Docker Compose para orquestrar 4 containers principai
 ## Configurações de Rede
 
 ### Rede Principal
-- **Nome**: `legisinc_network`
+- **Nome**: `legisinc_legisinc_network` (gerada automaticamente pelo Docker Compose)
 - **Driver**: bridge
+- **Subnet**: 172.23.0.0/16
+- **Gateway**: 172.23.0.1
 - **Comunicação interna**: Todos os containers estão na mesma rede
 
 ### Comunicação Entre Containers
 Os containers se comunicam através dos nomes de serviço:
 - **App → DB**: `db:5432`
 - **App → Redis**: `redis:6379`
-- **App → OnlyOffice**: `onlyoffice:80`
+- **App → OnlyOffice**: `legisinc-onlyoffice:80`
 - **OnlyOffice → DB**: `db:5432`
 - **OnlyOffice → Redis**: `redis:6379`
 
@@ -82,7 +84,7 @@ DB_USERNAME=postgres
 DB_PASSWORD=123456
 ```
 
-### OnlyOffice - Acesso ao PostgreSQL
+### OnlyOffice - Acesso ao PostgreSQL e Redis
 ```
 DB_TYPE=postgres
 DB_HOST=db
@@ -90,6 +92,8 @@ DB_PORT=5432
 DB_NAME=legisinc
 DB_USER=postgres
 DB_PWD=123456
+REDIS_SERVER_HOST=redis
+REDIS_SERVER_PORT=6379
 ```
 
 ## Configurações Redis
@@ -122,7 +126,11 @@ JWT_IN_BODY=true
 ### Outros Parâmetros
 ```
 WOPI_ENABLED=false
-USE_UNAUTHORIZED_STORAGE=false
+USE_UNAUTHORIZED_STORAGE=true
+ALLOW_PRIVATE_IP_ADDRESS=true
+ALLOW_META_IP_ADDRESS=true
+ALLOW_PRIVATE_IP=true
+REQUEST_FILTERING_AGENT_SECRET_ENABLED=false
 ```
 
 ## Volumes Persistentes
@@ -159,12 +167,8 @@ USE_UNAUTHORIZED_STORAGE=false
 - `.env.docker`: Variáveis de ambiente para Docker
 
 ### Configurações Específicas
-- `docker/nginx/nginx.conf`: Configuração principal do Nginx
-- `docker/nginx/default.conf`: Virtual host padrão
-- `docker/php/php.ini`: Configurações PHP
-- `docker/php/php-fpm.conf`: Configurações PHP-FPM
-- `docker/supervisor/supervisord.conf`: Gerenciamento de processos
-- `docker/start.sh`: Script de inicialização
+- `docker/php/php.ini`: Configurações PHP customizadas
+- `Dockerfile`: Build da imagem customizada do PHP/Nginx
 
 ## Como Executar
 
@@ -173,9 +177,14 @@ USE_UNAUTHORIZED_STORAGE=false
 docker-compose up -d
 ```
 
-### Ambiente de Desenvolvimento
+### Reiniciar Todos os Serviços
 ```bash
-docker-compose -f docker-compose.dev.yml up -d
+docker-compose restart
+```
+
+### Rebuild da Aplicação
+```bash
+docker-compose up -d --build
 ```
 
 ### Parar os Serviços
@@ -210,3 +219,18 @@ docker-compose logs -f [nome_do_serviço]
 - **Senhas padrão**: Alterar as senhas padrão em produção
 - **JWT desabilitado**: OnlyOffice sem autenticação JWT
 - **Portas expostas**: Considerar firewall para acesso externo
+- **OnlyOffice configurado**: Permite IPs privados e desabilita filtros de segurança
+
+## Rede e Endereços IP
+
+### Endereços IP Internos (rede 172.23.0.0/16)
+- **legisinc-redis**: 172.23.0.2
+- **legisinc-postgres**: 172.23.0.3  
+- **legisinc-app**: 172.23.0.4
+- **legisinc-onlyoffice**: 172.23.0.5
+
+### Status da Configuração
+✅ Todos os serviços funcionando na mesma rede Docker
+✅ Comunicação entre containers estabelecida
+✅ OnlyOffice integrado ao PostgreSQL e Redis compartilhados
+✅ Configuração de locale pt_BR para OnlyOffice
