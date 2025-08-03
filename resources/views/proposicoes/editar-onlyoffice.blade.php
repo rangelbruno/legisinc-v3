@@ -720,6 +720,7 @@
                                 Salvar*
                             `;
                             btnSalvar.className = 'btn btn-sm btn-success';
+                            updateUnsavedState(true);
                             Toast.info('Documento modificado', 'Lembre-se de salvar suas alterações.', 2000);
                         }
                     },
@@ -795,6 +796,7 @@ OnlyOffice Server: http://localhost:8080
                         `;
                         btnSalvar.className = 'btn btn-sm btn-success';
                         
+                        updateUnsavedState(false);
                         Toast.success('Documento salvo', 'Suas alterações foram salvas com sucesso!', 3000);
                         
                         setTimeout(function() {
@@ -887,13 +889,13 @@ OnlyOffice Server: http://localhost:8080
         
         function fecharAba() {
             // Verificar se há alterações não salvas
-            const btnSalvar = document.getElementById('btn-salvar');
-            if (btnSalvar && btnSalvar.innerHTML.includes('*')) {
+            if (hasUnsavedChanges) {
                 SwitchAlert.confirm(
-                    'Alterações não salvas',
-                    'Você tem alterações não salvas. Deseja realmente fechar o editor?',
+                    'Sair do site?',
+                    'As alterações que você fez talvez não sejam salvas.',
                     function() {
                         // Navigate back instead of trying to close window
+                        preventUnload = true;
                         window.history.back();
                         
                         // Fallback: redirect to propositions list
@@ -950,16 +952,44 @@ OnlyOffice Server: http://localhost:8080
             }
         });
 
-        // Prevenir saída sem salvar
-        window.addEventListener('beforeunload', function(e) {
-            // Se o documento foi modificado, avisar sobre possível perda de dados
-            const btnSalvar = document.getElementById('btn-salvar');
-            if (btnSalvar && btnSalvar.innerHTML.includes('*')) {
+        // Variável para controlar se deve mostrar aviso ao sair
+        let hasUnsavedChanges = false;
+        let preventUnload = false;
+        
+        // Atualizar estado de alterações não salvas
+        function updateUnsavedState(hasChanges) {
+            hasUnsavedChanges = hasChanges;
+        }
+        
+        // Interceptar tentativas de navegação
+        function interceptNavigation(e) {
+            if (hasUnsavedChanges && !preventUnload) {
                 e.preventDefault();
-                e.returnValue = 'Você tem alterações não salvas. Deseja realmente sair?';
-                return e.returnValue;
+                
+                SwitchAlert.confirm(
+                    'Sair do site?',
+                    'As alterações que você fez talvez não sejam salvas.',
+                    function() {
+                        // Usuário confirmou - permitir navegação
+                        preventUnload = true;
+                        // Re-trigger o evento original
+                        if (e.type === 'beforeunload') {
+                            window.location.reload();
+                        } else {
+                            window.history.back();
+                        }
+                    },
+                    function() {
+                        // Usuário cancelou - não fazer nada
+                        preventUnload = false;
+                    }
+                );
+                return false;
             }
-        });
+        }
+        
+        // Prevenir saída sem salvar - desabilitado para usar switch alert
+        // window.addEventListener('beforeunload', interceptNavigation);
         
         // Keyboard shortcuts for switch alert
         document.addEventListener('keydown', function(e) {
@@ -973,6 +1003,27 @@ OnlyOffice Server: http://localhost:8080
         document.getElementById('switch-alert-overlay').addEventListener('click', function(e) {
             if (e.target === this) {
                 SwitchAlert.hide();
+            }
+        });
+        
+        // Interceptar cliques em links e navegação
+        document.addEventListener('click', function(e) {
+            const link = e.target.closest('a');
+            if (link && hasUnsavedChanges && !preventUnload) {
+                // Verificar se não é um link para download ou externo
+                const href = link.getAttribute('href');
+                if (href && !href.startsWith('#') && !href.startsWith('javascript:') && !href.includes('download')) {
+                    e.preventDefault();
+                    
+                    SwitchAlert.confirm(
+                        'Sair do site?',
+                        'As alterações que você fez talvez não sejam salvas.',
+                        function() {
+                            preventUnload = true;
+                            window.location.href = href;
+                        }
+                    );
+                }
             }
         });
     </script>
