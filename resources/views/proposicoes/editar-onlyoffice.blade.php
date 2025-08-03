@@ -870,6 +870,9 @@ OnlyOffice Server: http://localhost:8080
                     btnSalvar.className = 'btn btn-sm btn-success';
                     btnSalvar.disabled = false;
                     
+                    // Resetar estado de alterações não salvas
+                    updateUnsavedState(false);
+                    
                     // Voltar ao estado normal após mais 2 segundos
                     setTimeout(function() {
                         btnSalvar.innerHTML = `
@@ -888,6 +891,7 @@ OnlyOffice Server: http://localhost:8080
         }
         
         function fecharAba() {
+            console.log('fecharAba called, hasUnsavedChanges:', hasUnsavedChanges);
             // Verificar se há alterações não salvas
             if (hasUnsavedChanges) {
                 SwitchAlert.confirm(
@@ -958,6 +962,7 @@ OnlyOffice Server: http://localhost:8080
         
         // Atualizar estado de alterações não salvas
         function updateUnsavedState(hasChanges) {
+            console.log('Updating unsaved state:', hasChanges);
             hasUnsavedChanges = hasChanges;
         }
         
@@ -1009,20 +1014,24 @@ OnlyOffice Server: http://localhost:8080
         // Interceptar cliques em links e navegação
         document.addEventListener('click', function(e) {
             const link = e.target.closest('a');
-            if (link && hasUnsavedChanges && !preventUnload) {
-                // Verificar se não é um link para download ou externo
-                const href = link.getAttribute('href');
-                if (href && !href.startsWith('#') && !href.startsWith('javascript:') && !href.includes('download')) {
-                    e.preventDefault();
-                    
-                    SwitchAlert.confirm(
-                        'Sair do site?',
-                        'As alterações que você fez talvez não sejam salvas.',
-                        function() {
-                            preventUnload = true;
-                            window.location.href = href;
-                        }
-                    );
+            if (link) {
+                console.log('Link clicked, hasUnsavedChanges:', hasUnsavedChanges, 'preventUnload:', preventUnload);
+                if (hasUnsavedChanges && !preventUnload) {
+                    // Verificar se não é um link para download ou externo
+                    const href = link.getAttribute('href');
+                    console.log('Link href:', href);
+                    if (href && !href.startsWith('#') && !href.startsWith('javascript:') && !href.includes('download')) {
+                        e.preventDefault();
+                        
+                        SwitchAlert.confirm(
+                            'Sair do site?',
+                            'As alterações que você fez talvez não sejam salvas.',
+                            function() {
+                                preventUnload = true;
+                                window.location.href = href;
+                            }
+                        );
+                    }
                 }
             }
         });
