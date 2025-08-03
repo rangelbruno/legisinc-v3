@@ -202,6 +202,226 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        
+        /* Switch Alert System */
+        .switch-alert-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 9999;
+            display: none;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .switch-alert {
+            background: white;
+            border-radius: 8px;
+            padding: 24px;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            animation: switchAlertFadeIn 0.3s ease-out;
+        }
+        
+        @keyframes switchAlertFadeIn {
+            from {
+                opacity: 0;
+                transform: scale(0.9) translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+        
+        .switch-alert-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        
+        .switch-alert-icon {
+            width: 24px;
+            height: 24px;
+            margin-right: 12px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+        
+        .switch-alert-icon.success {
+            background: #50CD89;
+            color: white;
+        }
+        
+        .switch-alert-icon.error {
+            background: #F1416C;
+            color: white;
+        }
+        
+        .switch-alert-icon.warning {
+            background: #FFC700;
+            color: white;
+        }
+        
+        .switch-alert-icon.info {
+            background: #009EF7;
+            color: white;
+        }
+        
+        .switch-alert-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #181C32;
+            margin: 0;
+        }
+        
+        .switch-alert-message {
+            color: #5E6278;
+            line-height: 1.5;
+            margin-bottom: 20px;
+        }
+        
+        .switch-alert-actions {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+        }
+        
+        .switch-alert-btn {
+            padding: 8px 16px;
+            border-radius: 6px;
+            border: 1px solid #E4E6EA;
+            background: #F5F8FA;
+            color: #5E6278;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        
+        .switch-alert-btn:hover {
+            background: #E4E6EA;
+        }
+        
+        .switch-alert-btn.primary {
+            background: #009EF7;
+            border-color: #009EF7;
+            color: white;
+        }
+        
+        .switch-alert-btn.primary:hover {
+            background: #0095E8;
+        }
+        
+        .switch-alert-btn.danger {
+            background: #F1416C;
+            border-color: #F1416C;
+            color: white;
+        }
+        
+        .switch-alert-btn.danger:hover {
+            background: #E6365F;
+        }
+        
+        /* Toast notifications */
+        .toast-container {
+            position: fixed;
+            top: 90px;
+            right: 20px;
+            z-index: 10000;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .toast {
+            background: white;
+            border-radius: 8px;
+            padding: 16px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            border-left: 4px solid #009EF7;
+            min-width: 300px;
+            animation: toastSlideIn 0.3s ease-out;
+        }
+        
+        @keyframes toastSlideIn {
+            from {
+                opacity: 0;
+                transform: translateX(100%);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        .toast.success {
+            border-left-color: #50CD89;
+        }
+        
+        .toast.error {
+            border-left-color: #F1416C;
+        }
+        
+        .toast.warning {
+            border-left-color: #FFC700;
+        }
+        
+        .toast-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 4px;
+        }
+        
+        .toast-icon {
+            width: 16px;
+            height: 16px;
+            margin-right: 8px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+        }
+        
+        .toast-icon.success {
+            background: #50CD89;
+            color: white;
+        }
+        
+        .toast-icon.error {
+            background: #F1416C;
+            color: white;
+        }
+        
+        .toast-icon.warning {
+            background: #FFC700;
+            color: white;
+        }
+        
+        .toast-icon.info {
+            background: #009EF7;
+            color: white;
+        }
+        
+        .toast-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #181C32;
+        }
+        
+        .toast-message {
+            font-size: 13px;
+            color: #5E6278;
+            line-height: 1.4;
+        }
     </style>
 </head>
 <body>
@@ -246,9 +466,136 @@
     </div>
     
     <div id="onlyoffice-placeholder"></div>
+    
+    <!-- Switch Alert Overlay -->
+    <div id="switch-alert-overlay" class="switch-alert-overlay">
+        <div class="switch-alert">
+            <div class="switch-alert-header">
+                <div id="switch-alert-icon" class="switch-alert-icon"></div>
+                <h3 id="switch-alert-title" class="switch-alert-title"></h3>
+            </div>
+            <div id="switch-alert-message" class="switch-alert-message"></div>
+            <div id="switch-alert-actions" class="switch-alert-actions"></div>
+        </div>
+    </div>
+    
+    <!-- Toast Container -->
+    <div id="toast-container" class="toast-container"></div>
 
     <script type="text/javascript">
         let docEditor;
+        
+        // Switch Alert System
+        class SwitchAlert {
+            static show(type, title, message, actions = []) {
+                const overlay = document.getElementById('switch-alert-overlay');
+                const icon = document.getElementById('switch-alert-icon');
+                const titleEl = document.getElementById('switch-alert-title');
+                const messageEl = document.getElementById('switch-alert-message');
+                const actionsEl = document.getElementById('switch-alert-actions');
+                
+                // Set icon based on type
+                const icons = {
+                    success: '✓',
+                    error: '✕',
+                    warning: '⚠',
+                    info: 'i'
+                };
+                
+                icon.className = `switch-alert-icon ${type}`;
+                icon.textContent = icons[type] || 'i';
+                titleEl.textContent = title;
+                messageEl.textContent = message;
+                
+                // Clear previous actions
+                actionsEl.innerHTML = '';
+                
+                // Add actions
+                if (actions.length === 0) {
+                    actions = [{ text: 'OK', action: () => SwitchAlert.hide(), primary: true }];
+                }
+                
+                actions.forEach(action => {
+                    const btn = document.createElement('button');
+                    btn.className = `switch-alert-btn ${action.primary ? 'primary' : ''} ${action.danger ? 'danger' : ''}`;
+                    btn.textContent = action.text;
+                    btn.onclick = () => {
+                        if (action.action) action.action();
+                        SwitchAlert.hide();
+                    };
+                    actionsEl.appendChild(btn);
+                });
+                
+                overlay.style.display = 'flex';
+            }
+            
+            static hide() {
+                const overlay = document.getElementById('switch-alert-overlay');
+                overlay.style.display = 'none';
+            }
+            
+            static confirm(title, message, onConfirm, onCancel) {
+                this.show('warning', title, message, [
+                    { text: 'Cancelar', action: onCancel },
+                    { text: 'Confirmar', action: onConfirm, primary: true }
+                ]);
+            }
+        }
+        
+        // Toast Notification System
+        class Toast {
+            static show(type, title, message, duration = 4000) {
+                const container = document.getElementById('toast-container');
+                const toast = document.createElement('div');
+                toast.className = `toast ${type}`;
+                
+                const icons = {
+                    success: '✓',
+                    error: '✕',
+                    warning: '⚠',
+                    info: 'i'
+                };
+                
+                toast.innerHTML = `
+                    <div class="toast-header">
+                        <div class="toast-icon ${type}">${icons[type] || 'i'}</div>
+                        <div class="toast-title">${title}</div>
+                    </div>
+                    <div class="toast-message">${message}</div>
+                `;
+                
+                container.appendChild(toast);
+                
+                // Auto-remove after duration
+                setTimeout(() => {
+                    if (toast.parentNode) {
+                        toast.style.opacity = '0';
+                        toast.style.transform = 'translateX(100%)';
+                        setTimeout(() => {
+                            if (toast.parentNode) {
+                                container.removeChild(toast);
+                            }
+                        }, 300);
+                    }
+                }, duration);
+            }
+            
+            static success(title, message, duration) {
+                this.show('success', title, message, duration);
+            }
+            
+            static error(title, message, duration) {
+                this.show('error', title, message, duration);
+            }
+            
+            static warning(title, message, duration) {
+                this.show('warning', title, message, duration);
+            }
+            
+            static info(title, message, duration) {
+                this.show('info', title, message, duration);
+            }
+        }
         
         document.addEventListener('DOMContentLoaded', function() {
             inicializarOnlyOffice();
@@ -283,7 +630,7 @@
                 "type": "desktop",
                 "documentType": "word",
                 "document": {
-                    "fileType": "docx",
+                    "fileType": "rtf",
                     "key": "{{ $documentKey }}",
                     "title": "Proposição {{ $proposicao->id ?? '' }} - {{ $template ? ($template->tipoProposicao->nome ?? $template->nome) : 'Template em Branco' }}",
                     "url": "http://host.docker.internal:8001/onlyoffice/file/proposicao/{{ $proposicao->id ?? 1 }}/{{ $arquivoProposicao }}",
@@ -373,6 +720,7 @@
                                 Salvar*
                             `;
                             btnSalvar.className = 'btn btn-sm btn-success';
+                            Toast.info('Documento modificado', 'Lembre-se de salvar suas alterações.', 2000);
                         }
                     },
                     "onError": function(event) {
@@ -447,6 +795,8 @@ OnlyOffice Server: http://localhost:8080
                         `;
                         btnSalvar.className = 'btn btn-sm btn-success';
                         
+                        Toast.success('Documento salvo', 'Suas alterações foram salvas com sucesso!', 3000);
+                        
                         setTimeout(function() {
                             btnSalvar.innerHTML = `
                                 <i class="ki-duotone ki-save fs-2">
@@ -483,7 +833,7 @@ OnlyOffice Server: http://localhost:8080
         
         function salvarDocumento() {
             if (docEditor) {
-                console.log("Salvando documento...");
+                console.log("Forçando salvamento do documento...");
                 
                 // Mostrar mensagem de salvamento
                 const btnSalvar = document.getElementById('btn-salvar');
@@ -496,10 +846,17 @@ OnlyOffice Server: http://localhost:8080
                 `;
                 btnSalvar.disabled = true;
                 
-                // O OnlyOffice salva automaticamente quando há mudanças
-                // Vamos apenas dar feedback visual ao usuário
-                // O callback com status 2 será chamado automaticamente pelo OnlyOffice
+                // IMPORTANTE: Forçar o OnlyOffice a salvar o documento imediatamente
+                // Usar o método requestSave() da API do OnlyOffice
+                try {
+                    // Chamar o método de salvamento forçado do OnlyOffice
+                    docEditor.requestSave();
+                    console.log("requestSave() chamado com sucesso");
+                } catch (error) {
+                    console.error("Erro ao chamar requestSave():", error);
+                }
                 
+                // Aguardar um pouco e mostrar feedback de sucesso
                 setTimeout(function() {
                     btnSalvar.innerHTML = `
                         <i class="ki-duotone ki-check fs-2">
@@ -523,21 +880,8 @@ OnlyOffice Server: http://localhost:8080
                         btnSalvar.className = 'btn btn-sm btn-primary';
                     }, 2000);
                 }, 1500);
-                
-                // Fazer uma requisição para forçar o salvamento via callback
-                // Isso irá disparar o OnlyOffice para enviar o callback com o arquivo atualizado
-                fetch('/proposicoes/{{ $proposicao->id ?? 1 }}/atualizar-status', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                    },
-                    body: JSON.stringify({
-                        status: 'salvando'
-                    })
-                });
             } else {
-                alert("Editor não está pronto ainda.");
+                SwitchAlert.show('warning', 'Editor não está pronto', 'Aguarde o editor OnlyOffice carregar completamente antes de salvar.');
             }
         }
         
@@ -545,18 +889,28 @@ OnlyOffice Server: http://localhost:8080
             // Verificar se há alterações não salvas
             const btnSalvar = document.getElementById('btn-salvar');
             if (btnSalvar && btnSalvar.innerHTML.includes('*')) {
-                if (!confirm('Você tem alterações não salvas. Deseja realmente fechar?')) {
-                    return;
-                }
+                SwitchAlert.confirm(
+                    'Alterações não salvas',
+                    'Você tem alterações não salvas. Deseja realmente fechar o editor?',
+                    function() {
+                        // Navigate back instead of trying to close window
+                        window.history.back();
+                        
+                        // Fallback: redirect to propositions list
+                        setTimeout(function() {
+                            window.location.href = "{{ route('proposicoes.minhas-proposicoes') }}";
+                        }, 100);
+                    }
+                );
+            } else {
+                // Navigate back instead of trying to close window
+                window.history.back();
+                
+                // Fallback: redirect to propositions list
+                setTimeout(function() {
+                    window.location.href = "{{ route('proposicoes.minhas-proposicoes') }}";
+                }, 100);
             }
-            
-            // Navigate back instead of trying to close window
-            window.history.back();
-            
-            // Fallback: redirect to propositions list
-            setTimeout(function() {
-                window.location.href = "{{ route('proposicoes.minhas-proposicoes') }}";
-            }, 100);
         }
         
         // Verificar se o OnlyOffice está disponível
@@ -604,6 +958,21 @@ OnlyOffice Server: http://localhost:8080
                 e.preventDefault();
                 e.returnValue = 'Você tem alterações não salvas. Deseja realmente sair?';
                 return e.returnValue;
+            }
+        });
+        
+        // Keyboard shortcuts for switch alert
+        document.addEventListener('keydown', function(e) {
+            const overlay = document.getElementById('switch-alert-overlay');
+            if (e.key === 'Escape' && overlay.style.display === 'flex') {
+                SwitchAlert.hide();
+            }
+        });
+        
+        // Click outside to close switch alert
+        document.getElementById('switch-alert-overlay').addEventListener('click', function(e) {
+            if (e.target === this) {
+                SwitchAlert.hide();
             }
         });
     </script>
