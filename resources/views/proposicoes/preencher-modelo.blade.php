@@ -249,13 +249,8 @@ $(document).ready(function() {
                         if (response.success) {
                             toastr.success('Rascunho salvo automaticamente. Abrindo editor...');
                             
-                            // Ir para tela intermediária de edição
-                            if (isTemplate) {
-                                window.location.href = `/proposicoes/${proposicaoId}/preparar-edicao/${templateId}`;
-                            } else {
-                                // Para modelos normais, ir para editor de texto simples
-                                window.location.href = `/proposicoes/${proposicaoId}/editar-texto`;
-                            }
+                            // Redirecionar direto para a tela de visualização/edição da proposição
+                            window.location.href = `/proposicoes/${proposicaoId}`;
                         }
                     })
                     .fail(function(xhr) {
