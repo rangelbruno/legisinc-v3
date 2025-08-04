@@ -1,592 +1,340 @@
 <!DOCTYPE html>
-
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
-<!--begin::Head-->
-
-<head>
-    <title>LegisInc - Sistema de Tramitação Legislativa</title>
-    <meta charset="utf-8" />
-    
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, user-scalable=no" />
-    <meta property="og:locale" content="pt_BR" />
-    <meta property="og:type" content="article" />
-    <meta property="og:title" content="LegisInc - Sistema de Tramitação Legislativa" />
-    <link rel="shortcut icon" href="{{ asset('assets/media/logos/favicon.ico') }}" />
-    <!--begin::Fonts(mandatory for all pages)-->
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,400,500,600,700" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <!--end::Fonts-->
-    <!--begin::Stylesheets-->
-    <link href="{{ asset('assets/plugins/global/plugins.bundle.css') }}" rel="stylesheet">
-    <link href="{{ asset('assets/css/style.bundle.css') }}" rel="stylesheet">
-    <!--end::Stylesheets-->
-    <style>
-        .auth-bg {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
+    <!--begin::Head-->
+    <head>
+        <title>LegisInc - Sistema de Tramitação Legislativa</title>
+        <meta charset="utf-8" />
+        <meta name="description" content="Sistema completo de tramitação legislativa para câmaras municipais, assembleias e órgãos legislativos" />
+        <meta name="keywords" content="legisinc, tramitação legislativa, projetos, câmara municipal, assembleia, gestão legislativa" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="csrf-token" content="{{ csrf_token() }}" />
+        <meta property="og:locale" content="pt_BR" />
+        <meta property="og:type" content="article" />
+        <meta property="og:title" content="LegisInc - Sistema de Tramitação Legislativa" />
+        <meta property="og:url" content="{{ url('/') }}" />
+        <meta property="og:site_name" content="LegisInc" />
+        <link rel="shortcut icon" href="{{ asset('assets/media/logos/favicon.ico') }}" />
+        <!--begin::Fonts(mandatory for all pages)-->
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,400,500,600,700" />
+        <!--end::Fonts-->
+        <!--begin::Global Stylesheets Bundle(mandatory for all pages)-->
+        <link href="{{ asset('assets/plugins/global/plugins.bundle.css') }}" rel="stylesheet" type="text/css" />
+        <link href="{{ asset('assets/css/style.bundle.css') }}" rel="stylesheet" type="text/css" />
+        <!--end::Global Stylesheets Bundle-->
+        <style>
+        .auth-aside-bg {
+            background-image: url('/assets/media/misc/auth-bg.png');
         }
-        
-        .legislative-pattern {
-            background: linear-gradient(45deg, rgba(255,255,255,0.1) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.1) 75%, transparent 75%, transparent);
-            background-size: 20px 20px;
-        }
-        
-        .form-control {
-            border-radius: 8px;
-            border: 2px solid #e1e5e9;
-            padding: 12px 16px;
-            font-size: 14px;
-            transition: all 0.3s ease;
-        }
-        
-        .form-control:focus {
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-        }
-        
-        .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border: none;
-            border-radius: 8px;
-            padding: 12px 24px;
-            font-weight: 600;
-            transition: all 0.3s ease;
-        }
-        
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
-        }
-        
-        .btn-outline-primary {
-            border: 2px solid #667eea;
-            color: #667eea;
-            background: transparent;
-            border-radius: 20px;
-            padding: 8px 20px;
-            font-weight: 600;
-            transition: all 0.3s ease;
-        }
-        
-        .btn-outline-primary:hover {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-color: #667eea;
-            color: white;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
-        }
-        
-        .legislative-card {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 16px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-            margin: 0 auto;
-            max-width: 100%;
-        }
-        
-        .logo-container {
-            position: relative;
-            margin-bottom: 2rem;
-        }
-        
-        .logo-glow {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 100px;
-            height: 100px;
-            background: radial-gradient(circle, rgba(102, 126, 234, 0.2) 0%, transparent 70%);
-            border-radius: 50%;
-            z-index: 1;
-        }
-        
-        .legislative-icon {
-            color: #667eea;
-            font-size: 1.2rem;
-            margin-right: 0.5rem;
-        }
-        
-        .feature-badge {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 4px 8px;
-            border-radius: 20px;
-            font-size: 11px;
-            font-weight: 600;
-            margin: 2px;
-            display: inline-flex;
-            align-items: center;
-        }
-        
-        /* Mobile Responsive Styles */
-        @media (max-width: 991.98px) {
-            .auth-bg {
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                padding: 1rem;
-            }
-            
-            .legislative-card {
-                margin: 0;
-                padding: 1.5rem !important;
-                border-radius: 12px;
-                width: 100%;
-                max-width: none;
-            }
-            
-            .logo-container {
-                margin-bottom: 1.5rem;
-            }
-            
-            .logo-glow {
-                width: 80px;
-                height: 80px;
-            }
-            
-            .feature-badge {
-                font-size: 10px;
-                padding: 3px 6px;
-                margin: 1px;
-            }
-            
-            .legislative-icon {
-                font-size: 1rem;
-            }
-            
-            .form-control {
-                padding: 10px 12px;
-                font-size: 16px; /* Prevent zoom on iOS */
-            }
-            
-            .btn-primary {
-                padding: 14px 24px;
-                font-size: 14px;
-            }
-            
-            .btn-primary:hover {
-                transform: none; /* Remove hover effect on mobile */
-            }
-            
-            .btn-outline-primary:hover {
-                transform: none; /* Remove hover effect on mobile */
-            }
-            
-            .btn-outline-primary {
-                padding: 6px 16px;
-                font-size: 13px;
-            }
-            
-            h1 {
-                font-size: 1.75rem !important;
-            }
-            
-            .d-flex.flex-column.flex-lg-row-fluid.w-lg-50.w-100 {
-                width: 100% !important;
-            }
-        }
-        
-        @media (max-width: 576px) {
-            .auth-bg {
-                padding: 0.5rem;
-            }
-            
-            .legislative-card {
-                padding: 1rem !important;
-                border-radius: 8px;
-            }
-            
-            .logo-container {
-                margin-bottom: 1rem;
-            }
-            
-            .logo-glow {
-                width: 60px;
-                height: 60px;
-            }
-            
-            .feature-badge {
-                font-size: 9px;
-                padding: 2px 4px;
-            }
-            
-            .d-flex.justify-content-center.flex-wrap.gap-2 {
-                gap: 0.25rem !important;
-            }
-            
-            h1 {
-                font-size: 1.5rem !important;
-                margin-bottom: 1rem !important;
-            }
-            
-            .text-gray-600 {
-                font-size: 0.875rem !important;
-            }
-        }
-        
-        /* Landscape orientation adjustments */
-        @media (max-width: 991.98px) and (orientation: landscape) {
-            .auth-bg {
-                padding: 0.5rem;
-            }
-            
-            .legislative-card {
-                padding: 1rem !important;
-            }
-            
-            .logo-container {
-                margin-bottom: 0.5rem;
-            }
-            
-            .mb-11 {
-                margin-bottom: 1.5rem !important;
-            }
-        }
-    </style>
-</head>
-<!--end::Head-->
-<!--begin::Body-->
-
-<body id="kt_body" class="auth-bg">
-    <!--begin::Theme mode setup on page load-->
-    <script>var defaultThemeMode = "light"; var themeMode; if (document.documentElement) { if (document.documentElement.hasAttribute("data-bs-theme-mode")) { themeMode = document.documentElement.getAttribute("data-bs-theme-mode"); } else { if (localStorage.getItem("data-bs-theme") !== null) { themeMode = localStorage.getItem("data-bs-theme"); } else { themeMode = defaultThemeMode; } } if (themeMode === "system") { themeMode = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"; } document.documentElement.setAttribute("data-bs-theme", themeMode); }</script>
-    <!--end::Theme mode setup on page load-->
-    <!--begin::Main-->
-    <!--begin::Root-->
-    <div class="d-flex flex-column flex-root">
-        <!--begin::Authentication - Sign-in -->
-        <div class="d-flex flex-column flex-lg-row flex-column-fluid min-vh-100">
-            <!--begin::Body-->
-            <div class="d-flex flex-column flex-lg-row-fluid w-lg-50 w-100 p-lg-10 p-3 order-2 order-lg-1">
-                <!--begin::Form-->
-                <div class="d-flex flex-center flex-column flex-lg-row-fluid">
-                    <!--begin::Wrapper-->
-                    <div class="w-lg-500px w-100 p-lg-10 p-4 legislative-card">
-                        <!--begin::Logo Mobile-->
-                        <div class="text-center mb-6 d-lg-none">
-                            <div class="logo-container">
-                                <div class="logo-glow"></div>
-                                <img alt="LegisInc Logo" src="{{ asset('assets/media/logos/legisinc.png') }}" class="h-60px" style="position: relative; z-index: 2;" />
-                            </div>
-                        </div>
-                        <!--end::Logo Mobile-->
-                        
-                        <!--begin::Form-->
-                        <form class="form w-100" novalidate="novalidate" id="kt_sign_in_form"
-                            method="POST" action="{{ route('login') }}">
-                            @csrf
-                            <!--begin::Heading-->
-                            <div class="text-center mb-11">
-                                <!--begin::Title-->
-                                <h1 class="text-gray-900 fw-bolder mb-3 fs-1">
-                                    <i class="fas fa-gavel legislative-icon"></i>
-                                    Acesso ao Sistema
-                                </h1>
-                                <!--end::Title-->
-                                <!--begin::Subtitle-->
-                                <div class="text-gray-600 fw-semibold fs-6 mb-4">
-                                    Sistema de Tramitação Legislativa
-                                </div>
-                                <div class="d-flex justify-content-center flex-wrap gap-2">
-                                    <span class="feature-badge">
-                                        <i class="fas fa-file-alt me-1"></i>
-                                        Projetos
-                                    </span>
-                                    <span class="feature-badge">
-                                        <i class="fas fa-route me-1"></i>
-                                        Tramitação
-                                    </span>
-                                    <span class="feature-badge">
-                                        <i class="fas fa-users me-1"></i>
-                                        Parlamentares
-                                    </span>
-                                    <span class="feature-badge">
-                                        <i class="fas fa-gavel me-1"></i>
-                                        Comissões
-                                    </span>
-                                </div>
-                                <!--end::Subtitle=-->
-                            </div>
-                            <!--begin::Heading-->
-                            
-                            <x-alerts.flash />
-                            <!--begin::Input group=-->
-                            <div class="fv-row mb-8">
-                                <!--begin::Email-->
-                                <label class="form-label fs-6 fw-bold text-gray-900 mb-2">
-                                    <i class="fas fa-envelope me-2"></i>
-                                    E-mail
-                                </label>
-                                <input type="email" placeholder="Digite seu e-mail" name="email" autocomplete="off"
-                                    class="form-control" value="{{ old('email') }}" />
-                                <!--end::Email-->
-                            </div>
-                            <!--end::Input group=-->
-                            <div class="fv-row mb-3">
-                                <!--begin::Password-->
-                                <label class="form-label fs-6 fw-bold text-gray-900 mb-2">
-                                    <i class="fas fa-lock me-2"></i>
-                                    Senha
-                                </label>
-                                <input type="password" placeholder="Digite sua senha" name="password" autocomplete="off"
-                                    class="form-control" />
-                                <!--end::Password-->
-                            </div>
-                            <!--end::Input group=-->
-                            <!--begin::Wrapper-->
-                            <div class="d-flex flex-stack flex-wrap gap-3 fs-base fw-semibold mb-8">
-                                <div class="d-flex align-items-center">
-                                    <input type="checkbox" class="form-check-input me-2" id="remember_me" name="remember">
-                                    <label class="form-check-label text-gray-600" for="remember_me">
-                                        Lembrar-me
-                                    </label>
-                                </div>
-                                <!--begin::Link-->
-                                <a href="#" class="link-primary">
-                                    <i class="fas fa-key me-1"></i>
-                                    Esqueceu a senha?
-                                </a>
-                                <!--end::Link-->
-                            </div>
-                            <!--end::Wrapper-->
-                            <!--begin::Submit button-->
-                            <div class="d-grid mb-10">
-                                <button type="submit" id="kt_sign_in_submit" class="btn btn-primary btn-lg">
-                                    <!--begin::Indicator label-->
-                                    <span class="indicator-label">
-                                        <i class="fas fa-sign-in-alt me-2"></i>
-                                        Entrar no Sistema
-                                    </span>
-                                    <!--end::Indicator label-->
-                                    <!--begin::Indicator progress-->
-                                    <span class="indicator-progress">
-                                        <i class="fas fa-spinner fa-spin me-2"></i>
-                                        Aguarde...
-                                    </span>
-                                    <!--end::Indicator progress-->
-                                </button>
-                            </div>
-                            <!--end::Submit button-->
-                            
-                            
-                            <!--begin::Progress Link-->
-                            <div class="text-center mt-4">
-                                <a href="{{ route('progress.index') }}" class="btn btn-outline-primary btn-sm rounded-pill">
-                                    <i class="fas fa-chart-line me-2"></i>
-                                    Progresso do Projeto
+        </style>
+        <script>// Frame-busting to prevent site from being loaded within a frame without permission (click-jacking) if (window.top != window.self) { window.top.location.replace(window.self.location.href); }</script>
+    </head>
+    <!--end::Head-->
+    <!--begin::Body-->
+    <body id="kt_body" class="auth-bg">
+        <!--begin::Theme mode setup on page load-->
+        <script>var defaultThemeMode = "light"; var themeMode; if ( document.documentElement ) { if ( document.documentElement.hasAttribute("data-bs-theme-mode")) { themeMode = document.documentElement.getAttribute("data-bs-theme-mode"); } else { if ( localStorage.getItem("data-bs-theme") !== null ) { themeMode = localStorage.getItem("data-bs-theme"); } else { themeMode = defaultThemeMode; } } if (themeMode === "system") { themeMode = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"; } document.documentElement.setAttribute("data-bs-theme", themeMode); }</script>
+        <!--end::Theme mode setup on page load-->
+        <!--begin::Main-->
+        <!--begin::Root-->
+        <div class="d-flex flex-column flex-root" id="kt_app_root">
+            <!--begin::Authentication - Sign-in -->
+            <div class="d-flex flex-column flex-lg-row flex-column-fluid">
+                <!--begin::Body-->
+                <div class="d-flex flex-column flex-lg-row-fluid w-lg-50 p-10 order-2 order-lg-1">
+                    <!--begin::Form-->
+                    <div class="d-flex flex-center flex-column flex-lg-row-fluid">
+                        <!--begin::Wrapper-->
+                        <div class="w-lg-500px p-10">
+                            <!--begin::Logo mobile-->
+                            <div class="text-center mb-11 d-lg-none">
+                                <a href="#" class="mb-7">
+                                    <img alt="Logo" src="{{ asset('assets/media/logos/legisinc.png') }}" class="h-40px" />
                                 </a>
                             </div>
-                            <!--end::Progress Link-->
-                        </form>
-                        <!--end::Form-->
+                            <!--end::Logo mobile-->
+                            <!--begin::Form-->
+                            <form class="form w-100" novalidate="novalidate" id="kt_sign_in_form" method="POST" action="{{ route('login') }}">
+                                @csrf
+                                <!--begin::Heading-->
+                                <div class="text-center mb-11">
+                                    <!--begin::Title-->
+                                    <h1 class="text-gray-900 fw-bolder mb-3">Acesso ao Sistema</h1>
+                                    <!--end::Title-->
+                                    <!--begin::Subtitle-->
+                                    <div class="text-gray-500 fw-semibold fs-6">Sistema de Tramitação Legislativa</div>
+                                    <!--end::Subtitle=-->
+                                </div>
+                                <!--begin::Heading-->
+                                    
+                                <x-alerts.flash />
+                                    
+                                <!--begin::Login options-->
+                                <div class="row g-2 mb-9">
+                                    <!--begin::Col-->
+                                    <div class="col-md-6 mb-2">
+                                        <!--begin::Demo access link=-->
+                                        <a href="#" class="btn btn-flex btn-outline btn-text-gray-700 btn-active-color-primary bg-state-light flex-center text-nowrap w-100" onclick="document.querySelector('input[name=email]').value='bruno@sistema.gov.br'; document.querySelector('input[name=password]').value='13ligado';">
+                                            <i class="ki-duotone ki-user fs-4 me-2">
+                                                <span class="path1"></span>
+                                                <span class="path2"></span>
+                                            </i>Administrador
+                                        </a>
+                                        <!--end::Demo access link=-->
+                                    </div>
+                                    <!--end::Col-->
+                                    <!--begin::Col-->
+                                    <div class="col-md-6 mb-2">
+                                        <!--begin::Demo access link=-->
+                                        <a href="#" class="btn btn-flex btn-outline btn-text-gray-700 btn-active-color-primary bg-state-light flex-center text-nowrap w-100" onclick="document.querySelector('input[name=email]').value='jessica@sistema.gov.br'; document.querySelector('input[name=password]').value='13ligado';">
+                                            <i class="ki-duotone ki-security-user fs-4 me-2">
+                                                <span class="path1"></span>
+                                                <span class="path2"></span>
+                                            </i>Parlamentar
+                                        </a>
+                                        <!--end::Demo access link=-->
+                                    </div>
+                                    <!--end::Col-->
+                                    <!--begin::Col-->
+                                    <div class="col-md-6 mb-2">
+                                        <!--begin::Demo access link=-->
+                                        <a href="#" class="btn btn-flex btn-outline btn-text-gray-700 btn-active-color-primary bg-state-light flex-center text-nowrap w-100" onclick="document.querySelector('input[name=email]').value='joao@sistema.gov.br'; document.querySelector('input[name=password]').value='13ligado';">
+                                            <i class="ki-duotone ki-abstract-39 fs-4 me-2">
+                                                <span class="path1"></span>
+                                                <span class="path2"></span>
+                                            </i>Legislativo
+                                        </a>
+                                        <!--end::Demo access link=-->
+                                    </div>
+                                    <!--end::Col-->
+                                    <!--begin::Col-->
+                                    <div class="col-md-6 mb-2">
+                                        <!--begin::Demo access link=-->
+                                        <a href="#" class="btn btn-flex btn-outline btn-text-gray-700 btn-active-color-primary bg-state-light flex-center text-nowrap w-100" onclick="document.querySelector('input[name=email]').value='roberto@sistema.gov.br'; document.querySelector('input[name=password]').value='13ligado';">
+                                            <i class="ki-duotone ki-document fs-4 me-2">
+                                                <span class="path1"></span>
+                                                <span class="path2"></span>
+                                            </i>Protocolo
+                                        </a>
+                                        <!--end::Demo access link=-->
+                                    </div>
+                                    <!--end::Col-->
+                                    <!--begin::Col-->
+                                    <div class="col-md-6 mb-2">
+                                        <!--begin::Demo access link=-->
+                                        <a href="#" class="btn btn-flex btn-outline btn-text-gray-700 btn-active-color-primary bg-state-light flex-center text-nowrap w-100" onclick="document.querySelector('input[name=email]').value='expediente@sistema.gov.br'; document.querySelector('input[name=password]').value='13ligado';">
+                                            <i class="ki-duotone ki-send fs-4 me-2">
+                                                <span class="path1"></span>
+                                                <span class="path2"></span>
+                                            </i>Expediente
+                                        </a>
+                                        <!--end::Demo access link=-->
+                                    </div>
+                                    <!--end::Col-->
+                                    <!--begin::Col-->
+                                    <div class="col-md-6 mb-2">
+                                        <!--begin::Demo access link=-->
+                                        <a href="#" class="btn btn-flex btn-outline btn-text-gray-700 btn-active-color-primary bg-state-light flex-center text-nowrap w-100" onclick="document.querySelector('input[name=email]').value='juridico@sistema.gov.br'; document.querySelector('input[name=password]').value='13ligado';">
+                                            <i class="ki-duotone ki-courthouse fs-4 me-2">
+                                                <span class="path1"></span>
+                                                <span class="path2"></span>
+                                            </i>Assessor Jurídico
+                                        </a>
+                                        <!--end::Demo access link=-->
+                                    </div>
+                                    <!--end::Col-->
+                                </div>
+                                <!--end::Login options-->
+                                <!--begin::Separator-->
+                                <div class="separator separator-content my-14">
+                                    <span class="w-125px text-gray-500 fw-semibold fs-7">Ou com suas credenciais</span>
+                                </div>
+                                <!--end::Separator-->
+                                <!--begin::Input group=-->
+                                <div class="fv-row mb-8">
+                                    <!--begin::Email-->
+                                    <input type="email" placeholder="E-mail" name="email" autocomplete="email" class="form-control bg-transparent" value="{{ old('email') }}" />
+                                    <!--end::Email-->
+                                </div>
+                                <!--end::Input group=-->
+                                <div class="fv-row mb-3">
+                                    <!--begin::Password-->
+                                    <input type="password" placeholder="Senha" name="password" autocomplete="current-password" class="form-control bg-transparent" />
+                                    <!--end::Password-->
+                                </div>
+                                <!--end::Input group=-->
+                                <!--begin::Wrapper-->
+                                <div class="d-flex flex-stack flex-wrap gap-3 fs-base fw-semibold mb-8">
+                                    <div>
+                                        <input type="checkbox" class="form-check-input me-2" id="remember_me" name="remember">
+                                        <label class="form-check-label text-gray-600" for="remember_me">
+                                            Lembrar-me
+                                        </label>
+                                    </div>
+                                    <!--begin::Link-->
+                                    <a href="#" class="link-primary">Esqueceu a senha?</a>
+                                    <!--end::Link-->
+                                </div>
+                                <!--end::Wrapper-->
+                                <!--begin::Submit button-->
+                                <div class="d-grid mb-10">
+                                    <button type="submit" id="kt_sign_in_submit" class="btn btn-primary">
+                                        <!--begin::Indicator label-->
+                                        <span class="indicator-label">Entrar no Sistema</span>
+                                        <!--end::Indicator label-->
+                                        <!--begin::Indicator progress-->
+                                        <span class="indicator-progress">Aguarde... 
+                                        <span class="spinner-border spinner-border-sm align-middle ms-2"></span></span>
+                                        <!--end::Indicator progress-->
+                                    </button>
+                                </div>
+                                <!--end::Submit button-->
+                                <!--begin::Sign up-->
+                                <div class="text-gray-500 text-center fw-semibold fs-6">Ainda não possui acesso? 
+                                <a href="{{ route('progress.index') }}" class="link-primary">Solicitar cadastro</a></div>
+                                <!--end::Sign up-->
+                            </form>
+                            <!--end::Form-->
+                        </div>
+                        <!--end::Wrapper-->
                     </div>
-                    <!--end::Wrapper-->
+                    <!--end::Form-->
                 </div>
-                <!--end::Form-->
-                
-            </div>
-            <!--end::Body-->
-            <!--begin::Aside-->
-            <div class="d-none d-lg-flex flex-lg-row-fluid w-lg-50 legislative-pattern order-1 order-lg-2 position-relative"
-                style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-                <!--begin::Content-->
-                <div class="d-flex flex-column flex-center py-7 py-lg-15 px-5 px-md-15 w-100">
-                    <!--begin::Logo-->
-                    <div class="logo-container mb-lg-12">
-                        <div class="logo-glow"></div>
-                        <img alt="LegisInc Logo" src="{{ asset('assets/media/logos/legisinc.png') }}" 
-                             class="h-120px h-lg-150px" style="position: relative; z-index: 2;" />
-                    </div>
-                    <!--end::Logo-->
-                    <!--begin::Image-->
-                    <div class="d-none d-lg-block text-center mb-10 mb-lg-20">
-                        <div class="d-flex justify-content-center mb-8">
-                            <div class="bg-white bg-opacity-20 rounded-circle p-4 mx-3">
-                                <i class="fas fa-file-alt text-white fs-2x"></i>
+                <!--end::Body-->
+                <!--begin::Aside-->
+                <div class="d-flex flex-lg-row-fluid w-lg-50 bgi-size-cover bgi-position-center order-1 order-lg-2 auth-aside-bg">
+                    <!--begin::Content-->
+                    <div class="d-flex flex-column flex-center py-7 py-lg-15 px-5 px-md-15 w-100">
+                        <!--begin::Logo-->
+                        <a href="#" class="mb-0 mb-lg-12">
+                            <img alt="Logo" src="{{ asset('assets/media/logos/legisinc.png') }}" class="h-80px h-lg-120px h-xl-150px" />
+                        </a>
+                        <!--end::Logo-->
+                        <!--begin::Alert-->
+                        <div class="mb-10 mb-lg-20">
+                            <div class="text-white fs-2qx fw-bolder text-center mb-7 d-none d-lg-block">
+                                Sistema de Tramitação Legislativa
                             </div>
-                            <div class="bg-white bg-opacity-20 rounded-circle p-4 mx-3">
-                                <i class="fas fa-route text-white fs-2x"></i>
-                            </div>
-                            <div class="bg-white bg-opacity-20 rounded-circle p-4 mx-3">
-                                <i class="fas fa-check-circle text-white fs-2x"></i>
+                            
+                            <div class="alert bg-light-primary d-flex flex-column flex-sm-row p-5 mb-10 shadow-lg rounded-3">
+                                <!--begin::Icon-->
+                                <i class="ki-duotone ki-notification-bing fs-2hx text-primary me-4 mb-5 mb-sm-0">
+                                    <span class="path1"></span>
+                                    <span class="path2"></span>
+                                    <span class="path3"></span>
+                                </i>
+                                <!--end::Icon-->
+
+                                <!--begin::Wrapper-->
+                                <div class="d-flex flex-column">
+                                    <!--begin::Title-->
+                                    <h4 class="fw-semibold text-primary mb-2">Sistema LegisInc - Versão Demo</h4>
+                                    <!--end::Title-->
+
+                                    <!--begin::Content-->
+                                    <span class="text-gray-700 fs-6">
+                                        Plataforma completa para gestão e tramitação legislativa. 
+                                        <br class="d-none d-lg-block">
+                                        Use as credenciais de teste para explorar todas as funcionalidades do sistema.
+                                        <br class="d-none d-lg-block">
+                                        <strong>500+ projetos processados | 98% de eficiência | Disponível 24/7</strong>
+                                    </span>
+                                    <!--end::Content-->
+                                </div>
+                                <!--end::Wrapper-->
                             </div>
                         </div>
-                    </div>
-                    <!--end::Image-->
-                    <!--begin::Title-->
-                    <h1 class="d-none d-lg-block text-white fs-2qx fw-bolder text-center mb-7">
-                        Rápido, Eficiente e Seguro
-                    </h1>
-                    <!--end::Title-->
-                    <!--begin::Text-->
-                    <div class="d-none d-lg-block text-white fs-base text-center mb-8">
-                        Sistema completo para <strong>tramitação legislativa</strong> que otimiza o processo 
-                        <br />de análise e aprovação de projetos, oferecendo 
-                        <br />controle total sobre cada etapa do fluxo parlamentar.
-                    </div>
-                    <!--end::Text-->
-                    
-                    <!--begin::Features-->
-                    <div class="d-none d-lg-block">
-                        <div class="row text-center">
-                            <div class="col-4">
-                                <div class="d-flex flex-column align-items-center">
-                                    <div class="bg-white bg-opacity-20 rounded-circle p-3 mb-3">
-                                        <i class="fas fa-shield-alt text-white fs-3"></i>
-                                    </div>
-                                    <span class="text-white fw-bold fs-6">Segurança</span>
-                                    <span class="text-white-50 fs-7">Dados protegidos</span>
-                                </div>
+                        <!--end::Alert-->
+                        <!--begin::Title-->
+                        <h1 class="d-none d-lg-block text-white fs-2qx fw-bolder text-center mb-7">
+                            Controle Total do Processo Legislativo
+                        </h1>
+                        <!--end::Title-->
+                        <!--begin::Text-->
+                        <div class="d-none d-lg-block text-center">
+                            <div class="text-white fs-5 fw-semibold mb-6">
+                                O <a href="#" class="opacity-75-hover text-warning fw-bold">LegisInc</a> oferece as ferramentas mais avançadas para gestão legislativa:
                             </div>
-                            <div class="col-4">
-                                <div class="d-flex flex-column align-items-center">
-                                    <div class="bg-white bg-opacity-20 rounded-circle p-3 mb-3">
-                                        <i class="fas fa-tachometer-alt text-white fs-3"></i>
+                            <div class="row g-4 mb-8">
+                                <div class="col-6">
+                                    <div class="d-flex align-items-center bg-light bg-opacity-15 rounded-3 p-3">
+                                        <i class="ki-duotone ki-arrow-right-square fs-2x text-success me-3">
+                                            <span class="path1"></span>
+                                            <span class="path2"></span>
+                                            <span class="path3"></span>
+                                        </i>
+                                        <span class="text-white fs-6 fw-semibold">Tramitação automatizada de projetos</span>
                                     </div>
-                                    <span class="text-white fw-bold fs-6">Performance</span>
-                                    <span class="text-white-50 fs-7">Processo ágil</span>
                                 </div>
-                            </div>
-                            <div class="col-4">
-                                <div class="d-flex flex-column align-items-center">
-                                    <div class="bg-white bg-opacity-20 rounded-circle p-3 mb-3">
-                                        <i class="fas fa-users text-white fs-3"></i>
+                                <div class="col-6">
+                                    <div class="d-flex align-items-center bg-light bg-opacity-15 rounded-3 p-3">
+                                        <i class="ki-duotone ki-notification-status fs-2x text-warning me-3">
+                                            <span class="path1"></span>
+                                            <span class="path2"></span>
+                                            <span class="path3"></span>
+                                            <span class="path4"></span>
+                                        </i>
+                                        <span class="text-white fs-6 fw-semibold">Controle de prazos e notificações</span>
                                     </div>
-                                    <span class="text-white fw-bold fs-6">Colaboração</span>
-                                    <span class="text-white-50 fs-7">Trabalho em equipe</span>
+                                </div>
+                                <div class="col-6">
+                                    <div class="d-flex align-items-center bg-light bg-opacity-15 rounded-3 p-3">
+                                        <i class="ki-duotone ki-chart-simple fs-2x text-info me-3">
+                                            <span class="path1"></span>
+                                            <span class="path2"></span>
+                                            <span class="path3"></span>
+                                            <span class="path4"></span>
+                                        </i>
+                                        <span class="text-white fs-6 fw-semibold">Relatórios gerenciais em tempo real</span>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="d-flex align-items-center bg-light bg-opacity-15 rounded-3 p-3">
+                                        <i class="ki-duotone ki-arrows-loop fs-2x text-primary me-3">
+                                            <span class="path1"></span>
+                                            <span class="path2"></span>
+                                        </i>
+                                        <span class="text-white fs-6 fw-semibold">Integração com sistemas governamentais</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
+                        <!--end::Text-->
+                        <!--begin::Documentation Link-->
+                        <div class="d-none d-lg-block mt-10 text-center">
+                            <a href="{{ route('progress.index') }}" class="btn btn-light-primary btn-lg fw-bold shadow-sm px-8 py-4 rounded-pill">
+                                <i class="ki-duotone ki-book-open fs-1 text-primary me-3">
+                                    <span class="path1"></span>
+                                    <span class="path2"></span>
+                                    <span class="path3"></span>
+                                    <span class="path4"></span>
+                                </i>
+                                <span class="text-primary fs-5">Acessar Documentação</span>
+                                <i class="ki-duotone ki-arrow-right fs-2 text-primary ms-2">
+                                    <span class="path1"></span>
+                                    <span class="path2"></span>
+                                </i>
+                            </a>
+                        </div>
+                        <!--end::Documentation Link-->
                     </div>
-                    <!--end::Features-->
+                    <!--end::Content-->
                 </div>
-                <!--end::Content-->
-                
-                <!--begin::API Status Indicator-->
-                <div class="position-absolute bottom-0 end-0 me-8 mb-8">
-                    <div class="d-flex align-items-center bg-dark bg-opacity-50 rounded-pill px-3 py-2">
-                        <div id="api-status-indicator" class="rounded-circle me-2" style="width: 12px; height: 12px; background-color: #6c757d;"></div>
-                        <span class="text-white fs-7 fw-semibold" id="api-status-text">Verificando API...</span>
-                    </div>
-                </div>
-                <!--end::API Status Indicator-->
-                
-               
+                <!--end::Aside-->
             </div>
-            <!--end::Aside-->
+            <!--end::Authentication - Sign-in -->
         </div>
-        <!--end::Authentication - Sign-in-->
-    </div>
-    <!--end::Root-->
-    <!--end::Main-->
-    <!--begin::Javascript-->
-    <script src="{{ asset('assets/plugins/global/plugins.bundle.js') }}"></script>
-    <script src="{{ asset('assets/js/scripts.bundle.js') }}"></script>
-    
-    <!--begin::API Status Script-->
-    <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const statusIndicator = document.getElementById('api-status-indicator');
-        const statusText = document.getElementById('api-status-text');
-        
-        // Cores para os diferentes status
-        const colors = {
-            checking: '#6c757d',  // Cinza
-            online: '#28a745',    // Verde
-            offline: '#dc3545',   // Vermelho
-            warning: '#ffc107'    // Amarelo
-        };
-        
-        // Textos para os diferentes status
-        const texts = {
-            checking: 'Verificando API...',
-            online: 'API Online',
-            offline: 'API Offline',
-            warning: 'API com Problemas'
-        };
-        
-        // Função para atualizar o status visual
-        function updateStatus(status) {
-            statusIndicator.style.backgroundColor = colors[status];
-            statusText.textContent = texts[status];
-            
-            // Adicionar animação de pulso para status checking
-            if (status === 'checking') {
-                statusIndicator.style.animation = 'pulse 2s infinite';
-            } else {
-                statusIndicator.style.animation = 'none';
-            }
-        }
-        
-        // Função para verificar o status da API
-        async function checkApiStatus() {
-            try {
-                updateStatus('checking');
-                
-                // Tentar endpoint de health check da API
-                const response = await fetch('/api-test/health', {
-                    method: 'GET',
-                    headers: {
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json'
-                    },
-                    timeout: 5000
-                });
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    
-                    if (data.success && data.healthy) {
-                        updateStatus('online');
-                    } else {
-                        updateStatus('warning');
-                    }
-                } else {
-                    updateStatus('offline');
-                }
-            } catch (error) {
-                console.warn('API Status Check Error:', error);
-                updateStatus('offline');
-            }
-        }
-        
-        // Verificar status imediatamente
-        checkApiStatus();
-        
-        // Verificar status a cada 30 segundos
-        setInterval(checkApiStatus, 30000);
-        
-        // Adicionar tooltip ao indicador
-        statusIndicator.parentElement.title = 'Status da API - Clique para verificar novamente';
-        
-        // Permitir verificação manual clicando no indicador
-        statusIndicator.parentElement.addEventListener('click', function() {
-            checkApiStatus();
-        });
-        
-        // Adicionar estilos CSS para a animação
-        const style = document.createElement('style');
-        style.textContent = `
-            @keyframes pulse {
-                0% { opacity: 1; transform: scale(1); }
-                50% { opacity: 0.5; transform: scale(1.1); }
-                100% { opacity: 1; transform: scale(1); }
-            }
-            
-            #api-status-indicator {
-                transition: all 0.3s ease;
-            }
-            
-            #api-status-indicator:hover {
-                transform: scale(1.2);
-            }
-        `;
-        document.head.appendChild(style);
-    });
-    </script>
-    <!--end::API Status Script-->
-    <!--end::Javascript-->
-</body>
-<!--end::Body-->
+        <!--end::Root-->
+        <!--end::Main-->
+        <!--begin::Javascript-->
+        <script>var hostUrl = "{{ asset('assets/') }}/";</script>
+        <!--begin::Global Javascript Bundle(mandatory for all pages)-->
+        <script src="{{ asset('assets/plugins/global/plugins.bundle.js') }}"></script>
+        <script src="{{ asset('assets/js/scripts.bundle.js') }}"></script>
+        <!--end::Global Javascript Bundle-->
+        <!--begin::Custom Javascript(used for this page only)-->
+        <script src="{{ asset('assets/js/custom/authentication/sign-in/general.js') }}"></script>
+        <!--end::Custom Javascript-->
+        <!--end::Javascript-->
+    </body>
+    <!--end::Body-->
 </html>

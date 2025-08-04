@@ -1,228 +1,209 @@
-@if(session('success') || session('error') || session('warning') || session('info'))
-    @if(session('success'))
-        <div class="alert alert-success temp-flash-alert">
-            <i class="ki-duotone ki-check-circle fs-2">
-                <span class="path1"></span>
-                <span class="path2"></span>
-            </i>
-            {{ session('success') }}
-        </div>
-    @endif
-
-    @if(session('error'))
-        <div class="alert alert-danger temp-flash-alert">
-            <i class="ki-duotone ki-cross-circle fs-2">
-                <span class="path1"></span>
-                <span class="path2"></span>
-            </i>
-            {{ session('error') }}
-        </div>
-    @endif
-
-    @if($errors->any())
-        <div class="alert alert-danger temp-flash-alert">
-            <i class="ki-duotone ki-cross-circle fs-2">
-                <span class="path1"></span>
-                <span class="path2"></span>
-            </i>
-            <strong>Erro:</strong> Verifique os campos abaixo:
-            <ul class="mb-0 mt-2">
-                @foreach($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
-        </div>
-    @endif
-
-    @if(session('warning'))
-        <div class="alert alert-warning temp-flash-alert">
-            <i class="ki-duotone ki-information fs-2">
-                <span class="path1"></span>
-                <span class="path2"></span>
-                <span class="path3"></span>
-            </i>
-            {{ session('warning') }}
-        </div>
-    @endif
-
-    @if(session('info'))
-        <div class="alert alert-info temp-flash-alert">
-            <i class="ki-duotone ki-information fs-2">
-                <span class="path1"></span>
-                <span class="path2"></span>
-                <span class="path3"></span>
-            </i>
-            {{ session('info') }}
-        </div>
-    @endif
-
+@if(session('success') || session('error') || session('warning') || session('info') || $errors->any())
     <script>
-    (function() {
-        // Create alert container immediately if it doesn't exist
-        if (!document.getElementById('alert-container')) {
-            const container = document.createElement('div');
-            container.id = 'alert-container';
-            container.className = 'alert-container position-fixed top-0 end-0 p-3';
-            container.style.zIndex = '1081';
-            container.style.maxWidth = '100vw';
-            container.style.overflow = 'hidden';
-            container.style.pointerEvents = 'none';
-            document.body.appendChild(container);
+    document.addEventListener('DOMContentLoaded', function() {
+        // Create toast container directly in body if it doesn't exist
+        let toastContainer = document.getElementById('kt_toast_container');
+        if (!toastContainer) {
+            toastContainer = document.createElement('div');
+            toastContainer.id = 'kt_toast_container';
+            toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+            toastContainer.style.cssText = `
+                position: fixed !important;
+                top: 20px !important;
+                right: 20px !important;
+                z-index: 99999 !important;
+                pointer-events: none !important;
+                max-width: 420px !important;
+            `;
+            document.body.appendChild(toastContainer);
         }
         
-        // Find and process all flash alerts
-        const alerts = document.querySelectorAll('.temp-flash-alert');
-        alerts.forEach(alert => {
-            const container = document.getElementById('alert-container');
-            
-            // Clone and enhance the alert
-            const clonedAlert = alert.cloneNode(true);
-            clonedAlert.classList.remove('temp-flash-alert');
-            clonedAlert.classList.add('alert-dismissible', 'alert-enhanced');
-            
-            // Apply modern styles
-            clonedAlert.style.position = 'relative';
-            clonedAlert.style.minWidth = '380px';
-            clonedAlert.style.maxWidth = '450px';
-            clonedAlert.style.paddingRight = '4rem';
-            clonedAlert.style.paddingLeft = '1.5rem';
-            clonedAlert.style.paddingTop = '1.25rem';
-            clonedAlert.style.paddingBottom = '1.25rem';
-            clonedAlert.style.marginBottom = '0.75rem';
-            clonedAlert.style.transform = 'translateX(100%)';
-            clonedAlert.style.transition = 'all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55)';
-            clonedAlert.style.opacity = '0';
-            clonedAlert.style.boxShadow = '0 15px 35px rgba(0, 0, 0, 0.25), 0 5px 15px rgba(0, 0, 0, 0.15)';
-            clonedAlert.style.border = 'none';
-            clonedAlert.style.borderRadius = '12px';
-            clonedAlert.style.pointerEvents = 'all';
-            clonedAlert.style.backgroundColor = '#ffffff';
-            clonedAlert.style.backdropFilter = 'none';
-            clonedAlert.style.fontSize = '14px';
-            clonedAlert.style.fontWeight = '500';
-            clonedAlert.style.color = '#212529';
-            
-            // Responsive styles for mobile
-            if (window.innerWidth <= 576) {
-                clonedAlert.style.minWidth = '280px';
-                clonedAlert.style.maxWidth = 'calc(100vw - 2rem)';
-            } else if (window.innerWidth <= 768) {
-                clonedAlert.style.minWidth = '320px';
-                clonedAlert.style.maxWidth = 'calc(100vw - 2rem)';
+        // Toast configuration for different types
+        const toastConfig = {
+            success: {
+                icon: '<i class="ki-duotone ki-check-circle fs-2 text-success me-3"><span class="path1"></span><span class="path2"></span></i>',
+                title: 'Sucesso!',
+                bgClass: 'bg-light-success'
+            },
+            error: {
+                icon: '<i class="ki-duotone ki-cross-circle fs-2 text-danger me-3"><span class="path1"></span><span class="path2"></span></i>',
+                title: 'Erro!',
+                bgClass: 'bg-light-danger'
+            },
+            warning: {
+                icon: '<i class="ki-duotone ki-information fs-2 text-warning me-3"><span class="path1"></span><span class="path2"></span><span class="path3"></span></i>',
+                title: 'Atenção!',
+                bgClass: 'bg-light-warning'
+            },
+            info: {
+                icon: '<i class="ki-duotone ki-information fs-2 text-info me-3"><span class="path1"></span><span class="path2"></span><span class="path3"></span></i>',
+                title: 'Informação',
+                bgClass: 'bg-light-info'
             }
+        };
+        
+        function showToast(message, type = 'info', duration = 2000) {
+            const config = toastConfig[type] || toastConfig.info;
+            const toastId = 'toast_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
             
-            // Apply type-specific styles with solid white background
-            if (clonedAlert.classList.contains('alert-success')) {
-                clonedAlert.style.borderLeft = '4px solid #198754';
-                clonedAlert.style.backgroundColor = '#ffffff';
-                clonedAlert.style.border = '1px solid rgba(25, 135, 84, 0.2)';
-            } else if (clonedAlert.classList.contains('alert-danger')) {
-                clonedAlert.style.borderLeft = '4px solid #dc3545';
-                clonedAlert.style.backgroundColor = '#ffffff';
-                clonedAlert.style.border = '1px solid rgba(220, 53, 69, 0.2)';
-            } else if (clonedAlert.classList.contains('alert-warning')) {
-                clonedAlert.style.borderLeft = '4px solid #ffc107';
-                clonedAlert.style.backgroundColor = '#ffffff';
-                clonedAlert.style.border = '1px solid rgba(255, 193, 7, 0.2)';
-            } else if (clonedAlert.classList.contains('alert-info')) {
-                clonedAlert.style.borderLeft = '4px solid #0dcaf0';
-                clonedAlert.style.backgroundColor = '#ffffff';
-                clonedAlert.style.border = '1px solid rgba(13, 202, 240, 0.2)';
-            }
-
-            // Add close button if not exists
-            if (!clonedAlert.querySelector('.btn-close')) {
-                const closeBtn = document.createElement('button');
-                closeBtn.type = 'button';
-                closeBtn.className = 'btn-close';
-                closeBtn.setAttribute('aria-label', 'Close');
-                closeBtn.style.position = 'absolute';
-                closeBtn.style.top = '12px';
-                closeBtn.style.right = '12px';
-                closeBtn.style.zIndex = '2';
-                closeBtn.style.width = '32px';
-                closeBtn.style.height = '32px';
-                closeBtn.style.padding = '0';
-                closeBtn.style.background = 'rgba(0, 0, 0, 0.15)';
-                closeBtn.style.border = '0';
-                closeBtn.style.borderRadius = '50%';
-                closeBtn.style.opacity = '0.7';
-                closeBtn.style.cursor = 'pointer';
-                closeBtn.style.display = 'flex';
-                closeBtn.style.alignItems = 'center';
-                closeBtn.style.justifyContent = 'center';
-                closeBtn.style.transition = 'all 0.2s ease';
-                closeBtn.innerHTML = '<i class="ki-duotone ki-cross fs-4"><span class="path1"></span><span class="path2"></span></i>';
-                
-                closeBtn.addEventListener('mouseenter', function() {
-                    this.style.opacity = '1';
-                    this.style.background = 'rgba(0, 0, 0, 0.25)';
-                    this.style.transform = 'scale(1.1)';
-                });
-                
-                closeBtn.addEventListener('mouseleave', function() {
-                    this.style.opacity = '0.7';
-                    this.style.background = 'rgba(0, 0, 0, 0.15)';
-                    this.style.transform = 'scale(1)';
-                });
-                
-                closeBtn.addEventListener('click', function() {
-                    clonedAlert.style.transform = 'translateX(100%)';
-                    clonedAlert.style.opacity = '0';
-                    setTimeout(() => {
-                        if (clonedAlert.parentNode) {
-                            clonedAlert.remove();
-                        }
-                    }, 400);
-                });
-                
-                clonedAlert.appendChild(closeBtn);
-            }
+            // Create toast HTML
+            const toastHtml = `
+                <div class="toast ${config.bgClass}" role="alert" aria-live="assertive" aria-atomic="true" id="${toastId}" data-bs-autohide="true" data-bs-delay="${duration}">
+                    <div class="toast-header">
+                        ${config.icon}
+                        <strong class="me-auto">${config.title}</strong>
+                        <small class="text-muted">agora</small>
+                        <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                    <div class="toast-body fw-semibold">
+                        ${message}
+                    </div>
+                </div>
+            `;
             
-            // Remove original and add to container
-            alert.remove();
-            container.appendChild(clonedAlert);
+            // Add toast to container
+            toastContainer.insertAdjacentHTML('beforeend', toastHtml);
             
-            // Show with animation
-            setTimeout(() => {
-                clonedAlert.style.transform = 'translateX(0) scale(1)';
-                clonedAlert.style.opacity = '1';
-            }, 50);
+            // Get the new toast element
+            const toastElement = document.getElementById(toastId);
             
-            // Add progress bar for auto-hide
-            const progressBar = document.createElement('div');
-            progressBar.style.position = 'absolute';
-            progressBar.style.bottom = '0';
-            progressBar.style.left = '0';
-            progressBar.style.height = '3px';
-            progressBar.style.backgroundColor = clonedAlert.classList.contains('alert-success') ? '#198754' :
-                                                clonedAlert.classList.contains('alert-danger') ? '#dc3545' :
-                                                clonedAlert.classList.contains('alert-warning') ? '#ffc107' :
-                                                clonedAlert.classList.contains('alert-info') ? '#0dcaf0' : '#6c757d';
-            progressBar.style.borderRadius = '0 0 12px 12px';
-            progressBar.style.width = '100%';
-            progressBar.style.transition = 'width 6s linear';
-            progressBar.style.opacity = '0.3';
-            clonedAlert.appendChild(progressBar);
+            // Initialize Bootstrap Toast
+            const toast = new bootstrap.Toast(toastElement, {
+                autohide: true,
+                delay: duration
+            });
             
-            // Start progress bar animation
-            setTimeout(() => {
-                progressBar.style.width = '0%';
-            }, 100);
+            // Show the toast
+            toast.show();
             
-            // Auto-hide after 6 seconds
-            setTimeout(() => {
-                if (clonedAlert.parentNode) {
-                    clonedAlert.style.transform = 'translateX(100%) scale(0.9)';
-                    clonedAlert.style.opacity = '0';
-                    setTimeout(() => {
-                        if (clonedAlert.parentNode) {
-                            clonedAlert.remove();
-                        }
-                    }, 400);
+            // Remove from DOM after it's hidden
+            toastElement.addEventListener('hidden.bs.toast', function() {
+                toastElement.remove();
+            });
+            
+            return toast;
+        }
+        
+        // Show session messages
+        @if(session('success'))
+            showToast(`{{ addslashes(session('success')) }}`, 'success');
+        @endif
+        
+        @if(session('error'))
+            showToast(`{{ addslashes(session('error')) }}`, 'error');
+        @endif
+        
+        @if(session('warning'))
+            showToast(`{{ addslashes(session('warning')) }}`, 'warning');
+        @endif
+        
+        @if(session('info'))
+            showToast(`{{ addslashes(session('info')) }}`, 'info');
+        @endif
+        
+        @if($errors->any())
+            @php
+                $errorMessage = 'Verifique os campos do formulário:\\n';
+                foreach($errors->all() as $error) {
+                    $errorMessage .= '• ' . $error . '\\n';
                 }
-            }, 6000);
-        });
-    })();
+            @endphp
+            showToast(`{{ addslashes($errorMessage) }}`, 'error', 3000);
+        @endif
+        
+        // Make showToast globally available for dynamic use
+        window.showToast = showToast;
+    });
     </script>
+    
+    <style>
+    /* Toast container global positioning - always in viewport */
+    #kt_toast_container {
+        position: fixed !important;
+        top: 20px !important;
+        right: 20px !important;
+        z-index: 99999 !important;
+        pointer-events: none !important;
+        max-width: 420px !important;
+        width: auto !important;
+    }
+    
+    /* Ensure toast container is not affected by parent positioning */
+    body #kt_toast_container {
+        position: fixed !important;
+        top: 20px !important;
+        right: 20px !important;
+        z-index: 99999 !important;
+    }
+    
+    /* Custom toast styling */
+    #kt_toast_container .toast {
+        min-width: 350px;
+        max-width: 400px;
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+        border: 1px solid rgba(0, 0, 0, 0.05);
+        pointer-events: all !important;
+        margin-bottom: 12px;
+    }
+    
+    .toast.bg-light-success {
+        background-color: rgba(25, 135, 84, 0.1) !important;
+        border-left: 4px solid #198754;
+    }
+    
+    .toast.bg-light-danger {
+        background-color: rgba(220, 53, 69, 0.1) !important;
+        border-left: 4px solid #dc3545;
+    }
+    
+    .toast.bg-light-warning {
+        background-color: rgba(255, 193, 7, 0.1) !important;
+        border-left: 4px solid #ffc107;
+    }
+    
+    .toast.bg-light-info {
+        background-color: rgba(13, 202, 240, 0.1) !important;
+        border-left: 4px solid #0dcaf0;
+    }
+    
+    .toast-header {
+        background-color: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(10px);
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    }
+    
+    .toast-body {
+        background-color: rgba(255, 255, 255, 0.95);
+        white-space: pre-line;
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 576px) {
+        #kt_toast_container {
+            left: 10px !important;
+            right: 10px !important;
+            top: 10px !important;
+            max-width: none !important;
+        }
+        
+        #kt_toast_container .toast {
+            min-width: auto !important;
+            max-width: none !important;
+            width: 100% !important;
+        }
+    }
+    
+    @media (max-width: 768px) {
+        #kt_toast_container {
+            top: 15px !important;
+            right: 15px !important;
+            max-width: calc(100vw - 30px) !important;
+        }
+        
+        #kt_toast_container .toast {
+            min-width: 300px !important;
+            max-width: calc(100vw - 30px) !important;
+        }
+    }
+    </style>
 @endif

@@ -169,31 +169,83 @@ class AuthController extends Controller
     {
         // Mock users for demo purposes
         $mockUsers = [
-            'admin@sistema.gov.br' => [
-                'password' => 'admin123',
+            'bruno@sistema.gov.br' => [
+                'password' => '13ligado',
                 'user' => [
                     'id' => 1,
-                    'name' => 'Administrador do Sistema',
-                    'email' => 'admin@sistema.gov.br',
-                    'documento' => '000.000.000-00',
-                    'telefone' => '(11) 0000-0000',
+                    'name' => 'Bruno Silva',
+                    'email' => 'bruno@sistema.gov.br',
+                    'documento' => '000.000.001-00',
+                    'telefone' => '(11) 9000-0001',
                     'profissao' => 'Administrador de Sistema',
                     'cargo_atual' => 'Administrador',
                     'ativo' => true,
                 ]
             ],
-            'parlamentar@camara.gov.br' => [
-                'password' => 'parlamentar123',
+            'jessica@sistema.gov.br' => [
+                'password' => '13ligado',
                 'user' => [
                     'id' => 2,
-                    'name' => 'João Silva Santos',
-                    'email' => 'parlamentar@camara.gov.br',
+                    'name' => 'Jessica Santos',
+                    'email' => 'jessica@sistema.gov.br',
                     'documento' => '111.111.111-11',
-                    'telefone' => '(11) 1111-1111',
-                    'data_nascimento' => '1975-03-15',
-                    'profissao' => 'Advogado',
-                    'cargo_atual' => 'Vereador',
+                    'telefone' => '(11) 9111-1111',
+                    'data_nascimento' => '1980-05-20',
+                    'profissao' => 'Advogada',
+                    'cargo_atual' => 'Vereadora',
                     'partido' => 'PT',
+                    'ativo' => true,
+                ]
+            ],
+            'joao@sistema.gov.br' => [
+                'password' => '13ligado',
+                'user' => [
+                    'id' => 3,
+                    'name' => 'João Oliveira',
+                    'email' => 'joao@sistema.gov.br',
+                    'documento' => '222.222.222-22',
+                    'telefone' => '(11) 9222-2222',
+                    'profissao' => 'Servidor Legislativo',
+                    'cargo_atual' => 'Diretor Legislativo',
+                    'ativo' => true,
+                ]
+            ],
+            'roberto@sistema.gov.br' => [
+                'password' => '13ligado',
+                'user' => [
+                    'id' => 4,
+                    'name' => 'Roberto Costa',
+                    'email' => 'roberto@sistema.gov.br',
+                    'documento' => '333.333.333-33',
+                    'telefone' => '(11) 9333-3333',
+                    'profissao' => 'Servidor Público',
+                    'cargo_atual' => 'Chefe de Protocolo',
+                    'ativo' => true,
+                ]
+            ],
+            'expediente@sistema.gov.br' => [
+                'password' => '13ligado',
+                'user' => [
+                    'id' => 5,
+                    'name' => 'Maria Expediente',
+                    'email' => 'expediente@sistema.gov.br',
+                    'documento' => '444.444.444-44',
+                    'telefone' => '(11) 9444-4444',
+                    'profissao' => 'Servidora Pública',
+                    'cargo_atual' => 'Responsável pelo Expediente',
+                    'ativo' => true,
+                ]
+            ],
+            'juridico@sistema.gov.br' => [
+                'password' => '13ligado',
+                'user' => [
+                    'id' => 6,
+                    'name' => 'Carlos Jurídico',
+                    'email' => 'juridico@sistema.gov.br',
+                    'documento' => '555.555.555-55',
+                    'telefone' => '(11) 9555-5555',
+                    'profissao' => 'Advogado',
+                    'cargo_atual' => 'Assessor Jurídico',
                     'ativo' => true,
                 ]
             ]
