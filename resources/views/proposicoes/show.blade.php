@@ -218,7 +218,7 @@
                                 <a href="{{ route('proposicoes.onlyoffice.editor', $proposicao->id) }}" class="btn btn-primary">
                                     <i class="fas fa-file-word me-2"></i>Revisar no Editor
                                 </a>
-                                @if(Auth::user()->perfil === 'JURIDICO')
+                                @if(Auth::user()->isAssessorJuridico())
                                 <a href="{{ route('proposicoes.revisar.show', $proposicao->id) }}" class="btn btn-outline-secondary">
                                     <i class="fas fa-clipboard-check me-2"></i>Análise Técnica
                                 </a>
@@ -293,7 +293,7 @@
                                 <a href="{{ route('proposicoes.onlyoffice.editor', $proposicao->id) }}" class="btn btn-primary">
                                     <i class="fas fa-file-word me-2"></i>Continuar Revisão no Editor
                                 </a>
-                                @if(Auth::user()->perfil === 'JURIDICO')
+                                @if(Auth::user()->isAssessorJuridico())
                                 <a href="{{ route('proposicoes.revisar.show', $proposicao->id) }}" class="btn btn-outline-secondary">
                                     <i class="fas fa-clipboard-check me-2"></i>Análise Técnica
                                 </a>
@@ -370,12 +370,12 @@
                             {{ $proposicao->numero_protocolo ? 'Protocolo: ' . $proposicao->numero_protocolo : 'Documento assinado digitalmente.' }}
                         </div>
                         <div class="d-grid gap-2">
-                            @if(Auth::user()->perfil === 'PROTOCOLO' && !$proposicao->numero_protocolo)
+                            @if(Auth::user()->isProtocolo() && !$proposicao->numero_protocolo)
                                 <button class="btn btn-success" onclick="atribuirNumeroProtocolo()">
                                     <i class="fas fa-hashtag me-2"></i>Atribuir Número de Protocolo
                                 </button>
                                 <hr class="my-2">
-                            @elseif(Auth::user()->perfil !== 'PROTOCOLO' && !$proposicao->numero_protocolo)
+                            @elseif(!Auth::user()->isProtocolo() && !$proposicao->numero_protocolo)
                                 <button class="btn btn-primary" onclick="enviarParaProtocolo()">
                                     <i class="fas fa-file-signature me-2"></i>Enviar para Protocolo
                                 </button>
@@ -391,7 +391,7 @@
                             {{ $proposicao->numero_protocolo ? 'Protocolo: ' . $proposicao->numero_protocolo : 'Documento enviado para protocolo oficial.' }}
                         </div>
                         <div class="d-grid gap-2">
-                            @if(Auth::user()->perfil === 'PROTOCOLO')
+                            @if(Auth::user()->isProtocolo())
                                 @if(!$proposicao->numero_protocolo)
                                     <a href="{{ route('proposicoes.protocolar.show', $proposicao) }}" class="btn btn-primary">
                                         <i class="fas fa-file-signature me-2"></i>Protocolar
@@ -442,7 +442,7 @@
                                 <button onclick="retornarParaParlamentar({{ $proposicao->id }})" class="btn btn-success">
                                     <i class="fas fa-arrow-right me-2"></i>Retornar para Parlamentar
                                 </button>
-                                @if(Auth::user()->perfil === 'JURIDICO')
+                                @if(Auth::user()->isAssessorJuridico())
                                 <a href="{{ route('proposicoes.revisar.show', $proposicao->id) }}" class="btn btn-outline-secondary">
                                     <i class="fas fa-clipboard-check me-2"></i>Análise Técnica
                                 </a>
@@ -479,6 +479,32 @@
                                 </button>
                             </div>
                         @endif
+                    @elseif($proposicao->status === 'protocolado')
+                        <div class="alert alert-success mb-3">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-file-signature fs-2 text-success me-3"></i>
+                                <div>
+                                    <h6 class="alert-heading mb-1">Proposição Protocolada</h6>
+                                    <p class="mb-0 small">
+                                        @if($proposicao->numero_protocolo)
+                                            Protocolo: {{ $proposicao->numero_protocolo }}
+                                        @else
+                                            Proposição protocolada com sucesso.
+                                        @endif
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="d-grid gap-2">
+                            @if(Auth::user()->isParlamentar())
+                                <a href="{{ route('proposicoes.serve-pdf', $proposicao->id) }}" class="btn btn-primary" target="_blank">
+                                    <i class="fas fa-file-pdf me-2"></i>Baixar PDF
+                                </a>
+                            @endif
+                            <button class="btn btn-outline-info btn-sm" onclick="consultarProtocolo()">
+                                <i class="fas fa-search me-2"></i>Consultar Protocolo
+                            </button>
+                        </div>
                     @else
                         <div class="alert alert-secondary">
                             <i class="fas fa-question-circle me-2"></i>
@@ -1617,7 +1643,7 @@ function baixarDocumento() {
     });
 
     // Fazer requisição para download
-    fetch(`{{ route('proposicoes.onlyoffice.download', $proposicao) }}`, {
+    fetch(`{{ route('proposicoes.serve-pdf', $proposicao) }}`, {
         method: 'GET',
         headers: {
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
@@ -1628,10 +1654,10 @@ function baixarDocumento() {
             throw new Error(`Erro ${response.status}: ${response.statusText}`);
         }
         
-        // Verificar se é realmente um arquivo
+        // Verificar se é realmente um arquivo PDF
         const contentType = response.headers.get('content-type');
-        if (!contentType || (!contentType.includes('application/pdf') && !contentType.includes('application/vnd.openxmlformats'))) {
-            throw new Error('Formato de arquivo não suportado');
+        if (!contentType || !contentType.includes('application/pdf')) {
+            throw new Error('Formato de arquivo não suportado. Esperado PDF.');
         }
         
         return response.blob();
@@ -1641,16 +1667,8 @@ function baixarDocumento() {
             throw new Error('Arquivo vazio recebido');
         }
         
-        // Determinar extensão baseada no content-type
-        let filename = `proposicao_{{ $proposicao->id }}_assinada`;
-        const contentType = blob.type;
-        if (contentType.includes('pdf')) {
-            filename += '.pdf';
-        } else if (contentType.includes('word') || contentType.includes('openxml')) {
-            filename += '.docx';
-        } else {
-            filename += '.pdf'; // default
-        }
+        // Nome do arquivo PDF assinado
+        const filename = `proposicao_{{ $proposicao->id }}_assinada.pdf`;
         
         // Criar URL do blob e iniciar download
         const url = window.URL.createObjectURL(blob);

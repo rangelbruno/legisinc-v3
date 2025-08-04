@@ -4099,11 +4099,20 @@ ${texto}
         $user = Auth::user();
         
         // Permitir acesso para:
-        // 1. Autor da proposição (parlamentar)
+        // 1. Autor da proposição (parlamentar) - especialmente para status 'protocolado'
         // 2. Usuários do legislativo
         // 3. Usuários com perfil jurídico
-        if (!$user->isLegislativo() && $proposicao->autor_id !== $user->id && $user->perfil !== 'JURIDICO') {
+        // 4. Usuários do protocolo
+        if (!$user->isLegislativo() && $proposicao->autor_id !== $user->id && !$user->isAssessorJuridico() && !$user->isProtocolo()) {
             abort(403, 'Acesso negado.');
+        }
+
+        // Para parlamentares, permitir apenas em status específicos onde o PDF já está disponível
+        if ($user->isParlamentar() && $proposicao->autor_id === $user->id) {
+            $statusPermitidos = ['protocolado', 'aprovado', 'assinado', 'enviado_protocolo', 'retornado_legislativo'];
+            if (!in_array($proposicao->status, $statusPermitidos)) {
+                abort(403, 'PDF não disponível para download neste status.');
+            }
         }
 
         // Verificar se o PDF existe

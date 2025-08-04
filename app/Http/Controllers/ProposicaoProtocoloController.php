@@ -91,6 +91,18 @@ class ProposicaoProtocoloController extends Controller
             'verificacoes_realizadas' => $verificacoes,
         ]);
 
+        // Regenerar PDF com número de protocolo
+        try {
+            $onlyOfficeService = app(\App\Services\OnlyOffice\OnlyOfficeService::class);
+            $onlyOfficeService->regenerarPDFComProtocolo($proposicao);
+        } catch (\Exception $e) {
+            \Log::warning('Falha ao regenerar PDF com número de protocolo', [
+                'proposicao_id' => $proposicao->id,
+                'numero_protocolo' => $numeroProtocolo,
+                'error' => $e->getMessage()
+            ]);
+        }
+
         // TODO: Implementar sistema de tramitação quando disponível
         // $proposicao->adicionarTramitacao(
         //     'Proposição protocolada - Nº ' . $numeroProtocolo,
@@ -258,6 +270,18 @@ class ProposicaoProtocoloController extends Controller
             $proposicao->update([
                 'status' => 'protocolado'
             ]);
+
+            // Regenerar PDF com número de protocolo
+            try {
+                $onlyOfficeService = app(\App\Services\OnlyOffice\OnlyOfficeService::class);
+                $onlyOfficeService->regenerarPDFComProtocolo($proposicao);
+            } catch (\Exception $e) {
+                \Log::warning('Falha ao regenerar PDF com número de protocolo', [
+                    'proposicao_id' => $proposicao->id,
+                    'numero_protocolo' => $numeroProtocolo,
+                    'error' => $e->getMessage()
+                ]);
+            }
 
             return response()->json([
                 'success' => true,

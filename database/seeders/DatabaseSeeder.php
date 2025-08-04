@@ -20,6 +20,11 @@ class DatabaseSeeder extends Seeder
             'email' => 'test@example.com',
         ]);
 
+        // Primeiro criar roles e permissões
+        $this->call([
+            RolesAndPermissionsSeeder::class,
+        ]);
+
         // Seeders do sistema de parâmetros
         $this->call([
             TipoParametroSeeder::class,

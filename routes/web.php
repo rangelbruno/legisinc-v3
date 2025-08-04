@@ -817,8 +817,40 @@ Route::prefix('admin')->middleware(['auth', 'check.screen.permission'])->group(f
 // Test Module routes (protected with auth)
 Route::prefix('tests')->name('tests.')->middleware('auth')->group(function () {
     Route::get('/', [App\Http\Controllers\TestController::class, 'index'])->name('index');
+    
+    // User Tests
+    Route::get('/users', [App\Http\Controllers\TestController::class, 'usersIndex'])->name('users');
     Route::post('/create-users', [App\Http\Controllers\TestController::class, 'createTestUsers'])->name('create-users');
     Route::get('/list-users', [App\Http\Controllers\TestController::class, 'listTestUsers'])->name('list-users');
     Route::delete('/clear-users', [App\Http\Controllers\TestController::class, 'clearTestUsers'])->name('clear-users');
+    
+    // Process Tests
+    Route::get('/processes', [App\Http\Controllers\TestController::class, 'processesIndex'])->name('processes');
+    Route::post('/run-process-tests', [App\Http\Controllers\TestController::class, 'runProcessTests'])->name('run-process-tests');
+    Route::post('/run-pest-tests', [App\Http\Controllers\TestController::class, 'runPestTests'])->name('run-pest-tests');
+    
+    // Interactive Process Test Routes
+    Route::get('/get-tipos-proposicao', [App\Http\Controllers\TestController::class, 'getTiposProposicao'])->name('get-tipos-proposicao');
+    Route::get('/get-templates/{tipoId}', [App\Http\Controllers\TestController::class, 'getTemplates'])->name('get-templates');
+    Route::post('/create-proposicao', [App\Http\Controllers\TestController::class, 'createProposicaoTest'])->name('create-proposicao');
+    Route::post('/tramitar/{id}/enviar-legislativo', [App\Http\Controllers\TestController::class, 'enviarLegislativo'])->name('tramitar.enviar-legislativo');
+    Route::post('/tramitar/{id}/analisar-legislativo', [App\Http\Controllers\TestController::class, 'analisarLegislativo'])->name('tramitar.analisar-legislativo');
+    Route::post('/tramitar/{id}/converter-pdf', [App\Http\Controllers\TestController::class, 'converterPDF'])->name('tramitar.converter-pdf');
+    Route::post('/tramitar/{id}/assinar', [App\Http\Controllers\TestController::class, 'assinarDocumento'])->name('tramitar.assinar');
+    Route::post('/tramitar/{id}/protocolizar', [App\Http\Controllers\TestController::class, 'protocolizar'])->name('tramitar.protocolizar');
+    Route::post('/tramitar/{id}/enviar-expediente', [App\Http\Controllers\TestController::class, 'enviarExpediente'])->name('tramitar.enviar-expediente');
+    Route::post('/tramitar/{id}/emitir-parecer', [App\Http\Controllers\TestController::class, 'emitirParecer'])->name('tramitar.emitir-parecer');
+    
+    // API Tests
+    Route::get('/api', [App\Http\Controllers\TestController::class, 'apiIndex'])->name('api');
+    
+    // Database Tests  
+    Route::get('/database', [App\Http\Controllers\TestController::class, 'databaseIndex'])->name('database');
+    
+    // Performance Tests
+    Route::get('/performance', [App\Http\Controllers\TestController::class, 'performanceIndex'])->name('performance');
+    
+    // Security Tests
+    Route::get('/security', [App\Http\Controllers\TestController::class, 'securityIndex'])->name('security');
 });
 

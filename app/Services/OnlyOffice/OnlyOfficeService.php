@@ -454,7 +454,7 @@ class OnlyOfficeService
         $ano = $dados['ano'] ?? date('Y');
         
         return [
-            'numero_proposicao' => sprintf('%04d/%d', $proposicaoId, $ano),
+            'numero_proposicao' => $dados['numero_protocolo'] ?? sprintf('%04d/%d', $proposicaoId, $ano),
             'ementa' => $dados['ementa'],
             'texto' => $dados['texto'],
             'autor_nome' => $autor->name,
@@ -1222,7 +1222,7 @@ ${texto}
             
             // Preparar dados para substituição - sem processar caracteres especiais por enquanto
             $dados = [
-                'numero_proposicao' => sprintf('%04d/%d', $proposicao->id, $proposicao->ano ?? date('Y')),
+                'numero_proposicao' => $proposicao->numero_protocolo ?: sprintf('%04d/%d', $proposicao->id, $proposicao->ano ?? date('Y')),
                 'ementa' => $proposicao->ementa ?? '',
                 'texto' => $proposicao->conteudo ?? '',
                 'autor_nome' => $proposicao->autor->name ?? '',
@@ -1796,5 +1796,48 @@ Status: " . ucfirst(str_replace('_', ' ', $proposicao->status)) . "\par
         }
         
         return $callbackUrl;
+    }
+
+    /**
+     * Regenerar PDF com número de protocolo após protocolação
+     */
+    public function regenerarPDFComProtocolo(\App\Models\Proposicao $proposicao): void
+    {
+        \Log::info('Regenerando PDF com número de protocolo', [
+            'proposicao_id' => $proposicao->id,
+            'numero_protocolo' => $proposicao->numero_protocolo,
+            'arquivo_pdf_path_atual' => $proposicao->arquivo_pdf_path
+        ]);
+
+        // Recarregar a proposição para ter os dados atualizados
+        $proposicao->refresh();
+        $proposicao->load(['template', 'autor']);
+
+        // Usar o serviço de conversão já existente do ProposicaoController
+        $proposicaoController = app(\App\Http\Controllers\ProposicaoController::class);
+        
+        // Utilizar reflexão para chamar o método privado de conversão
+        $reflection = new \ReflectionClass($proposicaoController);
+        $method = $reflection->getMethod('converterProposicaoParaPDF');
+        $method->setAccessible(true);
+        
+        try {
+            $method->invoke($proposicaoController, $proposicao);
+            
+            \Log::info('PDF regenerado com sucesso', [
+                'proposicao_id' => $proposicao->id,
+                'numero_protocolo' => $proposicao->numero_protocolo,
+                'novo_arquivo_pdf_path' => $proposicao->fresh()->arquivo_pdf_path
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Erro ao regenerar PDF com número de protocolo', [
+                'proposicao_id' => $proposicao->id,
+                'numero_protocolo' => $proposicao->numero_protocolo,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            throw $e;
+        }
     }
 }

@@ -88,37 +88,11 @@ class RolesAndPermissionsSeeder extends Seeder
 
         // Criar todas as permissões
         foreach ($permissions as $permission) {
-            Permission::create(['name' => $permission]);
+            Permission::firstOrCreate(['name' => $permission]);
         }
 
         // Criar os perfis do sistema parlamentar incluindo tramitação
         $roles = [
-            
-            User::PERFIL_LEGISLATIVO => [
-                'name' => User::PERFIL_LEGISLATIVO,
-                'description' => 'Analisa e aprova/rejeita documentos',
-                'permissions' => [
-                    'projeto.view_all',
-                    'projeto.analyze',
-                    'projeto.approve',
-                    'projeto.reject',
-                    'tramitacao.manage',
-                    'parlamentares.view',
-                    'parlamentares.create',
-                    'parlamentares.edit',
-                    'sessions.view',
-                    'sessions.create',
-                    'sessions.edit',
-                    'sessions.export',
-                    'sessoes.view',
-                    'sessoes.create',
-                    'sessoes.edit',
-                    'sessoes.controlar',
-                    'sistema.dashboard',
-                    'sistema.relatorios',
-                    'sistema.configuracoes',
-                ]
-            ],
             
             User::PERFIL_PROTOCOLO => [
                 'name' => User::PERFIL_PROTOCOLO,
@@ -273,6 +247,40 @@ class RolesAndPermissionsSeeder extends Seeder
                 ]
             ],
             
+            User::PERFIL_EXPEDIENTE => [
+                'name' => User::PERFIL_EXPEDIENTE,
+                'description' => 'Responsável pelo expediente e tramitação de documentos',
+                'permissions' => [
+                    'projeto.view_all',
+                    'projeto.assign_number',
+                    'projeto.include_session',
+                    'tramitacao.manage',
+                    'parlamentares.view',
+                    'sessions.view',
+                    'sessoes.view',
+                    'sistema.dashboard',
+                    'sistema.relatorios',
+                ]
+            ],
+            
+            User::PERFIL_ASSESSOR_JURIDICO => [
+                'name' => User::PERFIL_ASSESSOR_JURIDICO,
+                'description' => 'Assessor jurídico da casa legislativa',
+                'permissions' => [
+                    'projeto.view_all',
+                    'projeto.analyze',
+                    'projeto.create',
+                    'projeto.edit_own',
+                    'tramitacao.manage',
+                    'parlamentares.view',
+                    'sessions.view',
+                    'sessoes.view',
+                    'sistema.dashboard',
+                    'sistema.relatorios',
+                    'sistema.configuracoes',
+                ]
+            ],
+            
             User::PERFIL_ADMIN => [
                 'name' => User::PERFIL_ADMIN,
                 'description' => 'Acesso total ao sistema',
@@ -282,7 +290,7 @@ class RolesAndPermissionsSeeder extends Seeder
 
         // Criar roles e atribuir permissões
         foreach ($roles as $roleData) {
-            $role = Role::create([
+            $role = Role::firstOrCreate([
                 'name' => $roleData['name'],
                 'guard_name' => 'web'
             ]);

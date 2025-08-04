@@ -1,6 +1,6 @@
 @extends('components.layouts.app')
 
-@section('title', 'Módulo de Testes - Sistema Parlamentar')
+@section('title', 'Central de Testes - Sistema Parlamentar')
 
 @section('content')
 <!--begin::Content wrapper-->
@@ -11,7 +11,7 @@
             <!--begin::Page title-->
             <div class="page-title d-flex flex-column justify-content-center flex-wrap me-3">
                 <h1 class="page-heading d-flex text-dark fw-bold fs-3 flex-column justify-content-center my-0">
-                    Módulo de Testes
+                    Central de Testes do Sistema
                 </h1>
                 <ul class="breadcrumb breadcrumb-separatorless fw-semibold fs-7 my-0 pt-1">
                     <li class="breadcrumb-item text-muted">
@@ -43,227 +43,353 @@
     <div id="kt_app_content" class="app-content flex-column-fluid">
         <div id="kt_app_content_container" class="app-container container-xxl">
             
-            <!--begin::Row-->
-            <div class="row g-5 g-xl-8">
-                <!--begin::Col-->
-                <div class="col-xl-12">
-                    <!--begin::Test Actions Card-->
-                    <div class="card card-xl-stretch mb-5 mb-xl-8">
-                        <!--begin::Header-->
-                        <div class="card-header border-0 pt-5">
-                            <h3 class="card-title align-items-start flex-column">
-                                <span class="card-label fw-bold fs-3 mb-1">Testes de Criação de Usuários</span>
-                                <span class="text-muted mt-1 fw-semibold fs-7">Gerenciar usuários de teste do sistema</span>
-                            </h3>
-                        </div>
-                        <!--end::Header-->
-                        <!--begin::Body-->
-                        <div class="card-body py-3">
-                            <div class="d-flex flex-wrap gap-3 mb-5">
-                                <button 
-                                    id="createUsersBtn" 
-                                    class="btn btn-primary btn-sm"
-                                >
-                                    <i class="ki-duotone ki-user-plus fs-4 me-1">
-                                        <span class="path1"></span>
-                                        <span class="path2"></span>
-                                    </i>
-                                    Criar Usuários de Teste
-                                </button>
-                                
-                                <button 
-                                    id="listUsersBtn" 
-                                    class="btn btn-success btn-sm"
-                                >
-                                    <i class="ki-duotone ki-people fs-4 me-1">
-                                        <span class="path1"></span>
-                                        <span class="path2"></span>
-                                        <span class="path3"></span>
-                                        <span class="path4"></span>
-                                        <span class="path5"></span>
-                                    </i>
-                                    Listar Usuários
-                                </button>
-                                
-                                <button 
-                                    id="clearUsersBtn" 
-                                    class="btn btn-danger btn-sm"
-                                >
-                                    <i class="ki-duotone ki-trash fs-4 me-1">
-                                        <span class="path1"></span>
-                                        <span class="path2"></span>
-                                        <span class="path3"></span>
-                                        <span class="path4"></span>
-                                        <span class="path5"></span>
-                                    </i>
-                                    Limpar Usuários de Teste
-                                </button>
+            <!--begin::Stats-->
+            <div class="row g-5 g-xl-8 mb-8">
+                <div class="col-xl-3">
+                    <div class="card card-flush h-xl-100">
+                        <div class="card-body d-flex flex-column justify-content-between">
+                            <div class="d-flex align-items-center">
+                                <div class="symbol symbol-45px me-5">
+                                    <span class="symbol-label bg-light-success text-success">
+                                        <i class="ki-duotone ki-check-circle fs-1"></i>
+                                    </span>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <span class="text-dark fw-bold fs-6">Testes Disponíveis</span>
+                                    <span class="text-muted d-block fw-semibold">6 Categorias</span>
+                                </div>
                             </div>
-
-                            <!-- Área de Resultados -->
-                            <div id="results" class="mb-5"></div>
-                            
                         </div>
-                        <!--end::Body-->
                     </div>
-                    <!--end::Test Actions Card-->
                 </div>
-                <!--end::Col-->
+                <div class="col-xl-3">
+                    <div class="card card-flush h-xl-100">
+                        <div class="card-body d-flex flex-column justify-content-between">
+                            <div class="d-flex align-items-center">
+                                <div class="symbol symbol-45px me-5">
+                                    <span class="symbol-label bg-light-primary text-primary">
+                                        <i class="ki-duotone ki-code fs-1"></i>
+                                    </span>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <span class="text-dark fw-bold fs-6">Testes Unitários</span>
+                                    <span class="text-muted d-block fw-semibold">Pest Framework</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-3">
+                    <div class="card card-flush h-xl-100">
+                        <div class="card-body d-flex flex-column justify-content-between">
+                            <div class="d-flex align-items-center">
+                                <div class="symbol symbol-45px me-5">
+                                    <span class="symbol-label bg-light-warning text-warning">
+                                        <i class="ki-duotone ki-people fs-1"></i>
+                                    </span>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <span class="text-dark fw-bold fs-6">Testes Funcionais</span>
+                                    <span class="text-muted d-block fw-semibold">Interface & API</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-3">
+                    <div class="card card-flush h-xl-100">
+                        <div class="card-body d-flex flex-column justify-content-between">
+                            <div class="d-flex align-items-center">
+                                <div class="symbol symbol-45px me-5">
+                                    <span class="symbol-label bg-light-info text-info">
+                                        <i class="ki-duotone ki-rocket fs-1"></i>
+                                    </span>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <span class="text-dark fw-bold fs-6">Testes Performance</span>
+                                    <span class="text-muted d-block fw-semibold">Carga & Stress</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <!--end::Row-->
+            <!--end::Stats-->
 
-            <!--begin::Row-->
-            <div class="row g-5 g-xl-8">
-                <!--begin::Col-->
-                <div class="col-xl-8">
-                    <!-- Tabela de Usuários -->
-                    <div id="usersTable" class="card card-xl-stretch mb-5 mb-xl-8" style="display: none;">
-                        <!--begin::Header-->
-                        <div class="card-header border-0 pt-5">
-                            <h3 class="card-title align-items-start flex-column">
-                                <span class="card-label fw-bold fs-3 mb-1">Usuários de Teste no Sistema</span>
-                                <span class="text-muted mt-1 fw-semibold fs-7">Lista dos usuários de teste ativos</span>
-                            </h3>
-                        </div>
-                        <!--end::Header-->
-                        <!--begin::Body-->
-                        <div class="card-body py-3">
-                            <div class="table-responsive">
-                                <table class="table table-row-dashed table-row-gray-300 align-middle gs-0 gy-4">
-                                    <thead>
-                                        <tr class="fw-bold text-muted">
-                                            <th class="min-w-50px">ID</th>
-                                            <th class="min-w-150px">Nome</th>
-                                            <th class="min-w-140px">Email</th>
-                                            <th class="min-w-120px">Roles</th>
-                                            <th class="min-w-100px">Criado em</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="usersTableBody">
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                        <!--end::Body-->
-                    </div>
-                </div>
-                <!--end::Col-->
-
-                <!--begin::Col-->
+            <!--begin::Test Categories Cards-->
+            <div class="row g-6 g-xl-8">
+                
+                <!--begin::Testes de Usuários-->
                 <div class="col-xl-4">
-                    <!-- Informações dos Usuários de Teste -->
-                    <div class="card card-xl-stretch mb-5 mb-xl-8">
-                        <!--begin::Header-->
-                        <div class="card-header border-0 pt-5">
-                            <h3 class="card-title align-items-start flex-column">
-                                <span class="card-label fw-bold fs-3 mb-1">Usuários de Teste</span>
-                                <span class="text-muted mt-1 fw-semibold fs-7">Configuração dos usuários</span>
-                            </h3>
-                        </div>
-                        <!--end::Header-->
-                        <!--begin::Body-->
-                        <div class="card-body py-3">
-                            <div class="mb-7">
-                                <div class="d-flex align-items-center mb-3">
-                                    <div class="symbol symbol-35px me-4">
-                                        <div class="symbol-label bg-light-primary">
-                                            <i class="ki-duotone ki-shield-tick text-primary fs-6">
+                    <div class="card card-flush h-100">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <div class="d-flex align-items-center">
+                                    <div class="symbol symbol-50px me-5">
+                                        <span class="symbol-label bg-light-primary text-primary">
+                                            <i class="ki-duotone ki-people fs-2">
                                                 <span class="path1"></span>
                                                 <span class="path2"></span>
                                                 <span class="path3"></span>
+                                                <span class="path4"></span>
+                                                <span class="path5"></span>
                                             </i>
-                                        </div>
+                                        </span>
                                     </div>
                                     <div class="flex-grow-1">
-                                        <a href="#" class="text-gray-900 fw-bold text-hover-primary fs-6">bruno@sistema.gov.br</a>
-                                        <span class="text-muted d-block fw-semibold">Administrador - senha: 13ligado</span>
-                                    </div>
-                                </div>
-
-                                <div class="d-flex align-items-center mb-3">
-                                    <div class="symbol symbol-35px me-4">
-                                        <div class="symbol-label bg-light-info">
-                                            <i class="ki-duotone ki-user text-info fs-6">
-                                                <span class="path1"></span>
-                                                <span class="path2"></span>
-                                            </i>
-                                        </div>
-                                    </div>
-                                    <div class="flex-grow-1">
-                                        <a href="#" class="text-gray-900 fw-bold text-hover-primary fs-6">jessica@sistema.gov.br</a>
-                                        <span class="text-muted d-block fw-semibold">Parlamentar - senha: 13ligado</span>
-                                    </div>
-                                </div>
-
-                                <div class="d-flex align-items-center mb-3">
-                                    <div class="symbol symbol-35px me-4">
-                                        <div class="symbol-label bg-light-success">
-                                            <i class="ki-duotone ki-document text-success fs-6">
-                                                <span class="path1"></span>
-                                                <span class="path2"></span>
-                                            </i>
-                                        </div>
-                                    </div>
-                                    <div class="flex-grow-1">
-                                        <a href="#" class="text-gray-900 fw-bold text-hover-primary fs-6">joao@sistema.gov.br</a>
-                                        <span class="text-muted d-block fw-semibold">Legislativo - senha: 13ligado</span>
-                                    </div>
-                                </div>
-
-                                <div class="d-flex align-items-center mb-3">
-                                    <div class="symbol symbol-35px me-4">
-                                        <div class="symbol-label bg-light-warning">
-                                            <i class="ki-duotone ki-file-up text-warning fs-6">
-                                                <span class="path1"></span>
-                                                <span class="path2"></span>
-                                            </i>
-                                        </div>
-                                    </div>
-                                    <div class="flex-grow-1">
-                                        <a href="#" class="text-gray-900 fw-bold text-hover-primary fs-6">roberto@sistema.gov.br</a>
-                                        <span class="text-muted d-block fw-semibold">Protocolo - senha: 13ligado</span>
-                                    </div>
-                                </div>
-
-                                <div class="d-flex align-items-center mb-3">
-                                    <div class="symbol symbol-35px me-4">
-                                        <div class="symbol-label bg-light-dark">
-                                            <i class="ki-duotone ki-clipboard text-dark fs-6">
-                                                <span class="path1"></span>
-                                                <span class="path2"></span>
-                                                <span class="path3"></span>
-                                            </i>
-                                        </div>
-                                    </div>
-                                    <div class="flex-grow-1">
-                                        <a href="#" class="text-gray-900 fw-bold text-hover-primary fs-6">expediente@sistema.gov.br</a>
-                                        <span class="text-muted d-block fw-semibold">Expediente - senha: 13ligado</span>
-                                    </div>
-                                </div>
-
-                                <div class="d-flex align-items-center mb-3">
-                                    <div class="symbol symbol-35px me-4">
-                                        <div class="symbol-label bg-light-danger">
-                                            <i class="ki-duotone ki-law text-danger fs-6">
-                                                <span class="path1"></span>
-                                                <span class="path2"></span>
-                                                <span class="path3"></span>
-                                            </i>
-                                        </div>
-                                    </div>
-                                    <div class="flex-grow-1">
-                                        <a href="#" class="text-gray-900 fw-bold text-hover-primary fs-6">juridico@sistema.gov.br</a>
-                                        <span class="text-muted d-block fw-semibold">Assessor Jurídico - senha: 13ligado</span>
+                                        <h3 class="fw-bold text-dark fs-4 mb-1">Testes de Usuários</h3>
+                                        <span class="text-muted fs-7">Gestão e criação de usuários de teste</span>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                        <!--end::Body-->
+                        <div class="card-body pt-5">
+                            <p class="text-gray-600 fs-6 mb-8">
+                                Criar, listar e gerenciar usuários de teste para validação das funcionalidades do sistema.
+                            </p>
+                            <div class="d-flex flex-stack">
+                                <div class="text-muted fs-7">
+                                    <i class="ki-duotone ki-check-circle text-success fs-6 me-2"></i>
+                                    Criação automática<br>
+                                    <i class="ki-duotone ki-check-circle text-success fs-6 me-2"></i>
+                                    Múltiplos perfis<br>
+                                    <i class="ki-duotone ki-check-circle text-success fs-6 me-2"></i>
+                                    Limpeza rápida
+                                </div>
+                                <a href="{{ route('tests.users') }}" class="btn btn-primary">
+                                    Acessar Testes
+                                    <i class="ki-duotone ki-arrows-right fs-4 ms-1"></i>
+                                </a>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <!--end::Col-->
+                <!--end::Testes de Usuários-->
+
+                <!--begin::Testes de Processos-->
+                <div class="col-xl-4">
+                    <div class="card card-flush h-100">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <div class="d-flex align-items-center">
+                                    <div class="symbol symbol-50px me-5">
+                                        <span class="symbol-label bg-light-success text-success">
+                                            <i class="ki-duotone ki-setting-2 fs-2">
+                                                <span class="path1"></span>
+                                                <span class="path2"></span>
+                                            </i>
+                                        </span>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <h3 class="fw-bold text-dark fs-4 mb-1">Testes de Processos</h3>
+                                        <span class="text-muted fs-7">Workflows e processamento de templates</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body pt-5">
+                            <p class="text-gray-600 fs-6 mb-8">
+                                Validar processamento de templates, workflows de proposições e integração entre módulos.
+                            </p>
+                            <div class="d-flex flex-stack">
+                                <div class="text-muted fs-7">
+                                    <i class="ki-duotone ki-check-circle text-success fs-6 me-2"></i>
+                                    Template processing<br>
+                                    <i class="ki-duotone ki-check-circle text-success fs-6 me-2"></i>
+                                    Validação de dados<br>
+                                    <i class="ki-duotone ki-check-circle text-success fs-6 me-2"></i>
+                                    Testes Pest
+                                </div>
+                                <a href="{{ route('tests.processes') }}" class="btn btn-success">
+                                    Acessar Testes
+                                    <i class="ki-duotone ki-arrows-right fs-4 ms-1"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!--end::Testes de Processos-->
+
+                <!--begin::Testes de API-->
+                <div class="col-xl-4">
+                    <div class="card card-flush h-100">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <div class="d-flex align-items-center">
+                                    <div class="symbol symbol-50px me-5">
+                                        <span class="symbol-label bg-light-warning text-warning">
+                                            <i class="ki-duotone ki-technology-2 fs-2">
+                                                <span class="path1"></span>
+                                                <span class="path2"></span>
+                                            </i>
+                                        </span>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <h3 class="fw-bold text-dark fs-4 mb-1">Testes de API</h3>
+                                        <span class="text-muted fs-7">Endpoints e integração de APIs</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body pt-5">
+                            <p class="text-gray-600 fs-6 mb-8">
+                                Testar endpoints da API, autenticação, validação de dados e responses dos serviços.
+                            </p>
+                            <div class="d-flex flex-stack">
+                                <div class="text-muted fs-7">
+                                    <i class="ki-duotone ki-check-circle text-success fs-6 me-2"></i>
+                                    Endpoints REST<br>
+                                    <i class="ki-duotone ki-check-circle text-success fs-6 me-2"></i>
+                                    Autenticação<br>
+                                    <i class="ki-duotone ki-check-circle text-success fs-6 me-2"></i>
+                                    Response validation
+                                </div>
+                                <a href="{{ route('tests.api') }}" class="btn btn-warning">
+                                    Acessar Testes
+                                    <i class="ki-duotone ki-arrows-right fs-4 ms-1"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!--end::Testes de API-->
+
+                <!--begin::Testes de Database-->
+                <div class="col-xl-4">
+                    <div class="card card-flush h-100">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <div class="d-flex align-items-center">
+                                    <div class="symbol symbol-50px me-5">
+                                        <span class="symbol-label bg-light-info text-info">
+                                            <i class="ki-duotone ki-data fs-2">
+                                                <span class="path1"></span>
+                                                <span class="path2"></span>
+                                                <span class="path3"></span>
+                                            </i>
+                                        </span>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <h3 class="fw-bold text-dark fs-4 mb-1">Testes de Database</h3>
+                                        <span class="text-muted fs-7">Integridade e performance do BD</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body pt-5">
+                            <p class="text-gray-600 fs-6 mb-8">
+                                Validar integridade dos dados, migrations, seeds e performance das consultas do banco.
+                            </p>
+                            <div class="d-flex flex-stack">
+                                <div class="text-muted fs-7">
+                                    <i class="ki-duotone ki-check-circle text-success fs-6 me-2"></i>
+                                    Integridade de dados<br>
+                                    <i class="ki-duotone ki-check-circle text-success fs-6 me-2"></i>
+                                    Migrations<br>
+                                    <i class="ki-duotone ki-check-circle text-success fs-6 me-2"></i>
+                                    Performance queries
+                                </div>
+                                <a href="{{ route('tests.database') }}" class="btn btn-info">
+                                    Acessar Testes
+                                    <i class="ki-duotone ki-arrows-right fs-4 ms-1"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!--end::Testes de Database-->
+
+                <!--begin::Testes de Performance-->
+                <div class="col-xl-4">
+                    <div class="card card-flush h-100">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <div class="d-flex align-items-center">
+                                    <div class="symbol symbol-50px me-5">
+                                        <span class="symbol-label bg-light-danger text-danger">
+                                            <i class="ki-duotone ki-rocket fs-2">
+                                                <span class="path1"></span>
+                                                <span class="path2"></span>
+                                            </i>
+                                        </span>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <h3 class="fw-bold text-dark fs-4 mb-1">Testes de Performance</h3>
+                                        <span class="text-muted fs-7">Carga, stress e otimização</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body pt-5">
+                            <p class="text-gray-600 fs-6 mb-8">
+                                Avaliar performance do sistema sob carga, tempo de resposta e limites de capacidade.
+                            </p>
+                            <div class="d-flex flex-stack">
+                                <div class="text-muted fs-7">
+                                    <i class="ki-duotone ki-check-circle text-success fs-6 me-2"></i>
+                                    Teste de carga<br>
+                                    <i class="ki-duotone ki-check-circle text-success fs-6 me-2"></i>
+                                    Stress testing<br>
+                                    <i class="ki-duotone ki-check-circle text-success fs-6 me-2"></i>
+                                    Métricas de tempo
+                                </div>
+                                <a href="{{ route('tests.performance') }}" class="btn btn-danger">
+                                    Acessar Testes
+                                    <i class="ki-duotone ki-arrows-right fs-4 ms-1"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!--end::Testes de Performance-->
+
+                <!--begin::Testes de Segurança-->
+                <div class="col-xl-4">
+                    <div class="card card-flush h-100">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <div class="d-flex align-items-center">
+                                    <div class="symbol symbol-50px me-5">
+                                        <span class="symbol-label bg-light-dark text-dark">
+                                            <i class="ki-duotone ki-shield-tick fs-2">
+                                                <span class="path1"></span>
+                                                <span class="path2"></span>
+                                                <span class="path3"></span>
+                                            </i>
+                                        </span>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <h3 class="fw-bold text-dark fs-4 mb-1">Testes de Segurança</h3>
+                                        <span class="text-muted fs-7">Vulnerabilidades e proteções</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body pt-5">
+                            <p class="text-gray-600 fs-6 mb-8">
+                                Verificar vulnerabilidades, validação de entrada, autenticação e autorização do sistema.
+                            </p>
+                            <div class="d-flex flex-stack">
+                                <div class="text-muted fs-7">
+                                    <i class="ki-duotone ki-check-circle text-success fs-6 me-2"></i>
+                                    Validação entrada<br>
+                                    <i class="ki-duotone ki-check-circle text-success fs-6 me-2"></i>
+                                    Autenticação<br>
+                                    <i class="ki-duotone ki-check-circle text-success fs-6 me-2"></i>
+                                    Scan vulnerabilidades
+                                </div>
+                                <a href="{{ route('tests.security') }}" class="btn btn-dark">
+                                    Acessar Testes
+                                    <i class="ki-duotone ki-arrows-right fs-4 ms-1"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!--end::Testes de Segurança-->
+
             </div>
-            <!--end::Row-->
+            <!--end::Test Categories Cards-->
 
         </div>
     </div>
@@ -275,281 +401,7 @@
 @push('scripts')
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        const createBtn = document.getElementById('createUsersBtn');
-        const listBtn = document.getElementById('listUsersBtn');
-        const clearBtn = document.getElementById('clearUsersBtn');
-        const resultsDiv = document.getElementById('results');
-        const usersTable = document.getElementById('usersTable');
-        const usersTableBody = document.getElementById('usersTableBody');
-
-        // Função para mostrar resultados
-        function showResults(results) {
-            let html = '';
-            
-            results.forEach(result => {
-                let alertClass = 'alert-success';
-                let iconClass = 'ki-check-circle text-success';
-                let icon = '✓';
-                
-                if (result.status === 'error') {
-                    alertClass = 'alert-danger';
-                    iconClass = 'ki-cross-circle text-danger';
-                    icon = '✗';
-                } else if (result.status === 'warning') {
-                    alertClass = 'alert-warning';
-                    iconClass = 'ki-information text-warning';
-                    icon = '⚠';
-                }
-                
-                html += `
-                    <div class="alert ${alertClass} d-flex align-items-center p-5 mb-3">
-                        <i class="ki-duotone ${iconClass} fs-2hx me-4">
-                            <span class="path1"></span>
-                            <span class="path2"></span>
-                        </i>
-                        <div class="d-flex flex-column">
-                            <h4 class="mb-1 text-dark fw-bold">${result.email}</h4>
-                            <span class="fs-7">${result.message}</span>
-                        </div>
-                    </div>
-                `;
-            });
-            
-            resultsDiv.innerHTML = html;
-        }
-
-        // Função para mostrar usuários
-        function showUsers(users) {
-            if (users.length === 0) {
-                usersTableBody.innerHTML = `
-                    <tr>
-                        <td colspan="5" class="text-center py-10">
-                            <div class="d-flex flex-column align-items-center">
-                                <i class="ki-duotone ki-information-5 fs-3x text-muted mb-5">
-                                    <span class="path1"></span>
-                                    <span class="path2"></span>
-                                    <span class="path3"></span>
-                                </i>
-                                <div class="text-muted fw-semibold fs-6">Nenhum usuário de teste encontrado</div>
-                            </div>
-                        </td>
-                    </tr>
-                `;
-            } else {
-                let html = '';
-                users.forEach(user => {
-                    let rolesBadge = '';
-                    if (user.roles && user.roles.trim() !== '') {
-                        let badgeClass = 'badge-light-primary';
-                        let displayName = user.roles;
-                        
-                        switch(user.roles.trim()) {
-                            case 'ADMIN':
-                                badgeClass = 'badge-light-danger';
-                                displayName = 'Administrador';
-                                break;
-                            case 'PARLAMENTAR':
-                                badgeClass = 'badge-light-info';
-                                displayName = 'Parlamentar';
-                                break;
-                            case 'LEGISLATIVO':
-                                badgeClass = 'badge-light-success';
-                                displayName = 'Legislativo';
-                                break;
-                            case 'PROTOCOLO':
-                                badgeClass = 'badge-light-warning';
-                                displayName = 'Protocolo';
-                                break;
-                            case 'EXPEDIENTE':
-                                badgeClass = 'badge-light-dark';
-                                displayName = 'Expediente';
-                                break;
-                            case 'ASSESSOR_JURIDICO':
-                                badgeClass = 'badge-light-primary';
-                                displayName = 'Assessor Jurídico';
-                                break;
-                            // Legacy role names for backward compatibility
-                            case 'Administrador':
-                                badgeClass = 'badge-light-danger';
-                                displayName = 'Administrador';
-                                break;
-                            case 'Parlamentar':
-                                badgeClass = 'badge-light-info';
-                                displayName = 'Parlamentar';
-                                break;
-                            case 'Legislativo':
-                                badgeClass = 'badge-light-success';
-                                displayName = 'Legislativo';
-                                break;
-                            case 'Protocolo':
-                                badgeClass = 'badge-light-warning';
-                                displayName = 'Protocolo';
-                                break;
-                        }
-                        rolesBadge = `<span class="badge ${badgeClass}">${displayName}</span>`;
-                    } else {
-                        rolesBadge = '<span class="badge badge-light-secondary">Sem role</span>';
-                    }
-                        
-                    html += `
-                        <tr>
-                            <td>
-                                <div class="text-dark fw-bold text-hover-primary fs-6">${user.id}</div>
-                            </td>
-                            <td>
-                                <div class="d-flex align-items-center">
-                                    <div class="symbol symbol-35px me-3">
-                                        <div class="symbol-label bg-light-info">
-                                            <i class="ki-duotone ki-user text-info fs-6">
-                                                <span class="path1"></span>
-                                                <span class="path2"></span>
-                                            </i>
-                                        </div>
-                                    </div>
-                                    <div class="d-flex justify-content-start flex-column">
-                                        <a href="#" class="text-dark fw-bold text-hover-primary mb-1 fs-6">${user.name}</a>
-                                    </div>
-                                </div>
-                            </td>
-                            <td>
-                                <div class="text-dark fw-semibold d-block fs-7">${user.email}</div>
-                            </td>
-                            <td>
-                                ${rolesBadge}
-                            </td>
-                            <td>
-                                <div class="text-dark fw-semibold d-block fs-7">${user.created_at}</div>
-                            </td>
-                        </tr>
-                    `;
-                });
-                usersTableBody.innerHTML = html;
-            }
-            usersTable.style.display = 'block';
-        }
-
-        // Criar usuários
-        createBtn.addEventListener('click', function() {
-            this.disabled = true;
-            this.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Criando...';
-            
-            fetch('/tests/create-users', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    showResults(data.results);
-                }
-            })
-            .catch(error => {
-                console.error('Erro:', error);
-                resultsDiv.innerHTML = `
-                    <div class="alert alert-danger d-flex align-items-center p-5">
-                        <i class="ki-duotone ki-cross-circle text-danger fs-2hx me-4">
-                            <span class="path1"></span>
-                            <span class="path2"></span>
-                        </i>
-                        <div class="d-flex flex-column">
-                            <h4 class="mb-1 text-dark fw-bold">Erro</h4>
-                            <span class="fs-7">Erro ao criar usuários</span>
-                        </div>
-                    </div>
-                `;
-            })
-            .finally(() => {
-                this.disabled = false;
-                this.innerHTML = `
-                    <i class="ki-duotone ki-user-plus fs-4 me-1">
-                        <span class="path1"></span>
-                        <span class="path2"></span>
-                    </i>
-                    Criar Usuários de Teste
-                `;
-            });
-        });
-
-        // Listar usuários
-        listBtn.addEventListener('click', function() {
-            fetch('/tests/list-users')
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    showUsers(data.users);
-                }
-            })
-            .catch(error => {
-                console.error('Erro:', error);
-            });
-        });
-
-        // Limpar usuários
-        clearBtn.addEventListener('click', function() {
-            if (!confirm('Tem certeza que deseja remover todos os usuários de teste?')) {
-                return;
-            }
-            
-            this.disabled = true;
-            this.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Removendo...';
-            
-            fetch('/tests/clear-users', {
-                method: 'DELETE',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    resultsDiv.innerHTML = `
-                        <div class="alert alert-success d-flex align-items-center p-5">
-                            <i class="ki-duotone ki-check-circle text-success fs-2hx me-4">
-                                <span class="path1"></span>
-                                <span class="path2"></span>
-                            </i>
-                            <div class="d-flex flex-column">
-                                <h4 class="mb-1 text-dark fw-bold">Sucesso</h4>
-                                <span class="fs-7">${data.message}</span>
-                            </div>
-                        </div>
-                    `;
-                    usersTable.style.display = 'none';
-                }
-            })
-            .catch(error => {
-                console.error('Erro:', error);
-                resultsDiv.innerHTML = `
-                    <div class="alert alert-danger d-flex align-items-center p-5">
-                        <i class="ki-duotone ki-cross-circle text-danger fs-2hx me-4">
-                            <span class="path1"></span>
-                            <span class="path2"></span>
-                        </i>
-                        <div class="d-flex flex-column">
-                            <h4 class="mb-1 text-dark fw-bold">Erro</h4>
-                            <span class="fs-7">Erro ao remover usuários</span>
-                        </div>
-                    </div>
-                `;
-            })
-            .finally(() => {
-                this.disabled = false;
-                this.innerHTML = `
-                    <i class="ki-duotone ki-trash fs-4 me-1">
-                        <span class="path1"></span>
-                        <span class="path2"></span>
-                        <span class="path3"></span>
-                        <span class="path4"></span>
-                        <span class="path5"></span>
-                    </i>
-                    Limpar Usuários de Teste
-                `;
-            });
-        });
+        // Add any interactive functionality here if needed
     });
 </script>
 @endpush
