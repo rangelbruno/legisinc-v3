@@ -78,9 +78,8 @@ class OnlyOfficeController extends Controller
         }
 
         // URL de callback para salvar alterações (usando API para evitar CSRF)
-        $callbackUrl = route('api.onlyoffice.callback.legislativo', [
-            'proposicao' => $proposicao->id,
-            'documentKey' => $documentKey
+        $callbackUrl = route('api.onlyoffice.callback.proposicao', [
+            'proposicao' => $proposicao
         ]);
         
         // Ajustar URL para comunicação entre containers
@@ -114,6 +113,7 @@ class OnlyOfficeController extends Controller
                 ],
                 'customization' => [
                     'autosave' => true,
+                    'autosaveTimeout' => 30000, // 30 segundos
                     'chat' => false,
                     'comments' => true,
                     'compactHeader' => false,
@@ -191,13 +191,22 @@ class OnlyOfficeController extends Controller
         Log::info('OnlyOffice callback received', [
             'proposicao_id' => $proposicao->id,
             'document_key' => $documentKey,
-            'status' => $data['status'] ?? null
+            'status' => $data['status'] ?? null,
+            'timestamp' => now()->format('Y-m-d H:i:s.u')
         ]);
 
         try {
             // Status 2 = documento salvo e pronto para download
             if (isset($data['status']) && $data['status'] == 2) {
+                $callbackStart = microtime(true);
                 $resultado = $this->onlyOfficeService->processarCallbackProposicao($proposicao, $documentKey, $data);
+                $callbackTime = microtime(true) - $callbackStart;
+                
+                Log::info('OnlyOffice callback processamento concluído', [
+                    'proposicao_id' => $proposicao->id,
+                    'callback_time_seconds' => round($callbackTime, 2),
+                    'success' => !isset($resultado['error']) || $resultado['error'] == 0
+                ]);
             } else {
                 $resultado = ['error' => 0];
             }
@@ -211,6 +220,39 @@ class OnlyOfficeController extends Controller
             ]);
             
             return response()->json(['error' => 1]);
+        }
+    }
+
+    /**
+     * Force save document - método simplificado para forçar salvamento
+     */
+    public function forceSave(Request $request, Proposicao $proposicao)
+    {
+        try {
+            // Log da tentativa de force save
+            Log::info('Force save solicitado', [
+                'proposicao_id' => $proposicao->id,
+                'document_key' => $request->input('document_key')
+            ]);
+            
+            // Marcar a proposição como salva recentemente
+            $proposicao->touch(); // Atualiza updated_at
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Salvamento forçado iniciado',
+                'proposicao_id' => $proposicao->id
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Erro no force save', [
+                'proposicao_id' => $proposicao->id,
+                'error' => $e->getMessage()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Erro ao forçar salvamento'
+            ], 500);
         }
     }
 

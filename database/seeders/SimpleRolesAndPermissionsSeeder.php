@@ -80,6 +80,27 @@ class SimpleRolesAndPermissionsSeeder extends Seeder
             // Transparência
             ['name' => 'transparencia.view_publico', 'guard_name' => 'web'],
             ['name' => 'transparencia.view_completo', 'guard_name' => 'web'],
+            
+            // Expediente
+            ['name' => 'expediente.view', 'guard_name' => 'web'],
+            ['name' => 'expediente.create', 'guard_name' => 'web'],
+            ['name' => 'expediente.edit', 'guard_name' => 'web'],
+            ['name' => 'expediente.delete', 'guard_name' => 'web'],
+            ['name' => 'pauta.view', 'guard_name' => 'web'],
+            ['name' => 'pauta.create', 'guard_name' => 'web'],
+            ['name' => 'pauta.edit', 'guard_name' => 'web'],
+            ['name' => 'sessao.view', 'guard_name' => 'web'],
+            ['name' => 'sessao.create', 'guard_name' => 'web'],
+            ['name' => 'sessao.edit', 'guard_name' => 'web'],
+            
+            // Assessor Jurídico
+            ['name' => 'parecer.view', 'guard_name' => 'web'],
+            ['name' => 'parecer.create', 'guard_name' => 'web'],
+            ['name' => 'parecer.edit', 'guard_name' => 'web'],
+            ['name' => 'parecer.delete', 'guard_name' => 'web'],
+            ['name' => 'juridico.view', 'guard_name' => 'web'],
+            ['name' => 'juridico.create', 'guard_name' => 'web'],
+            ['name' => 'juridico.edit', 'guard_name' => 'web'],
         ];
 
         foreach ($permissions as $permission) {
@@ -96,7 +117,10 @@ class SimpleRolesAndPermissionsSeeder extends Seeder
             ['name' => User::PERFIL_ASSESSOR, 'guard_name' => 'web'],
             ['name' => User::PERFIL_RELATOR, 'guard_name' => 'web'],
             ['name' => User::PERFIL_PARLAMENTAR, 'guard_name' => 'web'],
+            ['name' => User::PERFIL_PROTOCOLO, 'guard_name' => 'web'],
+            ['name' => User::PERFIL_EXPEDIENTE, 'guard_name' => 'web'],
             ['name' => User::PERFIL_LEGISLATIVO, 'guard_name' => 'web'],
+            ['name' => User::PERFIL_ASSESSOR_JURIDICO, 'guard_name' => 'web'],
             ['name' => User::PERFIL_ADMIN, 'guard_name' => 'web'],
         ];
 
@@ -215,6 +239,47 @@ class SimpleRolesAndPermissionsSeeder extends Seeder
                 'mesa.view',
                 'mesa.gerenciar',
             ],
+            User::PERFIL_EXPEDIENTE => [
+                'transparencia.view_publico',
+                'transparencia.view_completo',
+                'parlamentares.view',
+                'projetos.view',
+                'sessoes.view',
+                'sistema.dashboard',
+                'expediente.view',
+                'expediente.create',
+                'expediente.edit',
+                'pauta.view',
+                'pauta.create',
+                'pauta.edit',
+                'sessao.view',
+                'sessao.create',
+                'sessao.edit',
+            ],
+            User::PERFIL_PROTOCOLO => [
+                'transparencia.view_publico',
+                'transparencia.view_completo',
+                'parlamentares.view',
+                'projetos.view',
+                'sessoes.view',
+                'sistema.dashboard',
+                'usuarios.view',
+            ],
+            User::PERFIL_ASSESSOR_JURIDICO => [
+                'transparencia.view_publico',
+                'transparencia.view_completo',
+                'parlamentares.view',
+                'projetos.view',
+                'sistema.dashboard',
+                'sistema.relatorios',
+                'parecer.view',
+                'parecer.create',
+                'parecer.edit',
+                'parecer.delete',
+                'juridico.view',
+                'juridico.create',
+                'juridico.edit',
+            ],
             User::PERFIL_ADMIN => array_keys($permissionIds->toArray()), // All permissions
         ];
 
@@ -268,6 +333,30 @@ class SimpleRolesAndPermissionsSeeder extends Seeder
                 'cargo_atual' => 'Servidor Técnico',
                 'ativo' => true,
                 'role' => User::PERFIL_LEGISLATIVO
+            ],
+            [
+                'name' => 'Carlos Expediente Silva',
+                'email' => 'expediente@camara.gov.br',
+                'password' => Hash::make('expediente123'),
+                'documento' => '333.333.333-33',
+                'telefone' => '(11) 3333-3333',
+                'data_nascimento' => '1980-12-10',
+                'profissao' => 'Técnico Legislativo',
+                'cargo_atual' => 'Responsável pelo Expediente',
+                'ativo' => true,
+                'role' => User::PERFIL_EXPEDIENTE
+            ],
+            [
+                'name' => 'Ana Jurídica Santos',
+                'email' => 'juridico@camara.gov.br',
+                'password' => Hash::make('juridico123'),
+                'documento' => '444.444.444-44',
+                'telefone' => '(11) 4444-4444',
+                'data_nascimento' => '1983-05-25',
+                'profissao' => 'Advogada',
+                'cargo_atual' => 'Assessora Jurídica',
+                'ativo' => true,
+                'role' => User::PERFIL_ASSESSOR_JURIDICO
             ]
         ];
 
@@ -294,5 +383,7 @@ class SimpleRolesAndPermissionsSeeder extends Seeder
         $this->command->info('- Admin: admin@sistema.gov.br / admin123');
         $this->command->info('- Parlamentar: parlamentar@camara.gov.br / parlamentar123');
         $this->command->info('- Servidor: servidor@camara.gov.br / servidor123');
+        $this->command->info('- Expediente: expediente@camara.gov.br / expediente123');
+        $this->command->info('- Assessor Jurídico: juridico@camara.gov.br / juridico123');
     }
 }

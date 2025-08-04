@@ -411,6 +411,74 @@
                                     </div>
                                     @endif
                                     <!--end:Menu item-->
+                                    
+                                    <!--begin:Menu item - Expediente (Submenu)-->
+                                    @if(auth()->user()->isExpediente() || auth()->user()->hasRole('EXPEDIENTE') || auth()->user()->isAdmin())
+                                    <div data-kt-menu-trigger="click" class="menu-item menu-accordion {{ request()->routeIs('proposicoes.legislativo.index') || request()->routeIs('pautas.*') ? 'here show' : '' }}">
+                                        <!--begin:Menu link-->
+                                        <span class="menu-link">
+                                            <span class="menu-bullet">
+                                                <span class="bullet bullet-dot"></span>
+                                            </span>
+                                            <span class="menu-title">Expediente</span>
+                                            <span class="menu-arrow"></span>
+                                        </span>
+                                        <!--end:Menu link-->
+                                        <!--begin:Menu sub-->
+                                        <div class="menu-sub menu-sub-accordion {{ request()->routeIs('proposicoes.legislativo.index') || request()->routeIs('pautas.*') ? 'show' : '' }}">
+                                            <!--begin:Menu item-->
+                                            @if(\App\Models\ScreenPermission::userCanAccessRoute('proposicoes.legislativo.index'))
+                                            <div class="menu-item">
+                                                <!--begin:Menu link-->
+                                                <a class="menu-link {{ request()->routeIs('proposicoes.legislativo.index') ? 'active' : '' }}" href="{{ route('proposicoes.legislativo.index') }}">
+                                                    <span class="menu-bullet">
+                                                        <span class="bullet bullet-dot"></span>
+                                                    </span>
+                                                    <span class="menu-title">Proposições Protocoladas</span>
+                                                </a>
+                                                <!--end:Menu link-->
+                                            </div>
+                                            @endif
+                                            <!--end:Menu item-->
+                                        </div>
+                                        <!--end:Menu sub-->
+                                    </div>
+                                    @endif
+                                    <!--end:Menu item-->
+                                    
+                                    <!--begin:Menu item - Assessor Jurídico (Submenu)-->
+                                    @if(auth()->user()->isAssessorJuridico() || auth()->user()->hasRole('ASSESSOR_JURIDICO') || auth()->user()->isAdmin())
+                                    <div data-kt-menu-trigger="click" class="menu-item menu-accordion {{ request()->routeIs('proposicoes.legislativo.index') || request()->routeIs('pareceres.*') ? 'here show' : '' }}">
+                                        <!--begin:Menu link-->
+                                        <span class="menu-link">
+                                            <span class="menu-bullet">
+                                                <span class="bullet bullet-dot"></span>
+                                            </span>
+                                            <span class="menu-title">Assessoria Jurídica</span>
+                                            <span class="menu-arrow"></span>
+                                        </span>
+                                        <!--end:Menu link-->
+                                        <!--begin:Menu sub-->
+                                        <div class="menu-sub menu-sub-accordion {{ request()->routeIs('proposicoes.legislativo.index') || request()->routeIs('pareceres.*') ? 'show' : '' }}">
+                                            <!--begin:Menu item-->
+                                            @if(\App\Models\ScreenPermission::userCanAccessRoute('proposicoes.legislativo.index'))
+                                            <div class="menu-item">
+                                                <!--begin:Menu link-->
+                                                <a class="menu-link {{ request()->routeIs('proposicoes.legislativo.index') ? 'active' : '' }}" href="{{ route('proposicoes.legislativo.index') }}">
+                                                    <span class="menu-bullet">
+                                                        <span class="bullet bullet-dot"></span>
+                                                    </span>
+                                                    <span class="menu-title">Proposições para Análise</span>
+                                                </a>
+                                                <!--end:Menu link-->
+                                            </div>
+                                            @endif
+                                            <!--end:Menu item-->
+                                        </div>
+                                        <!--end:Menu sub-->
+                                    </div>
+                                    @endif
+                                    <!--end:Menu item-->
                                 </div>
                                 <!--end:Menu sub-->
                             </div>

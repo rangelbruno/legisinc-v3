@@ -24,25 +24,37 @@ class TestController extends Controller
                 'email' => 'bruno@sistema.gov.br',
                 'name' => 'Bruno Administrador',
                 'password' => '13ligado',
-                'role' => 'Administrador'
+                'role' => 'ADMIN'
             ],
             [
                 'email' => 'jessica@sistema.gov.br',
                 'name' => 'Jessica Parlamentar',
                 'password' => '13ligado', 
-                'role' => 'Parlamentar'
+                'role' => 'PARLAMENTAR'
             ],
             [
                 'email' => 'joao@sistema.gov.br',
                 'name' => 'João Legislativo',
                 'password' => '13ligado',
-                'role' => 'Legislativo'
+                'role' => 'LEGISLATIVO'
             ],
             [
                 'email' => 'roberto@sistema.gov.br',
                 'name' => 'Roberto Protocolo',
                 'password' => '13ligado',
-                'role' => 'Protocolo'
+                'role' => 'PROTOCOLO'
+            ],
+            [
+                'email' => 'expediente@sistema.gov.br',
+                'name' => 'Carlos Expediente',
+                'password' => '13ligado',
+                'role' => 'EXPEDIENTE'
+            ],
+            [
+                'email' => 'juridico@sistema.gov.br',
+                'name' => 'Ana Assessora Jurídica',
+                'password' => '13ligado',
+                'role' => 'ASSESSOR_JURIDICO'
             ]
         ];
 
@@ -109,7 +121,9 @@ class TestController extends Controller
             'bruno@sistema.gov.br',
             'jessica@sistema.gov.br', 
             'joao@sistema.gov.br',
-            'roberto@sistema.gov.br'
+            'roberto@sistema.gov.br',
+            'expediente@sistema.gov.br',
+            'juridico@sistema.gov.br'
         ];
 
         $deletedCount = User::whereIn('email', $testEmails)->delete();
@@ -126,7 +140,9 @@ class TestController extends Controller
             'bruno@sistema.gov.br',
             'jessica@sistema.gov.br',
             'joao@sistema.gov.br', 
-            'roberto@sistema.gov.br'
+            'roberto@sistema.gov.br',
+            'expediente@sistema.gov.br',
+            'juridico@sistema.gov.br'
         ];
 
         $users = User::whereIn('email', $testEmails)

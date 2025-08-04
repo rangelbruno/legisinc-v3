@@ -34,6 +34,21 @@ O sistema de modelos de documentos visa:
 - Gestão de tipos de proposição
 - Acesso ao editor OnlyOffice
 
+### 🟠 **ASSESSOR JURÍDICO** (Nível 85)
+**Responsabilidades:**
+- ✅ Analisar documentos protocolados
+- ✅ Emitir pareceres jurídicos
+- ✅ Validar legalidade das proposições
+- ✅ Anexar documentos complementares
+- ✅ Orientar sobre aspectos legais
+
+**Permissões:**
+- Acesso a todos os documentos protocolados
+- Criação e anexação de pareceres
+- Edição de aspectos jurídicos
+- Validação de conformidade legal
+- Acesso ao histórico de pareceres
+
 ### 🔵 **LEGISLATIVO** (Nível 80) 
 **Responsabilidades:**
 - ✅ Criação de modelos especializados
@@ -41,6 +56,7 @@ O sistema de modelos de documentos visa:
 - ✅ Manutenção de modelos existentes
 - ✅ Suporte técnico aos parlamentares
 - ✅ Validação de documentos gerados
+- ✅ Revisão de proposições enviadas
 
 **Permissões:**
 - Criação e edição de modelos (`modelos.*`)
@@ -48,6 +64,22 @@ O sistema de modelos de documentos visa:
 - Visualização de relatórios de uso
 - Gestão de variáveis do sistema
 - Suporte aos parlamentares
+- Revisão de proposições
+
+### 🟢 **EXPEDIENTE** (Nível 75)
+**Responsabilidades:**
+- ✅ Receber documentos protocolados
+- ✅ Organizar por momento (Expediente/Ordem do Dia)
+- ✅ Preparar documentos para votação
+- ✅ Gerenciar pauta das sessões
+- ✅ Acompanhar tramitação
+
+**Permissões:**
+- Visualização de documentos protocolados
+- Organização de pautas
+- Alteração de status de tramitação
+- Geração de relatórios de sessão
+- Notificação aos parlamentares
 
 ### 🟣 **PARLAMENTAR** (Nível 70)
 **Responsabilidades:**
@@ -62,6 +94,52 @@ O sistema de modelos de documentos visa:
 - Download de documentos gerados
 - Solicitação de novos templates
 - Acesso limitado ao editor
+
+---
+
+## 🚀 Novo Fluxo de Tramitação de Documentos
+
+### **Visão Geral do Fluxo**
+
+```mermaid
+graph TD
+    A[Parlamentar cria proposição] --> B[Envia para Legislativo]
+    B --> C[Legislativo revisa e edita]
+    C --> D[Gera PDF final]
+    D --> E[Envia PDF para Parlamentar]
+    E --> F[Parlamentar assina PDF]
+    F --> G[Envio automático para Protocolo]
+    G --> H[Protocolo atribui número]
+    H --> I{Tipo de documento}
+    I -->|Expediente| J[Vai para Expediente]
+    I -->|Ordem do Dia| K[Vai para Ordem do Dia]
+    H --> L[Assessor Jurídico inclui parecer]
+    J --> M[Preparação para votação]
+    K --> M
+```
+
+### **Status do Novo Fluxo:**
+```
+RASCUNHO
+    ↓
+EM_REVISAO (Legislativo)
+    ↓
+REVISADO
+    ↓
+AGUARDANDO_ASSINATURA
+    ↓
+ASSINADO
+    ↓
+PROTOCOLADO (Automático)
+    ↓
+COM_PARECER (Assessor Jurídico)
+    ↓
+EM_PAUTA (Expediente)
+    ↓
+EM_VOTACAO
+    ↓
+APROVADO/REJEITADO
+```
 
 ---
 
@@ -543,7 +621,8 @@ $mapeamento = [
 5. 📝 Gera documento com todas as variáveis
 6. 👁️ Preview mostra resultado final
 7. ⬇️ Download do documento .docx/.pdf
-8. 📧 Documento pronto para tramitação
+8. 📤 "Enviar para o Legislativo" quando finalizado
+9. 📧 Documento pronto para tramitação
 ```
 
 ---
@@ -650,14 +729,31 @@ app/
 - ✅ Download e visualização
 - ✅ Duplicação de modelos
 - ✅ Interface responsiva Metronic
+- ✅ **Novo fluxo de tramitação implementado**
+- ✅ **Roles Expediente e Assessor Jurídico criados**
+- ✅ **Models para novo fluxo (ParecerJuridico, SessaoPlenaria, ItemPauta, TramitacaoLog)**
+- ✅ **Migrations executadas para novo fluxo**
+- ✅ **Políticas de segurança (ExpedientePolicy, ParecerJuridicoPolicy)**
+- ✅ **Campos adicionais na tabela proposicoes**
+- ✅ **Sistema de status expandido**
+- ✅ **Botão "Enviar para o Legislativo" na interface**
+- ✅ **Fluxo de redirecionamento otimizado**
+
+### **Em Desenvolvimento** 🔧
+- 🔧 **Controllers do Novo Fluxo:** ExpedienteController, ParecerJuridicoController
+- 🔧 **Interfaces Web:** Dashboard Expediente, Dashboard Assessor Jurídico
+- 🔧 **Sistema de Protocolo:** Geração automática de números
+- 🔧 **Assinatura Digital:** Integração com certificados digitais
+- 🔧 **Geração PDF:** Sistema de geração automática de PDF final
 
 ### **Próximas Melhorias** 🔄
+- 🔄 **Notificações:** Sistema de notificações por email/sistema
+- 🔄 **Workflow Engine:** Motor de workflow configurável
 - 🔄 **Templates AI:** Sugestão inteligente de variáveis
-- 🔄 **Colaboração Avançada:** Comments e suggestions
-- 🔄 **Workflow Approval:** Aprovação antes de ativar modelos
 - 🔄 **Analytics Avançado:** Dashboard de uso e performance
 - 🔄 **Mobile App:** Visualização e uso via mobile
 - 🔄 **Integração Externa:** APIs para sistemas terceiros
+- 🔄 **Auditoria Completa:** Log detalhado de todas as ações
 
 ---
 
@@ -670,11 +766,14 @@ O sistema de modelos de documentos do LegisInc representa uma solução completa
 - 📏 **Padronização:** Consistência em todos os documentos
 - 🔒 **Segurança:** Controle granular de acesso
 - 🚀 **Escalabilidade:** Suporte a crescimento do sistema
+- 📋 **Tramitação Completa:** Novo fluxo desde criação até votação
+- ⚖️ **Pareceres Jurídicos:** Sistema completo de análise legal
+- 📊 **Organização:** Classificação automática por expediente/ordem do dia
 
-O fluxo entre Administradores, Assessoria Legislativa e Parlamentares está bem definido, permitindo colaboração eficiente e manutenção organizada do sistema de templates.
+O fluxo entre todos os perfis (Administradores, Assessoria Legislativa, Parlamentares, Expediente e Assessor Jurídico) está bem definido, permitindo colaboração eficiente e tramitação organizada desde a criação até a votação final.
 
 ---
 
-**Última atualização:** 2025-07-23  
-**Versão do documento:** 1.0  
-**Status:** Documentação completa do sistema implementado
+**Última atualização:** 2025-08-03  
+**Versão do documento:** 2.1  
+**Status:** Documentação atualizada com status real de implementação

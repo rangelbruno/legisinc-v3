@@ -143,7 +143,7 @@
                 <div class="card-body">
                     @if(!empty($proposicao->conteudo))
                         <div class="documento-content">
-                            {!! nl2br(e($proposicao->conteudo)) !!}
+                            {!! $proposicao->conteudo !!}
                         </div>
                     @else
                         <div class="text-center py-5 text-muted">

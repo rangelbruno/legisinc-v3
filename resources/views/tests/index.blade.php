@@ -224,6 +224,38 @@
                                         <span class="text-muted d-block fw-semibold">Protocolo - senha: 13ligado</span>
                                     </div>
                                 </div>
+
+                                <div class="d-flex align-items-center mb-3">
+                                    <div class="symbol symbol-35px me-4">
+                                        <div class="symbol-label bg-light-dark">
+                                            <i class="ki-duotone ki-clipboard text-dark fs-6">
+                                                <span class="path1"></span>
+                                                <span class="path2"></span>
+                                                <span class="path3"></span>
+                                            </i>
+                                        </div>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <a href="#" class="text-gray-900 fw-bold text-hover-primary fs-6">expediente@sistema.gov.br</a>
+                                        <span class="text-muted d-block fw-semibold">Expediente - senha: 13ligado</span>
+                                    </div>
+                                </div>
+
+                                <div class="d-flex align-items-center mb-3">
+                                    <div class="symbol symbol-35px me-4">
+                                        <div class="symbol-label bg-light-danger">
+                                            <i class="ki-duotone ki-law text-danger fs-6">
+                                                <span class="path1"></span>
+                                                <span class="path2"></span>
+                                                <span class="path3"></span>
+                                            </i>
+                                        </div>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <a href="#" class="text-gray-900 fw-bold text-hover-primary fs-6">juridico@sistema.gov.br</a>
+                                        <span class="text-muted d-block fw-semibold">Assessor Jurídico - senha: 13ligado</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         <!--end::Body-->
@@ -325,6 +357,31 @@
                                 displayName = 'Legislativo';
                                 break;
                             case 'PROTOCOLO':
+                                badgeClass = 'badge-light-warning';
+                                displayName = 'Protocolo';
+                                break;
+                            case 'EXPEDIENTE':
+                                badgeClass = 'badge-light-dark';
+                                displayName = 'Expediente';
+                                break;
+                            case 'ASSESSOR_JURIDICO':
+                                badgeClass = 'badge-light-primary';
+                                displayName = 'Assessor Jurídico';
+                                break;
+                            // Legacy role names for backward compatibility
+                            case 'Administrador':
+                                badgeClass = 'badge-light-danger';
+                                displayName = 'Administrador';
+                                break;
+                            case 'Parlamentar':
+                                badgeClass = 'badge-light-info';
+                                displayName = 'Parlamentar';
+                                break;
+                            case 'Legislativo':
+                                badgeClass = 'badge-light-success';
+                                displayName = 'Legislativo';
+                                break;
+                            case 'Protocolo':
                                 badgeClass = 'badge-light-warning';
                                 displayName = 'Protocolo';
                                 break;

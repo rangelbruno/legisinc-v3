@@ -389,7 +389,8 @@ class ProposicaoController extends Controller
                 $proposicao = (object) [
                     'id' => $proposicaoId,
                     'tipo' => session('proposicao_' . $proposicaoId . '_tipo', 'mocao'),
-                    'modelo_id' => session('proposicao_' . $proposicaoId . '_modelo_id')
+                    'modelo_id' => session('proposicao_' . $proposicaoId . '_modelo_id'),
+                    'arquivo_path' => null
                 ];
             } else {
                 // Proposição não existe nem no BD nem na sessão
@@ -403,33 +404,57 @@ class ProposicaoController extends Controller
             $template = null;
             
             if ($templateId !== 'blank') {
-                // Primeiro, buscar o tipo de proposição
-                $tipoProposicao = \App\Models\TipoProposicao::buscarPorCodigo($proposicao->tipo);
-                
-                if ($tipoProposicao) {
-                    // Buscar template criado pelo admin para este tipo de proposição
-                    $template = \App\Models\TipoProposicaoTemplate::where('tipo_proposicao_id', $tipoProposicao->id)
+                // Se templateId é numérico, buscar diretamente pelo ID do template
+                if (is_numeric($templateId)) {
+                    $template = \App\Models\TipoProposicaoTemplate::where('id', $templateId)
                                                                   ->where('ativo', true)
                                                                   ->first();
                     
-                    \Log::info('Buscando template do admin', [
+                    \Log::info('Buscando template do admin pelo ID', [
                         'proposicao_id' => $proposicaoId,
-                        'tipo_proposicao' => $proposicao->tipo,
-                        'tipo_proposicao_id' => $tipoProposicao->id,
+                        'template_id' => $templateId,
                         'template_encontrado' => $template ? $template->id : 'nenhum'
                     ]);
                 } else {
-                    \Log::warning('Tipo de proposição não encontrado', [
-                        'tipo' => $proposicao->tipo
-                    ]);
+                    // Fallback: buscar pelo tipo de proposição
+                    $tipoProposicao = \App\Models\TipoProposicao::buscarPorCodigo($proposicao->tipo);
+                    
+                    if ($tipoProposicao) {
+                        // Buscar template criado pelo admin para este tipo de proposição
+                        $template = \App\Models\TipoProposicaoTemplate::where('tipo_proposicao_id', $tipoProposicao->id)
+                                                                      ->where('ativo', true)
+                                                                      ->first();
+                        
+                        \Log::info('Buscando template do admin por tipo', [
+                            'proposicao_id' => $proposicaoId,
+                            'tipo_proposicao' => $proposicao->tipo,
+                            'tipo_proposicao_id' => $tipoProposicao->id,
+                            'template_encontrado' => $template ? $template->id : 'nenhum'
+                        ]);
+                    } else {
+                        \Log::warning('Tipo de proposição não encontrado', [
+                            'tipo' => $proposicao->tipo
+                        ]);
+                    }
                 }
             }
             
             // Criar uma instância do documento baseada no template para esta proposição
-            $documentKey = 'proposicao_' . $proposicaoId . '_template_' . $templateId . '_' . time();
+            // Usar chave única com timestamp para evitar conflitos de versão
+            $documentKey = 'proposicao_' . $proposicaoId . '_' . $templateId . '_' . time() . '_' . substr(md5(uniqid()), 0, 8);
             
-            // Criar arquivo da proposição (com ou sem template específico)
-            $arquivoProposicaoPath = $this->criarArquivoProposicao($proposicaoId, $template);
+            // Verificar se a proposição já tem um arquivo salvo no banco de dados
+            if ($proposicao->arquivo_path && \Storage::disk('public')->exists($proposicao->arquivo_path)) {
+                $arquivoProposicaoPath = $proposicao->arquivo_path;
+                \Log::info('Usando arquivo existente da proposição do banco de dados', [
+                    'proposicao_id' => $proposicaoId,
+                    'arquivo_path' => $arquivoProposicaoPath
+                ]);
+            } else {
+                // Criar arquivo da proposição (com ou sem template específico)
+                $arquivoProposicaoPath = $this->criarArquivoProposicao($proposicaoId, $template);
+            }
+            
             $arquivoProposicao = basename($arquivoProposicaoPath); // Apenas o nome do arquivo
             
             \Log::info('Abrindo proposição no OnlyOffice', [
@@ -1010,6 +1035,17 @@ class ProposicaoController extends Controller
             $pathDestino = "proposicoes/{$nomeArquivo}";
             $pathCompleto = storage_path('app/public/' . $pathDestino);
             
+            // IMPORTANTE: Verificar se já existe um arquivo salvo para esta proposição
+            // Se existir, usar o arquivo existente ao invés de criar um novo
+            if (\Storage::disk('public')->exists($pathDestino)) {
+                \Log::info('Arquivo da proposição já existe, usando arquivo salvo', [
+                    'proposicao_id' => $proposicaoId,
+                    'arquivo_existente' => $pathDestino,
+                    'tamanho' => \Storage::disk('public')->size($pathDestino)
+                ]);
+                return $pathDestino;
+            }
+            
             // Garantir que o diretório existe
             $diretorio = dirname($pathCompleto);
             if (!file_exists($diretorio)) {
@@ -1017,7 +1053,8 @@ class ProposicaoController extends Controller
             }
             
             // Se o template tem um arquivo, copiar como base
-            \Log::info('Verificando template para cópia', [
+            \Log::info('Criando novo arquivo para proposição', [
+                'proposicao_id' => $proposicaoId,
                 'template_exists' => $template ? 'sim' : 'não',
                 'template_id' => $template ? $template->id : null,
                 'arquivo_path' => $template ? $template->arquivo_path : null
@@ -2073,9 +2110,15 @@ ${texto}
             // Status 6 = documento está sendo editado  
             if ($status == 2) {
                 if (isset($data['url'])) {
-                    // Substituir localhost pelo IP do container OnlyOffice
-                    // Usando IP direto porque os containers estão em redes diferentes
-                    $url = str_replace('http://localhost:8080', 'http://172.24.0.3', $data['url']);
+                    // Substituir localhost pelo nome do container OnlyOffice
+                    // Usar nome do container para comunicação entre containers
+                    $url = str_replace('http://localhost:8080', 'http://legisinc-onlyoffice', $data['url']);
+                    
+                    \Log::info('OnlyOffice callback - tentando baixar documento', [
+                        'proposicao_id' => $proposicaoId,
+                        'original_url' => $data['url'],
+                        'converted_url' => $url
+                    ]);
                     
                     // Download do arquivo atualizado usando cURL
                     $ch = curl_init();
@@ -2092,8 +2135,21 @@ ${texto}
                     curl_close($ch);
                     
                     if ($fileContent && $httpCode == 200) {
-                        // Extrair template_id do nome do arquivo atual ou da sessão
-                        $templateId = session('proposicao_' . $proposicaoId . '_template_id', 11);
+                        // Extrair template_id do arquivo atual da proposição
+                        $proposicao = Proposicao::find($proposicaoId);
+                        $templateId = 4; // default
+                        
+                        if ($proposicao && $proposicao->arquivo_path) {
+                            // Extrair template_id do nome do arquivo atual
+                            if (preg_match('/template_(\d+)\./', $proposicao->arquivo_path, $matches)) {
+                                $templateId = $matches[1];
+                            }
+                        }
+                        
+                        // Fallback para sessão se não conseguir extrair do arquivo
+                        if (!$templateId) {
+                            $templateId = session('proposicao_' . $proposicaoId . '_template_id', 4);
+                        }
                         
                         // Se o template_id veio como string "template_X", extrair apenas o número
                         if (is_string($templateId) && str_starts_with($templateId, 'template_')) {
@@ -2114,16 +2170,29 @@ ${texto}
                             'path' => $pathDestino
                         ]);
                         
+                        // Detectar formato do arquivo e extrair texto adequadamente
+                        $textoExtraido = $this->extrairTextoDoArquivo($fileContent);
+                        
                         // Atualizar sessão com timestamp da última modificação
                         session(['proposicao_' . $proposicaoId . '_ultima_modificacao' => now()]);
                         
                         // Atualizar registro da proposição no banco de dados
-                        $proposicao = Proposicao::find($proposicaoId);
                         if ($proposicao) {
+                            // Extrair ementa e conteúdo do texto
+                            $dadosExtraidos = \App\Services\RTFTextExtractor::extractEmentaAndConteudo($textoExtraido);
+                            
                             $proposicao->update([
                                 'arquivo_path' => $pathDestino,
                                 'ultima_modificacao' => now(),
-                                'status' => 'em_edicao'
+                                'status' => 'em_edicao',
+                                'ementa' => $dadosExtraidos['ementa'] ?? $proposicao->ementa,
+                                'conteudo' => $dadosExtraidos['conteudo'] ?? $proposicao->conteudo
+                            ]);
+                            
+                            \Log::info('Proposição atualizada com texto extraído', [
+                                'proposicao_id' => $proposicaoId,
+                                'ementa_atualizada' => !empty($dadosExtraidos['ementa']),
+                                'conteudo_atualizado' => !empty($dadosExtraidos['conteudo'])
                             ]);
                         }
                     } else {
@@ -2606,6 +2675,450 @@ ${texto}
             'protocolo' => $protocolo,
             'observacoes_legislativo' => $observacoes
         ]);
+    }
+
+    /**
+     * Extrair texto de qualquer formato de arquivo (DOCX ou RTF)
+     */
+    private function extrairTextoDoArquivo($fileContent)
+    {
+        try {
+            // Detectar formato do arquivo pelos primeiros bytes
+            $header = substr($fileContent, 0, 10);
+            
+            if (strpos($fileContent, 'PK') === 0 || strpos($fileContent, '<?xml') !== false) {
+                // Arquivo DOCX (formato ZIP com XML)
+                \Log::info('Detectado arquivo DOCX, extraindo texto do XML');
+                return $this->extrairTextoDOCX($fileContent);
+            } elseif (strpos($fileContent, '{\\rtf') === 0) {
+                // Arquivo RTF - usar o novo extrator
+                \Log::info('Detectado arquivo RTF, usando RTFTextExtractor');
+                return \App\Services\RTFTextExtractor::extract($fileContent);
+            } else {
+                // Tentar como texto puro primeiro
+                if (mb_check_encoding($fileContent, 'UTF-8')) {
+                    \Log::info('Tratando como texto puro UTF-8');
+                    return trim($fileContent);
+                } else {
+                    \Log::warning('Formato de arquivo não reconhecido, tentando como RTF');
+                    return \App\Services\RTFTextExtractor::extract($fileContent);
+                }
+            }
+        } catch (\Exception $e) {
+            \Log::error('Erro ao extrair texto do arquivo', [
+                'erro' => $e->getMessage()
+            ]);
+            return 'Erro ao extrair texto do documento';
+        }
+    }
+
+    /**
+     * Extrair texto de arquivo DOCX
+     */
+    private function extrairTextoDOCX($docxContent)
+    {
+        try {
+            \Log::info('Iniciando extração de texto DOCX', [
+                'tamanho_arquivo' => strlen($docxContent)
+            ]);
+            
+            $texto = '';
+            
+            // Método 1: Tentar usando ZipArchive se disponível
+            if (class_exists('ZipArchive')) {
+                $tempFile = tempnam(sys_get_temp_dir(), 'docx_extract_');
+                file_put_contents($tempFile, $docxContent);
+                
+                $zip = new \ZipArchive();
+                if ($zip->open($tempFile) === TRUE) {
+                    $documentXml = $zip->getFromName('word/document.xml');
+                    if ($documentXml !== false) {
+                        $texto = $this->extrairTextoDoXML($documentXml);
+                        \Log::info('Extração via ZipArchive bem-sucedida', [
+                            'tamanho_texto' => strlen($texto)
+                        ]);
+                    }
+                    $zip->close();
+                }
+                unlink($tempFile);
+            }
+            
+            // Método 2: Se ZipArchive não funcionou, usar stream wrapper
+            if (empty($texto)) {
+                \Log::info('Tentando extração via stream wrapper');
+                $texto = $this->extrairTextoDOCXStream($docxContent);
+            }
+            
+            // Método 3: Se nada funcionou, usar extração direta
+            if (empty($texto)) {
+                \Log::warning('Usando método de extração direta como fallback');
+                $texto = $this->extrairTextoDOCXDireto($docxContent);
+            }
+            
+            \Log::info('Texto extraído do DOCX', [
+                'tamanho_resultado' => strlen($texto),
+                'preview' => substr($texto, 0, 200)
+            ]);
+            
+            return $texto;
+            
+        } catch (\Exception $e) {
+            \Log::error('Erro ao extrair texto do DOCX', [
+                'erro' => $e->getMessage()
+            ]);
+            return 'Erro ao processar documento DOCX';
+        }
+    }
+
+    /**
+     * Extrair texto DOCX usando stream wrapper
+     */
+    private function extrairTextoDOCXStream($docxContent)
+    {
+        try {
+            // Criar arquivo temporário
+            $tempFile = tempnam(sys_get_temp_dir(), 'docx_stream_');
+            file_put_contents($tempFile, $docxContent);
+            
+            // Tentar usar stream wrapper para ZIP
+            $documentContent = @file_get_contents("zip://$tempFile#word/document.xml");
+            
+            if ($documentContent !== false) {
+                \Log::info('Stream wrapper funcionou', [
+                    'tamanho_xml' => strlen($documentContent)
+                ]);
+                
+                $texto = $this->extrairTextoDoXML($documentContent);
+                unlink($tempFile);
+                return $texto;
+            }
+            
+            unlink($tempFile);
+            return '';
+            
+        } catch (\Exception $e) {
+            \Log::error('Erro na extração via stream', [
+                'erro' => $e->getMessage()
+            ]);
+            return '';
+        }
+    }
+
+    /**
+     * Extrair texto do DOCX diretamente (sem ZipArchive)
+     */
+    private function extrairTextoDOCXDireto($docxContent)
+    {
+        try {
+            \Log::info('Tentando extração direta de DOCX', [
+                'tamanho_arquivo' => strlen($docxContent)
+            ]);
+            
+            // Como último recurso, se nenhum método funcionou, 
+            // vamos retornar uma mensagem indicando que o documento precisa ser salvo como texto
+            \Log::warning('Extração automática falhou - documento precisa ser salvo como texto simples');
+            
+            return 'Documento salvo no editor. Para visualizar o texto aqui, salve o documento como texto simples no editor.';
+            
+        } catch (\Exception $e) {
+            \Log::error('Erro na extração direta de DOCX', [
+                'erro' => $e->getMessage()
+            ]);
+            return 'Erro ao extrair texto do documento';
+        }
+    }
+
+    /**
+     * Extrair texto do XML do Word
+     */
+    private function extrairTextoDoXML($xmlContent)
+    {
+        try {
+            // Usar SimpleXML para extrair texto
+            $dom = new \DOMDocument();
+            $dom->loadXML($xmlContent);
+            
+            // Buscar todos os elementos de texto
+            $xpath = new \DOMXPath($dom);
+            $textNodes = $xpath->query('//w:t');
+            
+            $textos = [];
+            foreach ($textNodes as $node) {
+                $textos[] = $node->nodeValue;
+            }
+            
+            $texto = implode(' ', $textos);
+            
+            // Se não encontrou com namespace, tentar sem
+            if (empty($texto)) {
+                if (preg_match_all('/<w:t[^>]*>([^<]+)<\/w:t>/i', $xmlContent, $matches)) {
+                    $texto = implode(' ', $matches[1]);
+                }
+            }
+            
+            // Limpar e formatar
+            $texto = html_entity_decode($texto, ENT_QUOTES | ENT_XML1, 'UTF-8');
+            $texto = preg_replace('/\s+/', ' ', $texto);
+            $texto = trim($texto);
+            
+            return $texto;
+            
+        } catch (\Exception $e) {
+            \Log::error('Erro ao processar XML do Word', [
+                'erro' => $e->getMessage()
+            ]);
+            
+            // Fallback: regex simples
+            if (preg_match_all('/<w:t[^>]*>([^<]+)<\/w:t>/i', $xmlContent, $matches)) {
+                return implode(' ', $matches[1]);
+            }
+            
+            return '';
+        }
+    }
+
+    /**
+     * Extrair texto puro de um arquivo RTF
+     */
+    private function extrairTextoDoRTF($rtfContent)
+    {
+        try {
+            // Guardar o conteúdo original
+            $text = $rtfContent;
+            
+            // Remover grupos de controle do cabeçalho completamente (com conteúdo aninhado)
+            $text = preg_replace('/\{\\\\fonttbl.*?\}(?:\{.*?\})*\}/s', '', $text);
+            $text = preg_replace('/\{\\\\colortbl.*?\}/s', '', $text);
+            $text = preg_replace('/\{\\\\stylesheet.*?\}(?:\{.*?\})*\}/s', '', $text);
+            $text = preg_replace('/\{\\\\\*\\\\generator.*?\}/s', '', $text);
+            
+            // Decodificar caracteres especiais hex (\\'XX)
+            $text = preg_replace_callback("/\\\\'([0-9a-fA-F]{2})/", function($matches) {
+                return chr(hexdec($matches[1]));
+            }, $text);
+            
+            // IMPORTANTE: Decodificar caracteres Unicode ANTES de remover outros comandos
+            // Suporta \uXXXX? e \uXXXX*
+            $text = preg_replace_callback('/\\\\u(-?\d+)[\?\*]/', function($matches) {
+                $code = intval($matches[1]);
+                if ($code < 0) {
+                    $code = 65536 + $code;
+                }
+                if ($code < 128) {
+                    return chr($code);
+                } else if ($code < 256) {
+                    // Para caracteres Latin-1
+                    return chr($code);
+                } else {
+                    // Para outros caracteres Unicode
+                    return mb_convert_encoding(pack('n', $code), 'UTF-8', 'UTF-16BE');
+                }
+            }, $text);
+            
+            // Converter comandos de formatação em quebras de linha
+            $text = str_replace(['\\par', '\\line'], "\n", $text);
+            $text = str_replace('\\tab', "\t", $text);
+            
+            // Remover grupos com \* (grupos de controle especiais)
+            $text = preg_replace('/\{\\\\\*[^}]*\}/s', '', $text);
+            
+            // Remover todos os comandos RTF (começam com \)
+            // Mas preservar quebras de linha já convertidas
+            $text = preg_replace('/\\\\[a-z]+[-]?\d*\s*/i', '', $text);
+            
+            // Remover grupos vazios {}
+            $text = preg_replace('/\{\s*\}/', '', $text);
+            
+            // Remover chaves restantes
+            $text = str_replace(['{', '}'], '', $text);
+            
+            // Converter caracteres especiais
+            $text = str_replace('\\~', ' ', $text);
+            $text = str_replace('\\-', '', $text);
+            $text = str_replace('\\*', '', $text);
+            
+            // Remover múltiplos pontos e vírgulas consecutivos
+            $text = preg_replace('/[;]{2,}/', ';', $text);
+            $text = preg_replace('/;(\s*;)+/', ';', $text);
+            
+            // Limpar múltiplos espaços e quebras de linha
+            $text = preg_replace('/[ \t]+/', ' ', $text);
+            $text = preg_replace('/\n\s*\n\s*\n+/', "\n\n", $text);
+            $text = trim($text);
+            
+            // Garantir UTF-8
+            if (!mb_check_encoding($text, 'UTF-8')) {
+                $text = mb_convert_encoding($text, 'UTF-8', 'auto');
+            }
+            
+            \Log::info('Texto extraído do RTF', [
+                'tamanho_original' => strlen($rtfContent),
+                'tamanho_texto' => strlen($text),
+                'primeiros_200_chars' => substr($text, 0, 200)
+            ]);
+            
+            return $text;
+            
+        } catch (\Exception $e) {
+            \Log::error('Erro ao extrair texto do RTF', [
+                'erro' => $e->getMessage()
+            ]);
+            return '';
+        }
+    }
+
+    /**
+     * Extrair ementa e conteúdo do texto
+     */
+    private function extrairEmentaEConteudo($texto)
+    {
+        try {
+            $ementa = '';
+            $conteudo = '';
+            
+            // Limpar o texto primeiro
+            $texto = trim($texto);
+            
+            // Dividir o texto em linhas
+            $linhas = explode("\n", $texto);
+            $linhas = array_filter($linhas, function($linha) {
+                return trim($linha) !== '';
+            });
+            $linhas = array_values($linhas);
+            
+            // Procurar por padrões conhecidos
+            $ementaEncontrada = false;
+            $conteudoIniciado = false;
+            $linhasEmenta = [];
+            $linhasConteudo = [];
+            
+            foreach ($linhas as $linha) {
+                $linhaLimpa = trim($linha);
+                
+                // Pular linhas com apenas números ou códigos
+                if (preg_match('/^[\d\/\-]+$/', $linhaLimpa)) {
+                    continue;
+                }
+                
+                // Pular tipo de proposição (primeira linha geralmente)
+                if (preg_match('/^(Projeto de Lei|Requerimento|Indicação|Moção)/i', $linhaLimpa)) {
+                    continue;
+                }
+                
+                // Detectar início da ementa
+                if (!$ementaEncontrada && (
+                    stripos($linhaLimpa, 'EMENTA') !== false ||
+                    stripos($linhaLimpa, 'Atualizações') !== false ||
+                    stripos($linhaLimpa, 'Dispõe sobre') !== false ||
+                    stripos($linhaLimpa, 'dívida') !== false ||
+                    preg_match('/^[A-Za-zÀ-ÿ].*[a-z]:/', $linhaLimpa) // Linha que termina com :
+                )) {
+                    $ementaEncontrada = true;
+                    // Remover a palavra EMENTA se existir
+                    $linhaLimpa = preg_replace('/^EMENTA[:\s]*/i', '', $linhaLimpa);
+                    if ($linhaLimpa) {
+                        $linhasEmenta[] = $linhaLimpa;
+                    }
+                    continue;
+                }
+                
+                // Detectar início do conteúdo
+                if (stripos($linhaLimpa, 'CONTEÚDO') !== false ||
+                    stripos($linhaLimpa, 'TEXTO') !== false ||
+                    stripos($linhaLimpa, 'Prezado') !== false ||
+                    preg_match('/^Art\.\s*\d+/i', $linhaLimpa)) {
+                    $conteudoIniciado = true;
+                    // Remover a palavra CONTEÚDO/TEXTO se existir
+                    $linhaLimpa = preg_replace('/^(CONTEÚDO|TEXTO)[:\s]*/i', '', $linhaLimpa);
+                    if ($linhaLimpa) {
+                        $linhasConteudo[] = $linhaLimpa;
+                    }
+                    continue;
+                }
+                
+                // Adicionar linha ao conteúdo ou ementa apropriado
+                if ($conteudoIniciado) {
+                    $linhasConteudo[] = $linhaLimpa;
+                } elseif ($ementaEncontrada && !$conteudoIniciado) {
+                    $linhasEmenta[] = $linhaLimpa;
+                } elseif (!$ementaEncontrada && !$conteudoIniciado) {
+                    // Se ainda não encontrou marcadores, considerar como ementa as primeiras linhas
+                    if (count($linhasEmenta) === 0 && 
+                        (strlen($linhaLimpa) > 20 && strlen($linhaLimpa) < 200) &&
+                        !preg_match('/^(Prezado|Sua |Na |Art\.|Artigo)/i', $linhaLimpa)) {
+                        $linhasEmenta[] = $linhaLimpa;
+                        $ementaEncontrada = true; // Marca como encontrada para parar de procurar
+                    } elseif (count($linhasEmenta) === 0 && count($linhasConteudo) === 0) {
+                        // Se é a primeira linha e parece ser uma ementa curta
+                        $linhasEmenta[] = $linhaLimpa;
+                    } else {
+                        $linhasConteudo[] = $linhaLimpa;
+                    }
+                }
+            }
+            
+            // Montar ementa e conteúdo
+            $ementa = implode(' ', $linhasEmenta);
+            $conteudo = implode('<br>', $linhasConteudo);
+            
+            // Se não encontrou ementa, pegar a primeira linha significativa
+            if (empty($ementa) && !empty($linhasConteudo)) {
+                $ementa = $linhasConteudo[0];
+                array_shift($linhasConteudo);
+                $conteudo = implode('<br>', $linhasConteudo);
+            }
+            
+            // Limpar e formatar
+            $ementa = $this->limparTexto($ementa);
+            $conteudo = $this->limparTexto($conteudo);
+            
+            // Se a ementa ficar muito grande, truncar
+            if (strlen($ementa) > 500) {
+                $ementa = substr($ementa, 0, 497) . '...';
+            }
+            
+            \Log::info('Ementa e conteúdo extraídos', [
+                'ementa_tamanho' => strlen($ementa),
+                'conteudo_tamanho' => strlen($conteudo),
+                'ementa_preview' => substr($ementa, 0, 100),
+                'conteudo_preview' => substr($conteudo, 0, 100)
+            ]);
+            
+            return [
+                'ementa' => $ementa ?: 'Proposição em elaboração',
+                'conteudo' => $conteudo ?: 'Conteúdo a ser definido'
+            ];
+            
+        } catch (\Exception $e) {
+            \Log::error('Erro ao extrair ementa e conteúdo', [
+                'erro' => $e->getMessage()
+            ]);
+            return [
+                'ementa' => 'Erro ao processar ementa',
+                'conteudo' => $texto
+            ];
+        }
+    }
+
+    /**
+     * Limpar texto removendo caracteres indesejados
+     */
+    private function limparTexto($texto)
+    {
+        // Remover múltiplos espaços
+        $texto = preg_replace('/\s+/', ' ', $texto);
+        
+        // Remover espaços no início e fim
+        $texto = trim($texto);
+        
+        // Remover caracteres de controle
+        $texto = preg_replace('/[\x00-\x1F\x7F]/', '', $texto);
+        
+        // Preservar quebras de linha importantes
+        $texto = str_replace(["\r\n", "\r", "\n"], '<br>', $texto);
+        $texto = preg_replace('/(<br>)+/', '<br>', $texto);
+        
+        return $texto;
     }
 
     // ===============================================
@@ -3228,163 +3741,6 @@ ${texto}
     /**
      * Extrair texto básico do RTF removendo códigos de formatação
      */
-    private function extrairTextoDoRTF($rtfContent)
-    {
-        \Log::info('Iniciando extração de texto do RTF', [
-            'tamanho_original' => strlen($rtfContent),
-            'preview' => substr($rtfContent, 0, 200)
-        ]);
-
-        // ETAPA 0: Decodificar sequências Unicode RTF primeiro
-        $texto = $this->decodificarUnicodeRTF($rtfContent);
-        \Log::info('Após decodificação Unicode', [
-            'preview_decodificado' => substr($texto, 0, 200)
-        ]);
-        
-        // ETAPA 1: Converter RTF escape sequences para UTF-8 primeiro
-        $escapeSequences = [
-            "\\'e1" => 'á', "\\'e0" => 'à', "\\'e2" => 'â', "\\'e3" => 'ã',
-            "\\'e9" => 'é', "\\'ea" => 'ê', "\\'ed" => 'í',
-            "\\'f3" => 'ó', "\\'f4" => 'ô', "\\'f5" => 'õ',
-            "\\'fa" => 'ú', "\\'e7" => 'ç',
-            "\\'c1" => 'Á', "\\'c0" => 'À', "\\'c2" => 'Â', "\\'c3" => 'Ã',
-            "\\'c9" => 'É', "\\'ca" => 'Ê', "\\'cd" => 'Í',
-            "\\'d3" => 'Ó', "\\'d4" => 'Ô', "\\'d5" => 'Õ',
-            "\\'da" => 'Ú', "\\'c7" => 'Ç'
-        ];
-        
-        foreach ($escapeSequences as $rtf => $utf8) {
-            $texto = str_replace($rtf, $utf8, $texto);
-        }
-        
-        // ETAPA 2: Converter sequências Unicode RTF (\u123*)
-        $texto = preg_replace_callback('/\\\\u(\d+)\*/', function($matches) {
-            $codepoint = intval($matches[1]);
-            if ($codepoint < 128) {
-                return chr($codepoint);
-            } else {
-                return mb_chr($codepoint, 'UTF-8');
-            }
-        }, $texto);
-        
-        // ETAPA 3: Remover definitivamente grupos de definições (fonttbl, colortbl, stylesheet)
-        // Estes grupos contêm apenas definições, não conteúdo do documento
-        $texto = preg_replace('/\{\\\\fonttbl.*?\}/s', '', $texto);
-        $texto = preg_replace('/\{\\\\colortbl.*?\}/s', '', $texto);  
-        $texto = preg_replace('/\{\\\\stylesheet.*?\}/s', '', $texto);
-        $texto = preg_replace('/\{\\\\[*]\\\\[^{}]*\}/s', '', $texto);
-        
-        \Log::info('Após remoção de definições de estilo', [
-            'tamanho_apos_limpeza' => strlen($texto),
-            'preview_apos_limpeza' => substr($texto, 0, 300)
-        ]);
-        
-        // ETAPA 4: Extrair o corpo do documento (após as definições de página)
-        if (preg_match('/\\\\paperw.*$/s', $texto, $matches)) {
-            $corpoDocumento = $matches[0];
-            \Log::info('Corpo do documento extraído', [
-                'tamanho_corpo' => strlen($corpoDocumento),
-                'preview_corpo' => substr($corpoDocumento, 0, 300)
-            ]);
-            
-            $texto = $corpoDocumento;
-        } else {
-            \Log::warning('Não foi possível encontrar o corpo do documento com \\paperw, usando texto completo');
-        }
-        
-        // ETAPA 4: Remover códigos de formatação mas preservar texto
-        $patterns = [
-            '/\\\\pard[^\\\\]*/',                        // Remove paragraph definitions
-            '/\\\\plain[^\\\\]*/',                       // Remove plain text definitions
-            '/\\\\s\d+[^\\\\]*/',                        // Remove style references
-            '/\\\\itap\d+/',                             // Remove table info
-            '/\\\\q[lcr]/',                              // Remove alignment
-            '/\\\\sb\d+/',                               // Remove space before
-            '/\\\\sa\d+/',                               // Remove space after
-            '/\\\\sl\d+/',                               // Remove line spacing
-            '/\\\\slmult\d+/',                           // Remove line spacing multiplier
-            '/\\\\f\d+/',                                // Remove font references
-            '/\\\\fs\d+/',                               // Remove font size
-            '/\\\\b\d*/',                                // Remove bold
-            '/\\\\par/',                                 // Remove paragraph breaks (replace with space)
-        ];
-        
-        foreach ($patterns as $pattern) {
-            $texto = preg_replace($pattern, ' ', $texto);
-        }
-        
-        // ETAPA 6: Extrair conteúdo de texto real de forma mais agressiva
-        $fragmentosTexto = [];
-        
-        // Estratégia 1: Buscar texto dentro de chaves (mais provável de ser conteúdo)
-        if (preg_match_all('/\{([^{}]*[a-zA-ZÀ-ÿ\s][^{}]*)\}/u', $texto, $matches)) {
-            foreach ($matches[1] as $fragmento) {
-                $fragmento = trim($fragmento);
-                // Filtrar apenas texto real, não comandos RTF
-                if (strlen($fragmento) > 5 && 
-                    !preg_match('/^\\\\/', $fragmento) &&                    // Não começa com comando RTF
-                    !preg_match('/^[0-9\s\-\*]+$/', $fragmento) &&          // Não é só números/símbolos
-                    !preg_match('/^[a-z]+\d*\s*$/', $fragmento) &&          // Não é comando sem \
-                    preg_match('/[a-zA-ZÀ-ÿ]{3,}/', $fragmento)) {          // Contém palavras reais
-                    
-                    // Limpar comandos RTF restantes do fragmento
-                    $fragmentoLimpo = preg_replace('/\\\\[a-z]+\d*\s*/', ' ', $fragmento);
-                    $fragmentoLimpo = preg_replace('/\s+/', ' ', $fragmentoLimpo);
-                    $fragmentoLimpo = trim($fragmentoLimpo);
-                    
-                    if (strlen($fragmentoLimpo) > 3) {
-                        $fragmentosTexto[] = $fragmentoLimpo;
-                    }
-                }
-            }
-        }
-        
-        // Estratégia 2: Se não achou nada nas chaves, buscar texto livre
-        if (empty($fragmentosTexto)) {
-            // Buscar sequências de texto que não sejam comandos RTF
-            if (preg_match_all('/(?:^|[^\\\\])\s*([a-zA-ZÀ-ÿ][^\\\\{}\n\r]*)/u', $texto, $matches)) {
-                foreach ($matches[1] as $fragmento) {
-                    $fragmento = trim($fragmento);
-                    if (strlen($fragmento) > 10 && 
-                        !preg_match('/^[0-9\s\-\*]+$/', $fragmento) &&
-                        preg_match('/[a-zA-ZÀ-ÿ]{3,}/', $fragmento)) {
-                        $fragmentosTexto[] = $fragmento;
-                    }
-                }
-            }
-        }
-        
-        // Aplicar resultado
-        if (!empty($fragmentosTexto)) {
-            $texto = implode(' ', $fragmentosTexto);
-            \Log::info('Fragmentos de texto extraídos', [
-                'quantidade' => count($fragmentosTexto),
-                'fragmentos' => array_slice($fragmentosTexto, 0, 3), // Log apenas os primeiros 3
-                'preview' => substr($texto, 0, 200)
-            ]);
-        } else {
-            \Log::warning('Nenhum fragmento de texto encontrado, mantendo texto processado');
-        }
-        
-        // ETAPA 5: Limpeza final
-        $texto = str_replace(['{', '}'], '', $texto);
-        $texto = preg_replace('/\s+/', ' ', $texto);
-        $texto = trim($texto);
-        
-        // Se ainda está pequeno demais, usar estratégia mais agressiva
-        if (strlen($texto) < 50) {
-            \Log::warning('Extração de texto resultou em texto muito pequeno, usando fallback mais inteligente');
-            $texto = $this->extrairTextoRTFInteligente($rtfContent);
-        }
-        
-        \Log::info('Extração de texto do RTF finalizada', [
-            'tamanho_resultado' => strlen($texto),
-            'preview_resultado' => substr($texto, 0, 200)
-        ]);
-        
-        return $texto;
-    }
-    
     /**
      * Extração inteligente de texto RTF (fallback melhorado)
      */

@@ -66,7 +66,9 @@ class User extends Authenticatable
      * Constantes dos perfis do sistema parlamentar
      */
     public const PERFIL_ADMIN = 'ADMIN';
+    public const PERFIL_ASSESSOR_JURIDICO = 'ASSESSOR_JURIDICO';
     public const PERFIL_LEGISLATIVO = 'LEGISLATIVO';
+    public const PERFIL_EXPEDIENTE = 'EXPEDIENTE';
     public const PERFIL_PARLAMENTAR = 'PARLAMENTAR';
     public const PERFIL_RELATOR = 'RELATOR';
     public const PERFIL_PROTOCOLO = 'PROTOCOLO';
@@ -78,14 +80,16 @@ class User extends Authenticatable
      * Hierarquia de perfis (maior número = mais privilégios)
      */
     public const HIERARQUIA_PERFIS = [
-        self::PERFIL_PUBLICO => 1,
-        self::PERFIL_CIDADAO_VERIFICADO => 2,
-        self::PERFIL_ASSESSOR => 3,
-        self::PERFIL_PROTOCOLO => 4,
-        self::PERFIL_RELATOR => 5,
-        self::PERFIL_PARLAMENTAR => 6,
-        self::PERFIL_LEGISLATIVO => 7,
-        self::PERFIL_ADMIN => 8,
+        self::PERFIL_PUBLICO => 10,
+        self::PERFIL_CIDADAO_VERIFICADO => 20,
+        self::PERFIL_ASSESSOR => 30,
+        self::PERFIL_PROTOCOLO => 40,
+        self::PERFIL_PARLAMENTAR => 70,
+        self::PERFIL_EXPEDIENTE => 75,
+        self::PERFIL_LEGISLATIVO => 80,
+        self::PERFIL_ASSESSOR_JURIDICO => 85,
+        self::PERFIL_RELATOR => 90,
+        self::PERFIL_ADMIN => 100,
     ];
     
     /**
@@ -143,6 +147,22 @@ class User extends Authenticatable
     public function isProtocolo(): bool
     {
         return $this->hasRole([self::PERFIL_PROTOCOLO, self::PERFIL_ADMIN]);
+    }
+    
+    /**
+     * Verificar se é expediente
+     */
+    public function isExpediente(): bool
+    {
+        return $this->hasRole([self::PERFIL_EXPEDIENTE, self::PERFIL_ADMIN]);
+    }
+    
+    /**
+     * Verificar se é assessor jurídico
+     */
+    public function isAssessorJuridico(): bool
+    {
+        return $this->hasRole([self::PERFIL_ASSESSOR_JURIDICO, self::PERFIL_ADMIN]);
     }
     
     /**
@@ -327,7 +347,9 @@ class User extends Authenticatable
         
         return match($perfil) {
             self::PERFIL_ADMIN => 'Administrador',
+            self::PERFIL_ASSESSOR_JURIDICO => 'Assessor Jurídico',
             self::PERFIL_LEGISLATIVO => 'Servidor Legislativo',
+            self::PERFIL_EXPEDIENTE => 'Expediente',
             self::PERFIL_PARLAMENTAR => 'Parlamentar',
             self::PERFIL_RELATOR => 'Relator',
             self::PERFIL_PROTOCOLO => 'Protocolo',
@@ -347,7 +369,9 @@ class User extends Authenticatable
         
         return match($perfil) {
             self::PERFIL_ADMIN => 'danger',
+            self::PERFIL_ASSESSOR_JURIDICO => 'warning',
             self::PERFIL_LEGISLATIVO => 'primary',
+            self::PERFIL_EXPEDIENTE => 'info',
             self::PERFIL_PARLAMENTAR => 'success',
             self::PERFIL_RELATOR => 'warning',
             self::PERFIL_PROTOCOLO => 'dark',

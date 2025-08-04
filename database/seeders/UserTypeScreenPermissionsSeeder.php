@@ -17,6 +17,8 @@ class UserTypeScreenPermissionsSeeder extends Seeder
         // Configurar permissões para cada tipo de usuário
         $this->configureParlamentarScreens();
         $this->configureLegislativoScreens();
+        $this->configureExpedienteScreens();
+        $this->configureAssessorJuridicoScreens();
         $this->configureProtocoloScreens();
         $this->configureRelatorScreens();
         $this->configureAssessorScreens();
@@ -241,6 +243,120 @@ class UserTypeScreenPermissionsSeeder extends Seeder
 
         $this->applyScreenPermissions('ASSESSOR', $screens);
         $this->command->info('  ✅ ' . count($screens) . ' telas configuradas para ASSESSOR');
+    }
+
+    /**
+     * Configurar telas para EXPEDIENTE
+     * Foco: Organização de pautas e gestão de sessões plenárias
+     */
+    private function configureExpedienteScreens(): void
+    {
+        $this->command->info('📋 Configurando telas para EXPEDIENTE...');
+        
+        $screens = [
+            // Core - Acesso básico
+            ['route' => 'dashboard', 'name' => 'Dashboard', 'module' => 'dashboard'],
+            ['route' => 'profile.edit', 'name' => 'Editar Perfil', 'module' => 'profile'],
+            
+            // Proposições - Visualização para organização de pautas
+            ['route' => 'proposicoes.legislativo.index', 'name' => 'Consultar Proposições', 'module' => 'proposicoes'],
+            ['route' => 'proposicoes.show', 'name' => 'Visualizar Proposição', 'module' => 'proposicoes'],
+            ['route' => 'proposicoes.aguardando-protocolo', 'name' => 'Aguardando Protocolo', 'module' => 'proposicoes'],
+            ['route' => 'proposicoes.protocolar', 'name' => 'Proposições para Protocolo', 'module' => 'proposicoes'],
+            ['route' => 'proposicoes.protocolos-hoje', 'name' => 'Protocolos de Hoje', 'module' => 'proposicoes'],
+            
+            // Gestão de Pautas - Funcionalidade principal
+            ['route' => 'pautas.index', 'name' => 'Gerenciar Pautas', 'module' => 'pautas'],
+            ['route' => 'pautas.create', 'name' => 'Criar Pauta', 'module' => 'pautas'],
+            ['route' => 'pautas.edit', 'name' => 'Editar Pauta', 'module' => 'pautas'],
+            ['route' => 'pautas.show', 'name' => 'Visualizar Pauta', 'module' => 'pautas'],
+            ['route' => 'pautas.organizar', 'name' => 'Organizar Pauta', 'module' => 'pautas'],
+            ['route' => 'pautas.publicar', 'name' => 'Publicar Pauta', 'module' => 'pautas'],
+            
+            // Sessões Plenárias - Gestão completa
+            ['route' => 'sessoes.index', 'name' => 'Gerenciar Sessões', 'module' => 'sessoes'],
+            ['route' => 'sessoes.create', 'name' => 'Criar Sessão', 'module' => 'sessoes'],
+            ['route' => 'sessoes.edit', 'name' => 'Editar Sessão', 'module' => 'sessoes'],
+            ['route' => 'sessoes.show', 'name' => 'Visualizar Sessão', 'module' => 'sessoes'],
+            ['route' => 'sessoes.iniciar', 'name' => 'Iniciar Sessão', 'module' => 'sessoes'],
+            ['route' => 'sessoes.encerrar', 'name' => 'Encerrar Sessão', 'module' => 'sessoes'],
+            ['route' => 'sessoes.controlar-votacao', 'name' => 'Controlar Votação', 'module' => 'sessoes'],
+            
+            // Tramitação - Acompanhamento do fluxo
+            ['route' => 'tramitacao.index', 'name' => 'Acompanhar Tramitação', 'module' => 'tramitacao'],
+            ['route' => 'tramitacao.logs', 'name' => 'Logs de Tramitação', 'module' => 'tramitacao'],
+            ['route' => 'tramitacao.relatorio', 'name' => 'Relatório de Tramitação', 'module' => 'tramitacao'],
+            
+            // Consultas - Informações necessárias
+            ['route' => 'parlamentares.index', 'name' => 'Lista de Parlamentares', 'module' => 'parlamentares'],
+            ['route' => 'parlamentares.show', 'name' => 'Perfil do Parlamentar', 'module' => 'parlamentares'],
+            ['route' => 'usuarios.index', 'name' => 'Usuários do Sistema', 'module' => 'usuarios'],
+            ['route' => 'usuarios.show', 'name' => 'Perfil do Usuário', 'module' => 'usuarios'],
+            
+            // Relatórios - Específicos da área
+            ['route' => 'relatorios.expediente', 'name' => 'Relatório do Expediente', 'module' => 'relatorios'],
+            ['route' => 'relatorios.sessoes', 'name' => 'Relatório de Sessões', 'module' => 'relatorios'],
+            ['route' => 'relatorios.pautas', 'name' => 'Relatório de Pautas', 'module' => 'relatorios'],
+        ];
+
+        $this->applyScreenPermissions('EXPEDIENTE', $screens);
+        $this->command->info('  ✅ ' . count($screens) . ' telas configuradas para EXPEDIENTE');
+    }
+
+    /**
+     * Configurar telas para ASSESSOR_JURIDICO
+     * Foco: Emissão de pareceres jurídicos sobre proposições
+     */
+    private function configureAssessorJuridicoScreens(): void
+    {
+        $this->command->info('⚖️  Configurando telas para ASSESSOR_JURIDICO...');
+        
+        $screens = [
+            // Core - Acesso básico
+            ['route' => 'dashboard', 'name' => 'Dashboard', 'module' => 'dashboard'],
+            ['route' => 'profile.edit', 'name' => 'Editar Perfil', 'module' => 'profile'],
+            
+            // Proposições - Análise jurídica (proposições protocoladas)
+            ['route' => 'proposicoes.legislativo.index', 'name' => 'Proposições para Análise', 'module' => 'proposicoes'],
+            ['route' => 'proposicoes.show', 'name' => 'Visualizar Proposição', 'module' => 'proposicoes'],
+            ['route' => 'proposicoes.protocolar', 'name' => 'Proposições Protocoladas', 'module' => 'proposicoes'],
+            ['route' => 'proposicoes.protocolos-hoje', 'name' => 'Protocolos de Hoje', 'module' => 'proposicoes'],
+            ['route' => 'proposicoes.aguardando-protocolo', 'name' => 'Aguardando Protocolo', 'module' => 'proposicoes'],
+            
+            // Pareceres Jurídicos - Funcionalidade principal
+            ['route' => 'pareceres.index', 'name' => 'Gerenciar Pareceres', 'module' => 'pareceres'],
+            ['route' => 'pareceres.create', 'name' => 'Emitir Parecer', 'module' => 'pareceres'],
+            ['route' => 'pareceres.edit', 'name' => 'Editar Parecer', 'module' => 'pareceres'],
+            ['route' => 'pareceres.show', 'name' => 'Visualizar Parecer', 'module' => 'pareceres'],
+            ['route' => 'pareceres.favoravel', 'name' => 'Parecer Favorável', 'module' => 'pareceres'],
+            ['route' => 'pareceres.contrario', 'name' => 'Parecer Contrário', 'module' => 'pareceres'],
+            ['route' => 'pareceres.emendas', 'name' => 'Sugerir Emendas', 'module' => 'pareceres'],
+            ['route' => 'pareceres.finalizar', 'name' => 'Finalizar Parecer', 'module' => 'pareceres'],
+            
+            // Análise Jurídica - Ferramentas de apoio
+            ['route' => 'juridico.biblioteca', 'name' => 'Biblioteca Jurídica', 'module' => 'juridico'],
+            ['route' => 'juridico.jurisprudencia', 'name' => 'Jurisprudência', 'module' => 'juridico'],
+            ['route' => 'juridico.legislacao', 'name' => 'Legislação de Referência', 'module' => 'juridico'],
+            ['route' => 'juridico.precedentes', 'name' => 'Precedentes', 'module' => 'juridico'],
+            
+            // Tramitação - Acompanhamento específico
+            ['route' => 'tramitacao.juridica', 'name' => 'Tramitação Jurídica', 'module' => 'tramitacao'],
+            ['route' => 'tramitacao.prazos', 'name' => 'Controle de Prazos', 'module' => 'tramitacao'],
+            
+            // Consultas - Informações necessárias
+            ['route' => 'parlamentares.index', 'name' => 'Lista de Parlamentares', 'module' => 'parlamentares'],
+            ['route' => 'parlamentares.show', 'name' => 'Perfil do Parlamentar', 'module' => 'parlamentares'],
+            ['route' => 'usuarios.index', 'name' => 'Usuários do Sistema', 'module' => 'usuarios'],
+            ['route' => 'usuarios.show', 'name' => 'Perfil do Usuário', 'module' => 'usuarios'],
+            
+            // Relatórios - Específicos da área jurídica
+            ['route' => 'relatorios.juridico', 'name' => 'Relatório Jurídico', 'module' => 'relatorios'],
+            ['route' => 'relatorios.pareceres', 'name' => 'Relatório de Pareceres', 'module' => 'relatorios'],
+            ['route' => 'relatorios.analise-legal', 'name' => 'Análise Legal', 'module' => 'relatorios'],
+        ];
+
+        $this->applyScreenPermissions('ASSESSOR_JURIDICO', $screens);
+        $this->command->info('  ✅ ' . count($screens) . ' telas configuradas para ASSESSOR_JURIDICO');
     }
 
     /**

@@ -36,7 +36,16 @@ class Proposicao extends Model
         'funcionario_protocolo_id',
         'comissoes_destino',
         'observacoes_protocolo',
-        'verificacoes_realizadas'
+        'verificacoes_realizadas',
+        // Campos do novo fluxo
+        'enviado_revisao_em',
+        'revisor_id',
+        'revisado_em',
+        'pdf_path',
+        'pdf_assinado_path',
+        'momento_sessao',
+        'tem_parecer',
+        'parecer_id'
         // Campos temporariamente comentados até migração ser executada:
         // 'numero',
         // 'variaveis_template',
@@ -49,9 +58,12 @@ class Proposicao extends Model
         'data_assinatura' => 'datetime',
         'data_aprovacao_autor' => 'datetime',
         'data_protocolo' => 'datetime',
+        'enviado_revisao_em' => 'datetime',
+        'revisado_em' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'confirmacao_leitura' => 'boolean',
+        'tem_parecer' => 'boolean',
         'comissoes_destino' => 'array',
         'verificacoes_realizadas' => 'array'
         // 'variaveis_template' => 'array'
@@ -78,6 +90,38 @@ class Proposicao extends Model
     }
 
     /**
+     * Relacionamento com o revisor (usuário que revisou)
+     */
+    public function revisor(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'revisor_id');
+    }
+
+    /**
+     * Relacionamento com o parecer jurídico
+     */
+    public function parecer(): BelongsTo
+    {
+        return $this->belongsTo(ParecerJuridico::class, 'parecer_id');
+    }
+
+    /**
+     * Relacionamento com os logs de tramitação
+     */
+    public function logstramitacao()
+    {
+        return $this->hasMany(TramitacaoLog::class)->orderBy('created_at', 'desc');
+    }
+
+    /**
+     * Relacionamento com itens de pauta
+     */
+    public function itensPauta()
+    {
+        return $this->hasMany(ItemPauta::class);
+    }
+
+    /**
      * Scope para filtrar por autor
      */
     public function scopeDoAutor($query, $autorId)
@@ -99,6 +143,70 @@ class Proposicao extends Model
     public function scopeComTemplate($query)
     {
         return $query->whereNotNull('template_id');
+    }
+
+    /**
+     * Scope para proposições enviadas para revisão
+     */
+    public function scopeEmRevisao($query)
+    {
+        return $query->where('status', 'EM_REVISAO');
+    }
+
+    /**
+     * Scope para proposições revisadas
+     */
+    public function scopeRevisadas($query)
+    {
+        return $query->where('status', 'REVISADO')->orWhere('status', 'AGUARDANDO_ASSINATURA');
+    }
+
+    /**
+     * Scope para proposições assinadas
+     */
+    public function scopeAssinadas($query)
+    {
+        return $query->where('status', 'ASSINADO');
+    }
+
+    /**
+     * Scope para proposições protocoladas
+     */
+    public function scopeProtocoladas($query)
+    {
+        return $query->where('status', 'PROTOCOLADO');
+    }
+
+    /**
+     * Scope para proposições com parecer
+     */
+    public function scopeComParecer($query)
+    {
+        return $query->where('tem_parecer', true);
+    }
+
+    /**
+     * Scope para proposições sem parecer
+     */
+    public function scopeSemParecer($query)
+    {
+        return $query->where('tem_parecer', false);
+    }
+
+    /**
+     * Scope para proposições do expediente
+     */
+    public function scopeExpediente($query)
+    {
+        return $query->where('momento_sessao', 'EXPEDIENTE');
+    }
+
+    /**
+     * Scope para proposições da ordem do dia
+     */
+    public function scopeOrdemDia($query)
+    {
+        return $query->where('momento_sessao', 'ORDEM_DO_DIA');
     }
 
     /**
@@ -197,7 +305,7 @@ class Proposicao extends Model
      */
     public function podeSerEditada(): bool
     {
-        return in_array($this->status, ['rascunho', 'em_edicao']);
+        return in_array($this->status, ['RASCUNHO', 'EM_REVISAO']);
     }
 
     /**
@@ -205,7 +313,55 @@ class Proposicao extends Model
      */
     public function podeSerExcluida(): bool
     {
-        return in_array($this->status, ['rascunho', 'em_edicao']);
+        return in_array($this->status, ['RASCUNHO']);
+    }
+
+    /**
+     * Validar se pode ser enviada para revisão
+     */
+    public function podeSerEnviadaParaRevisao(): bool
+    {
+        return $this->status === 'RASCUNHO';
+    }
+
+    /**
+     * Validar se pode ser assinada
+     */
+    public function podeSerAssinada(): bool
+    {
+        return $this->status === 'AGUARDANDO_ASSINATURA';
+    }
+
+    /**
+     * Verificar se foi assinada
+     */
+    public function foiAssinada(): bool
+    {
+        return !empty($this->pdf_assinado_path);
+    }
+
+    /**
+     * Verificar se foi protocolada
+     */
+    public function foiProtocolada(): bool
+    {
+        return !empty($this->numero_protocolo);
+    }
+
+    /**
+     * Verificar se tem parecer jurídico
+     */
+    public function temParecer(): bool
+    {
+        return $this->tem_parecer && !empty($this->parecer_id);
+    }
+
+    /**
+     * Verificar se está em pauta
+     */
+    public function estaEmPauta(): bool
+    {
+        return $this->itensPauta()->exists();
     }
 
     /**
@@ -214,6 +370,18 @@ class Proposicao extends Model
     public function getStatusColor(): string
     {
         return match($this->status) {
+            'RASCUNHO' => 'warning',
+            'EM_REVISAO' => 'info',
+            'REVISADO' => 'primary',
+            'AGUARDANDO_ASSINATURA' => 'warning',
+            'ASSINADO' => 'success',
+            'PROTOCOLADO' => 'dark',
+            'COM_PARECER' => 'secondary',
+            'EM_PAUTA' => 'primary',
+            'EM_VOTACAO' => 'info',
+            'APROVADO' => 'success',
+            'REJEITADO' => 'danger',
+            // Status antigos para compatibilidade
             'rascunho', 'em_edicao' => 'warning',
             'enviado_legislativo' => 'info',
             'aprovado_legislativo', 'aprovado_assinatura' => 'success',
@@ -223,6 +391,53 @@ class Proposicao extends Model
             'em_tramitacao' => 'info',
             'arquivado' => 'secondary',
             default => 'secondary'
+        };
+    }
+
+    /**
+     * Obter texto formatado do status
+     */
+    public function getStatusFormatado(): string
+    {
+        return match($this->status) {
+            'RASCUNHO' => 'Rascunho',
+            'EM_REVISAO' => 'Em Revisão',
+            'REVISADO' => 'Revisado',
+            'AGUARDANDO_ASSINATURA' => 'Aguardando Assinatura',
+            'ASSINADO' => 'Assinado',
+            'PROTOCOLADO' => 'Protocolado',
+            'COM_PARECER' => 'Com Parecer',
+            'EM_PAUTA' => 'Em Pauta',
+            'EM_VOTACAO' => 'Em Votação',
+            'APROVADO' => 'Aprovado',
+            'REJEITADO' => 'Rejeitado',
+            default => 'Status não definido'
+        };
+    }
+
+    /**
+     * Obter cor do momento da sessão
+     */
+    public function getCorMomentoSessao(): string
+    {
+        return match($this->momento_sessao) {
+            'EXPEDIENTE' => 'info',
+            'ORDEM_DO_DIA' => 'primary',
+            'NAO_CLASSIFICADO' => 'secondary',
+            default => 'light'
+        };
+    }
+
+    /**
+     * Obter texto formatado do momento da sessão
+     */
+    public function getMomentoSessaoFormatado(): string
+    {
+        return match($this->momento_sessao) {
+            'EXPEDIENTE' => 'Expediente',
+            'ORDEM_DO_DIA' => 'Ordem do Dia',
+            'NAO_CLASSIFICADO' => 'Não Classificado',
+            default => 'Não definido'
         };
     }
 

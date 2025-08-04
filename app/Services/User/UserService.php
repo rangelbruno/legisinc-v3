@@ -286,7 +286,9 @@ class UserService
     {
         return [
             User::PERFIL_ADMIN => 'Administrador',
+            User::PERFIL_ASSESSOR_JURIDICO => 'Assessor Jurídico',
             User::PERFIL_LEGISLATIVO => 'Servidor Legislativo',
+            User::PERFIL_EXPEDIENTE => 'Expediente',
             User::PERFIL_PARLAMENTAR => 'Parlamentar',
             User::PERFIL_RELATOR => 'Relator',
             User::PERFIL_PROTOCOLO => 'Protocolo',

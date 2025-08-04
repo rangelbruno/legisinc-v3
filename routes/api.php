@@ -11,6 +11,9 @@ Route::post('/onlyoffice/callback/instance/{instance}', [App\Http\Controllers\Pr
 // OnlyOffice callback for Legislativo editor
 Route::post('/onlyoffice/callback/legislativo/{proposicao}/{documentKey}', [App\Http\Controllers\OnlyOfficeController::class, 'callback'])->name('api.onlyoffice.callback.legislativo');
 
+// OnlyOffice force save
+Route::post('/onlyoffice/force-save/proposicao/{proposicao}', [App\Http\Controllers\OnlyOfficeController::class, 'forceSave'])->name('api.onlyoffice.force-save');
+
 
 // Parâmetros API routes - Mantido para compatibilidade, mas deprecado
 Route::prefix('parametros')->name('api.parametros.')->middleware(['web'])->group(function () {
@@ -181,10 +184,6 @@ Route::prefix('templates')->group(function () {
 });
 
 // Route duplicada removida - usar a rota correta no grupo onlyoffice acima
-
-// Callback específico para proposições
-Route::post('onlyoffice/callback/proposicao/{proposicaoId}', [App\Http\Controllers\ProposicaoController::class, 'onlyOfficeCallback'])
-     ->name('api.onlyoffice.callback.proposicao');
 
 // ===== NOTIFICATIONS API ROUTES =====
 Route::middleware(['web', 'auth'])->group(function () {

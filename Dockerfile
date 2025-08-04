@@ -21,10 +21,11 @@ RUN apk add --no-cache \
     postgresql-dev \
     libpq-dev \
     autoconf \
-    build-base
+    build-base \
+    libzip-dev
 
 # Instalar extensões PHP primeiro
-RUN docker-php-ext-install mbstring exif pcntl bcmath gd pdo
+RUN docker-php-ext-install mbstring exif pcntl bcmath gd pdo zip
 
 # Instalar PostgreSQL extensions
 RUN docker-php-ext-configure pgsql -with-pgsql \

@@ -84,6 +84,7 @@ class OnlyOfficeService
                         'lang' => ['pt-BR']
                     ],
                     'autosave' => true, // Habilitar autosave para garantir salvamento
+                    'autosaveTimeout' => 30000, // 30 segundos
                     'autosaveType' => 0, // 0 = strict mode
                     'forcesave' => true, // Permitir salvamento manual
                     'compactHeader' => true,
@@ -258,7 +259,7 @@ class OnlyOfficeService
             ]);
             
             // Download direto com timeout aumentado
-            $response = Http::timeout(30)->get($urlCorrigida);
+            $response = Http::timeout(60)->get($urlCorrigida);
             
             if (!$response->successful()) {
                 // Fallback tentando outras variações de URL
@@ -273,7 +274,7 @@ class OnlyOfficeService
                         'status_anterior' => $response->status()
                     ]);
                     
-                    $response = Http::timeout(30)->get($urlFallback);
+                    $response = Http::timeout(60)->get($urlFallback);
                     if ($response->successful()) {
                         break;
                     }
@@ -1361,12 +1362,26 @@ ${texto}
             $arquivoSalvo = $proposicao->arquivo_path;
         }
         
-        // Se não tem arquivo_path, procurar por arquivo padrão do parlamentar
-        if (!$arquivoSalvo && $proposicao->template_id) {
-            $nomeArquivoPadrao = "proposicoes/proposicao_{$proposicao->id}_template_{$proposicao->template_id}.rtf";
-            if (Storage::disk('public')->exists($nomeArquivoPadrao)) {
-                $arquivoSalvo = $nomeArquivoPadrao;
-                $this->atualizarArquivoPathProposicao($proposicao, $nomeArquivoPadrao);
+        // Se não tem arquivo_path, procurar por qualquer arquivo salvo desta proposição
+        if (!$arquivoSalvo) {
+            // Buscar todos os arquivos desta proposição e pegar o mais recente
+            $pattern = "proposicoes/proposicao_{$proposicao->id}_template_*.rtf";
+            $arquivosEncontrados = glob(Storage::disk('public')->path('') . $pattern);
+            
+            if ($arquivosEncontrados) {
+                // Ordenar por data de modificação (mais recente primeiro)
+                usort($arquivosEncontrados, function($a, $b) {
+                    return filemtime($b) - filemtime($a);
+                });
+                
+                // Pegar o mais recente e converter para path relativo
+                $arquivoMaisRecente = basename($arquivosEncontrados[0]);
+                $nomeArquivoPadrao = "proposicoes/" . $arquivoMaisRecente;
+                
+                if (Storage::disk('public')->exists($nomeArquivoPadrao)) {
+                    $arquivoSalvo = $nomeArquivoPadrao;
+                    $this->atualizarArquivoPathProposicao($proposicao, $nomeArquivoPadrao);
+                }
             }
         }
         
@@ -1390,8 +1405,9 @@ ${texto}
                 $extensao = pathinfo($arquivoSalvo, PATHINFO_EXTENSION);
                 $nomeArquivo = "proposicao_{$proposicao->id}.{$extensao}";
                 
-                return response()->download($caminhoCompleto, $nomeArquivo)
-                    ->header('Content-Type', $this->getMimeType($extensao));
+                return response()->download($caminhoCompleto, $nomeArquivo, [
+                    'Content-Type' => $this->getMimeType($extensao)
+                ]);
             }
         }
         
@@ -1667,7 +1683,16 @@ Status: " . ucfirst(str_replace('_', ' ', $proposicao->status)) . "\par
                 ]);
                 
                 // Baixar o documento atualizado
-                $response = Http::timeout(10)->get($urlOtimizada);
+                $downloadStart = microtime(true);
+                $response = Http::timeout(60)->get($urlOtimizada);
+                $downloadTime = microtime(true) - $downloadStart;
+                
+                \Log::info('OnlyOffice callback - download concluído', [
+                    'proposicao_id' => $proposicao->id,
+                    'download_time_seconds' => round($downloadTime, 2),
+                    'response_successful' => $response->successful(),
+                    'response_status' => $response->status()
+                ]);
                 
                 if (!$response->successful()) {
                     \Log::error('Erro ao baixar documento do OnlyOffice', [
