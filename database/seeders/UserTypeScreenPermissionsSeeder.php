@@ -4,6 +4,9 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use App\Models\ScreenPermission;
+use App\Models\User;
+use Illuminate\Support\Facades\Hash;
+use Spatie\Permission\Models\Role;
 
 class UserTypeScreenPermissionsSeeder extends Seeder
 {
@@ -14,7 +17,10 @@ class UserTypeScreenPermissionsSeeder extends Seeder
     {
         $this->command->info('🚀 Configurando Permissões de Tela por Tipo de Usuário');
         
-        // Configurar permissões para cada tipo de usuário
+        // Primeiro, criar/corrigir usuários padrão
+        $this->createDefaultUsers();
+        
+        // Depois, configurar permissões para cada tipo de usuário
         $this->configureParlamentarScreens();
         $this->configureLegislativoScreens();
         $this->configureExpedienteScreens();
@@ -22,6 +28,8 @@ class UserTypeScreenPermissionsSeeder extends Seeder
         $this->configureProtocoloScreens();
         $this->configureRelatorScreens();
         $this->configureAssessorScreens();
+        
+        // Sistema mock do AuthController foi atualizado manualmente
         
         $this->command->info('✅ Permissões de tela configuradas com sucesso!');
     }
@@ -264,6 +272,16 @@ class UserTypeScreenPermissionsSeeder extends Seeder
             ['route' => 'proposicoes.aguardando-protocolo', 'name' => 'Aguardando Protocolo', 'module' => 'proposicoes'],
             ['route' => 'proposicoes.protocolar', 'name' => 'Proposições para Protocolo', 'module' => 'proposicoes'],
             ['route' => 'proposicoes.protocolos-hoje', 'name' => 'Protocolos de Hoje', 'module' => 'proposicoes'],
+            ['route' => 'proposicoes.relatorio-legislativo', 'name' => 'Relatório Legislativo', 'module' => 'proposicoes'],
+            
+            // Sistema de Expediente - Funcionalidades principais
+            ['route' => 'expediente.index', 'name' => 'Painel do Expediente', 'module' => 'expediente'],
+            ['route' => 'expediente.show', 'name' => 'Visualizar Proposição no Expediente', 'module' => 'expediente'],
+            ['route' => 'expediente.classificar', 'name' => 'Classificar Momento da Sessão', 'module' => 'expediente'],
+            ['route' => 'expediente.reclassificar', 'name' => 'Reclassificar Proposições', 'module' => 'expediente'],
+            ['route' => 'expediente.enviar-votacao', 'name' => 'Enviar para Votação', 'module' => 'expediente'],
+            ['route' => 'expediente.aguardando-pauta', 'name' => 'Proposições Aguardando Pauta', 'module' => 'expediente'],
+            ['route' => 'expediente.relatorio', 'name' => 'Relatório do Expediente', 'module' => 'expediente'],
             
             // Gestão de Pautas - Funcionalidade principal
             ['route' => 'pautas.index', 'name' => 'Gerenciar Pautas', 'module' => 'pautas'],
@@ -273,14 +291,14 @@ class UserTypeScreenPermissionsSeeder extends Seeder
             ['route' => 'pautas.organizar', 'name' => 'Organizar Pauta', 'module' => 'pautas'],
             ['route' => 'pautas.publicar', 'name' => 'Publicar Pauta', 'module' => 'pautas'],
             
-            // Sessões Plenárias - Gestão completa
+            // Sessões Plenárias - Gestão para organização de pautas
+            ['route' => 'admin.sessions.index', 'name' => 'Lista de Sessões', 'module' => 'sessoes'],
             ['route' => 'sessoes.index', 'name' => 'Gerenciar Sessões', 'module' => 'sessoes'],
-            ['route' => 'sessoes.create', 'name' => 'Criar Sessão', 'module' => 'sessoes'],
-            ['route' => 'sessoes.edit', 'name' => 'Editar Sessão', 'module' => 'sessoes'],
             ['route' => 'sessoes.show', 'name' => 'Visualizar Sessão', 'module' => 'sessoes'],
-            ['route' => 'sessoes.iniciar', 'name' => 'Iniciar Sessão', 'module' => 'sessoes'],
-            ['route' => 'sessoes.encerrar', 'name' => 'Encerrar Sessão', 'module' => 'sessoes'],
-            ['route' => 'sessoes.controlar-votacao', 'name' => 'Controlar Votação', 'module' => 'sessoes'],
+            ['route' => 'sessoes.agenda', 'name' => 'Agenda de Sessões', 'module' => 'sessoes'],
+            ['route' => 'sessoes.atas', 'name' => 'Atas das Sessões', 'module' => 'sessoes'],
+            ['route' => 'sessoes.pautas', 'name' => 'Gerenciar Pautas', 'module' => 'sessoes'],
+            ['route' => 'sessoes.incluir-proposicao', 'name' => 'Incluir Proposição em Pauta', 'module' => 'sessoes'],
             
             // Tramitação - Acompanhamento do fluxo
             ['route' => 'tramitacao.index', 'name' => 'Acompanhar Tramitação', 'module' => 'tramitacao'],
@@ -378,4 +396,110 @@ class UserTypeScreenPermissionsSeeder extends Seeder
             );
         }
     }
+
+    /**
+     * Criar/corrigir usuários padrão do sistema
+     */
+    private function createDefaultUsers(): void
+    {
+        $this->command->info('👤 Criando/corrigindo usuários padrão...');
+        
+        $defaultUsers = [
+            [
+                'name' => 'Bruno Silva',
+                'email' => 'bruno@sistema.gov.br',
+                'role' => 'ADMIN',
+                'documento' => '000.000.001-00',
+                'telefone' => '(11) 9000-0001',
+                'profissao' => 'Administrador de Sistema',
+                'cargo_atual' => 'Administrador',
+            ],
+            [
+                'name' => 'Jessica Santos',
+                'email' => 'jessica@sistema.gov.br', 
+                'role' => 'PARLAMENTAR',
+                'documento' => '111.111.111-11',
+                'telefone' => '(11) 9111-1111',
+                'profissao' => 'Advogada',
+                'cargo_atual' => 'Vereadora',
+                'partido' => 'PT',
+            ],
+            [
+                'name' => 'João Oliveira',
+                'email' => 'joao@sistema.gov.br',
+                'role' => 'LEGISLATIVO', 
+                'documento' => '222.222.222-22',
+                'telefone' => '(11) 9222-2222',
+                'profissao' => 'Servidor Legislativo',
+                'cargo_atual' => 'Diretor Legislativo',
+            ],
+            [
+                'name' => 'Roberto Costa',
+                'email' => 'roberto@sistema.gov.br',
+                'role' => 'PROTOCOLO',
+                'documento' => '333.333.333-33', 
+                'telefone' => '(11) 9333-3333',
+                'profissao' => 'Servidor Público',
+                'cargo_atual' => 'Chefe de Protocolo',
+            ],
+            [
+                'name' => 'Carlos Protocolo Silva',
+                'email' => 'protocolo@camara.gov.br',
+                'role' => 'PROTOCOLO',
+                'documento' => '444.444.444-44',
+                'telefone' => '(11) 9444-4444', 
+                'profissao' => 'Servidor Público',
+                'cargo_atual' => 'Responsável pelo Protocolo',
+            ],
+            [
+                'name' => 'Carlos Expediente',
+                'email' => 'expediente@sistema.gov.br',
+                'role' => 'EXPEDIENTE',
+                'documento' => '555.555.555-55',
+                'telefone' => '(11) 9555-5555',
+                'profissao' => 'Servidor Público', 
+                'cargo_atual' => 'Responsável pelo Expediente',
+            ],
+            [
+                'name' => 'Carlos Jurídico',
+                'email' => 'juridico@sistema.gov.br',
+                'role' => 'ASSESSOR_JURIDICO',
+                'documento' => '666.666.666-66',
+                'telefone' => '(11) 9666-6666',
+                'profissao' => 'Advogado',
+                'cargo_atual' => 'Assessor Jurídico',
+            ],
+        ];
+
+        foreach ($defaultUsers as $userData) {
+            // Verificar se a role existe
+            $role = Role::where('name', $userData['role'])->first();
+            if (!$role) {
+                $this->command->warn("   ⚠️  Role {$userData['role']} não encontrada. Pulando usuário {$userData['name']}");
+                continue;
+            }
+
+            // Criar ou atualizar usuário
+            $user = User::updateOrCreate(
+                ['email' => $userData['email']],
+                [
+                    'name' => $userData['name'],
+                    'password' => Hash::make('123456'),
+                    'email_verified_at' => now(),
+                    'documento' => $userData['documento'],
+                    'telefone' => $userData['telefone'],
+                    'profissao' => $userData['profissao'],
+                    'cargo_atual' => $userData['cargo_atual'],
+                    'partido' => $userData['partido'] ?? null,
+                    'ativo' => true,
+                ]
+            );
+
+            // Atribuir role
+            $user->syncRoles([$userData['role']]);
+            
+            $this->command->line("   ✅ {$userData['name']} ({$userData['role']}) - Senha: 123456");
+        }
+    }
+
 }

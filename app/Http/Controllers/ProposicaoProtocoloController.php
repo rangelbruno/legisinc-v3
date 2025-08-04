@@ -3,11 +3,18 @@
 namespace App\Http\Controllers;
 
 use App\Models\Proposicao;
+use App\Services\NumeroProcessoService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class ProposicaoProtocoloController extends Controller
 {
+    private NumeroProcessoService $numeroProcessoService;
+
+    public function __construct(NumeroProcessoService $numeroProcessoService)
+    {
+        $this->numeroProcessoService = $numeroProcessoService;
+    }
     /**
      * Lista proposições aguardando protocolo
      */
@@ -30,11 +37,11 @@ class ProposicaoProtocoloController extends Controller
             abort(403, 'Proposição não está disponível para protocolo.');
         }
 
-        // Gerar número de protocolo se não existir
-        if (!$proposicao->numero_protocolo) {
-            $numeroProtocolo = $this->gerarNumeroProtocolo();
-            $proposicao->update(['numero_protocolo' => $numeroProtocolo]);
-        }
+        // Configurações de numeração
+        $configuracoes = $this->numeroProcessoService->obterConfiguracoes();
+        
+        // Próximos números disponíveis
+        $proximosNumeros = $this->numeroProcessoService->preverProximosNumeros();
 
         // Comissões disponíveis (simulado - implementar conforme necessário)
         $comissoes = $this->obterComissoes($proposicao->tipo);
@@ -42,7 +49,13 @@ class ProposicaoProtocoloController extends Controller
         // Verificações automáticas
         $verificacoes = $this->realizarVerificacoes($proposicao);
 
-        return view('proposicoes.protocolo.protocolar', compact('proposicao', 'comissoes', 'verificacoes'));
+        return view('proposicoes.protocolo.protocolar', compact(
+            'proposicao', 
+            'comissoes', 
+            'verificacoes',
+            'configuracoes',
+            'proximosNumeros'
+        ));
     }
 
     /**
@@ -74,16 +87,24 @@ class ProposicaoProtocoloController extends Controller
             ], 400);
         }
 
-        // Gerar número de protocolo se não existir
-        if (!$proposicao->numero_protocolo) {
-            $numeroProtocolo = $this->gerarNumeroProtocolo();
+        // Atribuir número de processo se não existir
+        if (!$proposicao->numero_processo) {
+            try {
+                $numeroProcesso = $this->numeroProcessoService->atribuirNumeroProcesso($proposicao);
+            } catch (\Exception $e) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Erro ao gerar número de processo: ' . $e->getMessage()
+                ], 400);
+            }
         } else {
-            $numeroProtocolo = $proposicao->numero_protocolo;
+            $numeroProcesso = $proposicao->numero_processo;
         }
 
         $proposicao->update([
             'status' => 'protocolado',
-            'numero_protocolo' => $numeroProtocolo,
+            'numero_protocolo' => $numeroProcesso, // Mantém compatibilidade
+            'numero_processo' => $numeroProcesso,
             'data_protocolo' => now(),
             'funcionario_protocolo_id' => Auth::id(),
             'comissoes_destino' => $request->comissoes_destino,
@@ -113,7 +134,8 @@ class ProposicaoProtocoloController extends Controller
 
         return response()->json([
             'success' => true,
-            'numero_protocolo' => $numeroProtocolo,
+            'numero_protocolo' => $numeroProcesso,
+            'numero_processo' => $numeroProcesso,
             'message' => 'Proposição protocolada com sucesso!'
         ]);
     }
@@ -233,14 +255,22 @@ class ProposicaoProtocoloController extends Controller
     }
 
     /**
-     * Atribuir número de protocolo a uma proposição
+     * Atribuir número de processo a uma proposição
      */
-    public function atribuirNumeroProtocolo(Request $request, Proposicao $proposicao)
+    public function atribuirNumeroProcesso(Request $request, Proposicao $proposicao)
     {
-        $request->validate([
+        $configuracoes = $this->numeroProcessoService->obterConfiguracoes();
+        
+        $rules = [
             'tipo_numeracao' => 'required|in:automatico,manual',
-            'numero_protocolo' => 'required_if:tipo_numeracao,manual|string|nullable',
-        ]);
+        ];
+        
+        // Só validar número manual se configurado para permitir
+        if ($configuracoes['permitir_manual']) {
+            $rules['numero_processo'] = 'required_if:tipo_numeracao,manual|string|nullable';
+        }
+        
+        $request->validate($rules);
 
         if (!in_array($proposicao->status, ['enviado_protocolo', 'assinado'])) {
             return response()->json([
@@ -249,58 +279,51 @@ class ProposicaoProtocoloController extends Controller
             ], 400);
         }
 
-        if ($proposicao->numero_protocolo) {
+        if ($proposicao->numero_processo) {
             return response()->json([
                 'success' => false,
-                'message' => 'Esta proposição já possui um número de protocolo: ' . $proposicao->numero_protocolo
+                'message' => 'Esta proposição já possui um número de processo: ' . $proposicao->numero_processo
             ], 400);
         }
 
         try {
-            $numeroService = new \App\Services\ProposicaoNumeroService();
-            
-            if ($request->tipo_numeracao === 'automatico') {
-                $numeroProtocolo = $numeroService->atribuirNumeroAutomatico($proposicao);
-            } else {
-                $numeroService->atribuirNumeroManual($proposicao, $request->numero_protocolo);
-                $numeroProtocolo = $request->numero_protocolo;
+            if ($request->tipo_numeracao === 'manual' && !$configuracoes['permitir_manual']) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'A configuração atual não permite números manuais.'
+                ], 400);
             }
+            
+            $numeroManual = $request->tipo_numeracao === 'manual' ? $request->numero_processo : null;
+            $numeroProcesso = $this->numeroProcessoService->atribuirNumeroProcesso($proposicao, $numeroManual);
 
             // Atualizar status para protocolado
             $proposicao->update([
                 'status' => 'protocolado'
             ]);
 
-            // Regenerar PDF com número de protocolo
-            try {
-                $onlyOfficeService = app(\App\Services\OnlyOffice\OnlyOfficeService::class);
-                $onlyOfficeService->regenerarPDFComProtocolo($proposicao);
-            } catch (\Exception $e) {
-                \Log::warning('Falha ao regenerar PDF com número de protocolo', [
-                    'proposicao_id' => $proposicao->id,
-                    'numero_protocolo' => $numeroProtocolo,
-                    'error' => $e->getMessage()
-                ]);
-            }
-
             return response()->json([
                 'success' => true,
-                'numero_protocolo' => $numeroProtocolo,
+                'numero_processo' => $numeroProcesso,
+                'numero_protocolo' => $numeroProcesso, // Mantém compatibilidade
                 'data_protocolo' => $proposicao->fresh()->data_protocolo->format('d/m/Y H:i'),
-                'message' => 'Número de protocolo atribuído com sucesso!'
+                'message' => 'Número de processo atribuído com sucesso!'
             ]);
 
-        } catch (\InvalidArgumentException $e) {
+        } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage()
             ], 422);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erro interno. Tente novamente.'
-            ], 500);
         }
+    }
+
+    /**
+     * Alias para compatibilidade
+     */
+    public function atribuirNumeroProtocolo(Request $request, Proposicao $proposicao)
+    {
+        return $this->atribuirNumeroProcesso($request, $proposicao);
     }
 
     /**

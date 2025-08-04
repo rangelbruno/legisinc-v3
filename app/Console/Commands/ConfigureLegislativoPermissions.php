@@ -44,15 +44,17 @@ class ConfigureLegislativoPermissions extends Command
             'can_access' => true,
         ]);
 
-        // Permissões para o módulo Proposições
-        $this->info('Configurando permissões para Proposições...');
+        // Permissões para o módulo Proposições - LEGISLATIVO NÃO CRIA PROPOSIÇÕES
+        $this->info('Configurando permissões para Proposições (apenas análise e revisão)...');
         $proposicoesPermissions = [
-            'proposicoes.criar' => 'Criar Proposição',
-            'proposicoes.minhas-proposicoes' => 'Minhas Proposições',
+            // LEGISLATIVO NÃO PODE criar proposições
+            // 'proposicoes.criar' => 'Criar Proposição', // REMOVIDO
+            // 'proposicoes.minhas-proposicoes' => 'Minhas Proposições', // REMOVIDO
+            
+            // Apenas visualização e análise
             'proposicoes.show' => 'Visualizar Proposição',
-            'proposicoes.buscar-modelos' => 'Buscar Modelos',
-            'proposicoes.legislativo.index' => 'Lista Legislativo',
-            'proposicoes.legislativo.editar' => 'Editar Legislativo',
+            'proposicoes.legislativo.index' => 'Proposições Recebidas',
+            'proposicoes.legislativo.editar' => 'Editar via Legislativo',
             'proposicoes.legislativo.salvar-edicao' => 'Salvar Edição Legislativo',
             'proposicoes.legislativo.enviar-parlamentar' => 'Enviar para Parlamentar',
             'proposicoes.revisar' => 'Revisar Proposições',

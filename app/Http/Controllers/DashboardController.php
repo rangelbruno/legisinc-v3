@@ -38,6 +38,12 @@ class DashboardController extends Controller
             case User::PERFIL_PROTOCOLO:
                 return $this->dashboardProtocolo();
                 
+            case 'EXPEDIENTE':
+                return $this->dashboardExpediente();
+                
+            case 'ASSESSOR_JURIDICO':
+                return $this->dashboardAssessorJuridico();
+                
             case User::PERFIL_RELATOR:
                 return $this->dashboardRelator();
                 
@@ -214,6 +220,123 @@ class DashboardController extends Controller
             
         } catch (\Exception $e) {
             \Log::error('Erro no dashboard protocolo: ' . $e->getMessage());
+            return view('dashboard');
+        }
+    }
+
+    /**
+     * Dashboard do Expediente
+     */
+    private function dashboardExpediente()
+    {
+        try {
+            $userId = Auth::id();
+            
+            // Estatísticas específicas do Expediente
+            $estatisticas = [
+                'proposicoes_protocoladas' => Proposicao::where('status', 'protocolado')->count(),
+                'aguardando_pauta' => Proposicao::where('status', 'protocolado')
+                    ->whereNotNull('momento_sessao')
+                    ->where('momento_sessao', '!=', 'NAO_CLASSIFICADO')
+                    ->count(),
+                'expediente' => Proposicao::where('status', 'protocolado')
+                    ->where('momento_sessao', 'EXPEDIENTE')
+                    ->count(),
+                'ordem_dia' => Proposicao::where('status', 'protocolado')
+                    ->where('momento_sessao', 'ORDEM_DO_DIA')
+                    ->count(),
+                'nao_classificadas' => Proposicao::where('status', 'protocolado')
+                    ->whereIn('momento_sessao', ['NAO_CLASSIFICADO', null])
+                    ->count(),
+                'sessoes_hoje' => 0, // Implementar quando houver modelo de sessões
+                'pautas_organizadas' => 0, // Implementar quando houver modelo de pautas
+            ];
+
+            // Proposições não classificadas que precisam de atenção
+            $proposicoes_nao_classificadas = Proposicao::where('status', 'protocolado')
+                ->whereIn('momento_sessao', ['NAO_CLASSIFICADO', null])
+                ->with(['autor', 'tipoProposicao'])
+                ->orderBy('data_protocolo', 'asc')
+                ->limit(5)
+                ->get();
+
+            // Proposições do Expediente
+            $proposicoes_expediente = Proposicao::where('status', 'protocolado')
+                ->where('momento_sessao', 'EXPEDIENTE')
+                ->with(['autor'])
+                ->orderBy('data_protocolo', 'asc')
+                ->limit(5)
+                ->get();
+
+            // Proposições da Ordem do Dia
+            $proposicoes_ordem_dia = Proposicao::where('status', 'protocolado')
+                ->where('momento_sessao', 'ORDEM_DO_DIA')
+                ->with(['autor'])
+                ->orderBy('data_protocolo', 'asc')
+                ->limit(5)
+                ->get();
+
+            // Alertas do expediente
+            $alertas = collect([
+                (object)[
+                    'tipo' => 'warning',
+                    'titulo' => 'Proposições não classificadas',
+                    'descricao' => 'Proposições que precisam ser classificadas por momento da sessão',
+                    'count' => $estatisticas['nao_classificadas']
+                ],
+                (object)[
+                    'tipo' => 'info',
+                    'titulo' => 'Aguardando inclusão em pauta',
+                    'descricao' => 'Proposições prontas para serem incluídas em pauta de sessão',
+                    'count' => $estatisticas['aguardando_pauta']
+                ]
+            ])->filter(function($alerta) {
+                return $alerta->count > 0;
+            });
+
+            // Se não houver view específica, usar a do protocolo temporariamente
+            if (!view()->exists('dashboard.expediente')) {
+                return view('dashboard.protocolo', compact(
+                    'estatisticas', 
+                    'proposicoes_para_protocolo',
+                    'protocolos_recentes',
+                    'alertas_protocolo',
+                    'numeracao_tipos'
+                ))->with([
+                    'proposicoes_para_protocolo' => $proposicoes_nao_classificadas,
+                    'protocolos_recentes' => $proposicoes_expediente,
+                    'alertas_protocolo' => $alertas,
+                    'numeracao_tipos' => collect()
+                ]);
+            }
+
+            return view('dashboard.expediente', compact(
+                'estatisticas',
+                'proposicoes_nao_classificadas',
+                'proposicoes_expediente',
+                'proposicoes_ordem_dia',
+                'alertas'
+            ));
+            
+        } catch (\Exception $e) {
+            \Log::error('Erro no dashboard expediente: ' . $e->getMessage());
+            return view('dashboard');
+        }
+    }
+
+    /**
+     * Dashboard do Assessor Jurídico
+     */
+    private function dashboardAssessorJuridico()
+    {
+        try {
+            $userId = Auth::id();
+            
+            // Por enquanto usar o dashboard do legislativo
+            return $this->dashboardLegislativo();
+            
+        } catch (\Exception $e) {
+            \Log::error('Erro no dashboard assessor jurídico: ' . $e->getMessage());
             return view('dashboard');
         }
     }

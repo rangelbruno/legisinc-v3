@@ -627,6 +627,26 @@ Route::prefix('images')->name('images.')->middleware('auth')->group(function () 
 // OnlyOffice download route for Legislativo (sem autenticação para acesso do servidor OnlyOffice)
 Route::get('/proposicoes/{proposicao}/onlyoffice/download', [App\Http\Controllers\OnlyOfficeController::class, 'download'])->name('proposicoes.onlyoffice.download');
 
+// ROTAS DO EXPEDIENTE
+Route::prefix('expediente')->name('expediente.')->middleware(['auth', 'check.screen.permission'])->group(function () {
+    // Painel principal do expediente
+    Route::get('/', [App\Http\Controllers\ExpedienteController::class, 'index'])->name('index');
+    
+    // Visualização de proposições
+    Route::get('/proposicoes/{proposicao}', [App\Http\Controllers\ExpedienteController::class, 'show'])->name('show');
+    
+    // Classificação de proposições
+    Route::post('/proposicoes/{proposicao}/classificar', [App\Http\Controllers\ExpedienteController::class, 'classificar'])->name('classificar');
+    Route::get('/reclassificar-todas', [App\Http\Controllers\ExpedienteController::class, 'reclassificarTodas'])->name('reclassificar');
+    
+    // Envio para votação
+    Route::post('/proposicoes/{proposicao}/enviar-votacao', [App\Http\Controllers\ExpedienteController::class, 'enviarParaVotacao'])->name('enviar-votacao');
+    
+    // Rotas específicas do menu
+    Route::get('/aguardando-pauta', [App\Http\Controllers\ExpedienteController::class, 'aguardandoPauta'])->name('aguardando-pauta');
+    Route::get('/relatorio', [App\Http\Controllers\ExpedienteController::class, 'relatorio'])->name('relatorio');
+});
+
 // ROTAS DE ADMINISTRAÇÃO - TEMPLATES DE RELATÓRIO
 Route::prefix('admin/templates')->name('admin.templates.')->middleware(['auth', 'check.screen.permission'])->group(function () {
     Route::get('/relatorio-pdf', [App\Http\Controllers\Admin\TemplateRelatorioController::class, 'editarTemplatePdf'])->name('relatorio-pdf');
@@ -786,6 +806,14 @@ Route::prefix('admin')->middleware(['auth', 'check.screen.permission'])->group(f
          ->name('templates.editor');
     Route::post('templates/{tipo}/salvar', [App\Http\Controllers\TemplateController::class, 'salvarTemplate'])
          ->name('templates.salvar');
+    
+    // Parâmetros de Protocolo
+    Route::prefix('parametros/protocolo')->name('admin.parametros.protocolo.')->group(function () {
+        Route::get('/', [App\Http\Controllers\Admin\ParametroProtocoloController::class, 'index'])->name('index');
+        Route::put('/update', [App\Http\Controllers\Admin\ParametroProtocoloController::class, 'update'])->name('update');
+        Route::post('/testar', [App\Http\Controllers\Admin\ParametroProtocoloController::class, 'testarFormato'])->name('testar');
+        Route::get('/restaurar', [App\Http\Controllers\Admin\ParametroProtocoloController::class, 'restaurarPadroes'])->name('restaurar');
+    });
 
     // Nova Arquitetura - DocumentoTemplate routes
     Route::prefix('documento-templates')->name('documento-templates.')->group(function () {

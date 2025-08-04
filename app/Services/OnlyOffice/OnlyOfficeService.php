@@ -1799,6 +1799,73 @@ Status: " . ucfirst(str_replace('_', ' ', $proposicao->status)) . "\par
     }
 
     /**
+     * Inserir número de processo no documento
+     */
+    public function inserirNumeroProcesso(\App\Models\Proposicao $proposicao, string $posicao = 'cabecalho'): void
+    {
+        \Log::info('Inserindo número de processo no documento', [
+            'proposicao_id' => $proposicao->id,
+            'numero_processo' => $proposicao->numero_processo,
+            'posicao' => $posicao
+        ]);
+
+        try {
+            // Atualizar o conteúdo da proposição com o número do processo
+            $conteudo = $proposicao->conteudo;
+            $numeroProcesso = $proposicao->numero_processo;
+            
+            // Adicionar número baseado na posição configurada
+            switch ($posicao) {
+                case 'cabecalho':
+                    // Adicionar no início do documento
+                    $textoNumero = "PROCESSO Nº {$numeroProcesso}\n\n";
+                    $conteudo = $textoNumero . $conteudo;
+                    break;
+                    
+                case 'rodape':
+                    // Adicionar no final do documento
+                    $textoNumero = "\n\nPROCESSO Nº {$numeroProcesso}";
+                    $conteudo = $conteudo . $textoNumero;
+                    break;
+                    
+                case 'primeira_pagina':
+                    // Adicionar no canto superior direito (simulado com espaços)
+                    $textoNumero = str_pad("PROCESSO Nº {$numeroProcesso}", 80, ' ', STR_PAD_LEFT) . "\n\n";
+                    $conteudo = $textoNumero . $conteudo;
+                    break;
+                    
+                case 'marca_dagua':
+                    // Marca d'água não é possível em texto puro, adicionar como cabeçalho
+                    $textoNumero = "[PROCESSO Nº {$numeroProcesso}]\n\n";
+                    $conteudo = $textoNumero . $conteudo;
+                    break;
+            }
+            
+            // Atualizar conteúdo
+            $proposicao->update(['conteudo' => $conteudo]);
+            
+            // Regenerar PDF se existir
+            if ($proposicao->arquivo_pdf_path) {
+                $this->regenerarPDFComProtocolo($proposicao);
+            }
+            
+            \Log::info('Número de processo inserido com sucesso', [
+                'proposicao_id' => $proposicao->id,
+                'numero_processo' => $numeroProcesso
+            ]);
+            
+        } catch (\Exception $e) {
+            \Log::error('Erro ao inserir número de processo no documento', [
+                'proposicao_id' => $proposicao->id,
+                'numero_processo' => $proposicao->numero_processo,
+                'error' => $e->getMessage()
+            ]);
+            
+            throw $e;
+        }
+    }
+
+    /**
      * Regenerar PDF com número de protocolo após protocolação
      */
     public function regenerarPDFComProtocolo(\App\Models\Proposicao $proposicao): void
@@ -1806,6 +1873,7 @@ Status: " . ucfirst(str_replace('_', ' ', $proposicao->status)) . "\par
         \Log::info('Regenerando PDF com número de protocolo', [
             'proposicao_id' => $proposicao->id,
             'numero_protocolo' => $proposicao->numero_protocolo,
+            'numero_processo' => $proposicao->numero_processo,
             'arquivo_pdf_path_atual' => $proposicao->arquivo_pdf_path
         ]);
 
@@ -1827,12 +1895,14 @@ Status: " . ucfirst(str_replace('_', ' ', $proposicao->status)) . "\par
             \Log::info('PDF regenerado com sucesso', [
                 'proposicao_id' => $proposicao->id,
                 'numero_protocolo' => $proposicao->numero_protocolo,
+                'numero_processo' => $proposicao->numero_processo,
                 'novo_arquivo_pdf_path' => $proposicao->fresh()->arquivo_pdf_path
             ]);
         } catch (\Exception $e) {
             \Log::error('Erro ao regenerar PDF com número de protocolo', [
                 'proposicao_id' => $proposicao->id,
                 'numero_protocolo' => $proposicao->numero_protocolo,
+                'numero_processo' => $proposicao->numero_processo,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);

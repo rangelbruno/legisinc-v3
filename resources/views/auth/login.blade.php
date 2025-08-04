@@ -73,7 +73,7 @@
                                     <!--begin::Col-->
                                     <div class="col-md-6 mb-2">
                                         <!--begin::Demo access link=-->
-                                        <a href="#" class="btn btn-flex btn-outline btn-text-gray-700 btn-active-color-primary bg-state-light flex-center text-nowrap w-100" onclick="document.querySelector('input[name=email]').value='bruno@sistema.gov.br'; document.querySelector('input[name=password]').value='13ligado';">
+                                        <a href="#" class="btn btn-flex btn-outline btn-text-gray-700 btn-active-color-primary bg-state-light flex-center text-nowrap w-100" onclick="document.querySelector('input[name=email]').value='bruno@sistema.gov.br'; document.querySelector('input[name=password]').value='123456';">
                                             <i class="ki-duotone ki-user fs-4 me-2">
                                                 <span class="path1"></span>
                                                 <span class="path2"></span>
@@ -85,7 +85,7 @@
                                     <!--begin::Col-->
                                     <div class="col-md-6 mb-2">
                                         <!--begin::Demo access link=-->
-                                        <a href="#" class="btn btn-flex btn-outline btn-text-gray-700 btn-active-color-primary bg-state-light flex-center text-nowrap w-100" onclick="document.querySelector('input[name=email]').value='jessica@sistema.gov.br'; document.querySelector('input[name=password]').value='13ligado';">
+                                        <a href="#" class="btn btn-flex btn-outline btn-text-gray-700 btn-active-color-primary bg-state-light flex-center text-nowrap w-100" onclick="document.querySelector('input[name=email]').value='jessica@sistema.gov.br'; document.querySelector('input[name=password]').value='123456';">
                                             <i class="ki-duotone ki-security-user fs-4 me-2">
                                                 <span class="path1"></span>
                                                 <span class="path2"></span>
@@ -97,7 +97,7 @@
                                     <!--begin::Col-->
                                     <div class="col-md-6 mb-2">
                                         <!--begin::Demo access link=-->
-                                        <a href="#" class="btn btn-flex btn-outline btn-text-gray-700 btn-active-color-primary bg-state-light flex-center text-nowrap w-100" onclick="document.querySelector('input[name=email]').value='joao@sistema.gov.br'; document.querySelector('input[name=password]').value='13ligado';">
+                                        <a href="#" class="btn btn-flex btn-outline btn-text-gray-700 btn-active-color-primary bg-state-light flex-center text-nowrap w-100" onclick="document.querySelector('input[name=email]').value='joao@sistema.gov.br'; document.querySelector('input[name=password]').value='123456';">
                                             <i class="ki-duotone ki-abstract-39 fs-4 me-2">
                                                 <span class="path1"></span>
                                                 <span class="path2"></span>
@@ -109,7 +109,7 @@
                                     <!--begin::Col-->
                                     <div class="col-md-6 mb-2">
                                         <!--begin::Demo access link=-->
-                                        <a href="#" class="btn btn-flex btn-outline btn-text-gray-700 btn-active-color-primary bg-state-light flex-center text-nowrap w-100" onclick="document.querySelector('input[name=email]').value='roberto@sistema.gov.br'; document.querySelector('input[name=password]').value='13ligado';">
+                                        <a href="#" class="btn btn-flex btn-outline btn-text-gray-700 btn-active-color-primary bg-state-light flex-center text-nowrap w-100" onclick="document.querySelector('input[name=email]').value='roberto@sistema.gov.br'; document.querySelector('input[name=password]').value='123456';">
                                             <i class="ki-duotone ki-document fs-4 me-2">
                                                 <span class="path1"></span>
                                                 <span class="path2"></span>
@@ -121,7 +121,7 @@
                                     <!--begin::Col-->
                                     <div class="col-md-6 mb-2">
                                         <!--begin::Demo access link=-->
-                                        <a href="#" class="btn btn-flex btn-outline btn-text-gray-700 btn-active-color-primary bg-state-light flex-center text-nowrap w-100" onclick="document.querySelector('input[name=email]').value='expediente@sistema.gov.br'; document.querySelector('input[name=password]').value='13ligado';">
+                                        <a href="#" class="btn btn-flex btn-outline btn-text-gray-700 btn-active-color-primary bg-state-light flex-center text-nowrap w-100" onclick="document.querySelector('input[name=email]').value='expediente@sistema.gov.br'; document.querySelector('input[name=password]').value='123456';">
                                             <i class="ki-duotone ki-send fs-4 me-2">
                                                 <span class="path1"></span>
                                                 <span class="path2"></span>
@@ -133,7 +133,7 @@
                                     <!--begin::Col-->
                                     <div class="col-md-6 mb-2">
                                         <!--begin::Demo access link=-->
-                                        <a href="#" class="btn btn-flex btn-outline btn-text-gray-700 btn-active-color-primary bg-state-light flex-center text-nowrap w-100" onclick="document.querySelector('input[name=email]').value='juridico@sistema.gov.br'; document.querySelector('input[name=password]').value='13ligado';">
+                                        <a href="#" class="btn btn-flex btn-outline btn-text-gray-700 btn-active-color-primary bg-state-light flex-center text-nowrap w-100" onclick="document.querySelector('input[name=email]').value='juridico@sistema.gov.br'; document.querySelector('input[name=password]').value='123456';">
                                             <i class="ki-duotone ki-courthouse fs-4 me-2">
                                                 <span class="path1"></span>
                                                 <span class="path2"></span>

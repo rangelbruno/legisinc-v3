@@ -170,7 +170,7 @@ class AuthController extends Controller
         // Mock users for demo purposes
         $mockUsers = [
             'bruno@sistema.gov.br' => [
-                'password' => '13ligado',
+                'password' => '123456',
                 'user' => [
                     'id' => 1,
                     'name' => 'Bruno Silva',
@@ -183,7 +183,7 @@ class AuthController extends Controller
                 ]
             ],
             'jessica@sistema.gov.br' => [
-                'password' => '13ligado',
+                'password' => '123456',
                 'user' => [
                     'id' => 2,
                     'name' => 'Jessica Santos',
@@ -198,7 +198,7 @@ class AuthController extends Controller
                 ]
             ],
             'joao@sistema.gov.br' => [
-                'password' => '13ligado',
+                'password' => '123456',
                 'user' => [
                     'id' => 3,
                     'name' => 'João Oliveira',
@@ -211,7 +211,7 @@ class AuthController extends Controller
                 ]
             ],
             'roberto@sistema.gov.br' => [
-                'password' => '13ligado',
+                'password' => '123456',
                 'user' => [
                     'id' => 4,
                     'name' => 'Roberto Costa',
@@ -224,20 +224,20 @@ class AuthController extends Controller
                 ]
             ],
             'expediente@sistema.gov.br' => [
-                'password' => '13ligado',
+                'password' => '123456',
                 'user' => [
-                    'id' => 5,
-                    'name' => 'Maria Expediente',
+                    'id' => 10,
+                    'name' => 'Carlos Expediente',
                     'email' => 'expediente@sistema.gov.br',
                     'documento' => '444.444.444-44',
                     'telefone' => '(11) 9444-4444',
-                    'profissao' => 'Servidora Pública',
+                    'profissao' => 'Servidor Público',
                     'cargo_atual' => 'Responsável pelo Expediente',
                     'ativo' => true,
                 ]
             ],
             'juridico@sistema.gov.br' => [
-                'password' => '13ligado',
+                'password' => '123456',
                 'user' => [
                     'id' => 6,
                     'name' => 'Carlos Jurídico',
@@ -262,6 +262,21 @@ class AuthController extends Controller
                 $user->{$key} = $value;
             }
             $user->exists = true; // Mark as existing user
+
+            // Assign appropriate role based on email
+            $roleMapping = [
+                'bruno@sistema.gov.br' => 'ADMIN',
+                'jessica@sistema.gov.br' => 'PARLAMENTAR',
+                'joao@sistema.gov.br' => 'LEGISLATIVO',
+                'roberto@sistema.gov.br' => 'PROTOCOLO',
+                'expediente@sistema.gov.br' => 'EXPEDIENTE',
+                'juridico@sistema.gov.br' => 'ASSESSOR_JURIDICO',
+            ];
+            
+            if (isset($roleMapping[$email])) {
+                // Create a mock role collection
+                $user->roles = collect([(object)['name' => $roleMapping[$email]]]);
+            }
 
             // Manually log in the user
             Auth::login($user);

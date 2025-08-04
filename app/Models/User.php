@@ -313,9 +313,35 @@ class User extends Authenticatable
      */
     private function getRoleNamesFallback()
     {
-        // For mock/demo purposes, check if user email indicates admin role
+        // Use mock roles if available (from AuthController)
+        if (isset($this->roles) && $this->roles) {
+            return $this->roles->pluck('name');
+        }
+        
+        // For mock/demo purposes, check if user email indicates specific roles
         if ($this->email === 'admin@sistema.gov.br' || str_contains($this->email, 'admin') || $this->email === 'test@example.com') {
             return collect([self::PERFIL_ADMIN]);
+        }
+        
+        // Check for expediente role
+        if ($this->email === 'expediente@sistema.gov.br' || 
+            str_contains(strtolower($this->name), 'expediente') ||
+            str_contains(strtolower($this->cargo_atual ?? ''), 'expediente')) {
+            return collect([self::PERFIL_EXPEDIENTE]);
+        }
+        
+        // Check for protocolo role
+        if (str_contains(strtolower($this->name), 'protocolo') ||
+            str_contains(strtolower($this->cargo_atual ?? ''), 'protocolo') ||
+            str_contains(strtolower($this->email), 'protocolo')) {
+            return collect([self::PERFIL_PROTOCOLO]);
+        }
+        
+        // Check for juridico role
+        if (str_contains(strtolower($this->name), 'juridico') ||
+            str_contains(strtolower($this->cargo_atual ?? ''), 'juridico') ||
+            str_contains(strtolower($this->email), 'juridico')) {
+            return collect([self::PERFIL_ASSESSOR_JURIDICO]);
         }
         
         // Check if user name/email indicates legislativo role
