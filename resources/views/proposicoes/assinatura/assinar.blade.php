@@ -5,6 +5,37 @@
 @section('content')
 
 <style>
+/* Prevenir fechamento automático do modal */
+.swal2-no-auto-close {
+    animation: none !important;
+    transition: none !important;
+}
+
+.swal2-no-auto-close .swal2-timer-progress-bar {
+    display: none !important;
+}
+
+/* Garantir que o modal permaneça visível */
+.swal2-no-auto-close.swal2-shown {
+    display: flex !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+/* Desabilitar animações que podem causar fechamento */
+.swal2-no-auto-close .swal2-popup {
+    animation: none !important;
+}
+
+/* Modal customizado simples */
+#modalDevolverLegislativo {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1055;
+}
 .card-hover {
     transition: all 0.3s ease;
 }
@@ -247,7 +278,154 @@
 
                 <!--begin::Content-->
                 <div class="col-xl-8">
-                    <!--begin::Card-->
+                    <!--begin::PDF Viewer Card-->
+                    <div class="card card-flush mb-6">
+                        <!--begin::Card header-->
+                        <div class="card-header align-items-start">
+                            <div class="card-title">
+                                <h2 class="fw-bold text-dark">
+                                    <i class="fas fa-file-pdf text-danger me-2"></i>
+                                    Documento para Assinatura
+                                </h2>
+                            </div>
+                            <div class="card-toolbar">
+                                <div class="d-flex gap-2">
+                                    @if($proposicao->arquivo_pdf_path)
+                                    <a href="{{ route('proposicoes.serve-pdf', $proposicao) }}" target="_blank" class="btn btn-sm btn-outline btn-outline-primary">
+                                        <i class="fas fa-external-link-alt me-1"></i>Abrir PDF
+                                    </a>
+                                    <a href="{{ route('proposicoes.serve-pdf', $proposicao) }}" download class="btn btn-sm btn-outline btn-outline-secondary">
+                                        <i class="fas fa-download me-1"></i>Download
+                                    </a>
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+                        <!--end::Card header-->
+                        
+                        <!--begin::Card body-->
+                        <div class="card-body pt-0">
+                            @if(config('app.debug'))
+                            <!-- Debug Information -->
+                            <div class="alert alert-secondary mb-4">
+                                <strong>Debug Info:</strong><br>
+                                arquivo_pdf_path: {{ $proposicao->arquivo_pdf_path ?? 'null' }}<br>
+                                arquivo_path: {{ $proposicao->arquivo_path ?? 'null' }}<br>
+                                PDF exists (Storage): {{ $proposicao->arquivo_pdf_path ? (\Storage::exists($proposicao->arquivo_pdf_path) ? 'true' : 'false') : 'n/a' }}<br>
+                                PDF exists (file_exists): {{ $proposicao->arquivo_pdf_path ? (file_exists(storage_path('app/' . $proposicao->arquivo_pdf_path)) ? 'true' : 'false') : 'n/a' }}<br>
+                                PDF Route: {{ route('proposicoes.serve-pdf', $proposicao) }}<br>
+                                Full PDF Path: {{ $proposicao->arquivo_pdf_path ? storage_path('app/' . $proposicao->arquivo_pdf_path) : 'n/a' }}
+                                <br><br>
+                                <strong>Test PDF Access:</strong><br>
+                                <a href="{{ route('proposicoes.serve-pdf', $proposicao) }}" target="_blank" class="btn btn-sm btn-info">
+                                    <i class="fas fa-external-link-alt me-1"></i>Test PDF Route
+                                </a>
+                                <button onclick="forceHideLoading()" class="btn btn-sm btn-warning ms-2">
+                                    <i class="fas fa-eye-slash me-1"></i>Force Hide Loading
+                                </button>
+                            </div>
+                            @endif
+                            
+                            @if($proposicao->arquivo_pdf_path)
+                            <!-- PDF Viewer -->
+                            <div class="pdf-viewer-container position-relative" style="height: 600px; border: 1px solid #e1e3ea; border-radius: 8px; overflow: hidden; background-color: #f8f9fa;">
+                                <!-- Loading indicator -->
+                                <div id="pdf-loading" class="position-absolute top-50 start-50 translate-middle d-flex flex-column align-items-center text-center">
+                                    <div class="spinner-border text-primary mb-3" role="status">
+                                        <span class="visually-hidden">Carregando...</span>
+                                    </div>
+                                    <p class="text-muted">Carregando documento PDF...</p>
+                                    <small class="text-muted mt-2">Se não carregar, clique em "Abrir PDF" acima</small>
+                                </div>
+                                
+                                <!-- PDF Object (mais compatível que iframe) -->
+                                <object 
+                                    id="pdf-object"
+                                    data="{{ route('proposicoes.serve-pdf', $proposicao) }}" 
+                                    type="application/pdf" 
+                                    width="100%" 
+                                    height="100%"
+                                    style="display: none;"
+                                    onload="hideLoadingAndShowPdf()"
+                                    onerror="showPdfError()">
+                                    
+                                    <!-- Fallback iframe dentro do object -->
+                                    <iframe 
+                                        id="pdf-frame"
+                                        src="{{ route('proposicoes.serve-pdf', $proposicao) }}" 
+                                        width="100%" 
+                                        height="100%" 
+                                        frameborder="0">
+                                        
+                                        <!-- Fallback final para browsers antigos -->
+                                        <div class="d-flex flex-column align-items-center justify-content-center h-100 text-center p-4">
+                                            <i class="fas fa-file-pdf text-danger fs-2x mb-3"></i>
+                                            <h5 class="mb-3">PDF não pode ser exibido</h5>
+                                            <p class="text-muted mb-3">Seu navegador não suporta visualização de PDF incorporado.</p>
+                                            <a href="{{ route('proposicoes.serve-pdf', $proposicao) }}" target="_blank" class="btn btn-primary">
+                                                <i class="fas fa-external-link-alt me-1"></i>Abrir PDF em nova aba
+                                            </a>
+                                        </div>
+                                    </iframe>
+                                </object>
+                                
+                                <!-- Error fallback -->
+                                <div id="pdf-error" class="position-absolute top-50 start-50 translate-middle text-center d-none">
+                                    <i class="fas fa-exclamation-triangle text-warning fs-2x mb-3"></i>
+                                    <h5 class="mb-3">Problema ao carregar o PDF</h5>
+                                    <p class="text-muted mb-3">O PDF existe mas não pode ser exibido neste navegador.</p>
+                                    <div class="d-flex gap-2 justify-content-center">
+                                        <a href="{{ route('proposicoes.serve-pdf', $proposicao) }}" target="_blank" class="btn btn-primary">
+                                            <i class="fas fa-external-link-alt me-1"></i>Abrir em nova aba
+                                        </a>
+                                        <button onclick="retryPdfLoad()" class="btn btn-outline-primary">
+                                            <i class="fas fa-redo me-1"></i>Tentar novamente
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            @elseif($proposicao->arquivo_path)
+                            <!-- Fallback: Link para documento original -->
+                            <div class="alert alert-info d-flex align-items-center p-5">
+                                <i class="fas fa-info-circle fs-2hx text-info me-4"></i>
+                                <div class="d-flex flex-column">
+                                    <h4 class="mb-1 text-info">Gerando PDF para Assinatura</h4>
+                                    <span>O documento PDF está sendo processado automaticamente. 
+                                    <a href="{{ asset('storage/' . $proposicao->arquivo_path) }}" target="_blank" class="fw-bold">Visualizar documento original</a> enquanto isso.
+                                    <br><small class="text-muted">Recarregue a página em alguns segundos para ver o PDF.</small></span>
+                                </div>
+                            </div>
+                            
+                            <!-- Auto-refresh para verificar se PDF foi gerado -->
+                            <script>
+                            let autoRefreshTimer = setTimeout(function() {
+                                // Só recarrega se não há modal ativo de devolução
+                                if (!document.getElementById('modalDevolverLegislativo')) {
+                                    location.reload();
+                                } else {
+                                    console.log('Auto-refresh cancelado: modal de devolução está ativo');
+                                }
+                            }, 10000); // Recarrega após 10 segundos
+                            
+                            // Disponibilizar globalmente para cancelar se necessário
+                            window.autoRefreshTimer = autoRefreshTimer;
+                            </script>
+                            @else
+                            <!-- Erro: Nenhum documento disponível -->
+                            <div class="alert alert-danger d-flex align-items-center p-5">
+                                <i class="fas fa-exclamation-circle fs-2hx text-danger me-4"></i>
+                                <div class="d-flex flex-column">
+                                    <h4 class="mb-1 text-danger">Documento não encontrado</h4>
+                                    <span>Não foi possível localizar o documento para assinatura.</span>
+                                </div>
+                            </div>
+                            @endif
+                        </div>
+                        <!--end::Card body-->
+                    </div>
+                    <!--end::PDF Viewer Card-->
+                    
+                    <!--begin::Signature Card-->
                     <div class="card card-flush">
                         <!--begin::Card header-->
                         <div class="card-header align-items-start">
@@ -260,7 +438,11 @@
                         <!--begin::Card body-->
                         <div class="card-body pt-0">
                             
-                            <!-- Confirmação de Leitura -->
+                            <!-- Formulário de Assinatura -->
+                            <form id="assinatura-digital-form" method="POST" action="{{ route('proposicoes.processar-assinatura', $proposicao) }}" enctype="multipart/form-data">
+                                @csrf
+                                
+                                <!-- Confirmação de Leitura -->
                             <div class="alert alert-info d-flex align-items-center p-5 mb-8">
                                 <i class="ki-duotone ki-shield-tick fs-2hx text-info me-4">
                                     <span class="path1"></span>
@@ -276,7 +458,7 @@
                             <!-- Checkbox de Confirmação -->
                             <div class="mb-8">
                                 <div class="form-check form-check-custom form-check-solid">
-                                    <input class="form-check-input" type="checkbox" id="confirmacao_leitura" />
+                                    <input class="form-check-input" type="checkbox" id="confirmacao_leitura" name="confirmacao_leitura" value="1" />
                                     <label class="form-check-label fw-semibold text-gray-700" for="confirmacao_leitura">
                                         Confirmo que li e revisei completamente o documento e estou ciente do seu conteúdo
                                     </label>
@@ -348,7 +530,7 @@
                                 <div id="pfx-upload-area" class="mb-8" style="display: none;">
                                     <label class="fs-6 fw-semibold mb-2">Arquivo do Certificado (.pfx/.p12)</label>
                                     <div class="file-upload-area" id="file-drop-zone">
-                                        <input type="file" id="pfx-file" accept=".pfx,.p12" style="display: none;">
+                                        <input type="file" id="pfx-file" name="arquivo_certificado" accept=".pfx,.p12" style="display: none;">
                                         <i class="ki-duotone ki-file-up fs-3x text-primary mb-3">
                                             <span class="path1"></span>
                                             <span class="path2"></span>
@@ -375,7 +557,7 @@
                                 <!-- Campo de Senha -->
                                 <div id="senha-certificado" class="mb-8" style="display: none;">
                                     <label class="required fs-6 fw-semibold mb-2">Senha do Certificado</label>
-                                    <input type="password" class="form-control" id="senha_certificado" placeholder="Digite a senha do certificado digital">
+                                    <input type="password" class="form-control" id="senha_certificado" name="senha_certificado" placeholder="Digite a senha do certificado digital" autocomplete="current-password">
                                     <div class="form-text">Necessária para validar e utilizar o certificado digital</div>
                                 </div>
                                 
@@ -415,15 +597,33 @@
                                 
                                 <!-- Botões de Ação -->
                                 <div class="d-flex justify-content-end">
-                                    <button type="button" class="btn btn-light me-3" onclick="window.history.back()">
-                                        Cancelar
-                                    </button>
-                                    <button type="button" id="btn-assinar" class="btn btn-assinar" disabled>
-                                        <i class="ki-duotone ki-check fs-2 me-2">
-                                            <span class="path1"></span>
-                                            <span class="path2"></span>
-                                        </i>Assinar Digitalmente
-                                    </button>
+                                    <div>
+                                        <button type="button" class="btn btn-light me-3" onclick="window.history.back()">
+                                            Cancelar
+                                        </button>
+                                        <button type="button" id="btn-assinar" class="btn btn-assinar" disabled>
+                                            <i class="ki-duotone ki-check fs-2 me-2">
+                                                <span class="path1"></span>
+                                                <span class="path2"></span>
+                                            </i>Assinar Digitalmente
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            </form>
+                            <!--end::Formulário de Assinatura-->
+                            
+                            <!-- Separador -->
+                            <div class="separator separator-dashed my-6"></div>
+                            
+                            <!-- Botão Devolver para Legislativo (sempre visível) -->
+                            <div class="d-flex justify-content-start">
+                                <button type="button" class="btn btn-outline-warning" onclick="devolverParaLegislativo()">
+                                    <i class="fas fa-arrow-left me-2"></i>Devolver para o Legislativo
+                                </button>
+                                <div class="ms-3 d-flex align-items-center">
+                                    <small class="text-muted">Se o documento precisa de alterações, devolva-o para o Legislativo com suas observações</small>
                                 </div>
                             </div>
                         </div>
@@ -667,17 +867,21 @@ function processarAssinatura() {
     // Em implementação real, usaria bibliotecas específicas para assinatura
     
     setTimeout(() => {
-        const dadosAssinatura = {
-            tipo_certificado: certificadoSelecionado,
-            assinatura_digital: gerarAssinaturaDigital(),
-            certificado_digital: obterCertificadoDigital(),
-            _token: '{{ csrf_token() }}'
-        };
+        // Usar FormData do formulário para incluir arquivos
+        const form = document.getElementById('assinatura-digital-form');
+        const formData = new FormData(form);
+        
+        // Adicionar dados específicos da assinatura
+        formData.append('tipo_certificado', certificadoSelecionado);
+        formData.append('assinatura_digital', gerarAssinaturaDigital());
+        formData.append('certificado_digital', obterCertificadoDigital());
         
         $.ajax({
             url: '{{ route("proposicoes.processar-assinatura", $proposicao) }}',
             method: 'POST',
-            data: dadosAssinatura,
+            data: formData,
+            processData: false,
+            contentType: false,
             success: function(response) {
                 if (response.success) {
                     Swal.fire({
@@ -737,6 +941,498 @@ function obterCertificadoDigital() {
         emissor: 'AC Certisign RFB G5',
         validade: '2025-12-31',
         arquivo: arquivoCertificado ? arquivoCertificado.name : null
+    });
+}
+
+// Função simplificada para esconder loading
+function hideLoadingAndShowPdf() {
+    const loading = document.getElementById('pdf-loading');
+    const pdfObject = document.getElementById('pdf-object');
+    
+    console.log('Hiding loading and showing PDF');
+    
+    if (loading) {
+        loading.style.display = 'none';
+    }
+    if (pdfObject) {
+        pdfObject.style.display = 'block';
+    }
+}
+
+// Função para forçar esconder o loading (para debug)
+function forceHideLoading() {
+    console.log('Force hiding loading manually');
+    const loading = document.getElementById('pdf-loading');
+    const pdfObject = document.getElementById('pdf-object');
+    
+    if (loading) {
+        loading.style.display = 'none !important';
+        loading.style.visibility = 'hidden';
+        loading.classList.add('d-none');
+        loading.remove(); // Remove do DOM
+        console.log('Loading forcefully hidden and removed');
+    }
+    
+    if (pdfObject) {
+        pdfObject.style.display = 'block';
+        pdfObject.style.visibility = 'visible';
+        console.log('PDF object forcefully shown');
+    }
+    
+    alert('Loading forçadamente escondido!');
+}
+
+function retryPdfLoad() {
+    console.log('Retrying PDF load');
+    
+    // Esconder erro e mostrar loading
+    const loading = document.getElementById('pdf-loading');
+    const error = document.getElementById('pdf-error');
+    const pdfObject = document.getElementById('pdf-object');
+    
+    if (error) error.classList.add('d-none');
+    if (loading) loading.style.display = 'flex';
+    if (pdfObject) pdfObject.style.display = 'none';
+    
+    // Recarregar o PDF object
+    if (pdfObject) {
+        const originalData = pdfObject.data;
+        pdfObject.data = '';
+        setTimeout(() => {
+            pdfObject.data = originalData;
+            initPdfViewer();
+        }, 100);
+    }
+}
+
+function hidePdfLoading() {
+    const loading = document.getElementById('pdf-loading');
+    const pdfObject = document.getElementById('pdf-object');
+    
+    console.log('Hiding PDF loading indicator');
+    
+    if (loading) loading.style.display = 'none';
+    if (pdfObject) pdfObject.style.display = 'block';
+}
+
+function showPdfError() {
+    const loading = document.getElementById('pdf-loading');
+    const error = document.getElementById('pdf-error');
+    
+    if (loading) loading.classList.add('d-none');
+    if (error) error.classList.remove('d-none');
+}
+
+// Inicializar o visualizador PDF quando a página carregar
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Page loaded, hiding loading immediately');
+    
+    // Esconder loading imediatamente
+    const loading = document.getElementById('pdf-loading');
+    const pdfObject = document.getElementById('pdf-object');
+    
+    console.log('Loading element:', loading);
+    console.log('PDF object:', pdfObject);
+    
+    if (loading) {
+        loading.style.display = 'none';
+        loading.style.visibility = 'hidden';
+        loading.classList.add('d-none');
+        console.log('Loading hidden with multiple methods');
+    }
+    
+    if (pdfObject) {
+        pdfObject.style.display = 'block';
+        pdfObject.style.visibility = 'visible';
+        console.log('PDF object shown');
+    }
+    
+    // Backup forçado após 500ms
+    setTimeout(() => {
+        console.log('Backup: force hiding loading again');
+        const loadingBackup = document.getElementById('pdf-loading');
+        if (loadingBackup) {
+            loadingBackup.remove(); // Remove completamente do DOM
+            console.log('Loading element removed from DOM');
+        }
+    }, 500);
+});
+
+// Função para interceptar reloads da página
+function interceptarReloads() {
+    if (!window.originalReload) {
+        window.originalReload = location.reload;
+    }
+    
+    location.reload = function() {
+        if (document.getElementById('modalDevolverLegislativo')) {
+            console.log('RELOAD BLOQUEADO: Modal de devolução está ativo');
+            return false;
+        }
+        return window.originalReload.call(location);
+    };
+}
+
+// Função simples usando modal Bootstrap nativo
+function devolverParaLegislativoBootstrap() {
+    console.log('Abrindo modal de devolução');
+    
+    // Interceptar tentativas de reload
+    interceptarReloads();
+    
+    // Cancelar todos os timers ativos
+    for (let i = 1; i < 10000; i++) {
+        clearTimeout(i);
+    }
+    console.log('Todos os timers foram cancelados');
+    
+    // Criar modal usando HTML simples
+    const modalHtml = `
+        <div class="modal" id="modalDevolverLegislativo" tabindex="-1" style="display: block; background-color: rgba(0,0,0,0.5);">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="fas fa-arrow-left text-warning me-2"></i>
+                            Devolver para o Legislativo?
+                        </h5>
+                    </div>
+                    <div class="modal-body">
+                        <div class="text-center mb-4">
+                            <i class="fas fa-arrow-left text-warning fa-4x mb-3"></i>
+                            <p class="mb-3">Você está prestes a devolver esta proposição para o Legislativo com solicitação de alterações.</p>
+                        </div>
+                        <div class="mb-3">
+                            <label for="observacoesBootstrap" class="form-label fw-bold">Observações (obrigatório):</label>
+                            <textarea id="observacoesBootstrap" class="form-control" rows="4" placeholder="Descreva as alterações ou correções necessárias..."></textarea>
+                            <div id="observacoesError" class="text-danger mt-1 d-none">Por favor, informe as observações sobre as alterações necessárias</div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" onclick="fecharModalDevolver()">Cancelar</button>
+                        <button type="button" class="btn btn-warning" onclick="processarDevolucaoBootstrap()">
+                            <i class="fas fa-arrow-left me-1"></i>Devolver
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Remover modal anterior se existir
+    document.getElementById('modalDevolverLegislativo')?.remove();
+    
+    // Adicionar ao body
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    // Detectar mudanças na página que podem afetar o modal
+    const modal = document.getElementById('modalDevolverLegislativo');
+    if (modal) {
+        console.log('Modal criado e ativo');
+        
+        // Verificar se há recarregamentos automáticos da página
+        if (window.location.reload || document.querySelector('meta[http-equiv="refresh"]')) {
+            console.warn('Página tem recarregamento automático que pode fechar o modal');
+        }
+    }
+    
+    // Focar no textarea
+    setTimeout(() => {
+        document.getElementById('observacoesBootstrap')?.focus();
+    }, 200);
+}
+
+function fecharModalDevolver() {
+    document.getElementById('modalDevolverLegislativo')?.remove();
+    
+    // Restaurar função original de reload
+    if (window.originalReload) {
+        location.reload = window.originalReload;
+        console.log('Função de reload restaurada');
+    }
+    
+    console.log('Modal fechado');
+}
+
+function processarDevolucaoBootstrap() {
+    const observacoes = document.getElementById('observacoesBootstrap').value;
+    const errorDiv = document.getElementById('observacoesError');
+    
+    if (!observacoes.trim()) {
+        errorDiv.classList.remove('d-none');
+        return;
+    }
+    
+    errorDiv.classList.add('d-none');
+    
+    // Fechar modal
+    fecharModalDevolver();
+    
+    // Fazer a requisição
+    enviarDevolucao(observacoes);
+}
+
+function enviarDevolucao(observacoes) {
+    // Mostrar loading usando SweetAlert2 simples
+    Swal.fire({
+        title: 'Devolvendo...',
+        html: '<div class="spinner-border text-warning" role="status"></div><p class="mt-2">Devolvendo proposição...</p>',
+        allowOutsideClick: false,
+        showConfirmButton: false
+    });
+
+    $.ajax({
+        url: '{{ route("proposicoes.devolver-legislativo", $proposicao) }}',
+        method: 'PUT',
+        headers: {
+            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content'),
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+        },
+        data: JSON.stringify({ observacoes: observacoes }),
+        success: function(response) {
+            if (response.success) {
+                Swal.fire({
+                    title: 'Devolvida com Sucesso!',
+                    text: response.message,
+                    icon: 'success',
+                    confirmButtonText: 'OK'
+                }).then(() => {
+                    if (response.redirect) {
+                        window.location.href = response.redirect;
+                    } else {
+                        window.location.href = '{{ route("proposicoes.minhas-proposicoes") }}';
+                    }
+                });
+            } else {
+                Swal.fire('Erro!', response.message || 'Erro ao devolver proposição', 'error');
+            }
+        },
+        error: function(xhr) {
+            let message = 'Erro ao devolver proposição. Tente novamente.';
+            if (xhr.responseJSON?.message) {
+                message = xhr.responseJSON.message;
+            }
+            Swal.fire('Erro!', message, 'error');
+        }
+    });
+}
+
+// Função para devolver proposição para o Legislativo - VERSÃO FINAL SIMPLIFICADA
+function devolverParaLegislativo() {
+    console.log('Abrindo modal de devolução para o Legislativo');
+    
+    // Abordagem super simples: prompt nativo do browser
+    const observacoes = prompt(
+        "DEVOLVER PARA O LEGISLATIVO\n\n" +
+        "Você está prestes a devolver esta proposição para o Legislativo com solicitação de alterações.\n\n" +
+        "Observações (obrigatório):\n" +
+        "Descreva as alterações ou correções necessárias..."
+    );
+    
+    if (observacoes === null) {
+        // Usuário clicou em cancelar
+        return;
+    }
+    
+    if (!observacoes || observacoes.trim().length < 10) {
+        alert('Por favor, informe as observações sobre as alterações necessárias (mínimo 10 caracteres).');
+        return devolverParaLegislativo(); // Tentar novamente
+    }
+    
+    // Fazer a requisição diretamente
+    enviarDevolucao(observacoes.trim());
+    return;
+    
+    // Usar uma instância completamente nova do Swal com configurações mais restritivas
+    const SwalModal = Swal.mixin({
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        allowEnterKey: false,
+        stopKeydownPropagation: false,
+        keydownListenerCapture: false,
+        timer: null,
+        timerProgressBar: false,
+        backdrop: true,
+        toast: false,
+        position: 'center',
+        grow: false,
+        showClass: {
+            popup: 'animate__animated animate__fadeInDown'
+        },
+        hideClass: {
+            popup: 'animate__animated animate__fadeOutUp'
+        }
+    });
+    
+    SwalModal.fire({
+        title: 'Devolver para o Legislativo?',
+        html: `<div class="text-center">
+                <i class="fas fa-arrow-left text-warning fa-4x mb-3"></i>
+                <p class="mb-3">Você está prestes a devolver esta proposição para o Legislativo com solicitação de alterações.</p>
+                <div class="text-start">
+                    <label for="observacoes" class="form-label fw-bold">Observações (obrigatório):</label>
+                    <textarea id="observacoes" class="form-control" rows="4" placeholder="Descreva as alterações ou correções necessárias..."></textarea>
+                </div>
+               </div>`,
+        width: '500px',
+        icon: null,
+        showCancelButton: true,
+        confirmButtonText: '<i class="fas fa-arrow-left me-1"></i>Devolver',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#f1c40f',
+        cancelButtonColor: '#6c757d',
+        customClass: {
+            confirmButton: 'btn btn-warning',
+            cancelButton: 'btn btn-secondary',
+            popup: 'swal2-no-auto-close'
+        },
+        reverseButtons: true,
+        focusConfirm: false,
+        focusCancel: false,
+        preConfirm: () => {
+            const observacoes = document.getElementById('observacoes').value;
+            if (!observacoes.trim()) {
+                Swal.showValidationMessage('Por favor, informe as observações sobre as alterações necessárias');
+                return false;
+            }
+            console.log('Validação passou, observações:', observacoes);
+            return observacoes;
+        },
+        didOpen: (popup) => {
+            console.log('Modal de devolução foi aberto');
+            
+            // Desabilitar qualquer timer global
+            if (popup._timer) {
+                clearTimeout(popup._timer);
+                popup._timer = null;
+            }
+            
+            // Limpar todos os timers globais do Swal
+            if (window.Swal && window.Swal.getTimerLeft) {
+                window.Swal.stopTimer();
+            }
+            
+            // Override do método close para prevenir fechamento não autorizado
+            const originalClose = popup.close;
+            let allowClose = false;
+            
+            popup.close = function() {
+                if (allowClose) {
+                    originalClose.call(this);
+                } else {
+                    console.log('Fechamento do modal bloqueado');
+                }
+            };
+            
+            // Permitir fechamento apenas nos botões
+            popup.querySelector('.swal2-confirm')?.addEventListener('click', () => {
+                allowClose = true;
+            });
+            
+            popup.querySelector('.swal2-cancel')?.addEventListener('click', () => {
+                allowClose = true;
+            });
+            
+            // Focar no textarea
+            setTimeout(() => {
+                const textarea = document.getElementById('observacoes');
+                if (textarea) {
+                    textarea.focus();
+                }
+            }, 100);
+            
+            // Adicionar evento personalizado para prevenir fechamento
+            popup.addEventListener('click', (e) => {
+                // Permitir apenas cliques nos botões
+                if (!e.target.closest('.swal2-confirm') && !e.target.closest('.swal2-cancel')) {
+                    e.stopPropagation();
+                }
+            });
+        },
+        willClose: () => {
+            console.log('Modal está tentando fechar');
+        },
+        didClose: () => {
+            console.log('Modal foi fechado');
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Mostrar loading
+            Swal.fire({
+                title: 'Devolvendo...',
+                html: '<div class="text-center"><div class="spinner-border text-warning" role="status"><span class="visually-hidden">Carregando...</span></div><p class="mt-2 mb-0">Devolvendo proposição para o Legislativo...</p></div>',
+                allowOutsideClick: false,
+                showConfirmButton: false,
+                didOpen: () => {
+                    Swal.showLoading()
+                }
+            });
+
+            // Fazer a requisição
+            $.ajax({
+                url: '{{ route("proposicoes.devolver-legislativo", $proposicao) }}',
+                method: 'PUT',
+                headers: {
+                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content'),
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                },
+                data: JSON.stringify({
+                    observacoes: result.value
+                }),
+                success: function(response) {
+                    if (response.success) {
+                        Swal.fire({
+                            title: 'Devolvida com Sucesso!',
+                            html: `<div class="text-center">
+                                    <i class="fas fa-check-circle text-success fa-4x mb-3"></i>
+                                    <p>${response.message}</p>
+                                   </div>`,
+                            icon: null,
+                            confirmButtonText: 'OK',
+                            confirmButtonColor: '#28a745'
+                        }).then(() => {
+                            if (response.redirect) {
+                                window.location.href = response.redirect;
+                            } else {
+                                window.location.href = '{{ route("proposicoes.minhas-proposicoes") }}';
+                            }
+                        });
+                    } else {
+                        Swal.fire({
+                            title: 'Erro!',
+                            text: response.message || 'Erro ao devolver proposição',
+                            icon: 'error',
+                            confirmButtonText: 'OK',
+                            confirmButtonColor: '#dc3545'
+                        });
+                    }
+                },
+                error: function(xhr) {
+                    console.error('Erro:', xhr);
+                    let message = 'Erro ao devolver proposição. Tente novamente.';
+                    
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        message = xhr.responseJSON.message;
+                    } else if (xhr.status === 403) {
+                        message = 'Você não tem permissão para devolver esta proposição.';
+                    } else if (xhr.status === 404) {
+                        message = 'Proposição não encontrada.';
+                    } else if (xhr.status === 400) {
+                        message = xhr.responseJSON?.message || 'Esta proposição não pode ser devolvida no status atual.';
+                    }
+                    
+                    Swal.fire({
+                        title: 'Erro!',
+                        text: message,
+                        icon: 'error',
+                        confirmButtonText: 'OK',
+                        confirmButtonColor: '#dc3545'
+                    });
+                }
+            });
+        }
     });
 }
 </script>

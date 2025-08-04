@@ -37,7 +37,7 @@ class ProposicaoLegislativoController extends Controller
     public function index(Request $request)
     {
         $query = Proposicao::with(['autor'])
-            ->whereIn('status', ['enviado_legislativo', 'em_revisao']);
+            ->whereIn('status', ['enviado_legislativo', 'em_revisao', 'devolvido_correcao']);
             
         // Apply filters
         if ($request->filled('search')) {

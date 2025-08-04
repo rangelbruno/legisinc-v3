@@ -842,8 +842,8 @@ class ProposicaoController extends Controller
             'current_user' => \Auth::id()
         ]);
         
-        // Permitir exclusão de rascunhos, proposições em edição e salvando
-        $statusPermitidos = ['rascunho', 'em_edicao', 'salvando'];
+        // Permitir exclusão de rascunhos, proposições em edição, salvando e retornadas do legislativo
+        $statusPermitidos = ['rascunho', 'em_edicao', 'salvando', 'retornado_legislativo'];
         if (!in_array($proposicao->status, $statusPermitidos)) {
             \Log::warning('Tentativa de excluir proposição com status não permitido', [
                 'proposicao_id' => $proposicaoId,
@@ -853,7 +853,7 @@ class ProposicaoController extends Controller
             
             return response()->json([
                 'success' => false,
-                'message' => 'Apenas rascunhos, proposições em edição e salvando podem ser excluídas.'
+                'message' => 'Apenas rascunhos, proposições em edição, salvando e retornadas do legislativo podem ser excluídas.'
             ], 400);
         }
         
@@ -3321,11 +3321,36 @@ ${texto}
             }
 
             // Verificar se a proposição está no status correto
-            if (!in_array($proposicao->status, ['enviado_legislativo', 'em_revisao'])) {
+            if (!in_array($proposicao->status, ['enviado_legislativo', 'em_revisao', 'devolvido_correcao'])) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Esta proposição não pode ser devolvida no status atual.'
                 ], 400);
+            }
+
+            // Tentar converter o documento para PDF para facilitar a assinatura
+            try {
+                \Log::info('Iniciando conversão para PDF', [
+                    'proposicao_id' => $proposicao->id,
+                    'arquivo_path' => $proposicao->arquivo_path,
+                    'arquivo_existe' => $proposicao->arquivo_path ? \Storage::exists($proposicao->arquivo_path) : false,
+                    'has_content' => !empty($proposicao->conteudo)
+                ]);
+                
+                // Sempre tentar converter, seja com arquivo físico ou conteúdo do banco
+                $this->converterProposicaoParaPDF($proposicao);
+                
+                \Log::info('Conversão para PDF concluída', [
+                    'proposicao_id' => $proposicao->id,
+                    'arquivo_pdf_path' => $proposicao->arquivo_pdf_path
+                ]);
+            } catch (\Exception $e) {
+                \Log::error('Erro ao converter proposição para PDF', [
+                    'proposicao_id' => $proposicao->id,
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
+                ]);
+                // Continua sem falhar, pois a conversão é opcional
             }
 
             // Alterar o status para 'retornado_legislativo' - proposição volta para o parlamentar assinar
@@ -3956,5 +3981,230 @@ ${texto}
 </w:document>';
 
         $this->criarDOCXDeXML($documentXML, $outputPath);
+    }
+
+    /**
+     * Converter proposição para PDF (usado quando volta para parlamentar assinar)
+     */
+    private function converterProposicaoParaPDF(Proposicao $proposicao): void
+    {
+        // Determinar nome do PDF
+        $nomePdf = 'proposicao_' . $proposicao->id . '.pdf';
+        $diretorioPdf = 'proposicoes/pdfs/' . $proposicao->id;
+        $caminhoPdfRelativo = $diretorioPdf . '/' . $nomePdf;
+        $caminhoPdfAbsoluto = storage_path('app/' . $caminhoPdfRelativo);
+
+        // Garantir que o diretório existe
+        if (!is_dir(dirname($caminhoPdfAbsoluto))) {
+            mkdir(dirname($caminhoPdfAbsoluto), 0755, true);
+        }
+
+        // Se existe arquivo físico, tentar converter com LibreOffice
+        if ($proposicao->arquivo_path && \Storage::exists($proposicao->arquivo_path)) {
+            $caminhoArquivo = storage_path('app/' . $proposicao->arquivo_path);
+            
+            \Log::info('Convertendo proposição para PDF (com arquivo físico)', [
+                'proposicao_id' => $proposicao->id,
+                'arquivo_path' => $proposicao->arquivo_path,
+                'caminho_absoluto' => $caminhoArquivo,
+                'arquivo_existe' => file_exists($caminhoArquivo)
+            ]);
+            
+            $this->tentarConversaoComLibreOffice($caminhoArquivo, $caminhoPdfAbsoluto, $proposicao);
+        } else {
+            \Log::info('Proposição sem arquivo físico, gerando PDF do conteúdo do banco', [
+                'proposicao_id' => $proposicao->id,
+                'has_content' => !empty($proposicao->conteudo)
+            ]);
+            
+            // Usar DomPDF diretamente para proposições sem arquivo físico
+            $this->criarPDFComDomPDF($caminhoPdfAbsoluto, $proposicao);
+        }
+
+        // Atualizar proposição com caminho do PDF
+        $proposicao->arquivo_pdf_path = $caminhoPdfRelativo;
+        $proposicao->save();
+        
+        \Log::info('Proposição convertida para PDF', [
+            'proposicao_id' => $proposicao->id,
+            'arquivo_original' => $proposicao->arquivo_path,
+            'arquivo_pdf' => $caminhoPdfRelativo
+        ]);
+    }
+
+    /**
+     * Tentar conversão com LibreOffice
+     */
+    private function tentarConversaoComLibreOffice(string $caminhoArquivo, string $caminhoPdfAbsoluto, Proposicao $proposicao): void
+    {
+        // Verificar se LibreOffice está disponível
+        $libreOfficeDisponivel = $this->libreOfficeDisponivel();
+        \Log::info('Verificando LibreOffice', [
+            'disponivel' => $libreOfficeDisponivel,
+            'caminho_pdf' => $caminhoPdfAbsoluto
+        ]);
+        
+        if (!$libreOfficeDisponivel) {
+            // Fallback: Criar um PDF usando DomPDF
+            \Log::warning('LibreOffice não disponível, usando DomPDF como fallback');
+            $this->criarPDFComDomPDF($caminhoPdfAbsoluto, $proposicao);
+        } else {
+            // Converter para PDF usando LibreOffice
+            $comando = sprintf(
+                'libreoffice --headless --convert-to pdf --outdir %s %s 2>&1',
+                escapeshellarg(dirname($caminhoPdfAbsoluto)),
+                escapeshellarg($caminhoArquivo)
+            );
+            
+            \Log::info('Executando comando LibreOffice', [
+                'comando' => $comando
+            ]);
+            
+            exec($comando, $output, $returnCode);
+            
+            \Log::info('Resultado do comando LibreOffice', [
+                'return_code' => $returnCode,
+                'output' => $output,
+                'pdf_existe' => file_exists($caminhoPdfAbsoluto)
+            ]);
+            
+            if ($returnCode !== 0) {
+                \Log::warning('LibreOffice falhou, usando DomPDF como fallback', [
+                    'return_code' => $returnCode,
+                    'output' => $output
+                ]);
+                $this->criarPDFComDomPDF($caminhoPdfAbsoluto, $proposicao);
+            } else if (!file_exists($caminhoPdfAbsoluto)) {
+                \Log::warning('PDF não foi criado pelo LibreOffice, usando DomPDF como fallback');
+                $this->criarPDFComDomPDF($caminhoPdfAbsoluto, $proposicao);
+            }
+        }
+    }
+
+    /**
+     * Verificar se LibreOffice está disponível
+     */
+    private function libreOfficeDisponivel(): bool
+    {
+        exec('which libreoffice', $output, $returnCode);
+        return $returnCode === 0;
+    }
+
+    /**
+     * Servir arquivo PDF da proposição com controle de acesso
+     */
+    public function servePDF(Proposicao $proposicao)
+    {
+        // Verificar se o usuário tem permissão para ver este PDF
+        $user = Auth::user();
+        
+        // Permitir acesso para:
+        // 1. Autor da proposição (parlamentar)
+        // 2. Usuários do legislativo
+        // 3. Usuários com perfil jurídico
+        if (!$user->isLegislativo() && $proposicao->autor_id !== $user->id && $user->perfil !== 'JURIDICO') {
+            abort(403, 'Acesso negado.');
+        }
+
+        // Verificar se o PDF existe
+        if (!$proposicao->arquivo_pdf_path) {
+            abort(404, 'PDF não encontrado.');
+        }
+
+        $pdfPath = storage_path('app/' . $proposicao->arquivo_pdf_path);
+        
+        if (!file_exists($pdfPath)) {
+            abort(404, 'Arquivo PDF não encontrado.');
+        }
+
+        // Servir o arquivo PDF
+        return response()->file($pdfPath, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="proposicao_' . $proposicao->id . '.pdf"'
+        ]);
+    }
+
+    /**
+     * Criar PDF usando DomPDF como fallback
+     */
+    private function criarPDFComDomPDF(string $caminhoPdfAbsoluto, Proposicao $proposicao): void
+    {
+        try {
+            // Ler conteúdo do arquivo original
+            $conteudoOriginal = '';
+            if ($proposicao->arquivo_path && \Storage::exists($proposicao->arquivo_path)) {
+                $conteudoOriginal = \Storage::get($proposicao->arquivo_path);
+                // Remover tags RTF básicas se for RTF
+                $conteudoOriginal = strip_tags($conteudoOriginal);
+                $conteudoOriginal = preg_replace('/\\{[^}]*\\}/', '', $conteudoOriginal);
+                $conteudoOriginal = trim($conteudoOriginal);
+            }
+
+            // Usar conteúdo do banco se arquivo não existir
+            $conteudo = $conteudoOriginal ?: $proposicao->conteudo;
+
+            // Criar HTML simples para o PDF se o template não existir
+            $html = $this->gerarHTMLParaPDF($proposicao, $conteudo);
+
+            // Usar DomPDF para gerar PDF
+            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($html);
+            $pdf->setPaper('A4', 'portrait');
+            
+            // Salvar PDF
+            file_put_contents($caminhoPdfAbsoluto, $pdf->output());
+
+            \Log::info('PDF criado com DomPDF', [
+                'proposicao_id' => $proposicao->id,
+                'caminho' => $caminhoPdfAbsoluto,
+                'tamanho' => filesize($caminhoPdfAbsoluto)
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Erro ao criar PDF com DomPDF', [
+                'proposicao_id' => $proposicao->id,
+                'error' => $e->getMessage()
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Gerar HTML simples para PDF
+     */
+    private function gerarHTMLParaPDF(Proposicao $proposicao, string $conteudo): string
+    {
+        return "
+        <!DOCTYPE html>
+        <html lang='pt-BR'>
+        <head>
+            <meta charset='UTF-8'>
+            <title>Proposição {$proposicao->id}</title>
+            <style>
+                body { font-family: Arial, sans-serif; margin: 40px; line-height: 1.6; }
+                .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 20px; }
+                .title { font-size: 18px; font-weight: bold; margin: 10px 0; }
+                .info { font-size: 12px; color: #666; margin: 5px 0; }
+                .content { margin-top: 30px; text-align: justify; }
+                .ementa { background: #f5f5f5; padding: 15px; margin: 20px 0; border-left: 4px solid #007bff; }
+            </style>
+        </head>
+        <body>
+            <div class='header'>
+                <h1>CÂMARA MUNICIPAL</h1>
+                <div class='title'>" . strtoupper($proposicao->tipo) . " Nº {$proposicao->id}/{$proposicao->ano}</div>
+                <div class='info'>Autor: " . ($proposicao->autor->name ?? 'N/A') . "</div>
+                <div class='info'>Data: " . $proposicao->created_at->format('d/m/Y') . "</div>
+            </div>
+            
+            <div class='ementa'>
+                <strong>EMENTA:</strong><br>
+                " . nl2br(htmlspecialchars($proposicao->ementa)) . "
+            </div>
+            
+            <div class='content'>
+                " . nl2br(htmlspecialchars($conteudo ?: 'Conteúdo não disponível')) . "
+            </div>
+        </body>
+        </html>";
     }
 }

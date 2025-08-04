@@ -124,10 +124,10 @@
                     <x-dashboard.card
                         icon="ki-arrow-left"
                         iconClass="text-white"
-                        title="Devolvidas"
-                        :value="$allProposicoes->where('status', 'retornado_legislativo')->count()"
+                        title="Devolvidas p/ Correção"
+                        :value="$allProposicoes->where('status', 'devolvido_correcao')->count()"
                         cardType="danger"
-                        :progress="($allProposicoes->count() > 0) ? ($allProposicoes->where('status', 'retornado_legislativo')->count() / $allProposicoes->count() * 100) : 0"
+                        :progress="($allProposicoes->count() > 0) ? ($allProposicoes->where('status', 'devolvido_correcao')->count() / $allProposicoes->count() * 100) : 0"
                         colSize="col-xl-3"
                     />
                     <!--end::Card 4-->
@@ -218,6 +218,120 @@
                 </div>
                 <!--end::Filters-->
 
+                @if($proposicoes->where('status', 'devolvido_correcao')->count() > 0)
+                <!--begin::Urgent Section-->
+                <div class="card mb-5 mb-xl-8">
+                    <!--begin::Card header-->
+                    <div class="card-header border-0 pt-6">
+                        <!--begin::Card title-->
+                        <div class="card-title">
+                            <!--begin::Title-->
+                            <h2 class="fw-bold text-danger">
+                                <i class="ki-duotone ki-arrow-left fs-2 text-danger me-2">
+                                    <span class="path1"></span>
+                                    <span class="path2"></span>
+                                </i>
+                                Ação Requerida: Correções Solicitadas
+                            </h2>
+                            <!--end::Title-->
+                        </div>
+                        <!--end::Card title-->
+                        <!--begin::Card toolbar-->
+                        <div class="card-toolbar">
+                            <div class="badge badge-light-danger fs-7 fw-bold px-3 py-2">
+                                {{ $proposicoes->where('status', 'devolvido_correcao')->count() }} 
+                                {{ $proposicoes->where('status', 'devolvido_correcao')->count() === 1 ? 'documento' : 'documentos' }}
+                            </div>
+                        </div>
+                        <!--end::Card toolbar-->
+                    </div>
+                    <!--end::Card header-->
+                    <!--begin::Card body-->
+                    <div class="card-body pt-0">
+                        <!--begin::Notice-->
+                        <div class="notice d-flex bg-light-warning rounded border-warning border border-dashed p-6 mb-6">
+                            <i class="ki-duotone ki-information-5 fs-2tx text-warning me-4">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                                <span class="path3"></span>
+                            </i>
+                            <div class="d-flex flex-stack flex-grow-1">
+                                <div class="fw-semibold">
+                                    <h4 class="text-gray-900 fw-bold">Proposições Devolvidas</h4>
+                                    <div class="fs-6 text-gray-700">Os parlamentares solicitaram correções nos documentos abaixo. Revise as observações e faça as alterações necessárias.</div>
+                                </div>
+                            </div>
+                        </div>
+                        <!--end::Notice-->
+                        
+                        @foreach($proposicoes->where('status', 'devolvido_correcao') as $proposicao)
+                        <!--begin::Item-->
+                        <div class="d-flex flex-stack py-4 border-bottom border-gray-300 border-bottom-dashed">
+                            <!--begin::Details-->
+                            <div class="d-flex align-items-center">
+                                <!--begin::Avatar-->
+                                <div class="symbol symbol-45px me-5">
+                                    <div class="symbol-label fs-3 bg-light-danger text-danger fw-bold">
+                                        {{ substr($proposicao->autor?->name ?? 'A', 0, 1) }}
+                                    </div>
+                                </div>
+                                <!--end::Avatar-->
+                                <!--begin::Details-->
+                                <div class="d-flex flex-column">
+                                    <!--begin::Title-->
+                                    <div class="d-flex align-items-center mb-2">
+                                        <span class="badge badge-light-dark fs-8 fw-bold me-3">{{ $proposicao->tipo }}</span>
+                                        <a href="{{ route('proposicoes.show', $proposicao) }}" class="text-gray-900 fw-bold text-hover-primary fs-6">
+                                            {{ $proposicao->autor?->name ?? 'Autor não informado' }}
+                                        </a>
+                                    </div>
+                                    <!--end::Title-->
+                                    <!--begin::Description-->
+                                    <span class="text-muted fw-semibold fs-7 d-block text-start pe-10">
+                                        {{ Str::limit($proposicao->ementa, 120) }}
+                                    </span>
+                                    <!--end::Description-->
+                                    @if($proposicao->observacoes_retorno)
+                                    <!--begin::Observations-->
+                                    <div class="bg-light-danger rounded p-3 mt-3">
+                                        <div class="d-flex align-items-center mb-1">
+                                            <i class="ki-duotone ki-message-text-2 fs-6 text-danger me-2">
+                                                <span class="path1"></span>
+                                                <span class="path2"></span>
+                                                <span class="path3"></span>
+                                            </i>
+                                            <span class="fs-7 fw-bold text-danger">Observações:</span>
+                                        </div>
+                                        <span class="fs-7 text-gray-700">{{ $proposicao->observacoes_retorno }}</span>
+                                    </div>
+                                    <!--end::Observations-->
+                                    @endif
+                                </div>
+                                <!--end::Details-->
+                            </div>
+                            <!--end::Details-->
+                            <!--begin::Stats-->
+                            <div class="d-flex align-items-center w-200px w-sm-300px flex-column mt-3">
+                                <div class="d-flex justify-content-end w-100">
+                                    <a href="/proposicoes/{{ $proposicao->id }}/onlyoffice/editor" class="btn btn-bg-light btn-color-danger btn-active-color-primary btn-sm px-4 me-2">Corrigir</a>
+                                    <a href="{{ route('proposicoes.show', $proposicao) }}" class="btn btn-bg-light btn-color-muted btn-active-color-primary btn-sm px-4">Visualizar</a>
+                                </div>
+                                <div class="d-flex justify-content-end w-100 mt-2">
+                                    <span class="text-muted fs-7 fw-semibold">
+                                        {{ $proposicao->data_retorno_legislativo ? \Carbon\Carbon::parse($proposicao->data_retorno_legislativo)->format('d/m/Y H:i') : 'Data não informada' }}
+                                    </span>
+                                </div>
+                            </div>
+                            <!--end::Stats-->
+                        </div>
+                        <!--end::Item-->
+                        @endforeach
+                    </div>
+                    <!--end::Card body-->
+                </div>
+                <!--end::Urgent Section-->
+                @endif
+
                 <!--begin::Table-->
                 <div class="card">
                     <!--begin::Card header-->
@@ -254,6 +368,7 @@
                                     <th class="min-w-125px">Proposição</th>
                                     <th class="min-w-125px">Autor</th>
                                     <th class="min-w-200px">Ementa</th>
+                                    <th class="min-w-200px">Observações</th>
                                     <th class="min-w-100px">Data Envio</th>
                                     <th class="min-w-100px">Status</th>
                                     <th class="text-end min-w-100px">Ações</th>
@@ -270,7 +385,6 @@
                                     <td>
                                         <div class="d-flex flex-column">
                                             <span class="badge badge-light-dark fs-7 fw-bold mb-1">{{ $proposicao->tipo }}</span>
-                                            <a href="{{ route('proposicoes.show', $proposicao) }}" class="text-gray-900 fw-bold text-hover-primary mb-1 fs-6">{{ $proposicao->titulo ?? 'Sem título' }}</a>
                                             @if($proposicao->numero_temporario)
                                             <span class="text-muted fw-semibold d-block fs-7">Nº {{ $proposicao->numero_temporario }}</span>
                                             @endif
@@ -280,8 +394,8 @@
                                     <!--begin::Autor-->
                                     <td>
                                         <div class="d-flex flex-column">
-                                            <span class="text-gray-900 fw-bold fs-6">{{ $proposicao->autor->name }}</span>
-                                            <span class="text-muted fw-semibold d-block fs-7">{{ $proposicao->autor->cargo_atual ?? 'Parlamentar' }}</span>
+                                            <span class="text-gray-900 fw-bold fs-6">{{ $proposicao->autor?->name ?? 'Autor não informado' }}</span>
+                                            <span class="text-muted fw-semibold d-block fs-7">{{ $proposicao->autor?->cargo_atual ?? 'Parlamentar' }}</span>
                                         </div>
                                     </td>
                                     <!--end::Autor-->
@@ -292,6 +406,18 @@
                                         </div>
                                     </td>
                                     <!--end::Ementa-->
+                                    <!--begin::Observacoes-->
+                                    <td>
+                                        @if($proposicao->status === 'devolvido_correcao' && $proposicao->observacoes_retorno)
+                                            <div class="text-danger fw-semibold" data-bs-toggle="tooltip" data-bs-placement="top" title="{{ $proposicao->observacoes_retorno }}">
+                                                <i class="fas fa-exclamation-triangle me-1"></i>
+                                                {{ Str::limit($proposicao->observacoes_retorno, 80) }}
+                                            </div>
+                                        @else
+                                            <span class="text-muted">-</span>
+                                        @endif
+                                    </td>
+                                    <!--end::Observacoes-->
                                     <!--begin::Data-->
                                     <td>
                                         <div class="d-flex flex-column">
@@ -306,6 +432,10 @@
                                             <div class="badge badge-light-primary fw-bold">Aguardando Revisão</div>
                                         @elseif($proposicao->status === 'em_revisao')
                                             <div class="badge badge-light-warning fw-bold">Em Revisão</div>
+                                        @elseif($proposicao->status === 'devolvido_correcao')
+                                            <div class="badge badge-light-danger fw-bold">
+                                                <i class="fas fa-arrow-left me-1"></i>Devolvido p/ Correção
+                                            </div>
                                         @endif
                                     </td>
                                     <!--end::Status-->
@@ -329,7 +459,7 @@
                                                 </a>
                                             </div>
                                             <!--end::Menu item-->
-                                            @if(auth()->user()->isLegislativo() && ($proposicao->status === 'enviado_legislativo' || $proposicao->status === 'em_revisao'))
+                                            @if(auth()->user()->isLegislativo() && in_array($proposicao->status, ['enviado_legislativo', 'em_revisao', 'devolvido_correcao']))
                                             <!--begin::Menu item-->
                                             <div class="menu-item px-3">
                                                 <a href="/proposicoes/{{ $proposicao->id }}/onlyoffice/editor" class="menu-link px-3">
@@ -337,12 +467,12 @@
                                                         <span class="path1"></span>
                                                         <span class="path2"></span>
                                                     </i>
-                                                    Editar
+                                                    {{ $proposicao->status === 'devolvido_correcao' ? 'Corrigir' : 'Editar' }}
                                                 </a>
                                             </div>
                                             <!--end::Menu item-->
                                             @endif
-                                            @if(auth()->user()->isLegislativo() && ($proposicao->status === 'enviado_legislativo' || $proposicao->status === 'em_revisao'))
+                                            @if(auth()->user()->isLegislativo() && in_array($proposicao->status, ['enviado_legislativo', 'em_revisao', 'devolvido_correcao']))
                                             <!--begin::Menu item-->
                                             <div class="menu-item px-3">
                                                 <a href="{{ route('proposicoes.revisar.show', $proposicao) }}" class="menu-link px-3">
@@ -350,7 +480,7 @@
                                                         <span class="path1"></span>
                                                         <span class="path2"></span>
                                                     </i>
-                                                    Revisar
+                                                    {{ $proposicao->status === 'devolvido_correcao' ? 'Finalizar Correção' : 'Revisar' }}
                                                 </a>
                                             </div>
                                             <!--end::Menu item-->

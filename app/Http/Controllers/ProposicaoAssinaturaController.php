@@ -34,6 +34,19 @@ class ProposicaoAssinaturaController extends Controller
             abort(403, 'Proposição não está disponível para assinatura.');
         }
 
+        // Verificar se precisa gerar PDF
+        $pdfPath = $proposicao->arquivo_pdf_path ? storage_path('app/' . $proposicao->arquivo_pdf_path) : null;
+        if (!$proposicao->arquivo_pdf_path || !file_exists($pdfPath)) {
+            try {
+                $this->gerarPDFParaAssinatura($proposicao);
+            } catch (\Exception $e) {
+                \Log::warning('Não foi possível gerar PDF para assinatura', [
+                    'proposicao_id' => $proposicao->id,
+                    'error' => $e->getMessage()
+                ]);
+            }
+        }
+
         return view('proposicoes.assinatura.assinar', compact('proposicao'));
     }
 
@@ -217,6 +230,54 @@ class ProposicaoAssinaturaController extends Controller
     }
 
     /**
+     * Devolver proposição para legislativo com observações
+     */
+    public function devolverLegislativo(Request $request, Proposicao $proposicao)
+    {
+        // $this->authorize('update', $proposicao);
+        
+        $request->validate([
+            'observacoes' => 'required|string|min:10',
+        ], [
+            'observacoes.required' => 'É obrigatório informar o motivo da devolução.',
+            'observacoes.min' => 'As observações devem ter pelo menos 10 caracteres.'
+        ]);
+
+        if (!in_array($proposicao->status, ['aprovado_assinatura', 'retornado_legislativo'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Proposição não está disponível para devolução.'
+            ], 400);
+        }
+
+        // Atualizar status e salvar observações
+        $proposicao->update([
+            'status' => 'devolvido_correcao',
+            'observacoes_retorno' => $request->observacoes,
+            'data_retorno_legislativo' => now(),
+        ]);
+
+        \Log::info('Proposição devolvida para legislativo', [
+            'proposicao_id' => $proposicao->id,
+            'autor_devolucao' => Auth::user()->name,
+            'observacoes' => $request->observacoes
+        ]);
+
+        // TODO: Implementar sistema de tramitação quando disponível
+        // $proposicao->adicionarTramitacao(
+        //     'Devolvido pelo parlamentar para correções',
+        //     $proposicao->status,
+        //     'devolvido_correcao'
+        // );
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Proposição devolvida para o Legislativo com sucesso!',
+            'redirect' => route('proposicoes.assinatura')
+        ]);
+    }
+
+    /**
      * Histórico de assinaturas do parlamentar
      */
     public function historico()
@@ -227,5 +288,146 @@ class ProposicaoAssinaturaController extends Controller
             ->paginate(15);
 
         return view('proposicoes.assinatura.historico', compact('proposicoes'));
+    }
+
+    /**
+     * Gerar PDF para assinatura se não existir
+     */
+    private function gerarPDFParaAssinatura(Proposicao $proposicao): void
+    {
+        // Determinar nome do PDF
+        $nomePdf = 'proposicao_' . $proposicao->id . '.pdf';
+        $diretorioPdf = 'proposicoes/pdfs/' . $proposicao->id;
+        $caminhoPdfRelativo = $diretorioPdf . '/' . $nomePdf;
+        $caminhoPdfAbsoluto = storage_path('app/' . $caminhoPdfRelativo);
+
+        // Garantir que o diretório existe
+        if (!is_dir(dirname($caminhoPdfAbsoluto))) {
+            mkdir(dirname($caminhoPdfAbsoluto), 0755, true);
+        }
+
+        // Se não existe arquivo físico, usar conteúdo do banco de dados
+        if (!$proposicao->arquivo_path || !\Storage::exists($proposicao->arquivo_path)) {
+            \Log::info('Arquivo original não encontrado, gerando PDF do conteúdo do banco', [
+                'proposicao_id' => $proposicao->id,
+                'arquivo_path' => $proposicao->arquivo_path,
+                'has_content' => !empty($proposicao->conteudo)
+            ]);
+            
+            // Usar DomPDF diretamente
+            $this->criarPDFExemplo($caminhoPdfAbsoluto, $proposicao);
+            
+            // Atualizar proposição com caminho do PDF
+            $proposicao->arquivo_pdf_path = $caminhoPdfRelativo;
+            $proposicao->save();
+            
+            return;
+        }
+
+        $caminhoArquivo = storage_path('app/' . $proposicao->arquivo_path);
+        
+        \Log::info('Gerando PDF para assinatura a partir de arquivo físico', [
+            'proposicao_id' => $proposicao->id,
+            'arquivo_path' => $proposicao->arquivo_path,
+            'caminho_absoluto' => $caminhoArquivo
+        ]);
+
+        // Verificar se LibreOffice está disponível
+        if (!$this->libreOfficeDisponivel()) {
+            // Fallback: Criar um PDF de exemplo para demonstração
+            \Log::warning('LibreOffice não disponível, criando PDF de exemplo');
+            $this->criarPDFExemplo($caminhoPdfAbsoluto, $proposicao);
+        } else {
+            // Converter para PDF usando LibreOffice
+            $comando = sprintf(
+                'libreoffice --headless --convert-to pdf --outdir %s %s 2>&1',
+                escapeshellarg(dirname($caminhoPdfAbsoluto)),
+                escapeshellarg($caminhoArquivo)
+            );
+
+            \Log::info('Executando comando LibreOffice para assinatura', [
+                'comando' => $comando
+            ]);
+
+            exec($comando, $output, $returnCode);
+
+            \Log::info('Resultado comando LibreOffice para assinatura', [
+                'return_code' => $returnCode,
+                'output' => $output,
+                'pdf_existe' => file_exists($caminhoPdfAbsoluto)
+            ]);
+
+            if ($returnCode !== 0) {
+                throw new \Exception('Erro na conversão para PDF. Código: ' . $returnCode . '. Output: ' . implode(', ', $output));
+            }
+
+            // Verificar se o PDF foi criado
+            if (!file_exists($caminhoPdfAbsoluto)) {
+                throw new \Exception('PDF não foi criado após conversão');
+            }
+        }
+
+        // Atualizar proposição com caminho do PDF
+        $proposicao->arquivo_pdf_path = $caminhoPdfRelativo;
+        $proposicao->save();
+
+        \Log::info('PDF gerado com sucesso para assinatura', [
+            'proposicao_id' => $proposicao->id,
+            'arquivo_pdf_path' => $caminhoPdfRelativo,
+            'tamanho_arquivo' => filesize($caminhoPdfAbsoluto)
+        ]);
+    }
+
+    /**
+     * Verificar se LibreOffice está disponível
+     */
+    private function libreOfficeDisponivel(): bool
+    {
+        exec('which libreoffice', $output, $returnCode);
+        return $returnCode === 0;
+    }
+
+    /**
+     * Criar PDF de exemplo quando LibreOffice não está disponível
+     */
+    private function criarPDFExemplo(string $caminhoPdfAbsoluto, Proposicao $proposicao): void
+    {
+        try {
+            // Ler conteúdo do arquivo original
+            $conteudoOriginal = '';
+            if ($proposicao->arquivo_path && \Storage::exists($proposicao->arquivo_path)) {
+                $conteudoOriginal = \Storage::get($proposicao->arquivo_path);
+                // Remover tags RTF básicas se for RTF
+                $conteudoOriginal = strip_tags($conteudoOriginal);
+                $conteudoOriginal = preg_replace('/\{[^}]*\}/', '', $conteudoOriginal);
+                $conteudoOriginal = trim($conteudoOriginal);
+            }
+
+            // Criar HTML para o PDF
+            $html = view('proposicoes.pdf.template', [
+                'proposicao' => $proposicao,
+                'conteudo' => $conteudoOriginal ?: $proposicao->conteudo
+            ])->render();
+
+            // Usar Dompdf para gerar PDF
+            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($html);
+            $pdf->setPaper('A4', 'portrait');
+            
+            // Salvar PDF
+            file_put_contents($caminhoPdfAbsoluto, $pdf->output());
+
+            \Log::info('PDF de exemplo criado com sucesso', [
+                'proposicao_id' => $proposicao->id,
+                'caminho' => $caminhoPdfAbsoluto,
+                'tamanho' => filesize($caminhoPdfAbsoluto)
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Erro ao criar PDF de exemplo', [
+                'proposicao_id' => $proposicao->id,
+                'error' => $e->getMessage()
+            ]);
+            throw $e;
+        }
     }
 }

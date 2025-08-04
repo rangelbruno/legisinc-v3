@@ -38,7 +38,7 @@ class OnlyOfficeController extends Controller
         }
 
         // Verificar se a proposição está em status editável pelo Legislativo
-        $statusEditaveis = ['enviado_legislativo', 'em_revisao'];
+        $statusEditaveis = ['enviado_legislativo', 'em_revisao', 'devolvido_correcao'];
         if (!in_array($proposicao->status, $statusEditaveis)) {
             return redirect()->route('proposicoes.legislativo.index')
                 ->with('error', 'Esta proposição não está disponível para edição.');

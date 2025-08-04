@@ -15,6 +15,7 @@ class Proposicao extends Model
         'ementa',
         'conteudo',
         'arquivo_path',
+        'arquivo_pdf_path',
         'autor_id',
         'status',
         'ano',

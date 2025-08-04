@@ -66,6 +66,9 @@
                                         @case('devolvido_edicao')
                                             <span class="badge badge-warning fs-6">Devolvido para Edição</span>
                                             @break
+                                        @case('devolvido_correcao')
+                                            <span class="badge badge-danger fs-6">Devolvido p/ Correção</span>
+                                            @break
                                         @case('editado_legislativo')
                                             <span class="badge badge-info fs-6">Editado pelo Legislativo</span>
                                             @break
@@ -215,9 +218,14 @@
                                 <a href="{{ route('proposicoes.onlyoffice.editor', $proposicao->id) }}" class="btn btn-primary">
                                     <i class="fas fa-file-word me-2"></i>Revisar no Editor
                                 </a>
+                                @if(Auth::user()->perfil === 'JURIDICO')
                                 <a href="{{ route('proposicoes.revisar.show', $proposicao->id) }}" class="btn btn-outline-secondary">
                                     <i class="fas fa-clipboard-check me-2"></i>Análise Técnica
                                 </a>
+                                @endif
+                                <button onclick="devolverParaParlamentar({{ $proposicao->id }})" class="btn btn-success">
+                                    <i class="fas fa-arrow-left me-2"></i>Devolver para Parlamentar
+                                </button>
                             </div>
                         @else
                             <div class="alert alert-info mb-3">
@@ -285,9 +293,14 @@
                                 <a href="{{ route('proposicoes.onlyoffice.editor', $proposicao->id) }}" class="btn btn-primary">
                                     <i class="fas fa-file-word me-2"></i>Continuar Revisão no Editor
                                 </a>
+                                @if(Auth::user()->perfil === 'JURIDICO')
                                 <a href="{{ route('proposicoes.revisar.show', $proposicao->id) }}" class="btn btn-outline-secondary">
                                     <i class="fas fa-clipboard-check me-2"></i>Análise Técnica
                                 </a>
+                                @endif
+                                <button onclick="devolverParaParlamentar({{ $proposicao->id }})" class="btn btn-success">
+                                    <i class="fas fa-arrow-left me-2"></i>Devolver para Parlamentar
+                                </button>
                             </div>
                         @else
                             <div class="alert alert-primary mb-3">
@@ -327,17 +340,14 @@
                             <strong>Retornado do Legislativo:</strong> Proposição aprovada pelo Legislativo e pronta para assinatura digital.
                         </div>
                         <div class="d-grid gap-2">
-                            @if($proposicao->template_id)
-                                <a href="{{ route('proposicoes.editar-onlyoffice', ['proposicao' => $proposicao->id, 'template' => $proposicao->template_id]) }}" class="btn btn-success">
-                                    <i class="fas fa-signature me-2"></i>Assinar Documento
-                                </a>
-                            @else
-                                <a href="{{ route('proposicoes.assinar', $proposicao->id) }}" class="btn btn-success">
-                                    <i class="fas fa-signature me-2"></i>Assinar Documento
-                                </a>
-                            @endif
+                            <a href="{{ route('proposicoes.assinar', $proposicao->id) }}" class="btn btn-success">
+                                <i class="fas fa-signature me-2"></i>Assinar Documento
+                            </a>
                             <button class="btn btn-outline-primary btn-sm" onclick="consultarStatus()">
                                 <i class="fas fa-info-circle me-2"></i>Ver Detalhes
+                            </button>
+                            <button class="btn btn-outline-danger btn-sm" onclick="excluirProposicao()">
+                                <i class="fas fa-trash me-2"></i>Excluir Documento
                             </button>
                         </div>
                     @elseif($proposicao->status === 'aprovado')
@@ -381,11 +391,16 @@
                             {{ $proposicao->numero_protocolo ? 'Protocolo: ' . $proposicao->numero_protocolo : 'Documento enviado para protocolo oficial.' }}
                         </div>
                         <div class="d-grid gap-2">
-                            @if(Auth::user()->perfil === 'PROTOCOLO' && !$proposicao->numero_protocolo)
-                                <button class="btn btn-success" onclick="atribuirNumeroProtocolo()">
-                                    <i class="fas fa-hashtag me-2"></i>Atribuir Número de Protocolo
-                                </button>
-                                <hr class="my-2">
+                            @if(Auth::user()->perfil === 'PROTOCOLO')
+                                @if(!$proposicao->numero_protocolo)
+                                    <a href="{{ route('proposicoes.protocolar.show', $proposicao) }}" class="btn btn-primary">
+                                        <i class="fas fa-file-signature me-2"></i>Protocolar
+                                    </a>
+                                    <button class="btn btn-outline-success" onclick="atribuirNumeroProtocolo()">
+                                        <i class="fas fa-hashtag me-2"></i>Atribuir Número de Protocolo
+                                    </button>
+                                    <hr class="my-2">
+                                @endif
                             @endif
                             <button class="btn btn-outline-info btn-sm" onclick="consultarProtocolo()">
                                 <i class="fas fa-search me-2"></i>Consultar Protocolo
@@ -394,6 +409,76 @@
                                 <i class="fas fa-download me-2"></i>Baixar Documento Final
                             </button>
                         </div>
+                    @elseif($proposicao->status === 'devolvido_correcao')
+                        @if(Auth::user()->isLegislativo())
+                            <div class="alert alert-warning mb-3">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-exclamation-circle fs-2 text-warning me-3"></i>
+                                    <div>
+                                        <h6 class="alert-heading mb-1">Devolvido para Correção</h6>
+                                        <p class="mb-0 small">Este documento foi devolvido pelo parlamentar e requer correções.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            @if($proposicao->observacoes_retorno)
+                            <div class="alert alert-info mb-3">
+                                <h6 class="alert-heading">
+                                    <i class="fas fa-comment-dots me-2"></i>
+                                    Observações do Parlamentar
+                                </h6>
+                                <p class="mb-0">{{ $proposicao->observacoes_retorno }}</p>
+                                @if($proposicao->data_retorno_legislativo)
+                                <small class="text-muted">
+                                    <i class="fas fa-clock me-1"></i>
+                                    {{ $proposicao->data_retorno_legislativo->format('d/m/Y H:i') }}
+                                </small>
+                                @endif
+                            </div>
+                            @endif
+                            <div class="d-grid gap-2">
+                                <a href="{{ route('proposicoes.onlyoffice.editor', $proposicao->id) }}" class="btn btn-primary">
+                                    <i class="fas fa-file-word me-2"></i>Fazer Correções no Editor
+                                </a>
+                                <button onclick="retornarParaParlamentar({{ $proposicao->id }})" class="btn btn-success">
+                                    <i class="fas fa-arrow-right me-2"></i>Retornar para Parlamentar
+                                </button>
+                                @if(Auth::user()->perfil === 'JURIDICO')
+                                <a href="{{ route('proposicoes.revisar.show', $proposicao->id) }}" class="btn btn-outline-secondary">
+                                    <i class="fas fa-clipboard-check me-2"></i>Análise Técnica
+                                </a>
+                                @endif
+                            </div>
+                        @else
+                            <div class="alert alert-warning mb-3">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-undo fs-2 text-warning me-3"></i>
+                                    <div>
+                                        <h6 class="alert-heading mb-1">Devolvido para Correção</h6>
+                                        <p class="mb-0 small">Você devolveu este documento ao Legislativo solicitando correções.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            @if($proposicao->observacoes_retorno)
+                            <div class="alert alert-info mb-3">
+                                <h6 class="alert-heading">
+                                    <i class="fas fa-comment-dots me-2"></i>
+                                    Suas Observações
+                                </h6>
+                                <p class="mb-0">{{ $proposicao->observacoes_retorno }}</p>
+                                @if($proposicao->data_retorno_legislativo)
+                                <small class="text-muted">
+                                    <i class="fas fa-clock me-1"></i>
+                                    {{ $proposicao->data_retorno_legislativo->format('d/m/Y H:i') }}
+                                </small>
+                                @endif
+                            </div>
+                            @endif
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-outline-info btn-sm" onclick="consultarStatus()">
+                                    <i class="fas fa-search me-2"></i>Acompanhar Status
+                                </button>
+                            </div>
+                        @endif
                     @else
                         <div class="alert alert-secondary">
                             <i class="fas fa-question-circle me-2"></i>
@@ -2028,6 +2113,207 @@ function atribuirNumeroProtocolo() {
                         message = 'Você não tem permissão para atribuir números de protocolo.';
                     } else if (xhr.status === 404) {
                         message = 'Proposição não encontrada.';
+                    }
+                    
+                    Swal.fire({
+                        title: 'Erro!',
+                        text: message,
+                        icon: 'error',
+                        confirmButtonText: 'OK',
+                        confirmButtonColor: '#dc3545'
+                    });
+                }
+            });
+        }
+    });
+}
+
+function devolverParaParlamentar(proposicaoId) {
+    Swal.fire({
+        title: 'Devolver para o Parlamentar?',
+        html: `<div class="text-center">
+                <i class="fas fa-arrow-left text-success fa-4x mb-3"></i>
+                <p class="mb-3">Esta ação converterá o documento para PDF e o enviará de volta ao Parlamentar para assinatura.</p>
+                <div class="text-start small">
+                    <p class="mb-1"><i class="fas fa-check-circle text-success me-1"></i> Documento será convertido para PDF</p>
+                    <p class="mb-1"><i class="fas fa-check-circle text-success me-1"></i> Parlamentar poderá assinar</p>
+                    <p class="mb-0"><i class="fas fa-exclamation-triangle text-warning me-1"></i> O Legislativo não terá mais acesso</p>
+                </div>
+               </div>`,
+        width: '450px',
+        icon: null,
+        showCancelButton: true,
+        confirmButtonText: '<i class="fas fa-arrow-left me-1"></i>Devolver',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#28a745',
+        cancelButtonColor: '#6c757d',
+        customClass: {
+            confirmButton: 'btn btn-success',
+            cancelButton: 'btn btn-secondary'
+        },
+        reverseButtons: true
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Mostrar loading
+            Swal.fire({
+                title: 'Processando...',
+                html: '<div class="text-center"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Carregando...</span></div><p class="mt-2 mb-0">Convertendo documento e enviando para o Parlamentar...</p></div>',
+                allowOutsideClick: false,
+                showConfirmButton: false,
+                didOpen: () => {
+                    Swal.showLoading()
+                }
+            });
+
+            // Fazer a requisição
+            $.ajax({
+                url: `/proposicoes/${proposicaoId}/voltar-parlamentar`,
+                method: 'PUT',
+                headers: {
+                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content'),
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                },
+                success: function(response) {
+                    if (response.success) {
+                        Swal.fire({
+                            title: 'Sucesso!',
+                            html: `<div class="text-center">
+                                    <i class="fas fa-check-circle text-success fa-4x mb-3"></i>
+                                    <p>${response.message}</p>
+                                   </div>`,
+                            icon: null,
+                            confirmButtonText: 'OK',
+                            confirmButtonColor: '#28a745'
+                        }).then(() => {
+                            if (response.redirect) {
+                                window.location.href = response.redirect;
+                            } else {
+                                location.reload();
+                            }
+                        });
+                    } else {
+                        Swal.fire({
+                            title: 'Erro!',
+                            text: response.message || 'Erro ao devolver proposição',
+                            icon: 'error',
+                            confirmButtonText: 'OK',
+                            confirmButtonColor: '#dc3545'
+                        });
+                    }
+                },
+                error: function(xhr) {
+                    console.error('Erro:', xhr);
+                    let message = 'Erro ao devolver proposição. Tente novamente.';
+                    
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        message = xhr.responseJSON.message;
+                    } else if (xhr.status === 403) {
+                        message = 'Você não tem permissão para devolver esta proposição.';
+                    } else if (xhr.status === 404) {
+                        message = 'Proposição não encontrada.';
+                    } else if (xhr.status === 400) {
+                        message = xhr.responseJSON?.message || 'Esta proposição não pode ser devolvida no status atual.';
+                    }
+                    
+                    Swal.fire({
+                        title: 'Erro!',
+                        text: message,
+                        icon: 'error',
+                        confirmButtonText: 'OK',
+                        confirmButtonColor: '#dc3545'
+                    });
+                }
+            });
+        }
+    });
+}
+
+function retornarParaParlamentar(proposicaoId) {
+    Swal.fire({
+        title: 'Retornar para Parlamentar?',
+        html: `<div class="text-center">
+                <i class="fas fa-arrow-right text-success fa-4x mb-3"></i>
+                <p class="mb-3">Esta ação finalizará as correções e enviará o documento de volta ao Parlamentar para assinatura.</p>
+                <div class="text-start small">
+                    <p class="mb-1"><i class="fas fa-check-circle text-success me-1"></i> Correções foram finalizadas</p>
+                    <p class="mb-1"><i class="fas fa-check-circle text-success me-1"></i> Documento será convertido para PDF</p>
+                    <p class="mb-1"><i class="fas fa-check-circle text-success me-1"></i> Parlamentar poderá assinar</p>
+                    <p class="mb-0"><i class="fas fa-exclamation-triangle text-warning me-1"></i> O Legislativo não terá mais acesso</p>
+                </div>
+               </div>`,
+        width: '450px',
+        icon: null,
+        showCancelButton: true,
+        confirmButtonText: '<i class="fas fa-arrow-right me-1"></i>Retornar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#28a745',
+        cancelButtonColor: '#6c757d',
+        customClass: {
+            confirmButton: 'btn btn-success',
+            cancelButton: 'btn btn-secondary'
+        },
+        reverseButtons: true
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Mostrar loading
+            Swal.fire({
+                title: 'Processando...',
+                html: '<div class="text-center"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Carregando...</span></div><p class="mt-2 mb-0">Finalizando correções e enviando para o Parlamentar...</p></div>',
+                allowOutsideClick: false,
+                showConfirmButton: false,
+                didOpen: () => {
+                    Swal.showLoading()
+                }
+            });
+
+            // Fazer a requisição
+            $.ajax({
+                url: `/proposicoes/${proposicaoId}/voltar-parlamentar`,
+                method: 'PUT',
+                headers: {
+                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content'),
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                },
+                success: function(response) {
+                    if (response.success) {
+                        Swal.fire({
+                            title: 'Sucesso!',
+                            html: `<div class="text-center">
+                                    <i class="fas fa-check-circle text-success fa-3x mb-3"></i>
+                                    <p class="mb-2">${response.message}</p>
+                                    <p class="small text-muted">O documento foi enviado para o Parlamentar e está pronto para assinatura.</p>
+                                   </div>`,
+                            icon: null,
+                            confirmButtonText: 'OK',
+                            confirmButtonColor: '#28a745'
+                        }).then(() => {
+                            // Redirecionar
+                            window.location.href = response.redirect || '{{ route("proposicoes.legislativo.index") }}';
+                        });
+                    } else {
+                        Swal.fire({
+                            title: 'Erro!',
+                            text: response.message || 'Erro ao retornar proposição.',
+                            icon: 'error',
+                            confirmButtonText: 'OK',
+                            confirmButtonColor: '#dc3545'
+                        });
+                    }
+                },
+                error: function(xhr) {
+                    console.error('Erro:', xhr);
+                    let message = 'Erro ao retornar proposição. Tente novamente.';
+                    
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        message = xhr.responseJSON.message;
+                    } else if (xhr.status === 403) {
+                        message = 'Você não tem permissão para esta ação.';
+                    } else if (xhr.status === 404) {
+                        message = 'Proposição não encontrada.';
+                    } else if (xhr.status === 400) {
+                        message = xhr.responseJSON?.message || 'Esta proposição não pode ser retornada no status atual.';
                     }
                     
                     Swal.fire({

@@ -580,6 +580,7 @@ Route::prefix('proposicoes')->name('proposicoes.')->middleware(['auth', 'check.s
     Route::put('/{proposicao}/enviar-protocolo', [App\Http\Controllers\ProposicaoAssinaturaController::class, 'enviarProtocolo'])->name('enviar-protocolo');
     Route::post('/{proposicao}/salvar-correcoes', [App\Http\Controllers\ProposicaoAssinaturaController::class, 'salvarCorrecoes'])->name('salvar-correcoes');
     Route::put('/{proposicao}/reenviar-legislativo', [App\Http\Controllers\ProposicaoAssinaturaController::class, 'reenviarLegislativo'])->name('reenviar-legislativo');
+    Route::put('/{proposicao}/devolver-legislativo', [App\Http\Controllers\ProposicaoAssinaturaController::class, 'devolverLegislativo'])->name('devolver-legislativo');
     Route::get('/historico-assinaturas', [App\Http\Controllers\ProposicaoAssinaturaController::class, 'historico'])->name('historico-assinaturas');
     
     // Voltar proposição para parlamentar (do legislativo)
@@ -602,6 +603,7 @@ Route::prefix('proposicoes')->name('proposicoes.')->middleware(['auth', 'check.s
     Route::get('/limpar-sessao-teste', [App\Http\Controllers\ProposicaoController::class, 'limparSessaoTeste'])->name('limpar-sessao-teste'); // Temporário para desenvolvimento
     Route::get('/{proposicao}/status', [App\Http\Controllers\ProposicaoController::class, 'statusTramitacao'])->name('status-tramitacao');
     Route::get('/notificacoes', [App\Http\Controllers\ProposicaoController::class, 'buscarNotificacoes'])->name('notificacoes');
+    Route::get('/{proposicao}/pdf', [App\Http\Controllers\ProposicaoController::class, 'servePDF'])->name('serve-pdf');
     Route::get('/{proposicao}', [App\Http\Controllers\ProposicaoController::class, 'show'])->name('show');
     Route::delete('/{proposicao}', [App\Http\Controllers\ProposicaoController::class, 'destroy'])->name('destroy');
 });

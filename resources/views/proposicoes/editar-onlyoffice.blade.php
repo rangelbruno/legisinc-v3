@@ -499,6 +499,15 @@
                     </i>
                     Salvar
                 </button>
+                @if(Auth::user()->isLegislativo())
+                <button id="btn-voltar-parlamentar" class="btn btn-sm btn-success" onclick="voltarParaParlamentar()">
+                    <i class="ki-duotone ki-arrow-left fs-2">
+                        <span class="path1"></span>
+                        <span class="path2"></span>
+                    </i>
+                    Voltar para Parlamentar
+                </button>
+                @endif
                 <button id="btn-fechar" class="btn btn-sm btn-secondary" onclick="fecharAba()">
                     <i class="ki-duotone ki-cross fs-2">
                         <span class="path1"></span>
@@ -1141,6 +1150,59 @@ OnlyOffice Server: http://localhost:8080
                     window.location.href = "{{ route('proposicoes.minhas-proposicoes') }}";
                 }, 100);
             }
+        }
+        
+        function voltarParaParlamentar() {
+            // Primeiro salvar o documento
+            if (docEditor) {
+                console.log('Salvando documento antes de voltar para parlamentar...');
+                docEditor.downloadAs();
+            }
+            
+            SwitchAlert.confirm(
+                'Voltar para Parlamentar?',
+                'Esta ação converterá o documento para PDF e o enviará de volta ao Parlamentar para assinatura. O Legislativo não terá mais acesso à edição.',
+                [
+                    {
+                        text: 'Cancelar',
+                        primary: false,
+                        action: null
+                    },
+                    {
+                        text: 'Confirmar e Voltar',
+                        primary: true,
+                        action: () => {
+                            // Mostrar loading
+                            SwitchAlert.show('info', 'Processando...', 'Convertendo documento e enviando para o Parlamentar...');
+                            
+                            // Fazer a requisição
+                            fetch("{{ route('proposicoes.voltar-parlamentar', $proposicao->id ?? 1) }}", {
+                                method: 'PUT',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                                    'Accept': 'application/json'
+                                }
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.success) {
+                                    SwitchAlert.show('success', 'Sucesso!', data.message);
+                                    setTimeout(() => {
+                                        window.location.href = data.redirect || "{{ route('proposicoes.legislativo.index') }}";
+                                    }, 2000);
+                                } else {
+                                    SwitchAlert.show('error', 'Erro', data.message || 'Erro ao processar solicitação');
+                                }
+                            })
+                            .catch(error => {
+                                console.error('Erro:', error);
+                                SwitchAlert.show('error', 'Erro', 'Erro de conectividade. Tente novamente.');
+                            });
+                        }
+                    }
+                ]
+            );
         }
         
         // Verificar se o OnlyOffice está disponível
