@@ -697,6 +697,7 @@ Route::prefix('admin/tipo-proposicoes')->name('admin.tipo-proposicoes.')->middle
     // AJAX endpoints
     Route::get('/ajax/dropdown', [App\Http\Controllers\Admin\TipoProposicaoController::class, 'getParaDropdown'])->name('ajax.dropdown');
     Route::get('/ajax/validar-codigo', [App\Http\Controllers\Admin\TipoProposicaoController::class, 'validarCodigo'])->name('ajax.validar-codigo');
+    Route::get('/ajax/buscar-sugestoes', [App\Http\Controllers\Admin\TipoProposicaoController::class, 'buscarSugestoes'])->name('ajax.buscar-sugestoes');
 });
 
 // Rotas de autenticação por token (para AJAX)

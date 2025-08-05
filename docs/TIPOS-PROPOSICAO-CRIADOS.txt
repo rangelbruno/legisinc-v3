@@ -1,0 +1,27 @@
+ ordem |            codigo            |                    nome                     |          icone          |    cor    | ativo 
+-------+------------------------------+---------------------------------------------+-------------------------+-----------+-------
+     1 | proposta_emenda_constituicao | Proposta de Emenda à Constituição           | ki-shield-tick          | danger    | Sim
+     2 | proposta_emenda_lei_organica | Proposta de Emenda à Lei Orgânica Municipal | ki-shield-tick          | danger    | Sim
+     3 | projeto_lei_ordinaria        | Projeto de Lei Ordinária                    | ki-document             | primary   | Sim
+     4 | projeto_lei_complementar     | Projeto de Lei Complementar                 | ki-document-edit        | info      | Sim
+     5 | projeto_lei_delegada         | Projeto de Lei Delegada                     | ki-document-folder      | secondary | Sim
+     6 | medida_provisoria            | Medida Provisória                           | ki-time                 | warning   | Sim
+     7 | projeto_decreto_legislativo  | Projeto de Decreto Legislativo              | ki-shield-search        | success   | Sim
+     8 | projeto_decreto_congresso    | Projeto de Decreto do Congresso             | ki-shield-search        | success   | Sim
+     9 | projeto_resolucao            | Projeto de Resolução                        | ki-home                 | dark      | Sim
+    10 | requerimento                 | Requerimento                                | ki-questionnaire-tablet | info      | Sim
+    11 | indicacao                    | Indicação                                   | ki-send                 | primary   | Sim
+    12 | mocao                        | Moção                                       | ki-message-text-2       | warning   | Sim
+    13 | emenda                       | Emenda                                      | ki-pencil               | secondary | Sim
+    14 | subemenda                    | Subemenda                                   | ki-pencil               | light     | Sim
+    15 | substitutivo                 | Substitutivo                                | ki-arrows-circle        | info      | Sim
+    16 | parecer_comissao             | Parecer de Comissão                         | ki-clipboard-check      | success   | Sim
+    17 | relatorio                    | Relatório                                   | ki-document-text        | dark      | Sim
+    18 | recurso                      | Recurso                                     | ki-arrow-circle-right   | danger    | Sim
+    19 | veto                         | Veto                                        | ki-cross-circle         | danger    | Sim
+    20 | destaque                     | Destaque                                    | ki-filter-search        | warning   | Sim
+    21 | oficio                       | Ofício                                      | ki-sms                  | primary   | Sim
+    22 | mensagem_executivo           | Mensagem do Executivo                       | ki-message-programming  | info      | Sim
+    23 | projeto_consolidacao_leis    | Projeto de Consolidação das Leis            | ki-book                 | secondary | Sim
+(23 rows)
+

@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\View;
+use Illuminate\Pagination\Paginator;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -20,6 +21,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Configurar paginação padrão
+        Paginator::defaultView('pagination.bootstrap-4');
+        Paginator::defaultSimpleView('pagination.bootstrap-4');
+        
         // Registrar View Composer para notificações
         View::composer([
             'components.layouts.header',

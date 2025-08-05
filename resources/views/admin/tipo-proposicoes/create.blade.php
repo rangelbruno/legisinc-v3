@@ -142,7 +142,7 @@
                             <!--begin::Autocomplete container-->
                             <div class="position-relative">
                                 <!--begin::Input-->
-                                <input type="text" id="autocomplete-search" class="form-control mb-2" placeholder="Digite para buscar tipos de proposição existentes..." />
+                                <input type="text" id="autocomplete-search" class="form-control mb-2" placeholder="Ex: PL, PEC, Moção, Requerimento, Lei Ordinária..." />
                                 <!--end::Input-->
                                 <!--begin::Dropdown-->
                                 <div id="autocomplete-dropdown" class="dropdown-menu w-100" style="display: none; max-height: 300px; overflow-y: auto; position: absolute; top: 100%; left: 0; z-index: 1000;">
@@ -152,7 +152,7 @@
                             </div>
                             <!--end::Autocomplete container-->
                             <!--begin::Description-->
-                            <div class="text-muted fs-7">Digite para buscar e auto-preencher com dados de tipos existentes.</div>
+                            <div class="text-muted fs-7">Digite siglas (PL, PEC, PDL) ou nomes completos para buscar e auto-preencher.</div>
                             <!--end::Description-->
                         </div>
                         <!--end::Input group - Autocomplete-->
@@ -314,76 +314,13 @@ document.addEventListener('DOMContentLoaded', function() {
     const autocompleteDropdown = document.getElementById('autocomplete-dropdown');
     let searchTimeout;
     
-    // Mock API data - Replace with actual API endpoint
-    const mockApiData = [
-        {
-            nome: "Projeto de Lei Ordinária",
-            codigo: "projeto_lei_ordinaria",
-            icone: "ki-document",
-            cor: "primary",
-            ordem: 1,
-            configuracoes: {
-                "numeracao_automatica": true,
-                "tramitacao_obrigatoria": true,
-                "campos_obrigatorios": ["ementa", "justificativa"],
-                "prazos": {
-                    "apresentacao": 30,
-                    "emendas": 15
-                }
-            }
-        },
-        {
-            nome: "Moção",
-            codigo: "mocao",
-            icone: "ki-message-text-2",
-            cor: "warning",
-            ordem: 5,
-            configuracoes: {
-                "numeracao_automatica": true,
-                "tramitacao_simplificada": true,
-                "campos_obrigatorios": ["ementa"],
-                "tipos": ["apoio", "repudio", "pesar"]
-            }
-        },
-        {
-            nome: "Requerimento",
-            codigo: "requerimento",
-            icone: "ki-questionnaire-tablet",
-            cor: "info",
-            ordem: 3,
-            configuracoes: {
-                "numeracao_automatica": true,
-                "resposta_obrigatoria": true,
-                "prazo_resposta": 30,
-                "campos_obrigatorios": ["ementa", "justificativa"]
-            }
-        },
-        {
-            nome: "Projeto de Decreto Legislativo",
-            codigo: "projeto_decreto_legislativo",
-            icone: "ki-document-edit",
-            cor: "success",
-            ordem: 2,
-            configuracoes: {
-                "numeracao_automatica": true,
-                "tramitacao_especial": true,
-                "quorum_qualificado": true,
-                "campos_obrigatorios": ["ementa", "justificativa", "base_legal"]
-            }
-        }
-    ];
-    
     function searchApi(query) {
-        // Simulate API call - Replace with actual fetch to your API
-        return new Promise((resolve) => {
-            setTimeout(() => {
-                const results = mockApiData.filter(item => 
-                    item.nome.toLowerCase().includes(query.toLowerCase()) ||
-                    item.codigo.toLowerCase().includes(query.toLowerCase())
-                );
-                resolve(results);
-            }, 300);
-        });
+        return fetch(`{{ route('admin.tipo-proposicoes.ajax.buscar-sugestoes') }}?q=${encodeURIComponent(query)}`)
+            .then(response => response.json())
+            .catch(error => {
+                console.error('Erro ao buscar sugestões:', error);
+                return [];
+            });
     }
     
     function populateForm(data) {
@@ -430,20 +367,26 @@ document.addEventListener('DOMContentLoaded', function() {
         if (results.length === 0) {
             autocompleteDropdown.innerHTML = '<div class="dropdown-item-text text-muted">Nenhum resultado encontrado</div>';
         } else {
-            autocompleteDropdown.innerHTML = results.map(item => `
-                <div class="dropdown-item cursor-pointer autocomplete-item" data-item='${JSON.stringify(item)}'>
-                    <div class="d-flex align-items-center">
-                        <i class="ki-duotone ${item.icone} fs-2 text-${item.cor} me-3">
-                            <span class="path1"></span>
-                            <span class="path2"></span>
-                        </i>
-                        <div>
-                            <div class="fw-bold">${item.nome}</div>
-                            <div class="text-muted fs-7">${item.codigo}</div>
+            autocompleteDropdown.innerHTML = results.map(item => {
+                const badge = item.existe 
+                    ? '<span class="badge badge-light-success ms-2">Cadastrado</span>' 
+                    : '<span class="badge badge-light-info ms-2">Sugestão</span>';
+                
+                return `
+                    <div class="dropdown-item cursor-pointer autocomplete-item" data-item='${JSON.stringify(item)}'>
+                        <div class="d-flex align-items-center">
+                            <i class="ki-duotone ${item.icone} fs-2 text-${item.cor} me-3">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                            </i>
+                            <div class="flex-grow-1">
+                                <div class="fw-bold">${item.nome} ${badge}</div>
+                                <div class="text-muted fs-7">${item.codigo}</div>
+                            </div>
                         </div>
                     </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
             
             // Add click handlers
             autocompleteDropdown.querySelectorAll('.autocomplete-item').forEach(item => {

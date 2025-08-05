@@ -38,5 +38,10 @@ class DatabaseSeeder extends Seeder
         $this->call([
             MenuPermissionsSeeder::class,
         ]);
+
+        // Seeder de tipos de proposição
+        $this->call([
+            TipoProposicaoCompletoSeeder::class,
+        ]);
     }
 }

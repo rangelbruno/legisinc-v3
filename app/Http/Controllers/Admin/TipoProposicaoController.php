@@ -312,4 +312,110 @@ class TipoProposicaoController extends Controller
             'message' => $message
         ]);
     }
+
+    /**
+     * Search for tipo suggestions based on query
+     */
+    public function buscarSugestoes(Request $request): JsonResponse
+    {
+        $query = strtolower(trim($request->get('q', '')));
+        
+        if (strlen($query) < 2) {
+            return response()->json([]);
+        }
+
+        $sugestoes = [];
+        $config = config('tipo_proposicao_mapping');
+        $mappings = $config['mappings'] ?? [];
+        $aliases = $config['aliases'] ?? [];
+        
+        // Buscar no banco de dados existente
+        try {
+            $tiposExistentes = TipoProposicao::where(function($q) use ($query) {
+                    $q->whereRaw('LOWER(nome) LIKE ?', ["%{$query}%"])
+                      ->orWhereRaw('LOWER(codigo) LIKE ?', ["%{$query}%"]);
+                })
+                ->ativos()
+                ->ordenados()
+                ->limit(10)
+                ->get()
+                ->map(function($tipo) {
+                    return [
+                        'id' => $tipo->id,
+                        'nome' => $tipo->nome,
+                        'codigo' => $tipo->codigo,
+                        'icone' => $tipo->icone,
+                        'cor' => $tipo->cor,
+                        'ordem' => $tipo->ordem,
+                        'configuracoes' => $tipo->configuracoes,
+                        'fonte' => 'banco',
+                        'existe' => true
+                    ];
+                })
+                ->toArray();
+        } catch (\Exception $e) {
+            // Se houver erro de conexão, continuar apenas com sugestões do mapeamento
+            $tiposExistentes = [];
+        }
+
+        // Adicionar tipos existentes primeiro
+        $sugestoes = array_merge($sugestoes, $tiposExistentes);
+        
+        // Verificar aliases para encontrar correspondências
+        $codigoEncontrado = null;
+        foreach ($aliases as $alias => $codigo) {
+            if (str_contains($alias, $query)) {
+                $codigoEncontrado = $codigo;
+                break;
+            }
+        }
+        
+        // Se encontrou um alias, usar o código correspondente
+        if ($codigoEncontrado && isset($mappings[$codigoEncontrado])) {
+            $tipoMapeado = $mappings[$codigoEncontrado];
+            
+            // Verificar se já existe no banco
+            try {
+                $jaExiste = TipoProposicao::where('codigo', $tipoMapeado['codigo'])->exists();
+            } catch (\Exception $e) {
+                $jaExiste = false;
+            }
+            
+            if (!$jaExiste) {
+                $sugestoes[] = array_merge($tipoMapeado, [
+                    'id' => null,
+                    'fonte' => 'sugestao',
+                    'existe' => false
+                ]);
+            }
+        }
+        
+        // Buscar diretamente nos mappings
+        foreach ($mappings as $key => $tipo) {
+            if (str_contains($key, $query) || 
+                str_contains(strtolower($tipo['nome']), $query) || 
+                str_contains($tipo['codigo'], $query)) {
+                
+                // Verificar se já existe no banco
+                try {
+                    $jaExiste = TipoProposicao::where('codigo', $tipo['codigo'])->exists();
+                } catch (\Exception $e) {
+                    $jaExiste = false;
+                }
+                
+                if (!$jaExiste && !in_array($tipo['codigo'], array_column($sugestoes, 'codigo'))) {
+                    $sugestoes[] = array_merge($tipo, [
+                        'id' => null,
+                        'fonte' => 'sugestao',
+                        'existe' => false
+                    ]);
+                }
+            }
+        }
+        
+        // Limitar resultados
+        $sugestoes = array_slice($sugestoes, 0, 15);
+        
+        return response()->json($sugestoes);
+    }
 }
