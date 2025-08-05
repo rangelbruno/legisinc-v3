@@ -33,7 +33,42 @@ class ParametroController extends Controller
     {
         $modulos = $this->parametroService->obterModulos();
         
+        // Carregar submódulos para cada módulo
+        $modulos->load('submodulosAtivos');
+        
+        // Remover duplicados por nome (manter o mais recente)
+        $modulosUnicos = $modulos->groupBy('nome')->map(function ($grupo) {
+            return $grupo->sortByDesc('id')->first(); // Pega o mais recente (ID maior)
+        })->values();
+        
+        // Adicionar contagem de submódulos
+        $modulosUnicos->transform(function ($modulo) {
+            $modulo->submodulos_count = $modulo->submodulosAtivos->count();
+            return $modulo;
+        });
+        
+        $modulos = $modulosUnicos;
         return view('modules.parametros.index', compact('modulos'));
+    }
+    
+    private function getSubmoduloIcon(string $nome): string
+    {
+        return match($nome) {
+            'Cabeçalho' => 'ki-document',
+            'Marca D\'água' => 'ki-water',
+            'Texto Padrão' => 'ki-text',
+            default => 'ki-setting-2'
+        };
+    }
+    
+    private function getSubmoduloRoute(string $nome): string
+    {
+        return match($nome) {
+            'Cabeçalho' => 'parametros.templates.cabecalho',
+            'Marca D\'água' => 'parametros.templates.marca-dagua', 
+            'Texto Padrão' => 'parametros.templates.texto-padrao',
+            default => 'parametros.index'
+        };
     }
 
     /**
@@ -91,6 +126,25 @@ class ParametroController extends Controller
         }
 
         $submodulos = $this->parametroService->obterSubmodulos($id);
+
+        // Se for Templates, mostrar página especial com cards dos submódulos
+        if ($modulo->nome === 'Templates') {
+            // Transformar submódulos em cards
+            $cards = $submodulos->map(function ($submodulo) use ($modulo) {
+                return (object) [
+                    'id' => $submodulo->id,
+                    'nome' => $submodulo->nome,
+                    'descricao' => $submodulo->descricao,
+                    'icon' => $this->getSubmoduloIcon($submodulo->nome),
+                    'ordem' => $submodulo->ordem,
+                    'ativo' => $submodulo->ativo,
+                    'rota' => $this->getSubmoduloRoute($submodulo->nome),
+                    'modulo_pai' => $modulo->nome
+                ];
+            })->sortBy('ordem');
+            
+            return view('modules.parametros.templates.index', compact('modulo', 'cards'));
+        }
 
         return view('modules.parametros.show', compact('modulo', 'submodulos'));
     }
@@ -177,6 +231,25 @@ class ParametroController extends Controller
         }
 
         $submodulos = $this->parametroService->obterSubmodulos($modulo->id);
+        
+        // Se for Templates, mostrar página especial com cards dos submódulos
+        if ($nomeModulo === 'Templates') {
+            // Transformar submódulos em cards
+            $cards = $submodulos->map(function ($submodulo) use ($modulo) {
+                return (object) [
+                    'id' => $submodulo->id,
+                    'nome' => $submodulo->nome,
+                    'descricao' => $submodulo->descricao,
+                    'icon' => $this->getSubmoduloIcon($submodulo->nome),
+                    'ordem' => $submodulo->ordem,
+                    'ativo' => $submodulo->ativo,
+                    'rota' => $this->getSubmoduloRoute($submodulo->nome),
+                    'modulo_pai' => $modulo->nome
+                ];
+            })->sortBy('ordem');
+            
+            return view('modules.parametros.templates.index', compact('modulo', 'cards'));
+        }
         
         return view('modules.parametros.configurar', compact('modulo', 'submodulos'));
     }

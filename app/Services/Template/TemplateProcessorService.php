@@ -5,12 +5,20 @@ namespace App\Services\Template;
 use App\Models\Proposicao;
 use App\Models\TipoProposicaoTemplate;
 use App\Models\User;
+use App\Services\Parametro\ParametroService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 
 class TemplateProcessorService
 {
+    protected ParametroService $parametroService;
+
+    public function __construct(ParametroService $parametroService)
+    {
+        $this->parametroService = $parametroService;
+    }
+
     private array $systemVariables = [
         // Datas e horários
         'data' => 'Data atual (formato: dd/mm/aaaa)',
@@ -293,7 +301,7 @@ class TemplateProcessorService
             'sessao_legislativa' => $agora->format('Y'),
             
             // Imagens padrão
-            'imagem_cabecalho' => asset('template/cabecalho.png')
+            'imagem_cabecalho' => $this->obterImagemCabecalho()
         ];
     }
 
@@ -439,6 +447,73 @@ class TemplateProcessorService
         }
         
         return '[PARTIDO]';
+    }
+
+    /**
+     * Obter configurações do cabeçalho dos templates
+     */
+    private function obterConfiguracoesTemplate(): array
+    {
+        try {
+            return [
+                'imagem' => $this->parametroService->obterValor('Templates', 'Cabeçalho', 'cabecalho_imagem') ?: 'template/cabecalho.png',
+                'usar_padrao' => $this->parametroService->obterValor('Templates', 'Cabeçalho', 'usar_cabecalho_padrao') ?: true,
+                'altura' => $this->parametroService->obterValor('Templates', 'Cabeçalho', 'cabecalho_altura') ?: 150,
+                'posicao' => $this->parametroService->obterValor('Templates', 'Cabeçalho', 'cabecalho_posicao') ?: 'topo'
+            ];
+        } catch (\Exception $e) {
+            // Se houver erro, usar valores padrão
+            return [
+                'imagem' => 'template/cabecalho.png',
+                'usar_padrao' => true,
+                'altura' => 150,
+                'posicao' => 'topo'
+            ];
+        }
+    }
+
+    /**
+     * Obter URL da imagem do cabeçalho
+     */
+    private function obterImagemCabecalho(): string
+    {
+        $configuracoes = $this->obterConfiguracoesTemplate();
+        $imagemPath = $configuracoes['imagem'];
+        
+        // Se o arquivo existir no storage público, usar ele
+        if (file_exists(public_path($imagemPath))) {
+            return asset($imagemPath);
+        }
+        
+        // Senão, usar a imagem padrão
+        return asset('template/cabecalho.png');
+    }
+
+    /**
+     * Verificar se deve aplicar cabeçalho automaticamente
+     */
+    public function deveAplicarCabecalho(): bool
+    {
+        $configuracoes = $this->obterConfiguracoesTemplate();
+        return (bool) $configuracoes['usar_padrao'];
+    }
+
+    /**
+     * Obter altura do cabeçalho em pixels
+     */
+    public function obterAlturaCabecalho(): int
+    {
+        $configuracoes = $this->obterConfiguracoesTemplate();
+        return (int) $configuracoes['altura'];
+    }
+
+    /**
+     * Obter posição do cabeçalho
+     */
+    public function obterPosicaoCabecalho(): string
+    {
+        $configuracoes = $this->obterConfiguracoesTemplate();
+        return $configuracoes['posicao'];
     }
 
     /**

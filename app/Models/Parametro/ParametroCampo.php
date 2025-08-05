@@ -88,12 +88,30 @@ class ParametroCampo extends Model
 
     public function getOpcoesFormatadaAttribute(): array
     {
-        return $this->opcoes ?? [];
+        if (is_array($this->opcoes)) {
+            return $this->opcoes;
+        }
+        
+        if (is_string($this->opcoes)) {
+            $decoded = json_decode($this->opcoes, true);
+            return (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) ? $decoded : [];
+        }
+        
+        return [];
     }
 
     public function getValidacaoFormatadaAttribute(): array
     {
-        return $this->validacao ?? [];
+        if (is_array($this->validacao)) {
+            return $this->validacao;
+        }
+        
+        if (is_string($this->validacao)) {
+            $decoded = json_decode($this->validacao, true);
+            return (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) ? $decoded : [];
+        }
+        
+        return [];
     }
 
     public function getValorAtualAttribute(): mixed
@@ -145,7 +163,30 @@ class ParametroCampo extends Model
 
         // Adicionar validações personalizadas
         if ($this->validacao) {
-            $rules = array_merge($rules, $this->validacao);
+            try {
+                // Garantir que validacao é um array
+                $validacaoArray = [];
+                
+                if (is_array($this->validacao)) {
+                    $validacaoArray = $this->validacao;
+                } elseif (is_string($this->validacao)) {
+                    // Se for string, tentar decodificar JSON
+                    $decoded = json_decode($this->validacao, true);
+                    if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                        $validacaoArray = $decoded;
+                    } else {
+                        // Se não for JSON válido, tratar como regra única
+                        $validacaoArray = [$this->validacao];
+                    }
+                }
+                
+                if (!empty($validacaoArray) && is_array($validacaoArray)) {
+                    $rules = array_merge($rules, $validacaoArray);
+                }
+            } catch (\Exception $e) {
+                // Em caso de erro, ignorar validações personalizadas
+                \Log::warning("Erro ao processar validações personalizadas para campo {$this->nome}: " . $e->getMessage());
+            }
         }
 
         return $rules;

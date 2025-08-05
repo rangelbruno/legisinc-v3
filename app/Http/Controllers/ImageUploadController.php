@@ -3,16 +3,19 @@
 namespace App\Http\Controllers;
 
 use App\Services\ImageUploadService;
+use App\Services\Parametro\ParametroService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
 class ImageUploadController extends Controller
 {
     protected ImageUploadService $imageUploadService;
+    protected ParametroService $parametroService;
 
-    public function __construct(ImageUploadService $imageUploadService)
+    public function __construct(ImageUploadService $imageUploadService, ParametroService $parametroService)
     {
         $this->imageUploadService = $imageUploadService;
+        $this->parametroService = $parametroService;
     }
 
     /**
@@ -76,6 +79,53 @@ class ImageUploadController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Erro ao enviar imagem: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Upload da imagem do cabeçalho dos templates
+     */
+    public function uploadCabecalhoTemplate(Request $request): JsonResponse
+    {
+        $request->validate([
+            'image' => 'required|image|mimes:jpeg,jpg,png|max:2048' // Max 2MB
+        ]);
+
+        try {
+            // Fazer upload da imagem para a pasta template no public
+            $file = $request->file('image');
+            $fileName = 'cabecalho.' . $file->getClientOriginalExtension();
+            
+            // Salvar diretamente no public/template
+            $destinationPath = public_path('template');
+            if (!file_exists($destinationPath)) {
+                mkdir($destinationPath, 0755, true);
+            }
+            
+            $file->move($destinationPath, $fileName);
+            $relativePath = 'template/' . $fileName;
+            
+            // Salvar o caminho nos parâmetros
+            $this->parametroService->salvarValor('Templates', 'Cabeçalho', 'cabecalho_imagem', $relativePath);
+            
+            $url = asset($relativePath);
+
+            return response()->json([
+                'success' => true,
+                'path' => $relativePath,
+                'url' => $url,
+                'message' => 'Imagem do cabeçalho enviada com sucesso!'
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Erro ao fazer upload da imagem do cabeçalho', [
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Erro ao enviar imagem do cabeçalho: ' . $e->getMessage()
             ], 500);
         }
     }

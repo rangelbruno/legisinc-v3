@@ -188,11 +188,28 @@
                                             {{ $modulo->ativo ? 'Ativo' : 'Inativo' }}
                                         </span>
                                     </div>
-                                    <div class="d-flex">
-                                        <a href="{{ route('parametros.configurar', $modulo->nome) }}" class="btn btn-sm btn-primary">
-                                            Configurar
-                                        </a>
+                                    
+                                    <!--begin::Action-->
+                                    <div class="d-flex gap-2">
+                                        @if($modulo->nome === 'Templates')
+                                            <a href="{{ route('parametros.show', $modulo->id) }}" class="btn btn-sm btn-primary">
+                                                <i class="ki-duotone ki-enter-6 fs-6 me-1">
+                                                    <span class="path1"></span>
+                                                    <span class="path2"></span>
+                                                </i>
+                                                Acessar
+                                            </a>
+                                        @else
+                                            <a href="{{ route('parametros.configurar', $modulo->nome) }}" class="btn btn-sm btn-primary">
+                                                <i class="ki-duotone ki-setting-3 fs-6 me-1">
+                                                    <span class="path1"></span>
+                                                    <span class="path2"></span>
+                                                </i>
+                                                Configurar
+                                            </a>
+                                        @endif
                                     </div>
+                                    <!--end::Action-->
                                 </div>
                                 <!--end::Progress-->
                             </div>
@@ -381,6 +398,11 @@
 
 @push('scripts')
     <script>
+        // Debug de erros JavaScript
+        window.addEventListener('error', function(e) {
+            console.error('❌ ERRO JAVASCRIPT:', e.error, e.filename, e.lineno);
+        });
+        
         document.addEventListener('DOMContentLoaded', function() {
             console.log('🚀 Sistema de parâmetros carregado');
             
@@ -982,6 +1004,9 @@
 
             // Initialize on page load
             initializeCardsDeleteListeners();
+            
+            // Debug simples
+            console.log('🎯 Templates button should be a BUTTON element with onclick');
         });
     </script>
 @endpush

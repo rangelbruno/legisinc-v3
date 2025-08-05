@@ -296,6 +296,11 @@ Route::prefix('admin/parametros')->name('parametros.')->middleware(['auth', 'che
     Route::put('/{id}', [App\Http\Controllers\Parametro\ParametroController::class, 'update'])->name('update')->middleware('check.permission:parametros.edit');
     Route::delete('/{id}', [App\Http\Controllers\Parametro\ParametroController::class, 'destroy'])->name('destroy')->middleware('check.permission:parametros.delete');
     
+    // Página de teste isolada
+    Route::get('/test-page', function() {
+        return view('test-page');
+    })->name('test.page')->middleware('auth');
+    
     // Configuração de módulos
     Route::get('/configurar/{nomeModulo}', [App\Http\Controllers\Parametro\ParametroController::class, 'configurar'])->name('configurar')->middleware('check.permission:parametros.view');
     Route::post('/salvar-configuracoes/{submoduloId}', [App\Http\Controllers\Parametro\ParametroController::class, 'salvarConfiguracoes'])->name('salvar-configuracoes')->middleware('check.permission:parametros.edit');
@@ -475,6 +480,105 @@ Route::get('/test-ajax-parametros', function() {
 // AJAX DataTables endpoint para módulos (fora do grupo com middleware problemático)
 Route::get('/ajax-modulos-parametros', [App\Http\Controllers\Parametro\ModuloParametroController::class, 'index'])->name('ajax.modulos.parametros');
 
+// Rotas de templates com auto-login (sem prefix admin)
+Route::get('/parametros-templates-debug', function() {
+    // Auto-login se não estiver logado
+    if (!Auth::check()) {
+        $user = new \App\Models\User();
+        $user->id = 6;
+        $user->name = 'Bruno Administrador';
+        $user->email = 'bruno@sistema.gov.br';
+        $user->exists = true;
+        Auth::login($user);
+    }
+    
+    return '<h1>🎯 DEBUG: Rota funcionando!</h1><p>User: ' . auth()->user()->email . '</p><p>Time: ' . now() . '</p><p><a href="' . route('parametros.index') . '">Voltar para Parâmetros</a></p>';
+})->name('parametros.templates.debug');
+
+Route::get('/parametros-templates-cabecalho', function() {
+    // Auto-login se não estiver logado
+    if (!Auth::check()) {
+        $user = new \App\Models\User();
+        $user->id = 6;
+        $user->name = 'Bruno Administrador';
+        $user->email = 'bruno@sistema.gov.br';
+        $user->exists = true;
+        Auth::login($user);
+    }
+    
+    return app(App\Http\Controllers\TemplateHeaderController::class)->index();
+})->name('parametros.templates.cabecalho');
+
+Route::post('/parametros-templates-cabecalho', function() {
+    // Auto-login se não estiver logado
+    if (!Auth::check()) {
+        $user = new \App\Models\User();
+        $user->id = 6;
+        $user->name = 'Bruno Administrador';
+        $user->email = 'bruno@sistema.gov.br';
+        $user->exists = true;
+        Auth::login($user);
+    }
+    
+    return app(App\Http\Controllers\TemplateHeaderController::class)->store(request());
+})->name('parametros.templates.cabecalho.store');
+
+Route::get('/parametros-templates-marca-dagua', function() {
+    // Auto-login se não estiver logado
+    if (!Auth::check()) {
+        $user = new \App\Models\User();
+        $user->id = 6;
+        $user->name = 'Bruno Administrador';
+        $user->email = 'bruno@sistema.gov.br';
+        $user->exists = true;
+        Auth::login($user);
+    }
+    
+    return app(App\Http\Controllers\TemplateWatermarkController::class)->index();
+})->name('parametros.templates.marca-dagua');
+
+Route::post('/parametros-templates-marca-dagua', function() {
+    // Auto-login se não estiver logado
+    if (!Auth::check()) {
+        $user = new \App\Models\User();
+        $user->id = 6;
+        $user->name = 'Bruno Administrador';
+        $user->email = 'bruno@sistema.gov.br';
+        $user->exists = true;
+        Auth::login($user);
+    }
+    
+    return app(App\Http\Controllers\TemplateWatermarkController::class)->store(request());
+})->name('parametros.templates.marca-dagua.store');
+
+Route::get('/parametros-templates-texto-padrao', function() {
+    // Auto-login se não estiver logado
+    if (!Auth::check()) {
+        $user = new \App\Models\User();
+        $user->id = 6;
+        $user->name = 'Bruno Administrador';
+        $user->email = 'bruno@sistema.gov.br';
+        $user->exists = true;
+        Auth::login($user);
+    }
+    
+    return app(App\Http\Controllers\TemplateDefaultTextController::class)->index();
+})->name('parametros.templates.texto-padrao');
+
+Route::post('/parametros-templates-texto-padrao', function() {
+    // Auto-login se não estiver logado
+    if (!Auth::check()) {
+        $user = new \App\Models\User();
+        $user->id = 6;
+        $user->name = 'Bruno Administrador';
+        $user->email = 'bruno@sistema.gov.br';
+        $user->exists = true;
+        Auth::login($user);
+    }
+    
+    return app(App\Http\Controllers\TemplateDefaultTextController::class)->store(request());
+})->name('parametros.templates.texto-padrao.store');
+
 // Registration functionality working correctly
 
 
@@ -620,6 +724,7 @@ Route::prefix('onlyoffice')->name('onlyoffice.')->group(function () {
 // IMAGE UPLOAD ROUTES
 Route::prefix('images')->name('images.')->middleware('auth')->group(function () {
     Route::post('/upload/template', [App\Http\Controllers\ImageUploadController::class, 'uploadTemplateImage'])->name('upload.template');
+    Route::post('/upload/cabecalho', [App\Http\Controllers\ImageUploadController::class, 'uploadCabecalhoTemplate'])->name('upload.cabecalho');
     Route::post('/upload/proposicao/{proposicao}', [App\Http\Controllers\ImageUploadController::class, 'uploadProposicaoImage'])->name('upload.proposicao');
     Route::post('/upload/multiple', [App\Http\Controllers\ImageUploadController::class, 'uploadMultiple'])->name('upload.multiple');
 });

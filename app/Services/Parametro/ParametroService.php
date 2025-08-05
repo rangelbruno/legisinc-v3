@@ -189,6 +189,73 @@ class ParametroService
     }
 
     /**
+     * Salva um valor específico de parâmetro
+     */
+    public function salvarValor(string $nomeModulo, string $nomeSubmodulo, string $nomeCampo, mixed $valor): bool
+    {
+        try {
+            // Encontrar o módulo
+            $modulo = ParametroModulo::where('nome', $nomeModulo)->first();
+            if (!$modulo) {
+                Log::warning("Módulo '{$nomeModulo}' não encontrado");
+                return false;
+            }
+
+            // Encontrar o submódulo
+            $submodulo = ParametroSubmodulo::where('modulo_id', $modulo->id)
+                ->where('nome', $nomeSubmodulo)
+                ->first();
+            
+            if (!$submodulo) {
+                Log::warning("Submódulo '{$nomeSubmodulo}' não encontrado no módulo '{$nomeModulo}'");
+                return false;
+            }
+
+            // Encontrar o campo
+            $campo = ParametroCampo::where('submodulo_id', $submodulo->id)
+                ->where('nome', $nomeCampo)
+                ->first();
+            
+            if (!$campo) {
+                Log::warning("Campo '{$nomeCampo}' não encontrado no submódulo '{$nomeSubmodulo}'");
+                return false;
+            }
+
+            // Expirar valores antigos (removido por compatibilidade)
+            // $campo->valores()->validos()->update(['valido_ate' => now()]);
+
+            // Criar novo valor
+            $novoValor = new ParametroValor();
+            $novoValor->campo_id = $campo->id;
+            $novoValor->valor = is_array($valor) ? json_encode($valor) : (string)$valor;
+            $novoValor->save();
+
+            // Invalidar cache
+            $this->cacheService->invalidateConfiguracoes($nomeModulo, $nomeSubmodulo);
+
+            Log::info("Valor '{$nomeCampo}' salvo com sucesso", [
+                'modulo' => $nomeModulo,
+                'submodulo' => $nomeSubmodulo,
+                'campo' => $nomeCampo,
+                'valor' => $valor
+            ]);
+
+            return true;
+
+        } catch (\Exception $e) {
+            Log::error("Erro ao salvar valor '{$nomeCampo}'", [
+                'modulo' => $nomeModulo,
+                'submodulo' => $nomeSubmodulo,
+                'campo' => $nomeCampo,
+                'valor' => $valor,
+                'error' => $e->getMessage()
+            ]);
+
+            return false;
+        }
+    }
+
+    /**
      * Cria um novo módulo
      */
     public function criarModulo(array $dados): ParametroModulo
