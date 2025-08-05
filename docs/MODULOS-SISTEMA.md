@@ -8,7 +8,7 @@ O **LegisInc** é uma plataforma completa de gestão legislativa que digitaliza 
 
 ## 📊 Status Geral do Sistema
 
-- **Módulos Implementados**: 10 de 25 (40%)
+- **Módulos Implementados**: 13 de 25 (52%)
 - **Tecnologia Base**: Laravel 12 + Vue.js + OnlyOffice
 - **Arquitetura**: Microserviços com API RESTful
 - **Segurança**: Autenticação JWT + Permissões Granulares
@@ -161,11 +161,53 @@ O **LegisInc** é uma plataforma completa de gestão legislativa que digitaliza 
 
 ---
 
+### 11. 📋 Sistema de Expediente
+**Status**: ✅ Completo
+
+**Funcionalidades**:
+- Gestão completa de protocolos
+- Controle de entrada e saída de documentos
+- Fluxo de tramitação automatizado
+- Relatórios de expediente
+- Interface administrativa dedicada
+
+**Valor de Negócio**: Centraliza e automatiza todo o fluxo de documentos, garantindo rastreabilidade e eficiência.
+
+---
+
+### 12. ⚖️ Sistema de Pareceres Jurídicos
+**Status**: ✅ Completo
+
+**Funcionalidades**:
+- Análise jurídica de proposições
+- Templates de pareceres especializados
+- Workflow de aprovação
+- Histórico de pareceres
+- Integração com OnlyOffice para edição
+
+**Valor de Negócio**: Garante conformidade jurídica de todas as proposições antes da tramitação.
+
+---
+
+### 13. 🧪 Sistema de Testes
+**Status**: ✅ Completo
+
+**Funcionalidades**:
+- Suite completa de testes automatizados
+- Ambiente de desenvolvimento isolado
+- Validação de funcionalidades
+- Relatórios de cobertura
+- CI/CD integrado
+
+**Valor de Negócio**: Assegura qualidade e estabilidade do sistema através de testes contínuos.
+
+---
+
 ## 🔄 Módulos em Desenvolvimento
 
-### 11. 🏛️ Sessões Plenárias
-**Status**: 🔄 Em desenvolvimento (70%)
-**Previsão**: Agosto 2025
+### 14. 🏛️ Sessões Plenárias
+**Status**: 🔄 Em desenvolvimento (30%)
+**Previsão**: Setembro 2025
 
 **Funcionalidades Planejadas**:
 - Gestão de sessões ordinárias/extraordinárias
@@ -179,9 +221,9 @@ O **LegisInc** é uma plataforma completa de gestão legislativa que digitaliza 
 
 ---
 
-### 12. 🗳️ Sistema de Votação
-**Status**: 🔄 Em desenvolvimento (45%)
-**Previsão**: Setembro 2025
+### 15. 🗳️ Sistema de Votação
+**Status**: 🔄 Em desenvolvimento (15%)
+**Previsão**: Outubro 2025
 
 **Funcionalidades Planejadas**:
 - Votação eletrônica segura
@@ -197,9 +239,9 @@ O **LegisInc** é uma plataforma completa de gestão legislativa que digitaliza 
 
 ## 📅 Módulos Planejados
 
-### 13. 📊 Analytics e Business Intelligence
+### 16. 📊 Analytics e Business Intelligence
 **Status**: 📅 Planejado
-**Previsão**: Outubro 2025
+**Previsão**: Novembro 2025
 
 **Funcionalidades Previstas**:
 - Dashboards executivos avançados
@@ -211,9 +253,9 @@ O **LegisInc** é uma plataforma completa de gestão legislativa que digitaliza 
 
 ---
 
-### 14. 📱 Sistema de Notificações
+### 17. 📱 Sistema de Notificações
 **Status**: 📅 Planejado
-**Previsão**: Novembro 2025
+**Previsão**: Dezembro 2025
 
 **Funcionalidades Previstas**:
 - Notificações push multi-canal
@@ -225,9 +267,9 @@ O **LegisInc** é uma plataforma completa de gestão legislativa que digitaliza 
 
 ---
 
-### 15. 🌐 Portal da Transparência
+### 18. 🌐 Portal da Transparência
 **Status**: 📅 Planejado
-**Previsão**: Dezembro 2025
+**Previsão**: Janeiro 2026
 
 **Funcionalidades Previstas**:
 - Portal público responsivo
@@ -239,9 +281,9 @@ O **LegisInc** é uma plataforma completa de gestão legislativa que digitaliza 
 
 ---
 
-### 16. 🔌 APIs e Integrações
+### 19. 🔌 APIs e Integrações
 **Status**: 📅 Planejado
-**Previsão**: Janeiro 2026
+**Previsão**: Fevereiro 2026
 
 **Funcionalidades Previstas**:
 - Developer Portal
@@ -253,9 +295,9 @@ O **LegisInc** é uma plataforma completa de gestão legislativa que digitaliza 
 
 ---
 
-### 17. 🔒 Segurança e Compliance
+### 20. 🔒 Segurança e Compliance
 **Status**: 📅 Planejado
-**Previsão**: Fevereiro 2026
+**Previsão**: Março 2026
 
 **Funcionalidades Previstas**:
 - Security Operations Center
@@ -267,9 +309,9 @@ O **LegisInc** é uma plataforma completa de gestão legislativa que digitaliza 
 
 ---
 
-### 18. 📱 Aplicativo Mobile
+### 21. 📱 Aplicativo Mobile
 **Status**: 📅 Planejado
-**Previsão**: Março 2026
+**Previsão**: Abril 2026
 
 **Funcionalidades Previstas**:
 - Apps nativos iOS/Android
@@ -281,9 +323,9 @@ O **LegisInc** é uma plataforma completa de gestão legislativa que digitaliza 
 
 ---
 
-### 19. 🤖 Inteligência Artificial
+### 22. 🤖 Inteligência Artificial
 **Status**: 📅 Planejado
-**Previsão**: Abril 2026
+**Previsão**: Maio 2026
 
 **Funcionalidades Previstas**:
 - Chatbot legislativo
@@ -295,9 +337,9 @@ O **LegisInc** é uma plataforma completa de gestão legislativa que digitaliza 
 
 ---
 
-### 20. 📹 Gestão de Mídia
+### 23. 📹 Gestão de Mídia
 **Status**: 📅 Planejado
-**Previsão**: Maio 2026
+**Previsão**: Junho 2026
 
 **Funcionalidades Previstas**:
 - TV Legislativa integrada
@@ -309,9 +351,9 @@ O **LegisInc** é uma plataforma completa de gestão legislativa que digitaliza 
 
 ---
 
-### 21. 📚 Biblioteca Digital
+### 24. 📚 Biblioteca Digital
 **Status**: 📅 Planejado
-**Previsão**: Junho 2026
+**Previsão**: Julho 2026
 
 **Funcionalidades Previstas**:
 - Acervo digital completo
@@ -323,9 +365,9 @@ O **LegisInc** é uma plataforma completa de gestão legislativa que digitaliza 
 
 ---
 
-### 22. 💰 Gestão Orçamentária
+### 25. 💰 Gestão Orçamentária
 **Status**: 📅 Planejado
-**Previsão**: Julho 2026
+**Previsão**: Agosto 2026
 
 **Funcionalidades Previstas**:
 - Orçamento parlamentar
@@ -337,9 +379,9 @@ O **LegisInc** é uma plataforma completa de gestão legislativa que digitaliza 
 
 ---
 
-### 23. 📊 Ouvidoria Digital
+### 26. 📊 Ouvidoria Digital
 **Status**: 📅 Planejado
-**Previsão**: Agosto 2026
+**Previsão**: Setembro 2026
 
 **Funcionalidades Previstas**:
 - Canal de ouvidoria integrado
@@ -351,9 +393,9 @@ O **LegisInc** é uma plataforma completa de gestão legislativa que digitaliza 
 
 ---
 
-### 24. 🏛️ Gestão de Eventos
+### 27. 🏛️ Gestão de Eventos
 **Status**: 📅 Planejado
-**Previsão**: Setembro 2026
+**Previsão**: Outubro 2026
 
 **Funcionalidades Previstas**:
 - Calendário de eventos
@@ -365,9 +407,9 @@ O **LegisInc** é uma plataforma completa de gestão legislativa que digitaliza 
 
 ---
 
-### 25. ⚖️ Processo Legislativo Avançado
+### 28. ⚖️ Processo Legislativo Avançado
 **Status**: 📅 Planejado
-**Previsão**: Outubro 2026
+**Previsão**: Novembro 2026
 
 **Funcionalidades Previstas**:
 - Workflow customizável
@@ -416,14 +458,14 @@ O **LegisInc** é uma plataforma completa de gestão legislativa que digitaliza 
 ### 2025
 - ✅ Q1: Core do sistema (Autenticação, Usuários, Parlamentares)
 - ✅ Q2: Processo Legislativo (Proposições, Documentos, OnlyOffice)
-- 🔄 Q3: Sessões e Votação
-- 📅 Q4: Analytics e Notificações
+- ✅ Q3: Módulos Administrativos (Expediente, Jurídico, Testes)
+- 🔄 Q4: Sessões e Votação
 
 ### 2026
-- 📅 Q1: Transparência e APIs
-- 📅 Q2: Mobile e IA
-- 📅 Q3: Mídia e Biblioteca
-- 📅 Q4: Módulos Avançados
+- 📅 Q1: Analytics e Notificações
+- 📅 Q2: Transparência e APIs
+- 📅 Q3: Mobile e IA
+- 📅 Q4: Mídia e Biblioteca
 
 ---
 
@@ -448,4 +490,4 @@ O LegisInc visa ser a plataforma definitiva para gestão legislativa no Brasil, 
 
 ---
 
-*Última atualização: 31 de Julho de 2025*
+*Última atualização: 5 de Agosto de 2025*

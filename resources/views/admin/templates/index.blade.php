@@ -34,7 +34,7 @@
     <!--begin::Stats-->
     <div class="row g-5 g-xl-10 mb-5 mb-xl-10">
         <div class="col-md-6 col-lg-6 col-xl-6 col-xxl-3 mb-md-5 mb-xl-10">
-            <div class="card card-flush bgi-no-repeat bgi-size-contain bgi-position-x-end h-md-50 mb-5 mb-xl-10" style="background-color: #F1416C;background-image:url('{{ asset('assets/media/patterns/vector-1.png') }}')">
+            <div class="card card-flush bgi-no-repeat bgi-size-contain bgi-position-x-end mb-5 mb-xl-10" style="background-color: #F1416C;background-image:url('{{ asset('assets/media/patterns/vector-1.png') }}')">
                 <div class="card-header pt-5">
                     <div class="card-title d-flex flex-column">
                         <div class="d-flex align-items-center">
@@ -54,7 +54,7 @@
             </div>
         </div>
         <div class="col-md-6 col-lg-6 col-xl-6 col-xxl-3 mb-md-5 mb-xl-10">
-            <div class="card card-flush bgi-no-repeat bgi-size-contain bgi-position-x-end h-md-50 mb-5 mb-xl-10" style="background-color: #7239EA;background-image:url('{{ asset('assets/media/patterns/vector-1.png') }}')">
+            <div class="card card-flush bgi-no-repeat bgi-size-contain bgi-position-x-end mb-5 mb-xl-10" style="background-color: #7239EA;background-image:url('{{ asset('assets/media/patterns/vector-1.png') }}')">
                 <div class="card-header pt-5">
                     <div class="card-title d-flex flex-column">
                         <div class="d-flex align-items-center">
@@ -74,7 +74,7 @@
             </div>
         </div>
         <div class="col-md-6 col-lg-6 col-xl-6 col-xxl-3 mb-md-5 mb-xl-10">
-            <div class="card card-flush bgi-no-repeat bgi-size-contain bgi-position-x-end h-md-50 mb-5 mb-xl-10" style="background-color: #F1BC00;background-image:url('{{ asset('assets/media/patterns/vector-1.png') }}')">
+            <div class="card card-flush bgi-no-repeat bgi-size-contain bgi-position-x-end mb-5 mb-xl-10" style="background-color: #F1BC00;background-image:url('{{ asset('assets/media/patterns/vector-1.png') }}')">
                 <div class="card-header pt-5">
                     <div class="card-title d-flex flex-column">
                         <div class="d-flex align-items-center">
@@ -94,7 +94,7 @@
             </div>
         </div>
         <div class="col-md-6 col-lg-6 col-xl-6 col-xxl-3 mb-md-5 mb-xl-10">
-            <div class="card card-flush bgi-no-repeat bgi-size-contain bgi-position-x-end h-md-50 mb-5 mb-xl-10" style="background-color: #17C653;background-image:url('{{ asset('assets/media/patterns/vector-1.png') }}')">
+            <div class="card card-flush bgi-no-repeat bgi-size-contain bgi-position-x-end mb-5 mb-xl-10" style="background-color: #17C653;background-image:url('{{ asset('assets/media/patterns/vector-1.png') }}')">
                 <div class="card-header pt-5">
                     <div class="card-title d-flex flex-column">
                         <div class="d-flex align-items-center">
@@ -375,6 +375,21 @@
 <!--end::Modal - Como Usar-->
 
 @endsection
+
+@push('styles')
+<style>
+    /* Reduzir espaçamento entre linhas da tabela */
+    .table td {
+        padding-top: 0.5rem !important;
+        padding-bottom: 0.5rem !important;
+    }
+    
+    .table th {
+        padding-top: 0.75rem !important;
+        padding-bottom: 0.75rem !important;
+    }
+</style>
+@endpush
 
 @push('scripts')
 <script>

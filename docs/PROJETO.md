@@ -238,7 +238,37 @@ Configuração de serviços externos incluindo:
   - Editor de texto avançado
   - Histórico e relatórios por etapa
 
-### 6. Sistema de Middleware e Permissões (NOVO)
+### 6. Sistema de Expediente (NOVO)
+- **Localização**: `app/Http/Controllers/ExpedienteController.php`, `resources/views/expediente/`
+- **Funcionalidades**:
+  - Gestão completa de protocolos e tramitação
+  - Controle de entrada e saída de documentos
+  - Fluxo de tramitação automatizado
+  - Relatórios de expediente detalhados
+  - Interface administrativa dedicada
+  - Integração com sistema de proposições
+
+### 7. Sistema de Pareceres Jurídicos (NOVO)
+- **Localização**: `app/Http/Controllers/ParecerJuridicoController.php`, `resources/views/pareceres-juridicos/`
+- **Funcionalidades**:
+  - Análise jurídica completa de proposições
+  - Templates especializados para pareceres
+  - Workflow de aprovação jurídica
+  - Histórico completo de pareceres
+  - Integração com OnlyOffice para edição
+  - Sistema de classificação jurídica
+
+### 8. Sistema de Testes (NOVO)
+- **Localização**: `app/Http/Controllers/TestController.php`, `app/Http/Controllers/TestMenuController.php`
+- **Funcionalidades**:
+  - Suite completa de testes automatizados
+  - Ambiente de desenvolvimento isolado
+  - Validação de funcionalidades do sistema
+  - Relatórios de cobertura de testes
+  - CI/CD integrado
+  - Testes de integração com APIs
+
+### 9. Sistema de Middleware e Permissões
 - **Localização**: `app/Http/Middleware/CheckProposicaoPermission.php`, `app/Services/DynamicPermissionService.php`
 - **Funcionalidades**:
   - Middleware especializado para controle de acesso a proposições
@@ -250,7 +280,7 @@ Configuração de serviços externos incluindo:
   - Validação de acesso baseada em roles e permissões granulares
   - Sistema de fallback para permissões não configuradas
 
-### 7. Sistema de Parâmetros Modulares
+### 10. Sistema de Parâmetros Modulares
 - **Localização**: `app/Models/Parametro/`, `resources/views/admin/parametros/`
 - **Funcionalidades**:
   - Sistema hierárquico de configuração (Módulos → Submódulos → Campos → Valores)
@@ -264,7 +294,7 @@ Configuração de serviços externos incluindo:
   - Ordenação dinâmica e controle de status ativo/inativo
   - Importação/exportação de configurações
 
-### 10. Mesa Diretora e Estrutura Organizacional ✅
+### 11. Mesa Diretora e Estrutura Organizacional ✅
 - **Localização**: `app/Http/Controllers/MesaDiretoraController.php`, `resources/views/mesa-diretora/`
 - **Funcionalidades**:
   - CRUD completo da mesa diretora
@@ -273,7 +303,7 @@ Configuração de serviços externos incluindo:
   - Validações robustas seguindo padrões do sistema
   - Interface Metronic responsiva
 
-### 11. Sistema de Partidos Políticos ✅
+### 12. Sistema de Partidos Políticos ✅
 - **Localização**: `app/Http/Controllers/PartidoController.php`, `resources/views/partidos/`
 - **Funcionalidades**:
   - CRUD completo de partidos políticos
@@ -282,7 +312,7 @@ Configuração de serviços externos incluindo:
   - Sistema de validação robusto
   - Interface otimizada e responsiva
 
-### 12. Sistema de Documentos Avançado ✅
+### 13. Sistema de Documentos Avançado ✅
 - **Localização**: `app/Http/Controllers/Documento/`, `app/Services/Documento/`, `resources/views/documentos/`
 - **Funcionalidades**:
   - Editor de texto avançado com TipTap
@@ -306,7 +336,7 @@ Configuração de serviços externos incluindo:
   - `/api/parametros-modular/valores/*` - Gestão de valores
   - Endpoints especiais para validação, configuração e cache
 
-### 13. Sistema OnlyOffice Integrado ✅
+### 14. Sistema OnlyOffice Integrado ✅
 - **Localização**: `app/Http/Controllers/OnlyOffice/`, `app/Services/OnlyOffice/`, `config/onlyoffice.php`
 - **Funcionalidades**:
   - Editor de documentos Word, Excel e PowerPoint integrado
@@ -622,13 +652,50 @@ make logs                  # Ver logs
 
 ---
 
-**Última atualização**: 2025-07-31
+**Última atualização**: 2025-08-05
 **Versão do Laravel**: 12.0
-**Status**: 10 módulos core implementados (40% do total), **migração completa de Projetos para Proposições**, Mesa Diretora, Partidos Políticos, Sistema de Documentos e OnlyOffice implementados, estrutura base completa, sistema de parâmetros modulares funcional, APIs reais funcionando, documentação completa, workflow legislativo correto implementado, sistema estável e consolidado, pronto para implementação de módulos de negócio avançados
+**Status**: 13 módulos core implementados (52% do total), **migração completa de Projetos para Proposições**, Mesa Diretora, Partidos Políticos, Sistema de Documentos e OnlyOffice implementados, **Expediente, Pareceres Jurídicos e Testes** adicionados, estrutura base completa, sistema de parâmetros modulares funcional, APIs reais funcionando, documentação completa, workflow legislativo correto implementado, sistema estável e consolidado, pronto para implementação de módulos de negócio avançados
 
 ---
 
-## 🆕 Changelog Recente (2025-07-31)
+## 🆕 Changelog Recente (2025-08-05)
+
+### Novas Implementações dos Últimos Dias ✅
+
+#### Sistema de Expediente Completo (2025-08-04 a 2025-08-05)
+- ✅ **Interface Administrativa**: Sistema completo de gestão de expediente
+- ✅ **Controle de Protocolo**: Gestão de protocolos de entrada e saída
+- ✅ **Fluxo de Tramitação**: Sistema automatizado de tramitação de documentos
+- ✅ **Relatórios**: Relatórios detalhados de expediente por período
+- ✅ **Integração**: Totalmente integrado com sistema de proposições
+- ✅ **Menu Dedicado**: Interface específica para usuários do expediente
+
+#### Sistema de Pareceres Jurídicos (2025-08-04 a 2025-08-05)
+- ✅ **Análise Jurídica**: Sistema completo para análise jurídica de proposições
+- ✅ **Templates Especializados**: Templates dedicados para diferentes tipos de parecer
+- ✅ **Workflow Jurídico**: Fluxo de aprovação e revisão jurídica
+- ✅ **Histórico Completo**: Rastreamento de todos os pareceres emitidos
+- ✅ **Integração OnlyOffice**: Edição profissional de pareceres
+- ✅ **Interface Especializada**: Menu e funcionalidades para assessor jurídico
+
+#### Sistema de Testes Avançado (2025-08-04 a 2025-08-05)  
+- ✅ **Suite de Testes**: Sistema completo de testes automatizados
+- ✅ **Ambiente Isolado**: Ambiente de desenvolvimento para testes
+- ✅ **Validações**: Validação automática de funcionalidades
+- ✅ **Relatórios**: Relatórios de cobertura e resultados
+- ✅ **CI/CD**: Integração contínua para testes automatizados
+- ✅ **Menu de Testes**: Interface dedicada para execução de testes
+
+#### Melhorias na Estrutura de Menus (2025-08-04)
+- ✅ **Menu Expediente**: Menu específico para usuários do expediente
+- ✅ **Menu Jurídico**: Menu especializado para assessor jurídico
+- ✅ **Menu Testes**: Menu dedicado para ambiente de testes
+- ✅ **Organização**: Reorganização dos menus por perfil de usuário
+- ✅ **Navegação**: Melhorias na navegação e usabilidade
+
+---
+
+## 🆕 Changelog Anterior (2025-07-31)
 
 ### Novas Implementações dos Últimos Dias ✅
 
@@ -840,11 +907,11 @@ O sistema antigo de "Projetos" não seguia corretamente o processo legislativo p
 
 ---
 
-## 🔄 Status Atual do Sistema (2025-07-31)
+## 🔄 Status Atual do Sistema (2025-08-05)
 
-### Sistema Consolidado e Estável com OnlyOffice
+### Sistema Consolidado e Estável com Novos Módulos Administrativos
 
-O LegisInc encontra-se em um estado **altamente estável e consolidado** após as implementações recentes. Todos os 10 módulos core estão funcionando perfeitamente, incluindo a nova integração completa com OnlyOffice para edição colaborativa de documentos. O sistema de proposições agora conta com edição profissional de documentos e o dashboard foi aprimorado com métricas inteligentes. O sistema está pronto para a próxima fase de desenvolvimento focada em Sessões Plenárias e Sistema de Votação.
+O LegisInc encontra-se em um estado **altamente estável e consolidado** após as implementações recentes. Todos os 13 módulos core estão funcionando perfeitamente, incluindo os novos módulos de **Expediente**, **Pareceres Jurídicos** e **Testes**, além da integração completa com OnlyOffice para edição colaborativa de documentos. O sistema de proposições agora conta com edição profissional de documentos, fluxo jurídico completo e tramitação automatizada. O sistema está pronto para a próxima fase de desenvolvimento focada em Sessões Plenárias e Sistema de Votação.
 
 ### Indicadores de Qualidade
 
@@ -861,11 +928,15 @@ O LegisInc encontra-se em um estado **altamente estável e consolidado** após a
 3. ✅ **Gestão de Parlamentares** - Interface completa com busca avançada e integração com partidos
 4. ✅ **Gestão de Comissões** - Sistema de comissões permanentes e temporárias
 5. ✅ **Sistema de Proposições** - Workflow legislativo completo implementado com OnlyOffice
-6. ✅ **Sistema de Parâmetros Modulares** - Configuração hierárquica funcional
-7. ✅ **Mesa Diretora** - CRUD completo para gestão organizacional
-8. ✅ **Partidos Políticos** - Sistema completo com integração parlamentar
-9. ✅ **Sistema de Documentos** - Editor avançado com download e versionamento
-10. ✅ **Sistema OnlyOffice** - Editor completo com colaboração em tempo real
+6. ✅ **Sistema de Expediente** - Gestão completa de protocolos e tramitação
+7. ✅ **Sistema de Pareceres Jurídicos** - Análise jurídica completa com OnlyOffice
+8. ✅ **Sistema de Testes** - Suite completa de testes automatizados
+9. ✅ **Sistema de Middleware e Permissões** - Controle granular de acesso
+10. ✅ **Sistema de Parâmetros Modulares** - Configuração hierárquica funcional
+11. ✅ **Mesa Diretora** - CRUD completo para gestão organizacional
+12. ✅ **Partidos Políticos** - Sistema completo com integração parlamentar
+13. ✅ **Sistema de Documentos** - Editor avançado com download e versionamento
+14. ✅ **Sistema OnlyOffice** - Editor completo com colaboração em tempo real
 
 ### Próximo Marco: Sessões Plenárias e Votação
 
