@@ -878,7 +878,21 @@ Route::prefix('tests')->name('tests.')->middleware('auth')->group(function () {
     // Performance Tests
     Route::get('/performance', [App\Http\Controllers\TestController::class, 'performanceIndex'])->name('performance');
     
+    
     // Security Tests
     Route::get('/security', [App\Http\Controllers\TestController::class, 'securityIndex'])->name('security');
 });
 
+// Menu Debug Routes
+Route::middleware(['auth'])->group(function () {
+    Route::get('/test-menu', [App\Http\Controllers\TestMenuController::class, 'testExpedienteMenu'])->name('test-menu');
+    Route::get('/debug-menu', function() {
+        return view('debug-menu');
+    })->name('debug-menu');
+    Route::get('/test-permissions-live', function() {
+        return view('test-permissions-live');
+    })->name('test-permissions-live');
+    Route::get('/test-aside-debug', function() {
+        return view('test-aside-debug');
+    })->name('test-aside-debug');
+});

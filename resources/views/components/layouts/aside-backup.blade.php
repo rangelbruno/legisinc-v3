@@ -225,63 +225,18 @@
                                 <!--end:Menu link-->
                                 <!--begin:Menu sub-->
                                 <div class="menu-sub menu-sub-accordion {{ request()->routeIs('proposicoes.*') ? 'show' : '' }}">
-                                    {{-- FORCED CACHE BREAK {{ uniqid() }} --}}
+                                    <!-- DEBUG: SUBMENU ACTIVE {{ time() }} - USER: {{ Auth::user()->name ?? 'NOT_LOGGED' }} -->
                                     
-                                    {{-- URGENT: EXPEDIENTE SUBMENU MUST APPEAR --}}
-                                    @if(\App\Models\ScreenPermission::userCanAccessModule('expediente') || \App\Models\ScreenPermission::userCanAccessRoute('expediente.index'))
-                                    <div data-kt-menu-trigger="click" class="menu-item menu-accordion">
-                                        <span class="menu-link">
+                                    <!-- TESTE ITEM - FORCE UPDATE -->
+                                    <div class="menu-item">
+                                        <span class="menu-link" style="color: red; font-weight: bold;">
                                             <span class="menu-bullet">
                                                 <span class="bullet bullet-dot"></span>
                                             </span>
-                                            <span class="menu-title">📋 EXPEDIENTE</span>
-                                            <span class="menu-arrow"></span>
+                                            <span class="menu-title">🔥 TESTE UPDATE {{ now() }}</span>
                                         </span>
-                                        <div class="menu-sub menu-sub-accordion">
-                                            @if(\App\Models\ScreenPermission::userCanAccessRoute('expediente.index'))
-                                            <div class="menu-item">
-                                                <a class="menu-link" href="{{ route('expediente.index') }}">
-                                                    <span class="menu-bullet">
-                                                        <span class="bullet bullet-dot"></span>
-                                                    </span>
-                                                    <span class="menu-title">📋 Painel do Expediente</span>
-                                                </a>
-                                            </div>
-                                            @endif
-                                            @if(\App\Models\ScreenPermission::userCanAccessRoute('proposicoes.legislativo.index'))
-                                            <div class="menu-item">
-                                                <a class="menu-link" href="{{ route('proposicoes.legislativo.index') }}">
-                                                    <span class="menu-bullet">
-                                                        <span class="bullet bullet-dot"></span>
-                                                    </span>
-                                                    <span class="menu-title">Proposições Protocoladas</span>
-                                                </a>
-                                            </div>
-                                            @endif
-                                            @if(\App\Models\ScreenPermission::userCanAccessRoute('expediente.aguardando-pauta'))
-                                            <div class="menu-item">
-                                                <a class="menu-link" href="{{ route('expediente.aguardando-pauta') }}">
-                                                    <span class="menu-bullet">
-                                                        <span class="bullet bullet-dot"></span>
-                                                    </span>
-                                                    <span class="menu-title">Aguardando Pauta</span>
-                                                </a>
-                                            </div>
-                                            @endif
-                                            @if(\App\Models\ScreenPermission::userCanAccessRoute('expediente.relatorio'))
-                                            <div class="menu-item">
-                                                <a class="menu-link" href="{{ route('expediente.relatorio') }}">
-                                                    <span class="menu-bullet">
-                                                        <span class="bullet bullet-dot"></span>
-                                                    </span>
-                                                    <span class="menu-title">Relatório</span>
-                                                </a>
-                                            </div>
-                                            @endif
-                                        </div>
                                     </div>
-                                    @endif
-                                    {{-- END EXPEDIENTE SUBMENU --}}
+                                    <!-- END TESTE ITEM -->
                                     <!--begin:Menu item - Criar Proposição-->
                                     @if(\App\Models\ScreenPermission::userCanAccessRoute('proposicoes.criar'))
                                     <div class="menu-item">

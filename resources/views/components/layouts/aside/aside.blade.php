@@ -211,7 +211,7 @@
                 
                 <!--begin:Menu item - Proposições-->
                 @if(\App\Models\ScreenPermission::userCanAccessModule('proposicoes'))
-                <div data-kt-menu-trigger="click" class="menu-item menu-accordion {{ request()->routeIs('proposicoes.*') ? 'here show' : '' }}">
+                <div data-kt-menu-trigger="click" class="menu-item menu-accordion {{ request()->routeIs('proposicoes.*') || request()->routeIs('expediente.*') ? 'here show' : '' }}">
                     <span class="menu-link">
                         <span class="menu-icon">
                             <i class="ki-duotone ki-file-up fs-2">
@@ -222,7 +222,63 @@
                         <span class="menu-title">Proposições</span>
                         <span class="menu-arrow"></span>
                     </span>
-                    <div class="menu-sub menu-sub-accordion">
+                    <div class="menu-sub menu-sub-accordion {{ request()->routeIs('proposicoes.*') || request()->routeIs('expediente.*') ? 'show' : '' }}">
+                        {{-- EXPEDIENTE SUBMENU - FINAL FIX {{ time() }} --}}
+                        @if(\App\Models\ScreenPermission::userCanAccessModule('expediente') || \App\Models\ScreenPermission::userCanAccessRoute('expediente.index'))
+                        <div data-kt-menu-trigger="click" class="menu-item menu-accordion {{ request()->routeIs('expediente.*') ? 'here show' : '' }}">
+                            <span class="menu-link">
+                                <span class="menu-bullet">
+                                    <span class="bullet bullet-dot"></span>
+                                </span>
+                                <span class="menu-title">📋 EXPEDIENTE</span>
+                                <span class="menu-arrow"></span>
+                            </span>
+                            <div class="menu-sub menu-sub-accordion {{ request()->routeIs('expediente.*') ? 'show' : '' }}">
+                                @if(\App\Models\ScreenPermission::userCanAccessRoute('expediente.index'))
+                                <div class="menu-item">
+                                    <a class="menu-link {{ request()->routeIs('expediente.index') ? 'active' : '' }}" href="{{ route('expediente.index') }}">
+                                        <span class="menu-bullet">
+                                            <span class="bullet bullet-dot"></span>
+                                        </span>
+                                        <span class="menu-title">📋 Painel do Expediente</span>
+                                    </a>
+                                </div>
+                                @endif
+                                @if(\App\Models\ScreenPermission::userCanAccessRoute('proposicoes.legislativo.index'))
+                                <div class="menu-item">
+                                    <a class="menu-link {{ request()->routeIs('proposicoes.legislativo.index') ? 'active' : '' }}" href="{{ route('proposicoes.legislativo.index') }}">
+                                        <span class="menu-bullet">
+                                            <span class="bullet bullet-dot"></span>
+                                        </span>
+                                        <span class="menu-title">Proposições Protocoladas</span>
+                                    </a>
+                                </div>
+                                @endif
+                                @if(\App\Models\ScreenPermission::userCanAccessRoute('expediente.aguardando-pauta'))
+                                <div class="menu-item">
+                                    <a class="menu-link {{ request()->routeIs('expediente.aguardando-pauta') ? 'active' : '' }}" href="{{ route('expediente.aguardando-pauta') }}">
+                                        <span class="menu-bullet">
+                                            <span class="bullet bullet-dot"></span>
+                                        </span>
+                                        <span class="menu-title">Aguardando Pauta</span>
+                                    </a>
+                                </div>
+                                @endif
+                                @if(\App\Models\ScreenPermission::userCanAccessRoute('expediente.relatorio'))
+                                <div class="menu-item">
+                                    <a class="menu-link {{ request()->routeIs('expediente.relatorio') ? 'active' : '' }}" href="{{ route('expediente.relatorio') }}">
+                                        <span class="menu-bullet">
+                                            <span class="bullet bullet-dot"></span>
+                                        </span>
+                                        <span class="menu-title">Relatório</span>
+                                    </a>
+                                </div>
+                                @endif
+                            </div>
+                        </div>
+                        @endif
+                        {{-- END EXPEDIENTE SUBMENU --}}
+                        
                         @if(\App\Models\ScreenPermission::userCanAccessRoute('proposicoes.criar'))
                         <div class="menu-item">
                             <a class="menu-link {{ request()->routeIs('proposicoes.criar') ? 'active' : '' }}" href="{{ route('proposicoes.criar') }}">

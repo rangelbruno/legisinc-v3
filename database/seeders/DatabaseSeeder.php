@@ -33,5 +33,10 @@ class DatabaseSeeder extends Seeder
             ParametroPermissionSeeder::class,
             ParametroExemploSeeder::class,
         ]);
+
+        // Seeder de permissões de menu
+        $this->call([
+            MenuPermissionsSeeder::class,
+        ]);
     }
 }

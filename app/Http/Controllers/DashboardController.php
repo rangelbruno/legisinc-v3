@@ -234,7 +234,21 @@ class DashboardController extends Controller
             
             // Estatísticas específicas do Expediente
             $estatisticas = [
+                'total_proposicoes' => Proposicao::where('status', 'protocolado')->count(),
                 'proposicoes_protocoladas' => Proposicao::where('status', 'protocolado')->count(),
+                'aguardando_protocolo' => Proposicao::where('status', 'enviado_protocolo')->count(),
+                'protocoladas_hoje' => Proposicao::where('status', 'protocolado')
+                    ->whereDate('data_protocolo', today())
+                    ->count(),
+                'protocoladas_mes' => Proposicao::where('status', 'protocolado')
+                    ->whereMonth('data_protocolo', now()->month)
+                    ->whereYear('data_protocolo', now()->year)
+                    ->count(),
+                'por_funcionario_mes' => Proposicao::where('status', 'protocolado')
+                    ->whereMonth('data_protocolo', now()->month)
+                    ->whereYear('data_protocolo', now()->year)
+                    ->where('funcionario_protocolo_id', Auth::id())
+                    ->count(),
                 'aguardando_pauta' => Proposicao::where('status', 'protocolado')
                     ->whereNotNull('momento_sessao')
                     ->where('momento_sessao', '!=', 'NAO_CLASSIFICADO')
@@ -248,6 +262,8 @@ class DashboardController extends Controller
                 'nao_classificadas' => Proposicao::where('status', 'protocolado')
                     ->whereIn('momento_sessao', ['NAO_CLASSIFICADO', null])
                     ->count(),
+                'tempo_medio_protocolo' => 15, // Tempo médio estimado em minutos
+                'eficiencia_protocolo' => 4, // Proposições por hora
                 'sessoes_hoje' => 0, // Implementar quando houver modelo de sessões
                 'pautas_organizadas' => 0, // Implementar quando houver modelo de pautas
             ];
@@ -296,13 +312,8 @@ class DashboardController extends Controller
 
             // Se não houver view específica, usar a do protocolo temporariamente
             if (!view()->exists('dashboard.expediente')) {
-                return view('dashboard.protocolo', compact(
-                    'estatisticas', 
-                    'proposicoes_para_protocolo',
-                    'protocolos_recentes',
-                    'alertas_protocolo',
-                    'numeracao_tipos'
-                ))->with([
+                return view('dashboard.protocolo', [
+                    'estatisticas' => $estatisticas,
                     'proposicoes_para_protocolo' => $proposicoes_nao_classificadas,
                     'protocolos_recentes' => $proposicoes_expediente,
                     'alertas_protocolo' => $alertas,
