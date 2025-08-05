@@ -225,7 +225,7 @@
                     <div class="menu-sub menu-sub-accordion {{ request()->routeIs('proposicoes.*') || request()->routeIs('expediente.*') ? 'show' : '' }}">
                         {{-- EXPEDIENTE SUBMENU - FINAL FIX {{ time() }} --}}
                         @if(\App\Models\ScreenPermission::userCanAccessModule('expediente') || \App\Models\ScreenPermission::userCanAccessRoute('expediente.index'))
-                        <div data-kt-menu-trigger="click" class="menu-item menu-accordion {{ request()->routeIs('expediente.*') ? 'here show' : '' }}">
+                        <div data-kt-menu-trigger="click" class="menu-item menu-accordion {{ request()->routeIs('expediente.*') || request()->routeIs('proposicoes.legislativo.index') ? 'here show' : '' }}">
                             <span class="menu-link">
                                 <span class="menu-bullet">
                                     <span class="bullet bullet-dot"></span>
@@ -233,14 +233,14 @@
                                 <span class="menu-title">📋 EXPEDIENTE</span>
                                 <span class="menu-arrow"></span>
                             </span>
-                            <div class="menu-sub menu-sub-accordion {{ request()->routeIs('expediente.*') ? 'show' : '' }}">
+                            <div class="menu-sub menu-sub-accordion {{ request()->routeIs('expediente.*') || request()->routeIs('proposicoes.legislativo.index') ? 'show' : '' }}">
                                 @if(\App\Models\ScreenPermission::userCanAccessRoute('expediente.index'))
                                 <div class="menu-item">
                                     <a class="menu-link {{ request()->routeIs('expediente.index') ? 'active' : '' }}" href="{{ route('expediente.index') }}">
                                         <span class="menu-bullet">
                                             <span class="bullet bullet-dot"></span>
                                         </span>
-                                        <span class="menu-title">📋 Painel do Expediente</span>
+                                        <span class="menu-title">Painel do Expediente</span>
                                     </a>
                                 </div>
                                 @endif

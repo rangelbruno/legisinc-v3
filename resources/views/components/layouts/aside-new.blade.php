@@ -234,7 +234,7 @@
                                             <span class="menu-bullet">
                                                 <span class="bullet bullet-dot"></span>
                                             </span>
-                                            <span class="menu-title">📋 EXPEDIENTE</span>
+                                            <span class="menu-title">EXPEDIENTE</span>
                                             <span class="menu-arrow"></span>
                                         </span>
                                         <div class="menu-sub menu-sub-accordion">
@@ -244,7 +244,7 @@
                                                     <span class="menu-bullet">
                                                         <span class="bullet bullet-dot"></span>
                                                     </span>
-                                                    <span class="menu-title">📋 Painel do Expediente</span>
+                                                    <span class="menu-title">Painel do Expediente</span>
                                                 </a>
                                             </div>
                                             @endif
@@ -494,7 +494,7 @@
                                                     <span class="menu-bullet">
                                                         <span class="bullet bullet-dot"></span>
                                                     </span>
-                                                    <span class="menu-title">📋 Painel do Expediente [NOVO]</span>
+                                                    <span class="menu-title">Painel do Expediente [NOVO]</span>
                                                 </a>
                                                 <!--end:Menu link-->
                                             </div>

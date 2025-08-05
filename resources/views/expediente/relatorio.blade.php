@@ -3,6 +3,39 @@
 @section('title', 'Relatório do Expediente')
 
 @section('content')
+<style>
+.dashboard-card-primary {
+    background: linear-gradient(135deg, #F1416C 0%, #e02454 100%) !important;
+    background-image: url("/assets/media/patterns/vector-1.png"), linear-gradient(135deg, #F1416C 0%, #e02454 100%) !important;
+    background-repeat: no-repeat !important;
+    background-size: contain, cover !important;
+    background-position: right center, center !important;
+}
+
+.dashboard-card-info {
+    background: linear-gradient(135deg, #7239EA 0%, #5a2bc4 100%) !important;
+    background-image: url("/assets/media/patterns/vector-1.png"), linear-gradient(135deg, #7239EA 0%, #5a2bc4 100%) !important;
+    background-repeat: no-repeat !important;
+    background-size: contain, cover !important;
+    background-position: right center, center !important;
+}
+
+.dashboard-card-success {
+    background: linear-gradient(135deg, #17C653 0%, #13a342 100%) !important;
+    background-image: url("/assets/media/patterns/vector-1.png"), linear-gradient(135deg, #17C653 0%, #13a342 100%) !important;
+    background-repeat: no-repeat !important;
+    background-size: contain, cover !important;
+    background-position: right center, center !important;
+}
+
+.dashboard-card-warning {
+    background: linear-gradient(135deg, #FFC700 0%, #e6b300 100%) !important;
+    background-image: url("/assets/media/patterns/vector-1.png"), linear-gradient(135deg, #FFC700 0%, #e6b300 100%) !important;
+    background-repeat: no-repeat !important;
+    background-size: contain, cover !important;
+    background-position: right center, center !important;
+}
+</style>
 <div class="d-flex flex-column flex-column-fluid">
     <!-- Toolbar -->
     <div id="kt_app_toolbar" class="app-toolbar py-3 py-lg-6">
@@ -77,50 +110,116 @@
 
             <!-- Estatísticas -->
             <div class="row g-5 g-xl-10 mb-5 mb-xl-10">
-                <div class="col-md-6 col-lg-3">
-                    <div class="card card-flush bgi-no-repeat bgi-size-contain bgi-position-x-end h-md-50px" style="background-color: #F1416C; background-image:url('assets/media/patterns/vector-1.png')">
-                        <div class="card-header pt-5">
-                            <div class="card-title d-flex flex-column">
-                                <div class="d-flex align-items-center">
-                                    <span class="fs-2hx fw-bold text-white me-2 lh-1">{{ $estatisticas['total'] }}</span>
-                                </div>
-                                <span class="text-white opacity-75 pt-1 fw-semibold fs-6">Total</span>
+                <div class="col-xl-3 col-lg-6 col-md-6 col-sm-12">
+                    <div class="card card-flush h-100 mb-5 mb-xl-10 dashboard-card-primary cursor-pointer">
+                        <div class="card-header pt-5 pb-3">
+                            <div class="d-flex flex-center rounded-circle h-70px w-70px bg-white bg-opacity-20">
+                                <i class="ki-duotone ki-chart-simple text-white fs-2x">
+                                    <span class="path1"></span>
+                                    <span class="path2"></span>
+                                    <span class="path3"></span>
+                                    <span class="path4"></span>
+                                </i>
+                            </div>
+                        </div>
+                        
+                        <div class="card-body d-flex flex-column justify-content-end pt-0">
+                            <div class="d-flex align-items-center mb-3">
+                                <span class="fs-2hx fw-bold text-white me-2">{{ $estatisticas['total'] }}</span>
+                                <span class="fs-6 fw-semibold text-white opacity-75">proposições</span>
+                            </div>
+                            
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <span class="fs-6 fw-bold text-white">Total Protocoladas</span>
+                                <span class="badge badge-light-primary fs-8">100%</span>
+                            </div>
+                            
+                            <div class="progress h-6px bg-white bg-opacity-50">
+                                <div class="progress-bar bg-white" style="width: 100%"></div>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="col-md-6 col-lg-3">
-                    <div class="card card-flush bgi-no-repeat bgi-size-contain bgi-position-x-end h-md-50px" style="background-color: #7239EA; background-image:url('assets/media/patterns/vector-1.png')">
-                        <div class="card-header pt-5">
-                            <div class="card-title d-flex flex-column">
-                                <div class="d-flex align-items-center">
-                                    <span class="fs-2hx fw-bold text-white me-2 lh-1">{{ $estatisticas['por_momento']['EXPEDIENTE'] ?? 0 }}</span>
-                                </div>
-                                <span class="text-white opacity-75 pt-1 fw-semibold fs-6">Expediente</span>
+                <div class="col-xl-3 col-lg-6 col-md-6 col-sm-12">
+                    <div class="card card-flush h-100 mb-5 mb-xl-10 dashboard-card-info cursor-pointer">
+                        <div class="card-header pt-5 pb-3">
+                            <div class="d-flex flex-center rounded-circle h-70px w-70px bg-white bg-opacity-20">
+                                <i class="ki-duotone ki-file-up text-white fs-2x">
+                                    <span class="path1"></span>
+                                    <span class="path2"></span>
+                                </i>
+                            </div>
+                        </div>
+                        
+                        <div class="card-body d-flex flex-column justify-content-end pt-0">
+                            <div class="d-flex align-items-center mb-3">
+                                <span class="fs-2hx fw-bold text-white me-2">{{ $estatisticas['por_momento']['EXPEDIENTE'] ?? 0 }}</span>
+                                <span class="fs-6 fw-semibold text-white opacity-75">docs</span>
+                            </div>
+                            
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <span class="fs-6 fw-bold text-white">Expediente</span>
+                                <span class="badge badge-light-info fs-8">{{ $estatisticas['total'] > 0 ? round((($estatisticas['por_momento']['EXPEDIENTE'] ?? 0) / $estatisticas['total']) * 100) : 0 }}%</span>
+                            </div>
+                            
+                            <div class="progress h-6px bg-white bg-opacity-50">
+                                <div class="progress-bar bg-white" style="width: {{ $estatisticas['total'] > 0 ? round((($estatisticas['por_momento']['EXPEDIENTE'] ?? 0) / $estatisticas['total']) * 100) : 0 }}%"></div>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="col-md-6 col-lg-3">
-                    <div class="card card-flush bgi-no-repeat bgi-size-contain bgi-position-x-end h-md-50px" style="background-color: #17C653; background-image:url('assets/media/patterns/vector-1.png')">
-                        <div class="card-header pt-5">
-                            <div class="card-title d-flex flex-column">
-                                <div class="d-flex align-items-center">
-                                    <span class="fs-2hx fw-bold text-white me-2 lh-1">{{ $estatisticas['por_momento']['ORDEM_DO_DIA'] ?? 0 }}</span>
-                                </div>
-                                <span class="text-white opacity-75 pt-1 fw-semibold fs-6">Ordem do Dia</span>
+                <div class="col-xl-3 col-lg-6 col-md-6 col-sm-12">
+                    <div class="card card-flush h-100 mb-5 mb-xl-10 dashboard-card-success cursor-pointer">
+                        <div class="card-header pt-5 pb-3">
+                            <div class="d-flex flex-center rounded-circle h-70px w-70px bg-white bg-opacity-20">
+                                <i class="ki-duotone ki-calendar text-white fs-2x">
+                                    <span class="path1"></span>
+                                    <span class="path2"></span>
+                                </i>
+                            </div>
+                        </div>
+                        
+                        <div class="card-body d-flex flex-column justify-content-end pt-0">
+                            <div class="d-flex align-items-center mb-3">
+                                <span class="fs-2hx fw-bold text-white me-2">{{ $estatisticas['por_momento']['ORDEM_DO_DIA'] ?? 0 }}</span>
+                                <span class="fs-6 fw-semibold text-white opacity-75">itens</span>
+                            </div>
+                            
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <span class="fs-6 fw-bold text-white">Ordem do Dia</span>
+                                <span class="badge badge-light-success fs-8">{{ $estatisticas['total'] > 0 ? round((($estatisticas['por_momento']['ORDEM_DO_DIA'] ?? 0) / $estatisticas['total']) * 100) : 0 }}%</span>
+                            </div>
+                            
+                            <div class="progress h-6px bg-white bg-opacity-50">
+                                <div class="progress-bar bg-white" style="width: {{ $estatisticas['total'] > 0 ? round((($estatisticas['por_momento']['ORDEM_DO_DIA'] ?? 0) / $estatisticas['total']) * 100) : 0 }}%"></div>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="col-md-6 col-lg-3">
-                    <div class="card card-flush bgi-no-repeat bgi-size-contain bgi-position-x-end h-md-50px" style="background-color: #FFC700; background-image:url('assets/media/patterns/vector-1.png')">
-                        <div class="card-header pt-5">
-                            <div class="card-title d-flex flex-column">
-                                <div class="d-flex align-items-center">
-                                    <span class="fs-2hx fw-bold text-white me-2 lh-1">{{ $estatisticas['por_momento']['NAO_CLASSIFICADO'] ?? 0 }}</span>
-                                </div>
-                                <span class="text-white opacity-75 pt-1 fw-semibold fs-6">Não Classificadas</span>
+                <div class="col-xl-3 col-lg-6 col-md-6 col-sm-12">
+                    <div class="card card-flush h-100 mb-5 mb-xl-10 dashboard-card-warning cursor-pointer">
+                        <div class="card-header pt-5 pb-3">
+                            <div class="d-flex flex-center rounded-circle h-70px w-70px bg-white bg-opacity-20">
+                                <i class="ki-duotone ki-question text-white fs-2x">
+                                    <span class="path1"></span>
+                                    <span class="path2"></span>
+                                </i>
+                            </div>
+                        </div>
+                        
+                        <div class="card-body d-flex flex-column justify-content-end pt-0">
+                            <div class="d-flex align-items-center mb-3">
+                                <span class="fs-2hx fw-bold text-white me-2">{{ $estatisticas['por_momento']['NAO_CLASSIFICADO'] ?? 0 }}</span>
+                                <span class="fs-6 fw-semibold text-white opacity-75">pendentes</span>
+                            </div>
+                            
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <span class="fs-6 fw-bold text-white">Não Classificadas</span>
+                                <span class="badge badge-light-warning fs-8">{{ $estatisticas['total'] > 0 ? round((($estatisticas['por_momento']['NAO_CLASSIFICADO'] ?? 0) / $estatisticas['total']) * 100) : 0 }}%</span>
+                            </div>
+                            
+                            <div class="progress h-6px bg-white bg-opacity-50">
+                                <div class="progress-bar bg-white" style="width: {{ $estatisticas['total'] > 0 ? round((($estatisticas['por_momento']['NAO_CLASSIFICADO'] ?? 0) / $estatisticas['total']) * 100) : 0 }}%"></div>
                             </div>
                         </div>
                     </div>
@@ -301,6 +400,7 @@
         </div>
     </div>
 </div>
+
 
 @push('scripts')
 <script>

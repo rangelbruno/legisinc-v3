@@ -45,7 +45,7 @@
                 <div class="row g-5 g-xl-10 mb-5 mb-xl-10">
                     @foreach($porMomento as $momento => $props)
                     <div class="col-md-6">
-                        <div class="card card-flush bgi-no-repeat bgi-size-contain bgi-position-x-end h-md-50px" 
+                        <div class="card card-flush bgi-no-repeat bgi-size-contain bgi-position-x-end h-md-150px" 
                              style="background-color: {{ $momento === 'EXPEDIENTE' ? '#7239EA' : '#17C653' }}; background-image:url('assets/media/patterns/vector-1.png')">
                             <div class="card-header pt-5">
                                 <div class="card-title d-flex flex-column">

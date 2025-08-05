@@ -112,7 +112,7 @@ class CheckProposicaoPermission
      */
     private function checkLegislativoPermission($user, $next, $request)
     {
-        if ($user->hasRole('LEGISLATIVO') || $user->isAdmin()) {
+        if ($user->hasRole('LEGISLATIVO') || $user->hasRole('EXPEDIENTE') || $user->isAdmin()) {
             return $next($request);
         }
 
