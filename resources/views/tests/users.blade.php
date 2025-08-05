@@ -179,7 +179,7 @@
                                     </div>
                                     <div class="flex-grow-1">
                                         <a href="#" class="text-gray-900 fw-bold text-hover-primary fs-6">bruno@sistema.gov.br</a>
-                                        <span class="text-muted d-block fw-semibold">Administrador - senha: 13ligado</span>
+                                        <span class="text-muted d-block fw-semibold">Administrador - senha: 123456</span>
                                     </div>
                                 </div>
 
@@ -194,7 +194,7 @@
                                     </div>
                                     <div class="flex-grow-1">
                                         <a href="#" class="text-gray-900 fw-bold text-hover-primary fs-6">jessica@sistema.gov.br</a>
-                                        <span class="text-muted d-block fw-semibold">Parlamentar - senha: 13ligado</span>
+                                        <span class="text-muted d-block fw-semibold">Parlamentar - senha: 123456</span>
                                     </div>
                                 </div>
 
@@ -209,7 +209,7 @@
                                     </div>
                                     <div class="flex-grow-1">
                                         <a href="#" class="text-gray-900 fw-bold text-hover-primary fs-6">joao@sistema.gov.br</a>
-                                        <span class="text-muted d-block fw-semibold">Legislativo - senha: 13ligado</span>
+                                        <span class="text-muted d-block fw-semibold">Legislativo - senha: 123456</span>
                                     </div>
                                 </div>
 
@@ -224,7 +224,7 @@
                                     </div>
                                     <div class="flex-grow-1">
                                         <a href="#" class="text-gray-900 fw-bold text-hover-primary fs-6">roberto@sistema.gov.br</a>
-                                        <span class="text-muted d-block fw-semibold">Protocolo - senha: 13ligado</span>
+                                        <span class="text-muted d-block fw-semibold">Protocolo - senha: 123456</span>
                                     </div>
                                 </div>
 
@@ -240,7 +240,7 @@
                                     </div>
                                     <div class="flex-grow-1">
                                         <a href="#" class="text-gray-900 fw-bold text-hover-primary fs-6">expediente@sistema.gov.br</a>
-                                        <span class="text-muted d-block fw-semibold">Expediente - senha: 13ligado</span>
+                                        <span class="text-muted d-block fw-semibold">Expediente - senha: 123456</span>
                                     </div>
                                 </div>
 
@@ -256,7 +256,7 @@
                                     </div>
                                     <div class="flex-grow-1">
                                         <a href="#" class="text-gray-900 fw-bold text-hover-primary fs-6">juridico@sistema.gov.br</a>
-                                        <span class="text-muted d-block fw-semibold">Assessor Jurídico - senha: 13ligado</span>
+                                        <span class="text-muted d-block fw-semibold">Assessor Jurídico - senha: 123456</span>
                                     </div>
                                 </div>
                             </div>

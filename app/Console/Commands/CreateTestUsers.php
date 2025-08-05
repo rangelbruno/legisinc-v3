@@ -39,26 +39,38 @@ class CreateTestUsers extends Command
             [
                 'email' => 'bruno@sistema.gov.br',
                 'name' => 'Bruno Administrador',
-                'password' => '13ligado',
+                'password' => '123456',
                 'role' => User::PERFIL_ADMIN
             ],
             [
                 'email' => 'jessica@sistema.gov.br',
                 'name' => 'Jessica Parlamentar',
-                'password' => '13ligado', 
+                'password' => '123456', 
                 'role' => User::PERFIL_PARLAMENTAR
             ],
             [
                 'email' => 'joao@sistema.gov.br',
                 'name' => 'João Legislativo',
-                'password' => '13ligado',
+                'password' => '123456',
                 'role' => User::PERFIL_LEGISLATIVO
             ],
             [
                 'email' => 'roberto@sistema.gov.br',
                 'name' => 'Roberto Protocolo',
-                'password' => '13ligado',
+                'password' => '123456',
                 'role' => User::PERFIL_PROTOCOLO
+            ],
+            [
+                'email' => 'expediente@sistema.gov.br',
+                'name' => 'Carlos Expediente',
+                'password' => '123456',
+                'role' => User::PERFIL_EXPEDIENTE
+            ],
+            [
+                'email' => 'juridico@sistema.gov.br',
+                'name' => 'Ana Assessora Jurídica',
+                'password' => '123456',
+                'role' => User::PERFIL_ASSESSOR_JURIDICO
             ]
         ];
 
@@ -122,7 +134,9 @@ class CreateTestUsers extends Command
             'bruno@sistema.gov.br',
             'jessica@sistema.gov.br',
             'joao@sistema.gov.br',
-            'roberto@sistema.gov.br'
+            'roberto@sistema.gov.br',
+            'expediente@sistema.gov.br',
+            'juridico@sistema.gov.br'
         ];
 
         $deletedCount = User::whereIn('email', $testEmails)->delete();
@@ -138,7 +152,9 @@ class CreateTestUsers extends Command
             User::PERFIL_ADMIN,
             User::PERFIL_PARLAMENTAR, 
             User::PERFIL_LEGISLATIVO,
-            User::PERFIL_PROTOCOLO
+            User::PERFIL_PROTOCOLO,
+            User::PERFIL_EXPEDIENTE,
+            User::PERFIL_ASSESSOR_JURIDICO
         ];
         
         foreach ($requiredRoles as $roleName) {

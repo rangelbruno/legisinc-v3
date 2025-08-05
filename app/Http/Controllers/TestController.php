@@ -56,37 +56,37 @@ class TestController extends Controller
             [
                 'email' => 'bruno@sistema.gov.br',
                 'name' => 'Bruno Administrador',
-                'password' => '13ligado',
+                'password' => '123456',
                 'role' => 'ADMIN'
             ],
             [
                 'email' => 'jessica@sistema.gov.br',
                 'name' => 'Jessica Parlamentar',
-                'password' => '13ligado', 
+                'password' => '123456', 
                 'role' => 'PARLAMENTAR'
             ],
             [
                 'email' => 'joao@sistema.gov.br',
                 'name' => 'João Legislativo',
-                'password' => '13ligado',
+                'password' => '123456',
                 'role' => 'LEGISLATIVO'
             ],
             [
                 'email' => 'roberto@sistema.gov.br',
                 'name' => 'Roberto Protocolo',
-                'password' => '13ligado',
+                'password' => '123456',
                 'role' => 'PROTOCOLO'
             ],
             [
                 'email' => 'expediente@sistema.gov.br',
                 'name' => 'Carlos Expediente',
-                'password' => '13ligado',
+                'password' => '123456',
                 'role' => 'EXPEDIENTE'
             ],
             [
                 'email' => 'juridico@sistema.gov.br',
                 'name' => 'Ana Assessora Jurídica',
-                'password' => '13ligado',
+                'password' => '123456',
                 'role' => 'ASSESSOR_JURIDICO'
             ]
         ];
@@ -646,7 +646,7 @@ ARTIGO 2º - O teste deve validar todas as etapas do processo.';
                 $parlamentar = User::create([
                     'name' => 'Jessica Parlamentar',
                     'email' => 'jessica@sistema.gov.br',
-                    'password' => Hash::make('13ligado'),
+                    'password' => Hash::make('123456'),
                     'email_verified_at' => now()
                 ]);
                 $role = \Spatie\Permission\Models\Role::where('name', 'PARLAMENTAR')->first();
