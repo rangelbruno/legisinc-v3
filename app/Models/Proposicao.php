@@ -107,6 +107,14 @@ class Proposicao extends Model
     }
 
     /**
+     * Relacionamento com o parecer jurídico (alias)
+     */
+    public function parecerJuridico(): BelongsTo
+    {
+        return $this->belongsTo(ParecerJuridico::class, 'parecer_id');
+    }
+
+    /**
      * Relacionamento com os logs de tramitação
      */
     public function logstramitacao()

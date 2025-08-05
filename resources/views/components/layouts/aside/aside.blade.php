@@ -418,6 +418,45 @@
                 @endif
                 <!--end:Menu item-->
 
+                <!--begin:Menu item - Parecer Jurídico-->
+                @if(\App\Models\ScreenPermission::userCanAccessRoute('parecer-juridico.index'))
+                <div data-kt-menu-trigger="click" class="menu-item menu-accordion {{ request()->routeIs('parecer-juridico.*') ? 'here show' : '' }}">
+                    <span class="menu-link">
+                        <span class="menu-icon">
+                            <i class="ki-duotone ki-questionnaire-tablet fs-2">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                            </i>
+                        </span>
+                        <span class="menu-title">Parecer Jurídico</span>
+                        <span class="menu-arrow"></span>
+                    </span>
+                    <div class="menu-sub menu-sub-accordion {{ request()->routeIs('parecer-juridico.*') ? 'show' : '' }}">
+                        @if(\App\Models\ScreenPermission::userCanAccessRoute('parecer-juridico.index'))
+                        <div class="menu-item">
+                            <a class="menu-link {{ request()->routeIs('parecer-juridico.index') ? 'active' : '' }}" href="{{ route('parecer-juridico.index') }}">
+                                <span class="menu-bullet">
+                                    <span class="bullet bullet-dot"></span>
+                                </span>
+                                <span class="menu-title">Proposições Protocoladas</span>
+                            </a>
+                        </div>
+                        @endif
+                        @if(\App\Models\ScreenPermission::userCanAccessRoute('parecer-juridico.meus-pareceres'))
+                        <div class="menu-item">
+                            <a class="menu-link {{ request()->routeIs('parecer-juridico.meus-pareceres') ? 'active' : '' }}" href="{{ route('parecer-juridico.meus-pareceres') }}">
+                                <span class="menu-bullet">
+                                    <span class="bullet bullet-dot"></span>
+                                </span>
+                                <span class="menu-title">Meus Pareceres</span>
+                            </a>
+                        </div>
+                        @endif
+                    </div>
+                </div>
+                @endif
+                <!--end:Menu item-->
+
                 <!--begin:Menu item - Sessões-->
                 @if(\App\Models\ScreenPermission::userCanAccessModule('sessoes'))
                 <div data-kt-menu-trigger="click" class="menu-item menu-accordion {{ request()->routeIs('admin.sessions.*') ? 'here show' : '' }}">

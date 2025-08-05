@@ -577,7 +577,7 @@ Route::prefix('proposicoes')->name('proposicoes.')->middleware(['auth', 'check.s
     Route::get('/{proposicao}/corrigir', [App\Http\Controllers\ProposicaoAssinaturaController::class, 'corrigir'])->name('corrigir');
     Route::post('/{proposicao}/confirmar-leitura', [App\Http\Controllers\ProposicaoAssinaturaController::class, 'confirmarLeitura'])->name('confirmar-leitura');
     Route::post('/{proposicao}/processar-assinatura', [App\Http\Controllers\ProposicaoAssinaturaController::class, 'processarAssinatura'])->name('processar-assinatura');
-    Route::put('/{proposicao}/enviar-protocolo', [App\Http\Controllers\ProposicaoAssinaturaController::class, 'enviarProtocolo'])->name('enviar-protocolo');
+    Route::put('/{proposicao}/enviar-protocolo', [App\Http\Controllers\ProposicaoAssinaturaController::class, 'enviarProtocolo'])->name('assinatura.enviar-protocolo');
     Route::post('/{proposicao}/salvar-correcoes', [App\Http\Controllers\ProposicaoAssinaturaController::class, 'salvarCorrecoes'])->name('salvar-correcoes');
     Route::put('/{proposicao}/reenviar-legislativo', [App\Http\Controllers\ProposicaoAssinaturaController::class, 'reenviarLegislativo'])->name('reenviar-legislativo');
     Route::put('/{proposicao}/devolver-legislativo', [App\Http\Controllers\ProposicaoAssinaturaController::class, 'devolverLegislativo'])->name('devolver-legislativo');
@@ -655,6 +655,27 @@ Route::prefix('admin/templates')->name('admin.templates.')->middleware(['auth', 
     Route::get('/backups', [App\Http\Controllers\Admin\TemplateRelatorioController::class, 'listarBackups'])->name('listar-backups');
     Route::post('/backup/restaurar', [App\Http\Controllers\Admin\TemplateRelatorioController::class, 'restaurarBackup'])->name('restaurar-backup');
     Route::post('/resetar', [App\Http\Controllers\Admin\TemplateRelatorioController::class, 'resetarTemplate'])->name('resetar');
+});
+
+// ROTAS DO PARECER JURÍDICO
+Route::prefix('parecer-juridico')->name('parecer-juridico.')->middleware(['auth', 'check.screen.permission'])->group(function () {
+    // Listar proposições para parecer jurídico
+    Route::get('/', [App\Http\Controllers\ParecerJuridicoController::class, 'index'])->name('index');
+    
+    // Meus pareceres
+    Route::get('/meus-pareceres', [App\Http\Controllers\ParecerJuridicoController::class, 'meusPareceres'])->name('meus-pareceres');
+    
+    // Emitir parecer
+    Route::get('/proposicoes/{proposicao}/parecer', [App\Http\Controllers\ParecerJuridicoController::class, 'create'])->name('create');
+    Route::post('/proposicoes/{proposicao}/parecer', [App\Http\Controllers\ParecerJuridicoController::class, 'store'])->name('store');
+    
+    // Visualizar e editar parecer
+    Route::get('/pareceres/{parecerJuridico}', [App\Http\Controllers\ParecerJuridicoController::class, 'show'])->name('show');
+    Route::get('/pareceres/{parecerJuridico}/edit', [App\Http\Controllers\ParecerJuridicoController::class, 'edit'])->name('edit');
+    Route::put('/pareceres/{parecerJuridico}', [App\Http\Controllers\ParecerJuridicoController::class, 'update'])->name('update');
+    
+    // Gerar PDF
+    Route::get('/pareceres/{parecerJuridico}/pdf', [App\Http\Controllers\ParecerJuridicoController::class, 'generatePDF'])->name('pdf');
 });
 
 // ROTAS DE ADMINISTRAÇÃO - TIPOS DE PROPOSIÇÃO
