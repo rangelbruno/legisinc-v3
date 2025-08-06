@@ -57,6 +57,7 @@ class ParametroController extends Controller
             'Cabeçalho' => 'ki-document',
             'Marca D\'água' => 'ki-water',
             'Texto Padrão' => 'ki-text',
+            'Rodapé' => 'ki-scroll-down',
             default => 'ki-setting-2'
         };
     }
@@ -67,6 +68,7 @@ class ParametroController extends Controller
             'Cabeçalho' => 'parametros.templates.cabecalho',
             'Marca D\'água' => 'parametros.templates.marca-dagua', 
             'Texto Padrão' => 'parametros.templates.texto-padrao',
+            'Rodapé' => 'parametros.templates.rodape',
             default => 'parametros.index'
         };
     }

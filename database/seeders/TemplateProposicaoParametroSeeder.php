@@ -305,6 +305,123 @@ class TemplateProposicaoParametroSeeder extends Seeder
             $this->parametroService->criarCampo($campoData);
         }
 
+        // Criar submódulo "Rodapé"
+        $submoduloRodape = [
+            'modulo_id' => $modulo->id,
+            'nome' => 'Rodapé',
+            'descricao' => 'Configurações do rodapé dos documentos',
+            'tipo' => 'form',
+            'ordem' => 4,
+            'ativo' => true
+        ];
+
+        $submodulo4 = $this->parametroService->criarSubmodulo($submoduloRodape);
+
+        // Criar campos do submódulo Rodapé
+        $camposRodape = [
+            [
+                'nome' => 'usar_rodape',
+                'label' => 'Usar Rodapé',
+                'descricao' => 'Aplicar rodapé padrão nos documentos',
+                'tipo_campo' => 'checkbox',
+                'valor_padrao' => '1',
+                'obrigatorio' => false,
+                'ordem' => 1,
+                'placeholder' => 'Ativar rodapé automático'
+            ],
+            [
+                'nome' => 'rodape_tipo',
+                'label' => 'Tipo de Rodapé',
+                'descricao' => 'Tipo do rodapé: texto ou imagem',
+                'tipo_campo' => 'select',
+                'valor_padrao' => 'texto',
+                'obrigatorio' => true,
+                'ordem' => 2,
+                'placeholder' => 'Selecione o tipo',
+                'opcoes' => [
+                    'texto' => 'Texto',
+                    'imagem' => 'Imagem',
+                    'misto' => 'Texto + Imagem'
+                ]
+            ],
+            [
+                'nome' => 'rodape_texto',
+                'label' => 'Texto do Rodapé',
+                'descricao' => 'Texto padrão do rodapé dos documentos',
+                'tipo_campo' => 'textarea',
+                'valor_padrao' => 'Este documento foi gerado automaticamente pelo Sistema Legislativo.',
+                'obrigatorio' => false,
+                'ordem' => 3,
+                'placeholder' => 'Texto do rodapé',
+                'validacao' => [
+                    'max_length' => 500
+                ]
+            ],
+            [
+                'nome' => 'rodape_imagem',
+                'label' => 'Imagem do Rodapé',
+                'descricao' => 'Imagem utilizada no rodapé dos documentos',
+                'tipo_campo' => 'file',
+                'valor_padrao' => 'template/rodape.png',
+                'obrigatorio' => false,
+                'ordem' => 4,
+                'placeholder' => 'Selecione uma imagem PNG ou JPG',
+                'validacao' => [
+                    'accepted_types' => ['image/png', 'image/jpeg', 'image/jpg'],
+                    'max_size' => 2048 // 2MB
+                ],
+                'opcoes' => [
+                    'storage_path' => 'public/template',
+                    'default_file' => 'template/rodape.png'
+                ]
+            ],
+            [
+                'nome' => 'rodape_posicao',
+                'label' => 'Posição do Rodapé',
+                'descricao' => 'Posição do rodapé no documento',
+                'tipo_campo' => 'select',
+                'valor_padrao' => 'rodape',
+                'obrigatorio' => true,
+                'ordem' => 5,
+                'placeholder' => 'Selecione a posição',
+                'opcoes' => [
+                    'rodape' => 'Rodapé da página',
+                    'final' => 'Final do documento',
+                    'todas_paginas' => 'Todas as páginas'
+                ]
+            ],
+            [
+                'nome' => 'rodape_alinhamento',
+                'label' => 'Alinhamento',
+                'descricao' => 'Alinhamento do conteúdo do rodapé',
+                'tipo_campo' => 'select',
+                'valor_padrao' => 'centro',
+                'obrigatorio' => true,
+                'ordem' => 6,
+                'placeholder' => 'Selecione o alinhamento',
+                'opcoes' => [
+                    'esquerda' => 'Esquerda',
+                    'centro' => 'Centro',
+                    'direita' => 'Direita'
+                ]
+            ],
+            [
+                'nome' => 'rodape_numeracao',
+                'label' => 'Incluir Numeração',
+                'descricao' => 'Incluir numeração de páginas no rodapé',
+                'tipo_campo' => 'checkbox',
+                'valor_padrao' => '1',
+                'obrigatorio' => false,
+                'ordem' => 7,
+                'placeholder' => 'Ativar numeração de páginas'
+            ]
+        ];
+
+        foreach ($camposRodape as $campoData) {
+            $campoData['submodulo_id'] = $submodulo4->id;
+            $this->parametroService->criarCampo($campoData);
+        }
+
         $this->command->info('Módulo de Templates com todos os submódulos criado com sucesso!');
     }
 }

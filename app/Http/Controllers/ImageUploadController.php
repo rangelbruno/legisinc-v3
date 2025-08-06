@@ -131,6 +131,100 @@ class ImageUploadController extends Controller
     }
 
     /**
+     * Upload da imagem da marca d'água dos templates
+     */
+    public function uploadMarcaDagua(Request $request): JsonResponse
+    {
+        $request->validate([
+            'image' => 'required|image|mimes:jpeg,jpg,png|max:2048' // Max 2MB
+        ]);
+
+        try {
+            // Fazer upload da imagem para a pasta template no public
+            $file = $request->file('image');
+            $fileName = 'marca-dagua.' . $file->getClientOriginalExtension();
+            
+            // Salvar diretamente no public/template
+            $destinationPath = public_path('template');
+            if (!file_exists($destinationPath)) {
+                mkdir($destinationPath, 0755, true);
+            }
+            
+            $file->move($destinationPath, $fileName);
+            $relativePath = 'template/' . $fileName;
+            
+            // Salvar o caminho nos parâmetros
+            $this->parametroService->salvarValor('Templates', 'Marca D\'água', 'marca_dagua_imagem', $relativePath);
+            
+            $url = asset($relativePath);
+
+            return response()->json([
+                'success' => true,
+                'path' => $relativePath,
+                'url' => $url,
+                'message' => 'Imagem da marca d\'água enviada com sucesso!'
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Erro ao fazer upload da imagem da marca d\'água', [
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Erro ao enviar imagem da marca d\'água: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Upload da imagem do rodapé dos templates
+     */
+    public function uploadRodape(Request $request): JsonResponse
+    {
+        $request->validate([
+            'image' => 'required|image|mimes:jpeg,jpg,png|max:2048' // Max 2MB
+        ]);
+
+        try {
+            // Fazer upload da imagem para a pasta template no public
+            $file = $request->file('image');
+            $fileName = 'rodape.' . $file->getClientOriginalExtension();
+            
+            // Salvar diretamente no public/template
+            $destinationPath = public_path('template');
+            if (!file_exists($destinationPath)) {
+                mkdir($destinationPath, 0755, true);
+            }
+            
+            $file->move($destinationPath, $fileName);
+            $relativePath = 'template/' . $fileName;
+            
+            // Salvar o caminho nos parâmetros
+            $this->parametroService->salvarValor('Templates', 'Rodapé', 'rodape_imagem', $relativePath);
+            
+            $url = asset($relativePath);
+
+            return response()->json([
+                'success' => true,
+                'path' => $relativePath,
+                'url' => $url,
+                'message' => 'Imagem do rodapé enviada com sucesso!'
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Erro ao fazer upload da imagem do rodapé', [
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Erro ao enviar imagem do rodapé: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * Upload múltiplo de imagens
      */
     public function uploadMultiple(Request $request): JsonResponse

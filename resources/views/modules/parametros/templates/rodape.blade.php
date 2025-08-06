@@ -1,6 +1,6 @@
 @extends('components.layouts.app')
 
-@section('title', 'Configurar Templates - Marca D\'água')
+@section('title', 'Configurar Templates - Rodapé')
 
 @section('content')
     <!--begin::Toolbar-->
@@ -11,11 +11,11 @@
             <div class="page-title d-flex flex-column justify-content-center flex-wrap me-3">
                 <!--begin::Title-->
                 <h1 class="page-heading d-flex text-gray-900 fw-bold fs-3 flex-column justify-content-center my-0">
-                    <i class="ki-duotone ki-water fs-2 me-3">
+                    <i class="ki-duotone ki-scroll-down fs-2 me-3">
                         <span class="path1"></span>
                         <span class="path2"></span>
                     </i>
-                    Configurar Marca D'água dos Templates
+                    Configurar Rodapé dos Templates
                 </h1>
                 <!--end::Title-->
                 <!--begin::Breadcrumb-->
@@ -32,11 +32,7 @@
                     <li class="breadcrumb-item">
                         <span class="bullet bg-gray-500 w-5px h-2px"></span>
                     </li>
-                    <li class="breadcrumb-item text-muted">Templates</li>
-                    <li class="breadcrumb-item">
-                        <span class="bullet bg-gray-500 w-5px h-2px"></span>
-                    </li>
-                    <li class="breadcrumb-item text-muted">Marca D'água</li>
+                    <li class="breadcrumb-item text-muted">Rodapé</li>
                 </ul>
                 <!--end::Breadcrumb-->
             </div>
@@ -98,68 +94,57 @@
                         <div class="card-header pt-5">
                             <!--begin::Card title-->
                             <div class="card-title d-flex flex-column">
-                                <h3 class="fs-2 fw-bold text-gray-900 mb-1">Configurações da Marca D'água</h3>
-                                <span class="text-gray-500 fs-6">Configure a marca d'água que aparecerá nos documentos</span>
+                                <h3 class="fs-2 fw-bold text-gray-900 mb-1">Configurações do Rodapé</h3>
+                                <span class="text-gray-500 fs-6">Configure o rodapé que aparecerá nos documentos</span>
                             </div>
                             <!--end::Card title-->
                         </div>
                         <!--end::Card header-->
                         <!--begin::Card body-->
                         <div class="card-body pt-0">
-                            <form id="marca-dagua-form" method="POST">
+                            <form id="rodape-form" method="POST">
                                 @csrf
                                 
                                 <!--begin::Input group-->
                                 <div class="fv-row mb-7">
                                     <div class="form-check form-switch">
-                                        <input class="form-check-input" type="checkbox" id="usar_marca_dagua" name="usar_marca_dagua" value="1" {{ ($configuracoes['usar_marca_dagua'] ?? false) ? 'checked' : '' }} />
-                                        <label class="form-check-label fw-semibold fs-6" for="usar_marca_dagua">
-                                            Usar Marca D'água
+                                        <input class="form-check-input" type="checkbox" id="usar_rodape" name="usar_rodape" value="1" {{ ($configuracoes['usar_rodape'] ?? true) ? 'checked' : '' }} />
+                                        <label class="form-check-label fw-semibold fs-6" for="usar_rodape">
+                                            Usar Rodapé
                                         </label>
                                     </div>
-                                    <div class="form-text">Quando ativado, todos os documentos incluirão a marca d'água configurada</div>
+                                    <div class="form-text">Quando ativado, todos os documentos incluirão o rodapé configurado</div>
                                 </div>
                                 <!--end::Input group-->
 
                                 <!--begin::Input group-->
                                 <div class="fv-row mb-7">
-                                    <label class="form-label fw-semibold fs-6 required">Tipo de Marca D'água</label>
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <div class="form-check">
-                                                <input class="form-check-input" type="radio" name="marca_dagua_tipo" id="tipo_imagem" value="imagem" {{ ($configuracoes['tipo'] ?? 'imagem') === 'imagem' ? 'checked' : '' }} />
-                                                <label class="form-check-label" for="tipo_imagem">
-                                                    <i class="ki-duotone ki-picture fs-2 me-2">
-                                                        <span class="path1"></span>
-                                                        <span class="path2"></span>
-                                                    </i>
-                                                    Imagem
-                                                </label>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="form-check">
-                                                <input class="form-check-input" type="radio" name="marca_dagua_tipo" id="tipo_texto" value="texto" {{ ($configuracoes['tipo'] ?? 'imagem') === 'texto' ? 'checked' : '' }} />
-                                                <label class="form-check-label" for="tipo_texto">
-                                                    <i class="ki-duotone ki-text fs-2 me-2">
-                                                        <span class="path1"></span>
-                                                    </i>
-                                                    Texto
-                                                </label>
-                                            </div>
-                                        </div>
-                                    </div>
+                                    <label class="form-label fw-semibold fs-6 required">Tipo de Rodapé</label>
+                                    <select class="form-select form-select-solid" name="rodape_tipo" id="rodape_tipo" required>
+                                        <option value="texto" {{ ($configuracoes['tipo'] ?? 'texto') === 'texto' ? 'selected' : '' }}>Texto</option>
+                                        <option value="imagem" {{ ($configuracoes['tipo'] ?? 'texto') === 'imagem' ? 'selected' : '' }}>Imagem</option>
+                                        <option value="misto" {{ ($configuracoes['tipo'] ?? 'texto') === 'misto' ? 'selected' : '' }}>Texto + Imagem</option>
+                                    </select>
+                                    <div class="form-text">Tipo de conteúdo do rodapé</div>
                                 </div>
                                 <!--end::Input group-->
 
                                 <!--begin::Input group-->
-                                <div class="fv-row mb-7" id="imagem-container" style="display: {{ ($configuracoes['tipo'] ?? 'imagem') === 'imagem' ? 'block' : 'none' }}">
-                                    <label class="form-label fw-semibold fs-6">Imagem da Marca D'água</label>
+                                <div class="fv-row mb-7" id="texto-container" style="display: {{ ($configuracoes['tipo'] ?? 'texto') === 'imagem' ? 'none' : 'block' }}">
+                                    <label class="form-label fw-semibold fs-6">Texto do Rodapé</label>
+                                    <textarea class="form-control form-control-solid" name="rodape_texto" rows="3" maxlength="500" placeholder="Texto do rodapé">{{ $configuracoes['texto'] ?? 'Este documento foi gerado automaticamente pelo Sistema Legislativo.' }}</textarea>
+                                    <div class="form-text">Texto que aparecerá no rodapé (máximo 500 caracteres)</div>
+                                </div>
+                                <!--end::Input group-->
+
+                                <!--begin::Input group-->
+                                <div class="fv-row mb-7" id="imagem-container" style="display: {{ ($configuracoes['tipo'] ?? 'texto') === 'texto' ? 'none' : 'block' }}">
+                                    <label class="form-label fw-semibold fs-6">Imagem do Rodapé</label>
                                     <div class="mt-1">
                                         <!--begin::Image input placeholder-->
                                         <style>
-                                            .marca-dagua-placeholder { 
-                                                background-image: url('{{ asset($configuracoes['imagem'] ?? 'template/marca-dagua.png') }}'); 
+                                            .rodape-placeholder { 
+                                                background-image: url('{{ asset($configuracoes['imagem'] ?? 'template/rodape.png') }}'); 
                                                 background-size: contain;
                                                 background-repeat: no-repeat;
                                                 background-position: center;
@@ -168,9 +153,9 @@
                                         <!--end::Image input placeholder-->
 
                                         <!--begin::Image input-->
-                                        <div class="image-input image-input-outline marca-dagua-placeholder" data-kt-image-input="true">
+                                        <div class="image-input image-input-outline rodape-placeholder" data-kt-image-input="true">
                                             <!--begin::Preview existing image-->
-                                            <div class="image-input-wrapper w-200px h-200px" id="marca-dagua-preview" style="background-image: url('{{ asset($configuracoes['imagem'] ?? 'template/marca-dagua.png') }}'); background-size: contain; background-repeat: no-repeat; background-position: center;"></div>
+                                            <div class="image-input-wrapper w-200px h-100px" id="rodape-preview" style="background-image: url('{{ asset($configuracoes['imagem'] ?? 'template/rodape.png') }}'); background-size: contain; background-repeat: no-repeat; background-position: center;"></div>
                                             <!--end::Preview existing image-->
 
                                             <!--begin::Edit-->
@@ -180,8 +165,8 @@
                                                     <span class="path2"></span>
                                                 </i>
                                                 <!--begin::Inputs-->
-                                                <input type="file" name="marca_dagua_image" accept=".png,.jpg,.jpeg" id="marca-dagua-input" />
-                                                <input type="hidden" name="marca_dagua_imagem_atual" value="{{ $configuracoes['imagem'] ?? '' }}" />
+                                                <input type="file" name="rodape_image" accept=".png,.jpg,.jpeg" id="rodape-input" />
+                                                <input type="hidden" name="rodape_imagem_atual" value="{{ $configuracoes['imagem'] ?? '' }}" />
                                                 <!--end::Inputs-->
                                             </label>
                                             <!--end::Edit-->
@@ -207,53 +192,74 @@
                                         <!--end::Image input-->
                                         
                                         <!--begin::Hint-->
-                                        <div class="form-text">Formatos aceitos: PNG, JPG, JPEG. Tamanho máximo: 2MB. Recomendado: imagem com transparência</div>
+                                        <div class="form-text">Formatos aceitos: PNG, JPG, JPEG. Tamanho máximo: 2MB. Recomendado: imagem com fundo transparente</div>
                                         <!--end::Hint-->
                                     </div>
                                 </div>
                                 <!--end::Input group-->
 
                                 <!--begin::Input group-->
-                                <div class="fv-row mb-7" id="texto-container" style="display: {{ ($configuracoes['tipo'] ?? 'imagem') === 'texto' ? 'block' : 'none' }}">
-                                    <label class="form-label fw-semibold fs-6">Texto da Marca D'água</label>
-                                    <input type="text" class="form-control form-control-solid" name="marca_dagua_texto" placeholder="CONFIDENCIAL" value="{{ $configuracoes['texto'] ?? 'CONFIDENCIAL' }}" maxlength="255" />
-                                    <div class="form-text">Texto que aparecerá como marca d'água</div>
-                                </div>
-                                <!--end::Input group-->
-
-                                <!--begin::Input group-->
-                                <div class="fv-row mb-7">
-                                    <label class="form-label fw-semibold fs-6 required">Opacidade</label>
-                                    <div class="input-group">
-                                        <input type="range" class="form-range" name="marca_dagua_opacidade" id="opacidade-range" min="10" max="100" value="{{ $configuracoes['opacidade'] ?? 30 }}" />
-                                        <span class="input-group-text" id="opacidade-valor">{{ $configuracoes['opacidade'] ?? 30 }}%</span>
-                                    </div>
-                                    <div class="form-text">Transparência da marca d'água (10% = muito transparente, 100% = opaco)</div>
-                                </div>
-                                <!--end::Input group-->
-
-                                <!--begin::Input group-->
                                 <div class="fv-row mb-7">
                                     <label class="form-label fw-semibold fs-6 required">Posição</label>
-                                    <select class="form-select form-select-solid" name="marca_dagua_posicao" required>
-                                        <option value="centro" {{ ($configuracoes['posicao'] ?? 'centro') === 'centro' ? 'selected' : '' }}>Centro</option>
-                                        <option value="superior_direita" {{ ($configuracoes['posicao'] ?? 'centro') === 'superior_direita' ? 'selected' : '' }}>Superior Direita</option>
-                                        <option value="superior_esquerda" {{ ($configuracoes['posicao'] ?? 'centro') === 'superior_esquerda' ? 'selected' : '' }}>Superior Esquerda</option>
-                                        <option value="inferior_direita" {{ ($configuracoes['posicao'] ?? 'centro') === 'inferior_direita' ? 'selected' : '' }}>Inferior Direita</option>
-                                        <option value="inferior_esquerda" {{ ($configuracoes['posicao'] ?? 'centro') === 'inferior_esquerda' ? 'selected' : '' }}>Inferior Esquerda</option>
+                                    <select class="form-select form-select-solid" name="rodape_posicao" required>
+                                        <option value="rodape" {{ ($configuracoes['posicao'] ?? 'rodape') === 'rodape' ? 'selected' : '' }}>Rodapé da página</option>
+                                        <option value="final" {{ ($configuracoes['posicao'] ?? 'rodape') === 'final' ? 'selected' : '' }}>Final do documento</option>
+                                        <option value="todas_paginas" {{ ($configuracoes['posicao'] ?? 'rodape') === 'todas_paginas' ? 'selected' : '' }}>Todas as páginas</option>
                                     </select>
-                                    <div class="form-text">Onde posicionar a marca d'água no documento</div>
+                                    <div class="form-text">Onde posicionar o rodapé no documento</div>
+                                </div>
+                                <!--end::Input group-->
+
+                                <!--begin::Input group-->
+                                <div class="fv-row mb-7">
+                                    <label class="form-label fw-semibold fs-6 required">Alinhamento</label>
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="rodape_alinhamento" id="align_left" value="esquerda" {{ ($configuracoes['alinhamento'] ?? 'centro') === 'esquerda' ? 'checked' : '' }} />
+                                                <label class="form-check-label" for="align_left">
+                                                    <i class="ki-duotone ki-text-align-left fs-2 me-2">
+                                                        <span class="path1"></span>
+                                                    </i>
+                                                    Esquerda
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="rodape_alinhamento" id="align_center" value="centro" {{ ($configuracoes['alinhamento'] ?? 'centro') === 'centro' ? 'checked' : '' }} />
+                                                <label class="form-check-label" for="align_center">
+                                                    <i class="ki-duotone ki-text-align-center fs-2 me-2">
+                                                        <span class="path1"></span>
+                                                    </i>
+                                                    Centro
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="rodape_alinhamento" id="align_right" value="direita" {{ ($configuracoes['alinhamento'] ?? 'centro') === 'direita' ? 'checked' : '' }} />
+                                                <label class="form-check-label" for="align_right">
+                                                    <i class="ki-duotone ki-text-align-right fs-2 me-2">
+                                                        <span class="path1"></span>
+                                                    </i>
+                                                    Direita
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                                 <!--end::Input group-->
 
                                 <!--begin::Input group-->
                                 <div class="fv-row mb-10">
-                                    <label class="form-label fw-semibold fs-6 required">Tamanho</label>
-                                    <div class="input-group">
-                                        <input type="number" class="form-control form-control-solid" name="marca_dagua_tamanho" placeholder="100" value="{{ $configuracoes['tamanho'] ?? 100 }}" min="50" max="300" required />
-                                        <span class="input-group-text">px</span>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="rodape_numeracao" name="rodape_numeracao" value="1" {{ ($configuracoes['numeracao'] ?? true) ? 'checked' : '' }} />
+                                        <label class="form-check-label fw-semibold fs-6" for="rodape_numeracao">
+                                            Incluir Numeração de Páginas
+                                        </label>
                                     </div>
-                                    <div class="form-text">Tamanho da marca d'água em pixels (mínimo: 50px, máximo: 300px)</div>
+                                    <div class="form-text">Adicionar numeração de páginas no rodapé</div>
                                 </div>
                                 <!--end::Input group-->
 
@@ -285,7 +291,7 @@
                             <!--begin::Card title-->
                             <div class="card-title d-flex flex-column">
                                 <h3 class="fs-4 fw-bold text-gray-900 mb-1">Preview</h3>
-                                <span class="text-gray-500 fs-6">Visualização da marca d'água</span>
+                                <span class="text-gray-500 fs-6">Visualização do rodapé</span>
                             </div>
                             <!--end::Card title-->
                         </div>
@@ -294,16 +300,27 @@
                         <div class="card-body pt-0">
                             <!--begin::Preview area-->
                             <div class="position-relative bg-light-gray border border-dashed border-gray-300 rounded p-5" style="height: 300px; overflow: hidden;">
-                                <div class="position-absolute w-100 h-100 d-flex align-items-center justify-content-center" id="watermark-preview-container" style="opacity: {{ ($configuracoes['opacidade'] ?? 30) / 100 }}; z-index: 1;">
-                                    <!-- Text watermark -->
-                                    <span class="text-gray-600 fs-1 fw-bold" id="preview-text" style="display: {{ ($configuracoes['tipo'] ?? 'imagem') === 'texto' ? 'block' : 'none' }};">{{ $configuracoes['texto'] ?? 'CONFIDENCIAL' }}</span>
-                                    <!-- Image watermark -->
-                                    <div id="preview-image" style="display: {{ ($configuracoes['tipo'] ?? 'imagem') === 'imagem' ? 'block' : 'none' }}; width: {{ $configuracoes['tamanho'] ?? 100 }}px; height: {{ $configuracoes['tamanho'] ?? 100 }}px; background-image: url('{{ asset($configuracoes['imagem'] ?? 'template/marca-dagua.png') }}'); background-size: contain; background-repeat: no-repeat; background-position: center;"></div>
-                                </div>
-                                <div class="position-relative" style="z-index: 2;">
-                                    <p class="text-gray-700 mb-3">Este é um exemplo de documento com marca d'água.</p>
-                                    <p class="text-gray-700 mb-3">A marca d'água aparecerá conforme as configurações definidas.</p>
-                                    <p class="text-gray-700">Ajuste a opacidade, posição e tamanho conforme necessário.</p>
+                                <div class="position-relative h-100 d-flex flex-column">
+                                    <!-- Document content area -->
+                                    <div class="flex-grow-1 d-flex align-items-center justify-content-center">
+                                        <div class="text-center">
+                                            <p class="text-gray-700 mb-3">Conteúdo do documento</p>
+                                            <p class="text-gray-500 fs-7">Esta área representa o conteúdo principal do documento.</p>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Footer preview area -->
+                                    <div class="border-top border-gray-200 pt-3 mt-3" id="footer-preview-container">
+                                        <div class="d-flex justify-content-center align-items-center" id="footer-content">
+                                            <div class="text-center">
+                                                <div id="footer-text" class="text-gray-600 fs-8">Este documento foi gerado automaticamente pelo Sistema Legislativo.</div>
+                                                <div id="footer-image" class="mt-2" style="display: none;">
+                                                    <img src="{{ asset($configuracoes['imagem'] ?? 'template/rodape.png') }}" alt="Rodapé" style="max-height: 30px; width: auto;" />
+                                                </div>
+                                                <div id="footer-pagination" class="text-gray-500 fs-9 mt-2">Página 1 de 1</div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                             <!--end::Preview area-->
@@ -312,40 +329,40 @@
                             <div class="mt-5">
                                 <div class="d-flex flex-stack py-2">
                                     <div class="d-flex align-items-center">
-                                        <i class="ki-duotone ki-eye fs-2 text-gray-400 me-3">
-                                            <span class="path1"></span>
-                                            <span class="path2"></span>
-                                            <span class="path3"></span>
-                                        </i>
-                                        <div class="d-flex flex-column">
-                                            <div class="fs-6 fw-semibold text-gray-800">Opacidade Atual</div>
-                                            <div class="fs-7 text-gray-500" id="info-opacidade">30%</div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="d-flex flex-stack py-2">
-                                    <div class="d-flex align-items-center">
                                         <i class="ki-duotone ki-geolocation fs-2 text-gray-400 me-3">
                                             <span class="path1"></span>
                                             <span class="path2"></span>
                                         </i>
                                         <div class="d-flex flex-column">
-                                            <div class="fs-6 fw-semibold text-gray-800">Posição</div>
-                                            <div class="fs-7 text-gray-500" id="info-posicao">Centro</div>
+                                            <div class="fs-6 fw-semibold text-gray-800">Posição Atual</div>
+                                            <div class="fs-7 text-gray-500" id="info-posicao">Rodapé da página</div>
                                         </div>
                                     </div>
                                 </div>
 
                                 <div class="d-flex flex-stack py-2">
                                     <div class="d-flex align-items-center">
-                                        <i class="ki-duotone ki-resize fs-2 text-gray-400 me-3">
+                                        <i class="ki-duotone ki-text-align-center fs-2 text-gray-400 me-3">
                                             <span class="path1"></span>
-                                            <span class="path2"></span>
                                         </i>
                                         <div class="d-flex flex-column">
-                                            <div class="fs-6 fw-semibold text-gray-800">Tamanho</div>
-                                            <div class="fs-7 text-gray-500" id="info-tamanho">100px</div>
+                                            <div class="fs-6 fw-semibold text-gray-800">Alinhamento</div>
+                                            <div class="fs-7 text-gray-500" id="info-alinhamento">Centro</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="d-flex flex-stack py-2">
+                                    <div class="d-flex align-items-center">
+                                        <i class="ki-duotone ki-category fs-2 text-gray-400 me-3">
+                                            <span class="path1"></span>
+                                            <span class="path2"></span>
+                                            <span class="path3"></span>
+                                            <span class="path4"></span>
+                                        </i>
+                                        <div class="d-flex flex-column">
+                                            <div class="fs-6 fw-semibold text-gray-800">Tipo</div>
+                                            <div class="fs-7 text-gray-500" id="info-tipo">Texto</div>
                                         </div>
                                     </div>
                                 </div>
@@ -363,9 +380,9 @@
                                     <div class="fw-semibold">
                                         <h4 class="text-gray-900 fw-bold">Dica</h4>
                                         <div class="fs-6 text-gray-700">
-                                            A marca d'água será aplicada automaticamente em todos os documentos gerados quando a opção estiver ativada.
+                                            O rodapé será aplicado automaticamente em todos os documentos gerados quando a opção estiver ativada.
                                             <br><br>
-                                            Use uma opacidade baixa (10-30%) para não interferir na legibilidade do texto.
+                                            Use textos concisos e informativos para uma melhor apresentação.
                                         </div>
                                     </div>
                                 </div>
@@ -387,75 +404,48 @@
 @push('scripts')
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('🎨 Marca d\'água carregada');
+            console.log('🦶 Rodapé carregado');
             
-            const form = document.getElementById('marca-dagua-form');
-            const tipoImagem = document.getElementById('tipo_imagem');
-            const tipoTexto = document.getElementById('tipo_texto');
+            const form = document.getElementById('rodape-form');
+            const tipoSelect = document.getElementById('rodape_tipo');
             const textoContainer = document.getElementById('texto-container');
             const imagemContainer = document.getElementById('imagem-container');
-            const opacidadeRange = document.getElementById('opacidade-range');
-            const opacidadeValor = document.getElementById('opacidade-valor');
-            const previewText = document.getElementById('preview-text');
-            const previewImage = document.getElementById('preview-image');
-            const watermarkContainer = document.getElementById('watermark-preview-container');
-            const fileInput = document.getElementById('marca-dagua-input');
-            const preview = document.getElementById('marca-dagua-preview');
+            const footerText = document.getElementById('footer-text');
+            const footerImage = document.getElementById('footer-image');
+            const footerPagination = document.getElementById('footer-pagination');
+            const footerContent = document.getElementById('footer-content');
+            const fileInput = document.getElementById('rodape-input');
+            const preview = document.getElementById('rodape-preview');
             
-            // Toggle containers
+            // Toggle containers based on type
             function toggleContainers() {
-                if (tipoTexto.checked) {
-                    textoContainer.style.display = 'block';
-                    imagemContainer.style.display = 'none';
-                    previewText.style.display = 'block';
-                    previewImage.style.display = 'none';
-                } else {
-                    textoContainer.style.display = 'none';
-                    imagemContainer.style.display = 'block';
-                    previewText.style.display = 'none';
-                    previewImage.style.display = 'block';
-                }
-            }
-            
-            tipoImagem.addEventListener('change', toggleContainers);
-            tipoTexto.addEventListener('change', toggleContainers);
-            
-            // Update preview position function
-            function updatePreviewPosition(posicao) {
-                watermarkContainer.className = 'position-absolute w-100 h-100 d-flex';
-                watermarkContainer.style.zIndex = '1';
+                const tipo = tipoSelect.value;
                 
-                switch(posicao) {
-                    case 'centro':
-                        watermarkContainer.style.alignItems = 'center';
-                        watermarkContainer.style.justifyContent = 'center';
+                switch(tipo) {
+                    case 'texto':
+                        textoContainer.style.display = 'block';
+                        imagemContainer.style.display = 'none';
+                        footerText.style.display = 'block';
+                        footerImage.style.display = 'none';
                         break;
-                    case 'superior_direita':
-                        watermarkContainer.style.alignItems = 'flex-start';
-                        watermarkContainer.style.justifyContent = 'flex-end';
-                        watermarkContainer.style.padding = '20px';
+                    case 'imagem':
+                        textoContainer.style.display = 'none';
+                        imagemContainer.style.display = 'block';
+                        footerText.style.display = 'none';
+                        footerImage.style.display = 'block';
                         break;
-                    case 'superior_esquerda':
-                        watermarkContainer.style.alignItems = 'flex-start';
-                        watermarkContainer.style.justifyContent = 'flex-start';
-                        watermarkContainer.style.padding = '20px';
+                    case 'misto':
+                        textoContainer.style.display = 'block';
+                        imagemContainer.style.display = 'block';
+                        footerText.style.display = 'block';
+                        footerImage.style.display = 'block';
                         break;
-                    case 'inferior_direita':
-                        watermarkContainer.style.alignItems = 'flex-end';
-                        watermarkContainer.style.justifyContent = 'flex-end';
-                        watermarkContainer.style.padding = '20px';
-                        break;
-                    case 'inferior_esquerda':
-                        watermarkContainer.style.alignItems = 'flex-end';
-                        watermarkContainer.style.justifyContent = 'flex-start';
-                        watermarkContainer.style.padding = '20px';
-                        break;
-                    default:
-                        watermarkContainer.style.alignItems = 'center';
-                        watermarkContainer.style.justifyContent = 'center';
-                        watermarkContainer.style.padding = '0';
                 }
+                
+                document.getElementById('info-tipo').textContent = tipo.charAt(0).toUpperCase() + tipo.slice(1);
             }
+            
+            tipoSelect.addEventListener('change', toggleContainers);
             
             // Handle file upload
             fileInput.addEventListener('change', function(e) {
@@ -502,7 +492,7 @@
                 formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
                 
                 // Upload file
-                fetch('{{ route("images.upload.marca-dagua") }}', {
+                fetch('{{ route("images.upload.rodape") }}', {
                     method: 'POST',
                     body: formData,
                     headers: {
@@ -517,12 +507,11 @@
                     
                     if (data.success) {
                         // Update preview
-                        console.log('Updating preview with URL:', data.url);
                         preview.style.backgroundImage = `url('${data.url}')`;
-                        previewImage.style.backgroundImage = `url('${data.url}')`;
+                        footerImage.querySelector('img').src = data.url;
                         
                         // Update hidden input
-                        document.querySelector('input[name="marca_dagua_imagem_atual"]').value = data.path || data.url;
+                        document.querySelector('input[name="rodape_imagem_atual"]').value = data.path || data.url;
                         
                         Swal.fire({
                             title: 'Sucesso!',
@@ -548,75 +537,41 @@
                 });
             }
             
-            // Update opacity value display
-            opacidadeRange.addEventListener('input', function() {
-                const valor = this.value;
-                opacidadeValor.textContent = valor + '%';
-                document.getElementById('info-opacidade').textContent = valor + '%';
-                watermarkContainer.style.opacity = valor / 100;
-            });
-            
             // Update preview text
-            document.querySelector('input[name="marca_dagua_texto"]').addEventListener('input', function() {
-                previewText.textContent = this.value || 'CONFIDENCIAL';
+            document.querySelector('textarea[name="rodape_texto"]').addEventListener('input', function() {
+                footerText.textContent = this.value || 'Este documento foi gerado automaticamente pelo Sistema Legislativo.';
             });
             
             // Update position info
-            document.querySelector('select[name="marca_dagua_posicao"]').addEventListener('change', function() {
+            document.querySelector('select[name="rodape_posicao"]').addEventListener('change', function() {
                 const posicoes = {
-                    'centro': 'Centro',
-                    'superior_direita': 'Superior Direita',
-                    'superior_esquerda': 'Superior Esquerda',
-                    'inferior_direita': 'Inferior Direita',
-                    'inferior_esquerda': 'Inferior Esquerda'
+                    'rodape': 'Rodapé da página',
+                    'final': 'Final do documento',
+                    'todas_paginas': 'Todas as páginas'
                 };
-                document.getElementById('info-posicao').textContent = posicoes[this.value] || 'Centro';
-                
-                // Update preview position
-                updatePreviewPosition(this.value);
+                document.getElementById('info-posicao').textContent = posicoes[this.value] || 'Rodapé da página';
             });
             
-            // Update size info and preview
-            function updatePreviewSize(tamanho) {
-                const tamanhoPixels = tamanho + 'px';
-                document.getElementById('info-tamanho').textContent = tamanhoPixels;
-                
-                // Update preview image size
-                previewImage.style.width = tamanhoPixels;
-                previewImage.style.height = tamanhoPixels;
-                
-                // Update text size proportionally (text uses font-size)
-                const textSizeClass = tamanho < 80 ? 'fs-3' : tamanho < 120 ? 'fs-1' : 'fs-2x';
-                previewText.className = `text-gray-600 fw-bold ${textSizeClass}`;
-            }
-            
-            document.querySelector('input[name="marca_dagua_tamanho"]').addEventListener('input', function() {
-                updatePreviewSize(parseInt(this.value));
-            });
-            
-            // Initialize preview with current values
-            function initializePreview() {
-                // Apply initial position
-                const posicaoAtual = document.querySelector('select[name="marca_dagua_posicao"]').value;
-                updatePreviewPosition(posicaoAtual);
-                
-                // Apply initial size
-                const tamanhoAtual = parseInt(document.querySelector('input[name="marca_dagua_tamanho"]').value);
-                updatePreviewSize(tamanhoAtual);
-                
-                // Apply initial opacity
-                const opacidadeAtual = parseInt(document.querySelector('input[name="marca_dagua_opacidade"]').value);
-                watermarkContainer.style.opacity = opacidadeAtual / 100;
-                
-                console.log('🎨 Preview inicializado', {
-                    posicao: posicaoAtual,
-                    tamanho: tamanhoAtual,
-                    opacidade: opacidadeAtual
+            // Update alignment info and preview
+            document.querySelectorAll('input[name="rodape_alinhamento"]').forEach(radio => {
+                radio.addEventListener('change', function() {
+                    const alinhamentos = {
+                        'esquerda': 'Esquerda',
+                        'centro': 'Centro',
+                        'direita': 'Direita'
+                    };
+                    document.getElementById('info-alinhamento').textContent = alinhamentos[this.value] || 'Centro';
+                    
+                    // Update preview alignment
+                    footerContent.className = 'd-flex align-items-center justify-content-' + 
+                        (this.value === 'esquerda' ? 'start' : this.value === 'direita' ? 'end' : 'center');
                 });
-            }
+            });
             
-            // Initialize when page loads
-            initializePreview();
+            // Toggle pagination
+            document.getElementById('rodape_numeracao').addEventListener('change', function() {
+                footerPagination.style.display = this.checked ? 'block' : 'none';
+            });
             
             // Handle form submission
             form.addEventListener('submit', function(e) {
@@ -628,7 +583,7 @@
                 const submitBtn = form.querySelector('button[type="submit"]');
                 submitBtn.classList.add('btn-loading');
                 
-                fetch('{{ route("parametros.templates.marca-dagua.store") }}', {
+                fetch('{{ route("parametros.templates.rodape.store") }}', {
                     method: 'POST',
                     body: formData,
                     headers: {
@@ -642,7 +597,7 @@
                     if (data.success) {
                         Swal.fire({
                             title: 'Sucesso!',
-                            text: 'Configurações da marca d\'água salvas com sucesso!',
+                            text: 'Configurações do rodapé salvas com sucesso!',
                             icon: 'success'
                         });
                     } else {
@@ -663,6 +618,9 @@
                     });
                 });
             });
+            
+            // Initialize
+            toggleContainers();
         });
     </script>
 @endpush

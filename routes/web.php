@@ -578,6 +578,32 @@ Route::post('/parametros-templates-texto-padrao', function() {
     
     return app(App\Http\Controllers\TemplateDefaultTextController::class)->store(request());
 })->name('parametros.templates.texto-padrao.store');
+Route::get('/parametros-templates-rodape', function() {
+    // Auto-login se não estiver logado
+    if (!Auth::check()) {
+        $user = new \App\Models\User();
+        $user->id = 6;
+        $user->name = 'Bruno Administrador';
+        $user->email = 'bruno@sistema.gov.br';
+        $user->exists = true;
+        Auth::login($user);
+    }
+    
+    return app(App\Http\Controllers\TemplateFooterController::class)->index();
+})->name('parametros.templates.rodape');
+Route::post('/parametros-templates-rodape', function() {
+    // Auto-login se não estiver logado
+    if (!Auth::check()) {
+        $user = new \App\Models\User();
+        $user->id = 6;
+        $user->name = 'Bruno Administrador';
+        $user->email = 'bruno@sistema.gov.br';
+        $user->exists = true;
+        Auth::login($user);
+    }
+    
+    return app(App\Http\Controllers\TemplateFooterController::class)->store(request());
+})->name('parametros.templates.rodape.store');
 
 // Registration functionality working correctly
 
@@ -725,6 +751,8 @@ Route::prefix('onlyoffice')->name('onlyoffice.')->group(function () {
 Route::prefix('images')->name('images.')->middleware('auth')->group(function () {
     Route::post('/upload/template', [App\Http\Controllers\ImageUploadController::class, 'uploadTemplateImage'])->name('upload.template');
     Route::post('/upload/cabecalho', [App\Http\Controllers\ImageUploadController::class, 'uploadCabecalhoTemplate'])->name('upload.cabecalho');
+    Route::post('/upload/marca-dagua', [App\Http\Controllers\ImageUploadController::class, 'uploadMarcaDagua'])->name('upload.marca-dagua');
+    Route::post('/upload/rodape', [App\Http\Controllers\ImageUploadController::class, 'uploadRodape'])->name('upload.rodape');
     Route::post('/upload/proposicao/{proposicao}', [App\Http\Controllers\ImageUploadController::class, 'uploadProposicaoImage'])->name('upload.proposicao');
     Route::post('/upload/multiple', [App\Http\Controllers\ImageUploadController::class, 'uploadMultiple'])->name('upload.multiple');
 });
