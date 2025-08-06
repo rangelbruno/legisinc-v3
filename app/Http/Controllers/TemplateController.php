@@ -218,6 +218,17 @@ class TemplateController extends Controller
         // Verificar se o arquivo precisa de correção de encoding antes do download
         $conteudoArquivo = Storage::get($template->arquivo_path);
         
+        // Processar variáveis do template se for arquivo RTF
+        if (pathinfo($template->arquivo_path, PATHINFO_EXTENSION) === 'rtf') {
+            $conteudoArquivo = $this->processarVariaveisTemplate($conteudoArquivo);
+            
+            \Log::info('Variáveis do template processadas', [
+                'template_id' => $template->id,
+                'arquivo_path' => $template->arquivo_path,
+                'tamanho_processado' => strlen($conteudoArquivo)
+            ]);
+        }
+        
         // Se contém caracteres mal codificados comuns, tentar corrigir
         if (strpos($conteudoArquivo, 'MunicÃ­pio') !== false || 
             strpos($conteudoArquivo, 'SÃ£o Paulo') !== false ||
@@ -266,7 +277,23 @@ class TemplateController extends Controller
             default => 'application/octet-stream'
         };
         
-        // Retornar arquivo com headers corretos
+        // Se o conteúdo foi processado, criar arquivo temporário
+        if (isset($conteudoArquivo)) {
+            $tempFile = tempnam(sys_get_temp_dir(), 'template_processed_') . '.rtf';
+            file_put_contents($tempFile, $conteudoArquivo);
+            
+            return response()->download(
+                $tempFile,
+                $nomeArquivo,
+                [
+                    'Cache-Control' => 'no-cache, no-store, must-revalidate',
+                    'Content-Type' => $contentType,
+                    'Content-Disposition' => 'attachment; filename="' . $nomeArquivo . '"'
+                ]
+            )->deleteFileAfterSend(true);
+        }
+        
+        // Fallback para arquivo original (caso não tenha sido processado)
         return response()->download(
             Storage::path($template->arquivo_path), 
             $nomeArquivo,
@@ -429,5 +456,28 @@ class TemplateController extends Controller
             'cobertura_percentual' => $tiposTotal > 0 ? round(($templatesTotal / $tiposTotal) * 100, 1) : 0,
             'parametros_count' => count($this->parametrosService->obterParametrosTemplates())
         ]);
+    }
+    
+    /**
+     * Processar variáveis no template usando TemplateParametrosService
+     */
+    private function processarVariaveisTemplate(string $conteudo): string
+    {
+        try {
+            // Primeiro, converter variáveis com escape RTF para formato normal
+            // De $\{variavel\} para ${variavel}
+            $conteudo = str_replace(['$\\{', '\\}'], ['${', '}'], $conteudo);
+            
+            // Processar o template com variáveis padrão
+            return $this->parametrosService->processarTemplate($conteudo, []);
+            
+        } catch (\Exception $e) {
+            \Log::warning('Erro ao processar variáveis do template:', [
+                'error' => $e->getMessage()
+            ]);
+            
+            // Se houver erro, retornar conteúdo original
+            return $conteudo;
+        }
     }
 }

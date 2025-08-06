@@ -218,8 +218,14 @@ class OnlyOfficeController extends Controller
             }
         }
         
-        return Storage::disk('public')->response($modelo->arquivo_path, $modelo->arquivo_nome, [
-            'Content-Type' => 'application/rtf'
+        // Processar variáveis do template antes de retornar
+        $conteudo = Storage::disk('public')->get($modelo->arquivo_path);
+        $conteudoProcessado = $this->processarVariaveisTemplate($conteudo);
+        
+        // Retornar o conteúdo processado diretamente
+        return response($conteudoProcessado, 200, [
+            'Content-Type' => 'application/rtf',
+            'Content-Disposition' => 'inline; filename="' . $modelo->arquivo_nome . '"'
         ]);
     }
     
@@ -293,9 +299,18 @@ class OnlyOfficeController extends Controller
     {
         $templatePath = resource_path('templates/documento_base.docx');
         $destinoPath = "documentos/modelos/" . $modelo->arquivo_nome;
+        $pathCompleto = storage_path('app/public/' . $destinoPath);
+        
+        // Criar diretório se não existir
+        $diretorio = dirname($pathCompleto);
+        if (!file_exists($diretorio)) {
+            mkdir($diretorio, 0775, true);
+            chown($diretorio, 'www-data');
+            chgrp($diretorio, 'www-data');
+        }
         
         if (file_exists($templatePath)) {
-            Storage::disk('public')->put($destinoPath, file_get_contents($templatePath));
+            file_put_contents($pathCompleto, file_get_contents($templatePath));
         } else {
             // Criar documento RTF básico
             $conteudoBase = '{\rtf1\ansi\deff0 {\fonttbl {\f0 Times New Roman;}}
@@ -309,12 +324,12 @@ Este é um modelo base para começar a edição.\par
 Você pode editá-lo usando o OnlyOffice.\par
 }';
             
-            Storage::disk('public')->put($destinoPath, $conteudoBase);
+            file_put_contents($pathCompleto, $conteudoBase);
         }
         
         $modelo->update([
             'arquivo_path' => $destinoPath,
-            'arquivo_size' => Storage::disk('public')->size($destinoPath)
+            'arquivo_size' => file_exists($pathCompleto) ? filesize($pathCompleto) : 0
         ]);
     }
     
@@ -484,6 +499,27 @@ Você pode editá-lo usando o OnlyOffice.\par
             'instancia' => $instancia,
             'title' => 'Visualizando: ' . $instancia->titulo
         ]);
+    }
+    
+    /**
+     * Processar variáveis no template usando TemplateParametrosService
+     */
+    private function processarVariaveisTemplate(string $conteudo): string
+    {
+        try {
+            $templateService = app(\App\Services\Template\TemplateParametrosService::class);
+            
+            // Processar o template com variáveis padrão
+            return $templateService->processarTemplate($conteudo, []);
+            
+        } catch (\Exception $e) {
+            \Log::warning('Erro ao processar variáveis do template:', [
+                'error' => $e->getMessage()
+            ]);
+            
+            // Se houver erro, retornar conteúdo original
+            return $conteudo;
+        }
     }
     
     /**

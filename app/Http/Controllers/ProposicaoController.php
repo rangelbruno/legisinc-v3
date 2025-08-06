@@ -797,133 +797,44 @@ class ProposicaoController extends Controller
      */
     public function destroy($proposicaoId)
     {
-        \Log::info('Iniciando exclusão de proposição', [
-            'proposicao_id' => $proposicaoId,
-            'user_id' => \Auth::id(),
-            'request_method' => request()->method()
-        ]);
-        
         try {
             // Buscar proposição no banco de dados
-            $proposicao = Proposicao::find($proposicaoId);
+            $proposicao = Proposicao::findOrFail($proposicaoId);
             
-            // Verificar se a proposição existe
-            if (!$proposicao) {
+            // Verificar se o usuário é o autor
+            if ($proposicao->autor_id !== Auth::id()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Proposição não encontrada.'
-                ], 404);
+                    'message' => 'Você não tem permissão para excluir esta proposição.'
+                ], 403);
             }
-        } catch (\Exception $e) {
-            \Log::error('Erro ao buscar proposição para exclusão', [
-                'proposicao_id' => $proposicaoId,
-                'error' => $e->getMessage()
-            ]);
             
-            // Fallback: verificar se existem dados na sessão
-            $sessionData = session('proposicao_' . $proposicaoId . '_tipo');
-            if (!$sessionData) {
+            // Verificar se é um status que permite exclusão
+            $statusPermitidos = ['rascunho', 'em_edicao', 'salvando', 'retornado_legislativo'];
+            if (!in_array($proposicao->status, $statusPermitidos)) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Proposição não encontrada.'
-                ], 404);
+                    'message' => 'Apenas rascunhos, proposições em edição, salvando e retornadas do legislativo podem ser excluídas.'
+                ], 400);
             }
             
-            // Usar dados da sessão como fallback
-            $proposicao = (object) [
-                'id' => $proposicaoId,
-                'status' => session('proposicao_' . $proposicaoId . '_status', 'rascunho'),
-                'autor_id' => \Auth::id(), // Assumir que é do usuário atual
-                'arquivo_path' => null
-            ];
-            
-            \Log::info('Usando dados da sessão para exclusão (fallback)', [
-                'proposicao_id' => $proposicaoId,
-                'user_id' => \Auth::id()
-            ]);
-        }
-        
-        // Verificar se é rascunho
-        \Log::info('Verificando status da proposição', [
-            'proposicao_id' => $proposicaoId,
-            'status' => $proposicao->status,
-            'autor_id' => $proposicao->autor_id,
-            'current_user' => \Auth::id()
-        ]);
-        
-        // Permitir exclusão de rascunhos, proposições em edição, salvando e retornadas do legislativo
-        $statusPermitidos = ['rascunho', 'em_edicao', 'salvando', 'retornado_legislativo'];
-        if (!in_array($proposicao->status, $statusPermitidos)) {
-            \Log::warning('Tentativa de excluir proposição com status não permitido', [
-                'proposicao_id' => $proposicaoId,
-                'status' => $proposicao->status,
-                'user_id' => \Auth::id()
-            ]);
-            
-            return response()->json([
-                'success' => false,
-                'message' => 'Apenas rascunhos, proposições em edição, salvando e retornadas do legislativo podem ser excluídas.'
-            ], 400);
-        }
-        
-        // Verificar se o usuário é o autor
-        if ($proposicao->autor_id !== Auth::id()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Você não tem permissão para excluir esta proposição.'
-            ], 403);
-        }
-        
-        try {
             // Excluir arquivos associados se existirem
-            if ($proposicao->arquivo_path && \Storage::disk('public')->exists($proposicao->arquivo_path)) {
-                \Storage::disk('public')->delete($proposicao->arquivo_path);
+            if ($proposicao->arquivo_path && \Storage::exists($proposicao->arquivo_path)) {
+                \Storage::delete($proposicao->arquivo_path);
             }
             
-            // Tentar excluir do banco de dados se for um modelo Eloquent real
-            if (is_a($proposicao, \App\Models\Proposicao::class)) {
-                $proposicao->delete();
-                $method = 'database_deletion';
-            } else {
-                // Fallback: limpar dados da sessão
-                $sessionKeys = [
-                    'proposicao_' . $proposicaoId . '_tipo',
-                    'proposicao_' . $proposicaoId . '_ementa',
-                    'proposicao_' . $proposicaoId . '_conteudo',
-                    'proposicao_' . $proposicaoId . '_status',
-                    'proposicao_' . $proposicaoId . '_modelo_id',
-                    'proposicao_' . $proposicaoId . '_template_id',
-                    'proposicao_' . $proposicaoId . '_variaveis_template',
-                    'proposicao_' . $proposicaoId . '_conteudo_processado'
-                ];
-                
-                foreach ($sessionKeys as $key) {
-                    session()->forget($key);
-                }
-                $method = 'session_cleanup';
-            }
-            
-            \Log::info('Proposição excluída', [
-                'proposicao_id' => $proposicaoId,
-                'user_id' => Auth::id(),
-                'method' => $method
-            ]);
+            // Excluir do banco de dados
+            $proposicao->delete();
             
             return response()->json([
                 'success' => true,
-                'message' => 'Proposição excluída com sucesso!'
+                'message' => 'Proposição excluída com sucesso.'
             ]);
             
         } catch (\Exception $e) {
-            \Log::error('Erro ao excluir proposição', [
-                'proposicao_id' => $proposicaoId,
-                'user_id' => Auth::id(),
-                'error' => $e->getMessage()
-            ]);
-            
             return response()->json([
                 'success' => false,
-                'message' => 'Erro interno do servidor. Tente novamente.'
+                'message' => 'Erro ao excluir proposição: ' . $e->getMessage()
             ], 500);
         }
     }
@@ -1092,11 +1003,21 @@ class ProposicaoController extends Controller
                 
                 // Criar arquivo DOCX usando RTF
                 $conteudoDocx = $this->criarArquivoDocx($textoCompleto);
-                \Storage::disk('public')->put($pathDestino, $conteudoDocx);
+                $pathCompleto = storage_path('app/public/' . $pathDestino);
+                
+                // Criar diretório se não existir
+                $diretorio = dirname($pathCompleto);
+                if (!file_exists($diretorio)) {
+                    mkdir($diretorio, 0775, true);
+                    chown($diretorio, 'www-data');
+                    chgrp($diretorio, 'www-data');
+                }
+                
+                file_put_contents($pathCompleto, $conteudoDocx);
                 \Log::info('Arquivo DOCX criado a partir do texto gerado', [
                     'proposicao_path' => $pathDestino,
                     'tamanho_arquivo' => strlen($conteudoDocx),
-                    'arquivo_existe_apos_criacao' => \Storage::disk('public')->exists($pathDestino),
+                    'arquivo_existe_apos_criacao' => file_exists($pathCompleto),
                     'ementa' => $ementa,
                     'tipo' => $tipo
                 ]);
@@ -1170,12 +1091,35 @@ class ProposicaoController extends Controller
                     $variaveisPreenchidas
                 );
                 
-                // Salvar arquivo processado
-                \Storage::disk('public')->put($pathDestino, $conteudoProcessado);
+                // DEBUG: Verificar se o conteúdo foi processado
+                \Log::info('DEBUG: Antes de salvar arquivo processado', [
+                    'pathDestino' => $pathDestino,
+                    'tamanho_conteudo_processado' => strlen($conteudoProcessado),
+                    'primeiros_100_chars' => substr($conteudoProcessado, 0, 100)
+                ]);
+                
+                // Salvar arquivo processado - usando file_put_contents diretamente
+                $pathCompleto = storage_path('app/public/' . $pathDestino);
+                
+                // Criar diretório se não existir
+                $diretorio = dirname($pathCompleto);
+                if (!file_exists($diretorio)) {
+                    mkdir($diretorio, 0775, true);
+                    chown($diretorio, 'www-data');
+                    chgrp($diretorio, 'www-data');
+                }
+                
+                $resultadoSave = file_put_contents($pathCompleto, $conteudoProcessado) !== false;
+                
+                \Log::info('DEBUG: Resultado do salvamento direto', [
+                    'resultado_save' => $resultadoSave,
+                    'path_completo' => $pathCompleto,
+                    'arquivo_existe' => file_exists($pathCompleto),
+                    'tamanho_arquivo' => file_exists($pathCompleto) ? filesize($pathCompleto) : 'N/A'
+                ]);
                 
                 // MANTER COMO RTF para preservar formatação - OnlyOffice trabalha bem com RTF
                 // A conversão para DOCX estava removendo toda formatação
-                $pathCompleto = storage_path('app/public/' . $pathDestino);
                 // $this->converterRTFParaDOCX($pathCompleto); // Comentado para preservar formatação
                 
                 \Log::info('Template processado com variáveis substituídas', [
@@ -1211,7 +1155,11 @@ class ProposicaoController extends Controller
         $conteudoTemplate = null;
         
         // Tentar carregar o template principal
-        if (\Storage::disk('local')->exists($template->arquivo_path)) {
+        // Primeiro tentar ler do local correto onde os templates são salvos (storage/app/templates)
+        $pathCompleto = storage_path('app/' . $template->arquivo_path);
+        if (file_exists($pathCompleto)) {
+            $conteudoTemplate = file_get_contents($pathCompleto);
+        } elseif (\Storage::disk('local')->exists($template->arquivo_path)) {
             $conteudoTemplate = \Storage::disk('local')->get($template->arquivo_path);
         } elseif (\Storage::disk('public')->exists($template->arquivo_path)) {
             $conteudoTemplate = \Storage::disk('public')->get($template->arquivo_path);
@@ -2045,11 +1993,16 @@ ${texto}
             
             $conteudo = \Storage::disk('public')->get($pathArquivo);
             
-            // Aplicar correção de encoding se o arquivo contém RTF
-            // TEMPORARIAMENTE DESABILITADO - causando triple encoding
-            // if (strpos($conteudo, '{\rtf') !== false) {
-            //     $conteudo = $this->corrigirEncodingParaOnlyOffice($conteudo);
-            // }
+            // Processar variáveis do template se for arquivo RTF
+            if (strpos($conteudo, '{\rtf') !== false) {
+                $conteudo = $this->processarVariaveisTemplate($conteudo);
+                
+                \Log::info('Variáveis do template processadas', [
+                    'proposicao_id' => $proposicaoId,
+                    'arquivo' => $arquivo,
+                    'tamanho_processado' => strlen($conteudo)
+                ]);
+            }
             
             // Determinar MIME type baseado na extensão
             $extensao = pathinfo($arquivo, PATHINFO_EXTENSION);
@@ -2170,7 +2123,17 @@ ${texto}
                         $pathDestino = "proposicoes/{$nomeArquivo}";
                         
                         // Salvar arquivo atualizado
-                        \Storage::disk('public')->put($pathDestino, $fileContent);
+                        $pathCompleto = storage_path('app/public/' . $pathDestino);
+                        
+                        // Criar diretório se não existir
+                        $diretorio = dirname($pathCompleto);
+                        if (!file_exists($diretorio)) {
+                            mkdir($diretorio, 0775, true);
+                            chown($diretorio, 'www-data');
+                            chgrp($diretorio, 'www-data');
+                        }
+                        
+                        file_put_contents($pathCompleto, $fileContent);
                         
                         \Log::info('Arquivo da proposição salvo via OnlyOffice', [
                             'proposicao_id' => $proposicaoId,
@@ -2413,7 +2376,7 @@ ${texto}
             
             // Criar RTF com dados preenchidos
             $rtfContent = $this->gerarRTFComDados($ementa, $conteudo);
-            \Storage::disk('public')->put($pathDestino, $rtfContent);
+            file_put_contents($pathCompleto, $rtfContent);
             
             return $pathDestino;
             
@@ -4225,5 +4188,30 @@ ${texto}
             </div>
         </body>
         </html>";
+    }
+    
+    /**
+     * Processar variáveis no template usando TemplateParametrosService
+     */
+    private function processarVariaveisTemplate(string $conteudo): string
+    {
+        try {
+            // Primeiro, converter variáveis com escape RTF para formato normal
+            // De $\{variavel\} para ${variavel}
+            $conteudo = str_replace(['$\\{', '\\}'], ['${', '}'], $conteudo);
+            
+            $templateService = app(\App\Services\Template\TemplateParametrosService::class);
+            
+            // Processar o template com variáveis padrão
+            return $templateService->processarTemplate($conteudo, []);
+            
+        } catch (\Exception $e) {
+            \Log::warning('Erro ao processar variáveis do template:', [
+                'error' => $e->getMessage()
+            ]);
+            
+            // Se houver erro, retornar conteúdo original
+            return $conteudo;
+        }
     }
 }

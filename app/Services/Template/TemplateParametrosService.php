@@ -15,7 +15,9 @@ class TemplateParametrosService
      */
     public function obterParametrosTemplates(): array
     {
-        return Cache::remember('parametros.templates', 3600, function () {
+        // Desabilitar cache temporariamente para debug
+        // return Cache::remember('parametros.templates', 3600, function () {
+        {
             $modulo = ParametroModulo::where('nome', 'Templates')
                 ->with(['submodulos.campos.valores'])
                 ->first();
@@ -36,7 +38,7 @@ class TemplateParametrosService
             }
 
             return $parametros;
-        });
+        }
     }
 
     /**
@@ -74,6 +76,7 @@ class TemplateParametrosService
             '${endereco_camara}' => 'Endereço da Câmara',
             '${telefone_camara}' => 'Telefone da Câmara',
             '${website_camara}' => 'Website da Câmara',
+            '${imagem_cabecalho}' => 'Imagem do cabeçalho',
             
             // Formatação
             '${assinatura_padrao}' => 'Área de assinatura',
@@ -144,8 +147,53 @@ class TemplateParametrosService
         $variaveis['${telefone_camara}'] = $parametros['Cabeçalho.cabecalho_telefone'] ?? '';
         $variaveis['${website_camara}'] = $parametros['Cabeçalho.cabecalho_website'] ?? '';
         
-        // Formatação
-        $variaveis['${assinatura_padrao}'] = $parametros['Variáveis Dinâmicas.var_assinatura_padrao'] ?? '';
+        // Imagem de cabeçalho - gerar URL completa da imagem
+        $imagemCabecalho = $parametros['Cabeçalho.cabecalho_imagem'] ?? '';
+        if (!empty($imagemCabecalho)) {
+            // Tentar localizar o arquivo de imagem nos diretórios padrão
+            $possiveisCaminhos = [
+                "template/{$imagemCabecalho}",
+                "storage/template/{$imagemCabecalho}",
+                $imagemCabecalho
+            ];
+            
+            $caminhoImagem = '';
+            foreach ($possiveisCaminhos as $caminho) {
+                if (file_exists(public_path($caminho))) {
+                    $caminhoImagem = public_path($caminho);
+                    break;
+                }
+            }
+            
+            // Se não encontrou o arquivo específico, usar imagem padrão
+            if (empty($caminhoImagem)) {
+                if (file_exists(public_path('template/cabecalho.png'))) {
+                    $caminhoImagem = public_path('template/cabecalho.png');
+                } else {
+                    // Fallback para texto simples se não há imagem
+                    $variaveis['${imagem_cabecalho}'] = '[IMAGEM DO CABEÇALHO]';
+                }
+            }
+            
+            // Gerar código RTF para inserir a imagem apenas se temos um caminho válido
+            if (!empty($caminhoImagem)) {
+                $codigoRTFImagem = $this->gerarCodigoRTFImagem($caminhoImagem);
+                $variaveis['${imagem_cabecalho}'] = $codigoRTFImagem;
+            }
+        } else {
+            // Se não há imagem, remover o placeholder completamente
+            $variaveis['${imagem_cabecalho}'] = '';
+        }
+        
+        // Formatação - só incluir assinatura se não estiver vazia
+        $assinaturaPadrao = $parametros['Variáveis Dinâmicas.var_assinatura_padrao'] ?? '';
+        if (!empty($assinaturaPadrao)) {
+            $variaveis['${assinatura_padrao}'] = $assinaturaPadrao;
+        } else {
+            // Se não há assinatura, remover o placeholder completamente
+            $variaveis['${assinatura_padrao}'] = '';
+        }
+        
         $variaveis['${rodape}'] = $parametros['Rodapé.rodape_texto'] ?? '';
         
         // Adicionar variáveis customizadas passadas diretamente
@@ -231,5 +279,69 @@ class TemplateParametrosService
     public function limparCache(): void
     {
         Cache::forget('parametros.templates');
+    }
+
+    /**
+     * Gerar código RTF para inserir uma imagem
+     */
+    private function gerarCodigoRTFImagem(string $caminhoImagem): string
+    {
+        try {
+            // Verificar se arquivo existe e obter informações
+            if (!file_exists($caminhoImagem)) {
+                return '[IMAGEM DO CABEÇALHO - ARQUIVO NÃO ENCONTRADO]';
+            }
+            
+            $info = getimagesize($caminhoImagem);
+            if (!$info) {
+                return '[IMAGEM DO CABEÇALHO - FORMATO INVÁLIDO]';
+            }
+            
+            // Para o OnlyOffice, vamos inserir a imagem usando código RTF específico
+            // Primeiro, converter a imagem para formato hexadecimal
+            $imagemData = file_get_contents($caminhoImagem);
+            $imagemHex = bin2hex($imagemData);
+            
+            // Obter dimensões da imagem
+            $largura = $info[0];
+            $altura = $info[1];
+            
+            // Redimensionar se necessário (máximo 200px de largura para evitar arquivo muito grande)
+            if ($largura > 200) {
+                $novaLargura = 200;
+                $novaAltura = intval(($novaLargura * $altura) / $largura);
+            } else {
+                $novaLargura = $largura;
+                $novaAltura = $altura;
+            }
+            
+            // Converter para twips (1 pixel = 15 twips aprox)
+            $larguraTwips = $novaLargura * 15;
+            $alturaTwips = $novaAltura * 15;
+            
+            // Determinar o tipo MIME da imagem
+            $tipoImagem = $info['mime'];
+            $formatoRTF = match($tipoImagem) {
+                'image/png' => 'pngblip',
+                'image/jpeg', 'image/jpg' => 'jpegblip',
+                default => 'pngblip'
+            };
+            
+            // Gerar código RTF para inserir a imagem
+            $rtfImagem = "{\pict\\{$formatoRTF}\\picw{$largura}\\pich{$altura}\\picwgoal{$larguraTwips}\\pichgoal{$alturaTwips} {$imagemHex}}";
+            
+            // Centralizar a imagem
+            return "{\\qc {$rtfImagem}\\par}";
+            
+        } catch (\Exception $e) {
+            \Log::warning('Erro ao gerar código RTF para imagem:', [
+                'caminho' => $caminhoImagem,
+                'error' => $e->getMessage()
+            ]);
+            
+            // Fallback para placeholder se houver erro
+            $nomeArquivo = basename($caminhoImagem);
+            return "{\\qc\\b\\fs20 [INSERIR IMAGEM: {$nomeArquivo}]\\par}";
+        }
     }
 }
