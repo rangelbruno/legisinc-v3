@@ -82,7 +82,7 @@
                         <!-- Tipo de Proposição -->
                         <div class="mb-4">
                             <label for="tipo" class="form-label required">Tipo de Proposição</label>
-                            <select name="tipo" id="tipo" class="form-select" required>
+                            <select name="tipo" id="tipo" class="form-select" data-control="select2" data-placeholder="Selecione o tipo de proposição" required>
                                 <option value="">Selecione o tipo de proposição</option>
                                 @foreach($tipos as $key => $label)
                                     <option value="{{ $key }}">{{ $label }}</option>
@@ -96,7 +96,7 @@
                         <!-- Modelo -->
                         <div class="mb-4" id="modelo-container" style="display: none;">
                             <label for="modelo" class="form-label required">Selecionar Modelo</label>
-                            <select name="modelo" id="modelo" class="form-select">
+                            <select name="modelo" id="modelo" class="form-select" data-control="select2" data-placeholder="Selecione um modelo">
                                 <option value="">Carregando modelos...</option>
                             </select>
                             <div class="form-text">
@@ -166,6 +166,21 @@
 <script>
 $(document).ready(function() {
     let proposicaoId = null;
+
+    // Inicializar Select2
+    $('#tipo').select2({
+        width: '100%',
+        placeholder: 'Selecione o tipo de proposição',
+        allowClear: false,
+        minimumResultsForSearch: 3
+    });
+
+    $('#modelo').select2({
+        width: '100%',
+        placeholder: 'Selecione um modelo',
+        allowClear: false,
+        minimumResultsForSearch: 3
+    });
 
     // Carregar modelos quando tipo for selecionado
     $('#tipo').on('change', function() {
@@ -335,6 +350,190 @@ $(document).ready(function() {
 .form-text {
     font-size: 0.875rem;
     color: #6c757d;
+}
+
+/* Estilos Select2 Moderno - Tema Padrão */
+.select2-container {
+    width: 100% !important;
+    font-family: inherit !important;
+}
+
+/* Container principal do select */
+.select2-selection--single {
+    height: 58px !important;
+    border: 2px solid #e1e5e9 !important;
+    border-radius: 12px !important;
+    background: linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%) !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06) !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    position: relative !important;
+    overflow: hidden !important;
+}
+
+.select2-selection--single:hover {
+    border-color: #007bff !important;
+    box-shadow: 0 4px 15px rgba(0, 123, 255, 0.2) !important;
+    transform: translateY(-1px) !important;
+}
+
+.select2-container--focus .select2-selection--single,
+.select2-container--open .select2-selection--single {
+    border-color: #007bff !important;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1), 0 4px 15px rgba(0, 123, 255, 0.2) !important;
+    transform: translateY(-1px) !important;
+}
+
+/* Texto renderizado */
+.select2-selection__rendered {
+    padding: 0 20px !important;
+    line-height: 54px !important;
+    color: #2c3e50 !important;
+    font-weight: 500 !important;
+    font-size: 1rem !important;
+}
+
+.select2-selection__placeholder {
+    color: #8b9cb5 !important;
+    font-weight: 400 !important;
+    font-style: italic !important;
+}
+
+/* Seta do dropdown */
+.select2-selection__arrow {
+    height: 58px !important;
+    width: 20px !important;
+    top: 0 !important;
+    right: 15px !important;
+}
+
+.select2-selection__arrow b {
+    border-color: #007bff transparent transparent transparent !important;
+    border-style: solid !important;
+    border-width: 7px 7px 0 7px !important;
+    height: 0 !important;
+    left: 50% !important;
+    margin-left: -7px !important;
+    margin-top: -3px !important;
+    position: absolute !important;
+    top: 50% !important;
+    width: 0 !important;
+    transition: transform 0.3s ease !important;
+}
+
+.select2-container--open .select2-selection__arrow b {
+    transform: rotate(180deg) !important;
+}
+
+/* Dropdown */
+.select2-dropdown {
+    border: 2px solid #007bff !important;
+    border-radius: 12px !important;
+    box-shadow: 0 10px 30px rgba(0, 123, 255, 0.2) !important;
+    background: white !important;
+    margin-top: 5px !important;
+    overflow: hidden !important;
+    animation: fadeInDown 0.3s ease !important;
+}
+
+/* Campo de busca */
+.select2-search--dropdown {
+    padding: 16px !important;
+    background: linear-gradient(145deg, #f8f9fa 0%, #e9ecef 100%) !important;
+    border-bottom: 1px solid #e1e5e9 !important;
+}
+
+.select2-search__field {
+    border: 2px solid #e1e5e9 !important;
+    border-radius: 8px !important;
+    padding: 12px 16px !important;
+    font-size: 1rem !important;
+    width: 100% !important;
+    transition: all 0.3s ease !important;
+    background: white !important;
+}
+
+.select2-search__field:focus {
+    border-color: #007bff !important;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1) !important;
+    outline: none !important;
+}
+
+/* Opções do dropdown */
+.select2-results__options {
+    max-height: 280px !important;
+    padding: 8px 0 !important;
+}
+
+.select2-results__option {
+    padding: 14px 20px !important;
+    font-size: 1rem !important;
+    color: #2c3e50 !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+    border-left: 4px solid transparent !important;
+    position: relative !important;
+}
+
+.select2-results__option--highlighted {
+    background: linear-gradient(90deg, rgba(0, 123, 255, 0.12) 0%, rgba(0, 123, 255, 0.06) 100%) !important;
+    color: #007bff !important;
+    border-left-color: #007bff !important;
+}
+
+.select2-results__option[aria-selected="true"] {
+    background: linear-gradient(90deg, rgba(40, 167, 69, 0.12) 0%, rgba(40, 167, 69, 0.06) 100%) !important;
+    color: #28a745 !important;
+    border-left-color: #28a745 !important;
+    font-weight: 600 !important;
+}
+
+.select2-results__option[aria-selected="true"]::after {
+    content: '✓' !important;
+    position: absolute !important;
+    right: 20px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    color: #28a745 !important;
+    font-weight: bold !important;
+    font-size: 1.1em !important;
+}
+
+/* Mensagens do dropdown */
+.select2-results__message {
+    padding: 16px 20px !important;
+    color: #8b9cb5 !important;
+    text-align: center !important;
+    font-style: italic !important;
+    font-size: 0.95rem !important;
+}
+
+/* Animações */
+@keyframes fadeInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .select2-selection--single {
+        height: 52px !important;
+    }
+    
+    .select2-selection__rendered {
+        line-height: 48px !important;
+        padding: 0 16px !important;
+    }
+    
+    .select2-selection__arrow {
+        height: 52px !important;
+        right: 12px !important;
+    }
 }
 </style>
 @endpush
