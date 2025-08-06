@@ -7,6 +7,7 @@ use App\Models\Proposicao;
 use App\Models\DocumentoTemplate;
 use App\Services\Template\TemplateProcessorService;
 use App\Services\Template\TemplateInstanceService;
+use App\Services\Template\TemplateParametrosService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -304,6 +305,14 @@ class ProposicaoController extends Controller
                     $proposicao,
                     $variaveisTemplate
                 );
+                
+                // Aplicar substituição de parâmetros
+                $parametrosService = app(TemplateParametrosService::class);
+                $textoGerado = $parametrosService->processarTemplate($textoGerado, [
+                    'proposicao' => $proposicao,
+                    'autor' => $proposicao->autor,
+                    'variaveis' => $variaveisTemplate
+                ]);
             } else {
                 // Template em branco - criar conteúdo básico
                 $textoGerado = $this->criarTextoBasico($proposicao, $variaveisTemplate);
@@ -1274,8 +1283,9 @@ class ProposicaoController extends Controller
             return false;
         }
         
-        // Verificar se contém pelo menos uma variável (mais flexível)
-        $temVariavel = preg_match('/\$\{[^}]+\}/', $conteudo);
+        // Verificar se contém pelo menos uma variável (suporte para RTF e texto comum)
+        $temVariavel = preg_match('/\$\{[^}]+\}/', $conteudo) || // Variáveis texto comum: ${variavel}
+                      preg_match('/\$\\\\\{[^\\\\}]+\\\\\}/', $conteudo); // Variáveis RTF escapadas: $\{variavel\}
         
         // Se não tem variáveis, verificar se tem conteúdo significativo (possíveis imagens)
         if (!$temVariavel) {

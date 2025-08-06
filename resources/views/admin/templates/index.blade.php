@@ -129,6 +129,20 @@
             </div>
             <div class="card-toolbar">
                 <div class="d-flex justify-content-end" data-kt-templates-table-toolbar="base">
+                    <a href="/admin/parametros/6" class="btn btn-light-success me-3">
+                        <i class="ki-duotone ki-setting-2 fs-2">
+                            <span class="path1"></span>
+                            <span class="path2"></span>
+                        </i>
+                        Parâmetros
+                    </a>
+                    <button type="button" class="btn btn-light-warning me-3" onclick="regenerarTodosTemplates()">
+                        <i class="ki-duotone ki-arrows-circle fs-2">
+                            <span class="path1"></span>
+                            <span class="path2"></span>
+                        </i>
+                        Regenerar Todos
+                    </button>
                     <button type="button" class="btn btn-light-primary me-3" data-bs-toggle="modal" data-bs-target="#kt_modal_help_templates">
                         <i class="ki-duotone ki-information-5 fs-2">
                             <span class="path1"></span>
@@ -468,5 +482,53 @@ function confirmarExclusaoTemplate(templateId, tipoNome) {
 
 // Cache-busting nos links de download já resolve o problema
 // O link sempre terá o timestamp correto do banco de dados
+
+function regenerarTodosTemplates() {
+    Swal.fire({
+        title: 'Regenerar Todos os Templates?',
+        html: `
+            <p>Esta ação irá:</p>
+            <ul class="text-start">
+                <li>Regenerar templates para todos os 23 tipos de proposição</li>
+                <li>Aplicar os parâmetros atualizados (cabeçalho, rodapé, formatação)</li>
+                <li>Sobrescrever templates existentes</li>
+            </ul>
+            <p class="text-muted mt-3">Esta operação pode levar alguns segundos.</p>
+        `,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Sim, Regenerar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#f1bc00',
+        showLoaderOnConfirm: true,
+        preConfirm: () => {
+            return fetch('{{ route("templates.regenerar-todos") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                }
+            }).then(response => {
+                if (!response.ok) {
+                    throw new Error('Erro na regeneração');
+                }
+                return response;
+            }).catch(error => {
+                Swal.showValidationMessage(`Erro: ${error.message}`);
+            });
+        },
+        allowOutsideClick: () => !Swal.isLoading()
+    }).then((result) => {
+        if (result.isConfirmed) {
+            Swal.fire({
+                title: 'Templates Regenerados!',
+                text: 'Todos os templates foram atualizados com os parâmetros mais recentes.',
+                icon: 'success'
+            }).then(() => {
+                location.reload();
+            });
+        }
+    });
+}
 </script>
 @endpush

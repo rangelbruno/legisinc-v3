@@ -4,6 +4,7 @@ namespace App\Services\OnlyOffice;
 
 use App\Models\TipoProposicaoTemplate;
 use App\Models\User;
+use App\Services\Template\TemplateParametrosService;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Http;
 
@@ -475,20 +476,21 @@ class OnlyOfficeService
             return; // Já tem arquivo
         }
 
-        // Criar documento vazio - usar RTF por compatibilidade
+        // Usar o serviço de parâmetros para gerar o template com parâmetros aplicados
+        $parametrosService = app(TemplateParametrosService::class);
+        $conteudoComParametros = $this->gerarTemplateComParametros($template, $parametrosService);
+        
+        // Nome e caminho do arquivo
         $nomeArquivo = "template_{$template->tipo_proposicao_id}.rtf";
         $path = "templates/{$nomeArquivo}";
         
-        // Conteúdo com imagem padrão do cabeçalho
-        $conteudoVazio = $this->criarDocumentoComCabecalho($template);
-        
-        // Salvar no storage público padrão
-        Storage::put($path, $conteudoVazio);
+        // Salvar no storage 
+        Storage::put($path, $conteudoComParametros);
         
         // Atualizar template
         $template->update(['arquivo_path' => $path]);
         
-        \Log::info('Template arquivo criado', [
+        \Log::info('Template arquivo criado com parâmetros', [
             'template_id' => $template->id,
             'path' => $path,
             'file_exists' => Storage::exists($path)
@@ -496,19 +498,230 @@ class OnlyOfficeService
     }
 
     /**
-     * Criar um documento DOCX vazio válido
+     * Gerar template com parâmetros aplicados
      */
-    private function criarDocumentoComCabecalho(TipoProposicaoTemplate $template): string
+    private function gerarTemplateComParametros(TipoProposicaoTemplate $template, TemplateParametrosService $parametrosService): string
     {
-        // Usar template básico do storage se existir, senão criar um simples
-        $templateBasico = storage_path('app/templates/template_base.docx');
+        // Obter parâmetros do sistema
+        $parametros = $parametrosService->obterParametrosTemplates();
         
-        if (file_exists($templateBasico)) {
-            return file_get_contents($templateBasico);
+        // Obter tipo de proposição
+        $tipo = $template->tipoProposicao;
+        
+        // Gerar conteúdo do template baseado no tipo
+        $template_content = $this->obterTemplateBase($tipo);
+        
+        // Aplicar parâmetros de cabeçalho
+        // Primeiro, verificar se deve usar imagem ou texto
+        $usarImagem = !empty($parametros['Cabeçalho.cabecalho_imagem']);
+        
+        if ($usarImagem) {
+            // Usar placeholder para imagem no cabeçalho
+            $cabecalhoImagem = '${imagem_cabecalho}';
+            $template_content = str_replace('{{NOME_CAMARA}}', $cabecalhoImagem, $template_content);
+            $template_content = str_replace('{{ENDERECO_CAMARA}}', '', $template_content);
+            $template_content = str_replace('{{TELEFONE_CAMARA}}', '', $template_content);
+        } else {
+            // Usar texto dos parâmetros como fallback
+            if (!empty($parametros['Cabeçalho.cabecalho_nome_camara'])) {
+                $template_content = str_replace('{{NOME_CAMARA}}', $parametros['Cabeçalho.cabecalho_nome_camara'], $template_content);
+            }
+            
+            if (!empty($parametros['Cabeçalho.cabecalho_endereco'])) {
+                $template_content = str_replace('{{ENDERECO_CAMARA}}', $parametros['Cabeçalho.cabecalho_endereco'], $template_content);
+            }
+            
+            if (!empty($parametros['Cabeçalho.cabecalho_telefone'])) {
+                $template_content = str_replace('{{TELEFONE_CAMARA}}', $parametros['Cabeçalho.cabecalho_telefone'], $template_content);
+            }
+        }
+
+        // Aplicar parâmetros de formatação
+        $fonte = $parametros['Formatação.format_fonte'] ?? 'Arial';
+        $tamanhoFonte = $parametros['Formatação.format_tamanho_fonte'] ?? '12';
+        
+        // RTF com formatação básica
+        $template_content = $this->aplicarFormatacaoRTF($template_content, $fonte, $tamanhoFonte);
+        
+        return $template_content;
+    }
+
+    /**
+     * Obter template base por tipo de proposição
+     */
+    private function obterTemplateBase($tipo): string
+    {
+        // Templates específicos por tipo de proposição
+        $templates = [
+            'projeto_lei_ordinaria' => $this->getTemplateProjeto('Lei Ordinária'),
+            'projeto_lei_complementar' => $this->getTemplateProjeto('Lei Complementar'),
+            'indicacao' => $this->getTemplateIndicacao(),
+            'mocao' => $this->getTemplateMocao(),
+            'requerimento' => $this->getTemplateRequerimento(),
+            'projeto_decreto_legislativo' => $this->getTemplateProjeto('Decreto Legislativo'),
+            'projeto_resolucao' => $this->getTemplateProjeto('Resolução'),
+        ];
+
+        return $templates[$tipo->codigo] ?? $this->getTemplateGenerico($tipo->nome);
+    }
+
+    private function getTemplateProjeto(string $tipoNome): string
+    {
+        return '{{NOME_CAMARA}}
+{{ENDERECO_CAMARA}}
+{{TELEFONE_CAMARA}}
+
+' . strtoupper($tipoNome) . ' Nº ${numero_proposicao}
+
+EMENTA: ${ementa}
+
+Art. 1º ${texto}
+
+Art. 2º Esta Lei entra em vigor na data de sua publicação.
+
+${municipio}, ${data_atual}.
+
+${assinatura_padrao}
+';
+    }
+
+    private function getTemplateIndicacao(): string
+    {
+        return '{{NOME_CAMARA}}
+{{ENDERECO_CAMARA}}
+{{TELEFONE_CAMARA}}
+
+INDICAÇÃO Nº ${numero_proposicao}
+
+${autor_nome}
+
+INDICA ${ementa}
+
+Senhor Presidente,
+
+${texto}
+
+Sendo o que se apresenta para a elevada apreciação desta Casa Legislativa.
+
+${municipio}, ${data_atual}.
+
+${assinatura_padrao}
+';
+    }
+
+    private function getTemplateMocao(): string
+    {
+        return '{{NOME_CAMARA}}
+{{ENDERECO_CAMARA}}
+{{TELEFONE_CAMARA}}
+
+MOÇÃO Nº ${numero_proposicao}
+
+${autor_nome}
+
+${ementa}
+
+Senhor Presidente,
+
+${texto}
+
+É o que se apresenta para a elevada apreciação dos nobres Pares.
+
+${municipio}, ${data_atual}.
+
+${assinatura_padrao}
+';
+    }
+
+    private function getTemplateRequerimento(): string
+    {
+        return '{{NOME_CAMARA}}
+{{ENDERECO_CAMARA}}
+{{TELEFONE_CAMARA}}
+
+REQUERIMENTO Nº ${numero_proposicao}
+
+${autor_nome}
+
+${ementa}
+
+Senhor Presidente,
+
+${texto}
+
+Termos em que peço deferimento.
+
+${municipio}, ${data_atual}.
+
+${assinatura_padrao}
+';
+    }
+
+    private function getTemplateGenerico(string $tipoNome): string
+    {
+        return '{{NOME_CAMARA}}
+{{ENDERECO_CAMARA}}
+{{TELEFONE_CAMARA}}
+
+' . strtoupper($tipoNome) . ' Nº ${numero_proposicao}
+
+EMENTA: ${ementa}
+
+${texto}
+
+${municipio}, ${data_atual}.
+
+${assinatura_padrao}
+';
+    }
+
+    private function aplicarFormatacaoRTF(string $conteudo, string $fonte, string $tamanho): string
+    {
+        // Converter para RTF com formatação completa e UTF-8 correto
+        $rtfContent = '{\\rtf1\\ansi\\ansicpg65001\\deff0\\deflang1046';
+        $rtfContent .= '{\\fonttbl{\\f0\\froman\\fcharset0 ' . $fonte . ';}}';
+        $rtfContent .= '{\\colortbl;\\red0\\green0\\blue0;}';
+        $rtfContent .= '\\viewkind4\\uc1\\pard\\cf1\\f0\\fs' . ($tamanho * 2) . ' ';
+        
+        // Converter conteúdo para RTF com UTF-8 correto
+        $conteudoRTF = $this->converterUtf8ParaRtf($conteudo);
+        
+        $rtfContent .= $conteudoRTF . '}';
+        
+        return $rtfContent;
+    }
+
+    /**
+     * Converter texto UTF-8 para RTF com sequências Unicode corretas
+     * Baseado na solução documentada em docs/SOLUCAO_ACENTUACAO_ONLYOFFICE.md
+     */
+    private function converterUtf8ParaRtf(string $texto): string
+    {
+        $textoProcessado = '';
+        
+        // Escapar caracteres especiais do RTF primeiro
+        $texto = str_replace(['\\', '{', '}'], ['\\\\', '\\{', '\\}'], $texto);
+        
+        // Processar caractere por caractere usando funções multi-byte
+        $length = mb_strlen($texto, 'UTF-8');
+        for ($i = 0; $i < $length; $i++) {
+            $char = mb_substr($texto, $i, 1, 'UTF-8');  // Extrai caractere UTF-8 corretamente
+            $codepoint = mb_ord($char, 'UTF-8');        // Obtém codepoint Unicode real
+            
+            if ($codepoint > 127) {
+                // Gera sequência RTF Unicode correta
+                $textoProcessado .= '\\u' . $codepoint . '*';
+            } else {
+                // Converter quebras de linha para RTF
+                if ($char === "\n") {
+                    $textoProcessado .= '\\par ';
+                } else {
+                    $textoProcessado .= $char;
+                }
+            }
         }
         
-        // Criar conteúdo básico de um documento Word com cabeçalho
-        return $this->gerarDocumentoWordComCabecalho($template);
+        return $textoProcessado;
     }
 
     /**

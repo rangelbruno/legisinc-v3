@@ -788,6 +788,7 @@ Route::prefix('admin/templates')->name('admin.templates.')->middleware(['auth', 
     Route::get('/backups', [App\Http\Controllers\Admin\TemplateRelatorioController::class, 'listarBackups'])->name('listar-backups');
     Route::post('/backup/restaurar', [App\Http\Controllers\Admin\TemplateRelatorioController::class, 'restaurarBackup'])->name('restaurar-backup');
     Route::post('/resetar', [App\Http\Controllers\Admin\TemplateRelatorioController::class, 'resetarTemplate'])->name('resetar');
+    
 });
 
 // ROTAS DO PARECER JURÍDICO
@@ -961,6 +962,10 @@ Route::prefix('admin')->middleware(['auth', 'check.screen.permission'])->group(f
          ->name('templates.editor');
     Route::post('templates/{tipo}/salvar', [App\Http\Controllers\TemplateController::class, 'salvarTemplate'])
          ->name('templates.salvar');
+    Route::post('templates/regenerar-todos', [App\Http\Controllers\TemplateController::class, 'regenerarTodos'])
+         ->name('templates.regenerar-todos');
+    Route::get('templates/status', [App\Http\Controllers\TemplateController::class, 'status'])
+         ->name('templates.status');
     
     // Parâmetros de Protocolo
     Route::prefix('parametros/protocolo')->name('admin.parametros.protocolo.')->group(function () {

@@ -5,13 +5,16 @@ namespace App\Http\Controllers;
 use App\Models\TipoProposicao;
 use App\Models\TipoProposicaoTemplate;
 use App\Services\OnlyOffice\OnlyOfficeService;
+use App\Services\Template\TemplateParametrosService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Artisan;
 
 class TemplateController extends Controller
 {
     public function __construct(
-        private OnlyOfficeService $onlyOfficeService
+        private OnlyOfficeService $onlyOfficeService,
+        private TemplateParametrosService $parametrosService
     ) {}
 
     /**
@@ -375,5 +378,56 @@ class TemplateController extends Controller
             return redirect()->route('templates.index')
                             ->with('error', 'Erro ao remover template. Tente novamente.');
         }
+    }
+
+    /**
+     * Regenerar todos os templates usando parâmetros atualizados
+     */
+    public function regenerarTodos()
+    {
+        try {
+            // Executar comando de geração automática
+            Artisan::call('templates:gerar-automaticos', ['--force' => true]);
+            
+            $output = Artisan::output();
+            
+            \Log::info('Templates regenerados automaticamente', [
+                'user_id' => auth()->id(),
+                'output' => $output
+            ]);
+
+            // Contar templates criados/atualizados
+            $totalTemplates = TipoProposicaoTemplate::count();
+            
+            return redirect()->route('templates.index')
+                            ->with('success', "Todos os templates foram regenerados com os parâmetros atualizados! Total: {$totalTemplates} templates.");
+
+        } catch (\Exception $e) {
+            \Log::error('Erro ao regenerar templates', [
+                'error' => $e->getMessage(),
+                'user_id' => auth()->id()
+            ]);
+
+            return redirect()->route('templates.index')
+                            ->with('error', 'Erro ao regenerar templates: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Verificar status dos templates (quantos foram criados automaticamente)
+     */
+    public function status()
+    {
+        $tiposTotal = TipoProposicao::where('ativo', true)->count();
+        $templatesTotal = TipoProposicaoTemplate::count();
+        $templatesSemArquivo = TipoProposicaoTemplate::whereNull('arquivo_path')->count();
+        
+        return response()->json([
+            'tipos_total' => $tiposTotal,
+            'templates_total' => $templatesTotal,
+            'templates_sem_arquivo' => $templatesSemArquivo,
+            'cobertura_percentual' => $tiposTotal > 0 ? round(($templatesTotal / $tiposTotal) * 100, 1) : 0,
+            'parametros_count' => count($this->parametrosService->obterParametrosTemplates())
+        ]);
     }
 }

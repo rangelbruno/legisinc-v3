@@ -15,9 +15,15 @@
                 <i class="fas fa-arrow-left me-2"></i>Voltar
             </a>
             @if($proposicao->status === 'rascunho')
-                <a href="{{ route('proposicoes.editar-texto', $proposicao->id) }}" class="btn btn-primary ms-2">
-                    <i class="fas fa-edit me-2"></i>Editar
-                </a>
+                @if($proposicao->template_id)
+                    <a href="{{ route('proposicoes.editar-onlyoffice', ['proposicao' => $proposicao->id, 'template' => $proposicao->template_id]) }}" class="btn btn-primary ms-2">
+                        <i class="fas fa-file-word me-2"></i>Editar
+                    </a>
+                @else
+                    <a href="{{ route('proposicoes.editar-texto', $proposicao->id) }}" class="btn btn-primary ms-2">
+                        <i class="fas fa-edit me-2"></i>Editar
+                    </a>
+                @endif
             @endif
         </div>
     </div>
@@ -154,9 +160,15 @@
                             <h5>Conteúdo não disponível</h5>
                             <p>O conteúdo desta proposição ainda não foi definido.</p>
                             @if($proposicao->status === 'rascunho')
-                                <a href="{{ route('proposicoes.editar-texto', $proposicao->id) }}" class="btn btn-primary">
-                                    <i class="fas fa-edit me-2"></i>Adicionar Conteúdo
-                                </a>
+                                @if($proposicao->template_id)
+                                    <a href="{{ route('proposicoes.editar-onlyoffice', ['proposicao' => $proposicao->id, 'template' => $proposicao->template_id]) }}" class="btn btn-primary">
+                                        <i class="fas fa-file-word me-2"></i>Adicionar Conteúdo
+                                    </a>
+                                @else
+                                    <a href="{{ route('proposicoes.editar-texto', $proposicao->id) }}" class="btn btn-primary">
+                                        <i class="fas fa-edit me-2"></i>Adicionar Conteúdo
+                                    </a>
+                                @endif
                             @endif
                         </div>
                     @endif
@@ -177,9 +189,15 @@
                 <div class="card-body">
                     @if($proposicao->status === 'rascunho')
                         <div class="d-grid gap-2">
-                            <a href="{{ route('proposicoes.editar-texto', $proposicao->id) }}" class="btn btn-primary">
-                                <i class="fas fa-edit me-2"></i>Editar Proposição
-                            </a>
+                            @if($proposicao->template_id)
+                                <a href="{{ route('proposicoes.editar-onlyoffice', ['proposicao' => $proposicao->id, 'template' => $proposicao->template_id]) }}" class="btn btn-primary">
+                                    <i class="fas fa-file-word me-2"></i>Editar Proposição
+                                </a>
+                            @else
+                                <a href="{{ route('proposicoes.editar-texto', $proposicao->id) }}" class="btn btn-primary">
+                                    <i class="fas fa-edit me-2"></i>Editar Proposição
+                                </a>
+                            @endif
                             <button class="btn btn-success" onclick="enviarParaLegislativo()">
                                 <i class="fas fa-paper-plane me-2"></i>Enviar para o Legislativo
                             </button>

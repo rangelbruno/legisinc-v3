@@ -116,8 +116,41 @@ class ParametroCampo extends Model
 
     public function getValorAtualAttribute(): mixed
     {
-        $valor = $this->valorAtual()->latest()->first();
-        return $valor ? $valor->valor_formatado : $this->valor_padrao;
+        try {
+            // Se valores já estão carregados, usar o relacionamento loaded
+            if ($this->relationLoaded('valores')) {
+                $valor = $this->valores
+                    ->where('valido_ate', null)
+                    ->sortByDesc('created_at')
+                    ->first();
+                
+                if (!$valor) {
+                    $valor = $this->valores
+                        ->where('valido_ate', '>', now())
+                        ->sortByDesc('created_at')
+                        ->first();
+                }
+            } else {
+                // Fazer query se não estiver carregado
+                $valor = $this->valores()
+                    ->where(function($query) {
+                        $query->whereNull('valido_ate')
+                              ->orWhere('valido_ate', '>', now());
+                    })
+                    ->latest()
+                    ->first();
+            }
+            
+            return $valor ? $valor->valor_formatado : $this->valor_padrao;
+            
+        } catch (\Exception $e) {
+            \Log::warning('Erro ao acessar valor atual do campo', [
+                'campo_id' => $this->id,
+                'campo_nome' => $this->nome,
+                'error' => $e->getMessage()
+            ]);
+            return $this->valor_padrao;
+        }
     }
 
     // Métodos
@@ -130,7 +163,14 @@ class ParametroCampo extends Model
 
     public function hasValor(): bool
     {
-        return $this->valorAtual()->exists();
+        try {
+            if ($this->relationLoaded('valores')) {
+                return $this->valores->isNotEmpty();
+            }
+            return $this->valores()->exists();
+        } catch (\Exception $e) {
+            return false;
+        }
     }
 
     public function getValidationRules(): array
@@ -245,6 +285,137 @@ class ParametroCampo extends Model
     public function hasOpcoes(): bool
     {
         return in_array($this->tipo_campo, ['select', 'radio', 'checkbox']) && !empty($this->opcoes);
+    }
+
+    /**
+     * Validar valor do campo
+     */
+    public function validarValor($valor): array
+    {
+        $errors = [];
+
+        // Verificar se é obrigatório
+        if ($this->obrigatorio && (is_null($valor) || $valor === '')) {
+            $errors[] = "O campo {$this->label} é obrigatório";
+            return $errors; // Se obrigatório e vazio, não precisa validar mais
+        }
+
+        // Se valor está vazio e não é obrigatório, não validar
+        if (is_null($valor) || $valor === '') {
+            return $errors;
+        }
+
+        // Validações por tipo de campo
+        switch ($this->tipo_campo) {
+            case 'email':
+                if (!filter_var($valor, FILTER_VALIDATE_EMAIL)) {
+                    $errors[] = "O campo {$this->label} deve ser um e-mail válido";
+                }
+                break;
+
+            case 'number':
+                if (!is_numeric($valor)) {
+                    $errors[] = "O campo {$this->label} deve ser numérico";
+                }
+                break;
+
+            case 'select':
+                $opcoes = $this->opcoes_formatada;
+                if (!empty($opcoes) && !array_key_exists($valor, $opcoes)) {
+                    $errors[] = "O valor selecionado para {$this->label} não é válido";
+                }
+                break;
+
+            case 'checkbox':
+                // Checkbox só aceita 1, 0, true, false, "1", "0"
+                if (!in_array($valor, [1, 0, true, false, '1', '0'], true)) {
+                    $errors[] = "O campo {$this->label} deve ser verdadeiro ou falso";
+                }
+                break;
+
+            case 'file':
+                // Para arquivos, apenas verificar se é uma string (path)
+                if (!is_string($valor)) {
+                    $errors[] = "O campo {$this->label} deve ser um arquivo válido";
+                }
+                break;
+        }
+
+        // Validações customizadas do campo
+        if ($this->validacao) {
+            $validacoes = $this->validacao_formatada;
+            
+            foreach ($validacoes as $regra => $parametro) {
+                switch ($regra) {
+                    case 'min':
+                        if (strlen($valor) < $parametro) {
+                            $errors[] = "O campo {$this->label} deve ter no mínimo {$parametro} caracteres";
+                        }
+                        break;
+
+                    case 'max':
+                        if (strlen($valor) > $parametro) {
+                            $errors[] = "O campo {$this->label} deve ter no máximo {$parametro} caracteres";
+                        }
+                        break;
+
+                    case 'min_value':
+                        if (is_numeric($valor) && $valor < $parametro) {
+                            $errors[] = "O campo {$this->label} deve ser maior ou igual a {$parametro}";
+                        }
+                        break;
+
+                    case 'max_value':
+                        if (is_numeric($valor) && $valor > $parametro) {
+                            $errors[] = "O campo {$this->label} deve ser menor ou igual a {$parametro}";
+                        }
+                        break;
+
+                    case 'regex':
+                        if (!preg_match($parametro, $valor)) {
+                            $errors[] = "O formato do campo {$this->label} não é válido";
+                        }
+                        break;
+                }
+            }
+        }
+
+        return $errors;
+    }
+
+    /**
+     * Definir valor do campo
+     */
+    public function setValor($valor, $userId = null)
+    {
+        // Determinar tipo do valor
+        $tipoValor = 'string';
+        $valorFormatado = $valor;
+
+        if (is_array($valor) || is_object($valor)) {
+            $valorFormatado = json_encode($valor);
+            $tipoValor = 'json';
+        } elseif (is_bool($valor)) {
+            $valorFormatado = $valor ? '1' : '0';
+            $tipoValor = 'boolean';
+        } elseif ($this->tipo_campo === 'checkbox') {
+            $valorFormatado = $valor ? '1' : '0';
+            $tipoValor = 'boolean';
+        } elseif (is_int($valor)) {
+            $tipoValor = 'integer';
+        } elseif (is_float($valor)) {
+            $tipoValor = 'decimal';
+        }
+
+        // Criar ou atualizar valor
+        return $this->valores()->updateOrCreate(
+            ['campo_id' => $this->id],
+            [
+                'valor' => $valorFormatado,
+                'tipo_valor' => $tipoValor,
+                'user_id' => $userId ?? auth()->id()
+            ]
+        );
     }
 
     public function toJsonExtract(): array
