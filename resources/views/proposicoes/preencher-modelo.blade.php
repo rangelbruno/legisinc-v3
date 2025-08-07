@@ -11,8 +11,8 @@
             <p class="text-muted">Etapa 2: Preenchimento dos Campos do Modelo</p>
         </div>
         <div>
-            <a href="{{ route('proposicoes.criar') }}" class="btn btn-outline-secondary">
-                <i class="fas fa-arrow-left me-2"></i>Voltar
+            <a href="{{ route('proposicoes.show', $proposicao->id) }}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Voltar para Proposição
             </a>
         </div>
     </div>
@@ -81,28 +81,97 @@
                         <input type="hidden" name="proposicao_id" value="{{ $proposicao->id }}">
                         <input type="hidden" name="modelo_id" value="{{ $modelo->id }}">
 
-                        <!-- Campos simplificados -->
+                        <!-- Aviso de Dados Pré-preenchidos -->
+                        @if(!empty($valoresExistentes) && count($valoresExistentes) > 0)
+                            <div class="alert alert-info border-info bg-light-info d-flex align-items-center mb-4">
+                                <div class="me-3">
+                                    <i class="fas fa-info-circle fs-2 text-info"></i>
+                                </div>
+                                <div>
+                                    <h6 class="alert-heading mb-1">Dados Encontrados</h6>
+                                    <p class="mb-0">
+                                        Esta proposição já possui {{ count($valoresExistentes) }} campo(s) preenchido(s). 
+                                        Os valores existentes foram carregados automaticamente nos campos abaixo.
+                                        Você pode editá-los conforme necessário.
+                                    </p>
+                                </div>
+                            </div>
+                        @endif
+
+                        <!-- Campos Dinâmicos baseados no Template -->
                         <div id="campos-modelo">
-                            <!-- Ementa -->
-                            <div class="mb-4">
-                                <label for="ementa" class="form-label required">Ementa</label>
-                                <textarea name="conteudo_modelo[ementa]" id="ementa" class="form-control" 
-                                          rows="3" placeholder="Digite a ementa da proposição..." required>{{ session('proposicao_' . $proposicao->id . '_ementa', '') }}</textarea>
-                                <div class="form-text">
-                                    Resumo claro e objetivo da proposição.
+                            @if(!empty($templateVariablesGrouped))
+                                @foreach($templateVariablesGrouped as $category => $variables)
+                                    <div class="mb-5">
+                                        <h6 class="text-primary fw-bold mb-3 border-bottom pb-2">
+                                            <i class="fas fa-layer-group me-2"></i>
+                                            {{ $categoryLabels[$category] ?? ucfirst($category) }}
+                                        </h6>
+                                        
+                                        <div class="row">
+                                            @foreach($variables as $variableName => $variableConfig)
+                                                <div class="col-md-{{ $variableConfig['type'] === 'textarea' ? '12' : '6' }} mb-4">
+                                                    <label for="{{ $variableName }}" class="form-label {{ $variableConfig['required'] ? 'required' : '' }}">
+                                                        {{ $variableConfig['label'] }}
+                                                        @if(!empty($valoresExistentes[$variableName]))
+                                                            <small class="text-success ms-2">
+                                                                <i class="fas fa-check-circle"></i>
+                                                                Pré-preenchido
+                                                            </small>
+                                                        @endif
+                                                    </label>
+                                                    
+                                                    @if($variableConfig['type'] === 'textarea')
+                                                        <textarea 
+                                                            name="template_variables[{{ $variableName }}]" 
+                                                            id="{{ $variableName }}" 
+                                                            class="form-control" 
+                                                            rows="{{ $variableName === 'texto' ? '10' : '4' }}"
+                                                            placeholder="Digite {{ strtolower($variableConfig['label']) }}..."
+                                                            {{ $variableConfig['required'] ? 'required' : '' }}
+                                                        >{{ old('template_variables.'.$variableName, $valoresExistentes[$variableName] ?? '') }}</textarea>
+                                                    @elseif($variableConfig['type'] === 'text')
+                                                        <input 
+                                                            type="text" 
+                                                            name="template_variables[{{ $variableName }}]" 
+                                                            id="{{ $variableName }}" 
+                                                            class="form-control" 
+                                                            placeholder="Digite {{ strtolower($variableConfig['label']) }}..."
+                                                            value="{{ old('template_variables.'.$variableName, $valoresExistentes[$variableName] ?? '') }}"
+                                                            {{ $variableConfig['required'] ? 'required' : '' }}
+                                                        >
+                                                    @endif
+                                                    
+                                                    @if($variableConfig['description'])
+                                                        <div class="form-text">
+                                                            {{ $variableConfig['description'] }}
+                                                        </div>
+                                                    @endif
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                @endforeach
+                            @else
+                                <!-- Campos padrão quando não há template ou variáveis -->
+                                <div class="mb-4">
+                                    <label for="ementa" class="form-label required">Ementa</label>
+                                    <textarea name="conteudo_modelo[ementa]" id="ementa" class="form-control" 
+                                              rows="3" placeholder="Digite a ementa da proposição..." required>{{ session('proposicao_' . $proposicao->id . '_ementa', '') }}</textarea>
+                                    <div class="form-text">
+                                        Resumo claro e objetivo da proposição.
+                                    </div>
                                 </div>
-                            </div>
 
-                            <!-- Conteúdo Principal -->
-                            <div class="mb-4">
-                                <label for="conteudo" class="form-label required">Conteúdo Principal</label>
-                                <textarea name="conteudo_modelo[conteudo]" id="conteudo" class="form-control" 
-                                          rows="10" placeholder="Digite o conteúdo completo da proposição..." required></textarea>
-                                <div class="form-text">
-                                    Texto completo da proposição com artigos, parágrafos e incisos.
+                                <div class="mb-4">
+                                    <label for="conteudo" class="form-label required">Conteúdo Principal</label>
+                                    <textarea name="conteudo_modelo[conteudo]" id="conteudo" class="form-control" 
+                                              rows="10" placeholder="Digite o conteúdo completo da proposição..." required></textarea>
+                                    <div class="form-text">
+                                        Texto completo da proposição com artigos, parágrafos e incisos.
+                                    </div>
                                 </div>
-                            </div>
-
+                            @endif
                         </div>
 
                         <!-- Botões -->
@@ -129,6 +198,11 @@
                     <div class="mb-3">
                         <strong>Modelo:</strong> {{ $modelo->nome }}
                     </div>
+                    @if(!empty($templateVariables))
+                        <div class="mb-3">
+                            <strong>Variáveis:</strong> {{ count($templateVariables) }} encontradas
+                        </div>
+                    @endif
                     <div class="mb-3">
                         <strong>Proposição:</strong> #{{ $proposicao->id }}
                     </div>
@@ -144,14 +218,25 @@
                 </div>
                 <div class="card-body">
                     <ul class="list-unstyled small">
-                        <li class="mb-2">
-                            <i class="fas fa-check text-success me-1"></i>
-                            Preencha a ementa com clareza
-                        </li>
-                        <li class="mb-2">
-                            <i class="fas fa-check text-success me-1"></i>
-                            Digite o conteúdo completo da proposição
-                        </li>
+                        @if(!empty($templateVariablesGrouped))
+                            <li class="mb-2">
+                                <i class="fas fa-check text-success me-1"></i>
+                                Preencha os campos de acordo com o template
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check text-success me-1"></i>
+                                Campos obrigatórios estão marcados com *
+                            </li>
+                        @else
+                            <li class="mb-2">
+                                <i class="fas fa-check text-success me-1"></i>
+                                Preencha a ementa com clareza
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check text-success me-1"></i>
+                                Digite o conteúdo completo da proposição
+                            </li>
+                        @endif
                         <li class="mb-2">
                             <i class="fas fa-check text-success me-1"></i>
                             O rascunho será salvo automaticamente
@@ -240,29 +325,23 @@ $(document).ready(function() {
 
         const dados = $(this).serialize();
 
-        // Primeiro salvar como rascunho automaticamente, depois gerar documento
-        salvarRascunhoAutomatico()
-            .done(function() {
-                // Após salvar rascunho, gerar documento
-                $.post(`/proposicoes/${proposicaoId}/gerar-texto`, dados)
-                    .done(function(response) {
-                        if (response.success) {
-                            toastr.success('Rascunho salvo automaticamente. Abrindo editor...');
-                            
-                            // Redirecionar direto para a tela de visualização/edição da proposição
-                            window.location.href = `/proposicoes/${proposicaoId}`;
-                        }
-                    })
-                    .fail(function(xhr) {
-                        toastr.error('Erro ao processar dados');
-                        console.error(xhr.responseText);
-                    })
-                    .always(function() {
-                        $('#btn-continuar-edicao').prop('disabled', false).html('<i class="fas fa-arrow-right me-2"></i>Continuar para Edição');
-                    });
+        // Gerar documento com variáveis preenchidas
+        $.post(`/proposicoes/${proposicaoId}/gerar-texto`, dados)
+            .done(function(response) {
+                if (response.success) {
+                    toastr.success('Template processado com sucesso. Abrindo editor...');
+                    
+                    // Redirecionar direto para a tela de visualização/edição da proposição
+                    window.location.href = `/proposicoes/${proposicaoId}`;
+                } else {
+                    toastr.error(response.message || 'Erro ao processar template');
+                }
             })
-            .fail(function() {
-                toastr.error('Erro ao salvar rascunho automaticamente');
+            .fail(function(xhr) {
+                toastr.error('Erro ao processar dados');
+                console.error(xhr.responseText);
+            })
+            .always(function() {
                 $('#btn-continuar-edicao').prop('disabled', false).html('<i class="fas fa-arrow-right me-2"></i>Continuar para Edição');
             });
     });

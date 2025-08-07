@@ -104,7 +104,39 @@
                     <div class="mb-3">
                         <label class="form-label fw-bold">Ementa:</label>
                         <div class="p-3 bg-light rounded">
-                            {{ $proposicao->ementa ?? 'Ementa não informada' }}
+                            @if($proposicao->ementa)
+                                @if(str_contains($proposicao->ementa, 'a ser definid') || str_contains($proposicao->ementa, 'em elaboração') || str_contains($proposicao->ementa, 'serem definidos') || str_contains($proposicao->ementa, 'definidos'))
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas fa-clock text-warning me-2"></i>
+                                        <span class="text-warning">{{ $proposicao->ementa }}</span>
+                                    </div>
+                                    <small class="text-muted d-block mt-1">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Esta ementa foi gerada automaticamente. Complete o preenchimento dos campos do template para definir uma ementa específica.
+                                    </small>
+                                @else
+                                    {{ $proposicao->ementa }}
+                                @endif
+                            @elseif(isset($templateVariables['ementa']))
+                                {{ $templateVariables['ementa'] }}
+                            @elseif(isset($templateVariables['finalidade']))
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-lightbulb text-info me-2"></i>
+                                    {{ $templateVariables['finalidade'] }}
+                                </div>
+                                <small class="text-muted d-block mt-1">Baseado na finalidade definida no template</small>
+                            @elseif(isset($templateVariables['texto']))
+                                {{ Str::limit($templateVariables['texto'], 200) }}
+                                <small class="text-muted d-block mt-1">Extraído do conteúdo do template</small>
+                            @else
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-exclamation-triangle text-muted me-2"></i>
+                                    <span class="text-muted">Ementa não informada</span>
+                                </div>
+                                <small class="text-muted d-block mt-1">
+                                    Complete o preenchimento do template para gerar a ementa automaticamente.
+                                </small>
+                            @endif
                         </div>
                     </div>
 
@@ -154,6 +186,33 @@
                         <div class="documento-content">
                             {!! $proposicao->conteudo !!}
                         </div>
+                    @elseif(!empty($conteudoProcessado))
+                        <div class="documento-content">
+                            <div class="alert alert-info mb-3">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <strong>Conteúdo gerado a partir do template:</strong>
+                            </div>
+                            <div class="p-3 border rounded bg-light">
+                                {!! nl2br(e($conteudoProcessado)) !!}
+                            </div>
+                        </div>
+                    @elseif(!empty($templateVariables))
+                        <div class="documento-content">
+                            <div class="alert alert-warning mb-3">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                <strong>Variáveis do template preenchidas:</strong>
+                            </div>
+                            @foreach($templateVariables as $key => $value)
+                                @if(!empty($value) && !in_array($key, ['data_atual', 'autor_nome', 'nome_camara', 'imagem_cabecalho']))
+                                    <div class="mb-3">
+                                        <label class="fw-bold text-capitalize">{{ str_replace('_', ' ', $key) }}:</label>
+                                        <div class="p-2 border rounded bg-light">
+                                            {{ $value }}
+                                        </div>
+                                    </div>
+                                @endif
+                            @endforeach
+                        </div>
                     @else
                         <div class="text-center py-5 text-muted">
                             <i class="fas fa-file-alt fa-3x mb-3"></i>
@@ -193,14 +252,30 @@
                                 <a href="{{ route('proposicoes.editar-onlyoffice', ['proposicao' => $proposicao->id, 'template' => $proposicao->template_id]) }}" class="btn btn-primary">
                                     <i class="fas fa-file-word me-2"></i>Editar Proposição
                                 </a>
+                                <!-- Botão para preencher/repreencher template -->
+                                @if(str_contains($proposicao->ementa ?? '', 'a ser definid') || str_contains($proposicao->ementa ?? '', 'em elaboração') || str_contains($proposicao->ementa ?? '', 'serem definidos') || str_contains($proposicao->ementa ?? '', 'definidos') || empty($proposicao->ementa))
+                                    <a href="{{ route('proposicoes.preencher-modelo', ['proposicao' => $proposicao->id, 'modeloId' => $proposicao->template_id]) }}" class="btn btn-outline-info">
+                                        <i class="fas fa-form me-2"></i>Preencher Campos do Template
+                                    </a>
+                                    <small class="text-muted d-block mt-1">
+                                        <i class="fas fa-lightbulb me-1"></i>
+                                        Complete os campos para gerar uma ementa específica
+                                    </small>
+                                @endif
                             @else
                                 <a href="{{ route('proposicoes.editar-texto', $proposicao->id) }}" class="btn btn-primary">
                                     <i class="fas fa-edit me-2"></i>Editar Proposição
                                 </a>
                             @endif
-                            <button class="btn btn-success" onclick="enviarParaLegislativo()">
-                                <i class="fas fa-paper-plane me-2"></i>Enviar para o Legislativo
-                            </button>
+                            @if($podeEnviarLegislativo)
+                                <button class="btn btn-success" onclick="enviarParaLegislativo()">
+                                    <i class="fas fa-paper-plane me-2"></i>Enviar para o Legislativo
+                                </button>
+                            @else
+                                <button class="btn btn-success" disabled title="Proposição precisa ter ementa e conteúdo para ser enviada">
+                                    <i class="fas fa-paper-plane me-2"></i>Enviar para o Legislativo
+                                </button>
+                            @endif
                             <button class="btn btn-outline-danger" onclick="excluirProposicao()">
                                 <i class="fas fa-trash me-2"></i>Excluir Rascunho
                             </button>
@@ -211,9 +286,15 @@
                             <strong>Salvando:</strong> Proposição está sendo preparada.
                         </div>
                         <div class="d-grid gap-2">
-                            <button class="btn btn-success" onclick="enviarLegislativo()">
-                                <i class="fas fa-paper-plane me-2"></i>Enviar para Legislativo
-                            </button>
+                            @if($podeEnviarLegislativo)
+                                <button class="btn btn-success" onclick="enviarLegislativo()">
+                                    <i class="fas fa-paper-plane me-2"></i>Enviar para Legislativo
+                                </button>
+                            @else
+                                <button class="btn btn-success" disabled title="Proposição precisa ter ementa e conteúdo para ser enviada">
+                                    <i class="fas fa-paper-plane me-2"></i>Enviar para Legislativo
+                                </button>
+                            @endif
                             <a href="{{ route('proposicoes.onlyoffice.editor-parlamentar', $proposicao->id) }}" class="btn btn-outline-primary">
                                 <i class="fas fa-edit me-2"></i>Continuar Editando
                             </a>
@@ -284,14 +365,30 @@
                                 <a href="{{ route('proposicoes.editar-onlyoffice', ['proposicao' => $proposicao->id, 'template' => $proposicao->template_id]) }}" class="btn btn-primary">
                                     <i class="fas fa-file-word me-2"></i>Continuar Edição no Editor
                                 </a>
+                                <!-- Botão para preencher/repreencher template -->
+                                @if(str_contains($proposicao->ementa ?? '', 'a ser definid') || str_contains($proposicao->ementa ?? '', 'em elaboração') || str_contains($proposicao->ementa ?? '', 'serem definidos') || str_contains($proposicao->ementa ?? '', 'definidos') || empty($proposicao->ementa))
+                                    <a href="{{ route('proposicoes.preencher-modelo', ['proposicao' => $proposicao->id, 'modeloId' => $proposicao->template_id]) }}" class="btn btn-outline-info">
+                                        <i class="fas fa-form me-2"></i>Preencher Campos do Template
+                                    </a>
+                                    <small class="text-muted d-block mt-1">
+                                        <i class="fas fa-lightbulb me-1"></i>
+                                        Complete os campos para gerar uma ementa específica
+                                    </small>
+                                @endif
                             @else
                                 <a href="{{ route('proposicoes.editar-texto', $proposicao->id) }}" class="btn btn-primary">
                                     <i class="fas fa-edit me-2"></i>Continuar Edição
                                 </a>
                             @endif
-                            <button class="btn btn-success" onclick="enviarParaLegislativo()">
-                                <i class="fas fa-paper-plane me-2"></i>Enviar para Legislativo
-                            </button>
+                            @if($podeEnviarLegislativo)
+                                <button class="btn btn-success" onclick="enviarParaLegislativo()">
+                                    <i class="fas fa-paper-plane me-2"></i>Enviar para Legislativo
+                                </button>
+                            @else
+                                <button class="btn btn-success" disabled title="Proposição precisa ter ementa e conteúdo para ser enviada">
+                                    <i class="fas fa-paper-plane me-2"></i>Enviar para Legislativo
+                                </button>
+                            @endif
                             <button class="btn btn-outline-danger btn-sm" onclick="excluirProposicao()">
                                 <i class="fas fa-trash me-2"></i>Descartar Proposição
                             </button>

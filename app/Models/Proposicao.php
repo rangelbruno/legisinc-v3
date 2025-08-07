@@ -46,10 +46,10 @@ class Proposicao extends Model
         'pdf_assinado_path',
         'momento_sessao',
         'tem_parecer',
-        'parecer_id'
+        'parecer_id',
         // Campos temporariamente comentados até migração ser executada:
         // 'numero',
-        // 'variaveis_template',
+        'variaveis_template',
         // 'conteudo_processado'
     ];
 
@@ -66,8 +66,8 @@ class Proposicao extends Model
         'confirmacao_leitura' => 'boolean',
         'tem_parecer' => 'boolean',
         'comissoes_destino' => 'array',
-        'verificacoes_realizadas' => 'array'
-        // 'variaveis_template' => 'array'
+        'verificacoes_realizadas' => 'array',
+        'variaveis_template' => 'array'
     ];
 
     public function autor(): BelongsTo
@@ -248,7 +248,22 @@ class Proposicao extends Model
      */
     public function getVariaveisTemplateAttribute($value = null): array
     {
-        // Usar sessão temporariamente até migração ser executada
+        // Tentar primeiro do campo do banco (se existir dados)
+        if (!empty($this->attributes['variaveis_template'])) {
+            try {
+                $dadosBanco = json_decode($this->attributes['variaveis_template'], true);
+                if (is_array($dadosBanco) && !empty($dadosBanco)) {
+                    return $dadosBanco;
+                }
+            } catch (\Exception $e) {
+                \Log::warning('Erro ao decodificar variaveis_template do banco', [
+                    'proposicao_id' => $this->id,
+                    'error' => $e->getMessage()
+                ]);
+            }
+        }
+        
+        // Fallback: usar sessão como antes
         $sessionKey = 'proposicao_' . $this->id . '_variaveis_template';
         return session($sessionKey, []);
     }

@@ -8,6 +8,8 @@ use App\Models\DocumentoTemplate;
 use App\Services\Template\TemplateProcessorService;
 use App\Services\Template\TemplateInstanceService;
 use App\Services\Template\TemplateParametrosService;
+use App\Services\TemplateVariablesService;
+use App\Models\TipoProposicaoTemplate;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -223,6 +225,12 @@ class ProposicaoController extends Controller
      */
     public function preencherModelo($proposicaoId, $modeloId)
     {
+        \Log::info('preencherModelo called', [
+            'proposicao_id' => $proposicaoId,
+            'modelo_id' => $modeloId,
+            'user_id' => Auth::id()
+        ]);
+        
         // TODO: Implement proper authorization
         // $this->authorize('update', $proposicao);
         
@@ -233,9 +241,67 @@ class ProposicaoController extends Controller
             abort(403, 'Você não tem permissão para editar esta proposição.');
         }
         
-        $modelo = (object) ['id' => $modeloId, 'nome' => 'Modelo Temporário']; // Temporary
+        // Buscar template e extrair variáveis
+        $templateVariables = [];
+        $templateVariablesGrouped = [];
+        $modelo = null;
         
-        return view('proposicoes.preencher-modelo', compact('proposicao', 'modelo'));
+        // Tentar encontrar o template diretamente pelo ID ou processando o formato template_
+        $template = null;
+        if (str_starts_with($modeloId, 'template_')) {
+            $templateId = str_replace('template_', '', $modeloId);
+            $template = TipoProposicaoTemplate::find($templateId);
+        } else {
+            // Tentar buscar diretamente pelo ID numérico
+            $template = TipoProposicaoTemplate::find($modeloId);
+        }
+        
+        if ($template) {
+            $templateVariablesService = new TemplateVariablesService();
+            $templateVariables = $templateVariablesService->extractVariablesFromTemplate($template);
+            $userInputVariables = $templateVariablesService->getRequiredUserInputVariables($templateVariables);
+            $templateVariablesGrouped = $templateVariablesService->groupVariablesByCategory($userInputVariables);
+            $categoryLabels = $templateVariablesService->getCategoryLabels();
+            
+            $modelo = (object) [
+                'id' => $modeloId,
+                'nome' => 'Template de ' . ucfirst(str_replace('_', ' ', $proposicao->tipo)),
+                'template' => $template
+            ];
+            
+            \Log::info('Template encontrado e variáveis extraídas', [
+                'proposicao_id' => $proposicaoId,
+                'template_id' => $template->id,
+                'total_variaveis' => count($templateVariables),
+                'variaveis_usuario' => count($userInputVariables),
+                'grupos' => array_keys($templateVariablesGrouped)
+            ]);
+        } else {
+            $modelo = (object) ['id' => $modeloId, 'nome' => 'Template não encontrado'];
+            
+            \Log::warning('Template não encontrado', [
+                'proposicao_id' => $proposicaoId,
+                'modelo_id_tentativa' => $modeloId
+            ]);
+        }
+        
+        // Definir categoryLabels mesmo quando não há template
+        if (!isset($categoryLabels)) {
+            $templateVariablesService = new TemplateVariablesService();
+            $categoryLabels = $templateVariablesService->getCategoryLabels();
+        }
+        
+        // Carregar valores existentes de diferentes fontes para pré-preencher os campos
+        $valoresExistentes = $this->carregarValoresExistentes($proposicao);
+        
+        return view('proposicoes.preencher-modelo', compact(
+            'proposicao', 
+            'modelo', 
+            'templateVariables',
+            'templateVariablesGrouped',
+            'categoryLabels',
+            'valoresExistentes'
+        ));
     }
 
     /**
@@ -243,10 +309,20 @@ class ProposicaoController extends Controller
      */
     public function gerarTexto(Request $request, $proposicaoId)
     {
+        // Validação flexível para aceitar tanto conteudo_modelo quanto template_variables
         $request->validate([
-            'conteudo_modelo' => 'required|array',
             'modelo_id' => 'required'
         ]);
+        
+        // Aceitar tanto o formato antigo (conteudo_modelo) quanto o novo (template_variables)
+        $templateVariables = $request->template_variables ?? $request->conteudo_modelo ?? [];
+        
+        if (empty($templateVariables)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Nenhum dado foi fornecido para processar o template.'
+            ], 400);
+        }
 
         $proposicao = Proposicao::findOrFail($proposicaoId);
         
@@ -279,47 +355,46 @@ class ProposicaoController extends Controller
                 }
             }
 
-            // Mapear campos do formulário para variáveis do template
-            $variaveisTemplate = $request->conteudo_modelo;
-            $variaveisTemplate['texto'] = $variaveisTemplate['conteudo'] ?? '';
+            // Processar variáveis do template usando o novo sistema
+            $templateVariablesService = new TemplateVariablesService();
             
-            // Salvar variáveis na sessão temporariamente
+            if ($template) {
+                // Extrair variáveis definidas no template
+                $templateVars = $templateVariablesService->extractVariablesFromTemplate($template);
+                
+                // Substituir variáveis no conteúdo do template  
+                $processedContent = $this->substituirVariaveisNoTemplate($template, $templateVariables, $proposicao, $templateVariablesService);
+                
+                // Salvar o conteúdo processado
+                session(['proposicao_' . $proposicaoId . '_conteudo_processado' => $processedContent]);
+            }
+            
+            // Mapear campos principais para manter compatibilidade
+            // Prioridade: ementa > finalidade > texto (primeiros 200 chars como ementa)
+            $ementa = $templateVariables['ementa'] ?? 
+                     $templateVariables['finalidade'] ?? 
+                     (isset($templateVariables['texto']) && $templateVariables['texto'] ? substr($templateVariables['texto'], 0, 200) . '...' : $proposicao->ementa);
+            
+            $conteudo = $templateVariables['texto'] ?? 
+                       $templateVariables['conteudo'] ?? 
+                       $proposicao->conteudo;
+            
+            // Salvar variáveis na sessão
             $sessionKey = 'proposicao_' . $proposicaoId . '_variaveis_template';
-            session([$sessionKey => $variaveisTemplate]);
+            session([$sessionKey => $templateVariables]);
             
-            // Atualizar proposição apenas com campos existentes
+            // Atualizar proposição
             $proposicao->update([
-                'ementa' => $request->conteudo_modelo['ementa'] ?? $proposicao->ementa,
-                'conteudo' => $request->conteudo_modelo['conteudo'] ?? $proposicao->conteudo,
+                'ementa' => $ementa,
+                'conteudo' => $conteudo,
                 'modelo_id' => $modeloId,
                 'template_id' => $templateId,
                 'ultima_modificacao' => now()
             ]);
             
-            // Processar template
-            if ($template) {
-                // Template específico existe - usar processamento normal
-                $templateProcessor = app(TemplateProcessorService::class);
-                $textoGerado = $templateProcessor->processarTemplate(
-                    $template,
-                    $proposicao,
-                    $variaveisTemplate
-                );
-                
-                // Aplicar substituição de parâmetros
-                $parametrosService = app(TemplateParametrosService::class);
-                $textoGerado = $parametrosService->processarTemplate($textoGerado, [
-                    'proposicao' => $proposicao,
-                    'autor' => $proposicao->autor,
-                    'variaveis' => $variaveisTemplate
-                ]);
-            } else {
-                // Template em branco - criar conteúdo básico
-                $textoGerado = $this->criarTextoBasico($proposicao, $variaveisTemplate);
-            }
-            
-            // Salvar texto processado na sessão
-            session(['proposicao_' . $proposicaoId . '_conteudo_processado' => $textoGerado]);
+            // O conteúdo processado já foi salvo acima, se necessário processar mais
+            $textoGerado = session('proposicao_' . $proposicaoId . '_conteudo_processado') ?? 
+                          $this->criarTextoBasico($proposicao, $templateVariables);
             
         } else {
             // Fallback - tratar qualquer modelo não-template como template em branco
@@ -334,7 +409,7 @@ class ProposicaoController extends Controller
             'proposicao_' . $proposicaoId . '_modelo_id' => $modeloId,
             'proposicao_' . $proposicaoId . '_template_id' => $isTemplate ? $templateId : null,
             'proposicao_' . $proposicaoId . '_tipo' => session('proposicao_' . $proposicaoId . '_tipo', 'projeto_lei'),
-            'proposicao_' . $proposicaoId . '_texto_gerado' => $textoGerado
+            'proposicao_' . $proposicaoId . '_texto_gerado' => $textoGerado ?? ''
         ]);
 
         \Log::info('Texto gerado para proposição', [
@@ -541,7 +616,26 @@ class ProposicaoController extends Controller
             }
 
             // Validar se tem conteúdo mínimo
-            if (empty($proposicao->ementa) || (!$proposicao->conteudo && !$proposicao->arquivo_path)) {
+            $ementa = $proposicao->ementa;
+            
+            // Se não tem ementa no campo principal, tentar extrair das variáveis da sessão
+            if (empty($ementa)) {
+                $variaveisTemplate = session('proposicao_' . $proposicao->id . '_variaveis_template', []);
+                $ementa = $variaveisTemplate['ementa'] ?? 
+                         $variaveisTemplate['finalidade'] ?? 
+                         (isset($variaveisTemplate['texto']) ? $variaveisTemplate['texto'] : '');
+                
+                // Se encontrou ementa nas variáveis, atualizar a proposição
+                if (!empty($ementa)) {
+                    $proposicao->update(['ementa' => $ementa]);
+                    \Log::info('Ementa extraída das variáveis do template', [
+                        'proposicao_id' => $proposicao->id,
+                        'ementa' => substr($ementa, 0, 100)
+                    ]);
+                }
+            }
+            
+            if (empty($ementa) || (!$proposicao->conteudo && !$proposicao->arquivo_path)) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Proposição deve ter ementa e conteúdo antes de ser enviada.'
@@ -604,12 +698,71 @@ class ProposicaoController extends Controller
     public function show($proposicaoId)
     {
         // Buscar proposição real do banco de dados
-        $proposicao = Proposicao::findOrFail($proposicaoId);
+        $proposicao = Proposicao::with(['autor', 'tipoProposicao'])->findOrFail($proposicaoId);
         
         // TODO: Implement proper authorization
         // $this->authorize('view', $proposicao);
         
-        return view('proposicoes.show', compact('proposicao'));
+        // Se não tem ementa no campo principal, tentar extrair das variáveis
+        if (empty($proposicao->ementa)) {
+            $variaveisTemplate = session('proposicao_' . $proposicao->id . '_variaveis_template', []);
+            
+            // Se não tem variáveis na sessão, mas tem template_id, tentar extrair do template
+            if (empty($variaveisTemplate) && !empty($proposicao->template_id)) {
+                try {
+                    $template = \App\Models\TipoProposicaoTemplate::find($proposicao->template_id);
+                    if ($template) {
+                        $templateVariablesService = app(\App\Services\TemplateVariablesService::class);
+                        $variaveisTemplate = $templateVariablesService->extractVariablesFromTemplate($template);
+                        \Log::info('Variáveis extraídas do template para proposição sem ementa', [
+                            'proposicao_id' => $proposicao->id,
+                            'template_id' => $proposicao->template_id,
+                            'variaveis_encontradas' => array_keys($variaveisTemplate)
+                        ]);
+                    }
+                } catch (\Exception $e) {
+                    \Log::warning('Erro ao extrair variáveis do template', [
+                        'proposicao_id' => $proposicao->id,
+                        'template_id' => $proposicao->template_id,
+                        'erro' => $e->getMessage()
+                    ]);
+                }
+            }
+            
+            // Tentar gerar ementa baseada no tipo de proposição
+            $ementaGerada = $this->gerarEmentaAutomatica($proposicao, $variaveisTemplate);
+            
+            if (!empty($ementaGerada)) {
+                $proposicao->ementa = $ementaGerada;
+                // Salvar no banco também
+                $proposicao->save();
+                \Log::info('Ementa gerada automaticamente', [
+                    'proposicao_id' => $proposicao->id,
+                    'ementa' => $ementaGerada
+                ]);
+            }
+        }
+        
+        // Informações adicionais da sessão (se houver)
+        $templateVariables = session('proposicao_' . $proposicao->id . '_variaveis_template', []);
+        $conteudoProcessado = session('proposicao_' . $proposicao->id . '_conteudo_processado', '');
+        
+        // Status formatado
+        $statusFormatado = ucfirst(str_replace('_', ' ', $proposicao->status ?? 'rascunho'));
+        
+        // Verificar se pode ser enviado para legislativo
+        $podeEnviarLegislativo = $proposicao->autor_id === auth()->id() && 
+                                in_array($proposicao->status, ['rascunho', 'em_edicao']) &&
+                                (!empty($proposicao->ementa) || !empty($templateVariables)) &&
+                                ($proposicao->conteudo || $proposicao->arquivo_path);
+        
+        return view('proposicoes.show', compact(
+            'proposicao', 
+            'templateVariables', 
+            'conteudoProcessado',
+            'statusFormatado',
+            'podeEnviarLegislativo'
+        ));
     }
 
     /**
@@ -4213,5 +4366,192 @@ ${texto}
             // Se houver erro, retornar conteúdo original
             return $conteudo;
         }
+    }
+    
+    /**
+     * Substituir variáveis no template usando o novo sistema
+     */
+    private function substituirVariaveisNoTemplate($template, array $templateVariables, Proposicao $proposicao, TemplateVariablesService $templateVariablesService): string
+    {
+        try {
+            // Obter conteúdo do template usando o método privado do service (reflexão)
+            $reflection = new \ReflectionClass($templateVariablesService);
+            $method = $reflection->getMethod('getTemplateContent');
+            $method->setAccessible(true);
+            $templateContent = $method->invoke($templateVariablesService, $template);
+            
+            if (!$templateContent) {
+                return $this->criarTextoBasico($proposicao, $templateVariables);
+            }
+            
+            // Variáveis do sistema para preenchimento automático
+            $user = auth()->user();
+            $now = now();
+            
+            $systemVariables = [
+                'data_atual' => $now->format('d/m/Y'),
+                'data_extenso' => $now->locale('pt_BR')->translatedFormat('j \\d\\e F \\d\\e Y'),
+                'dia_atual' => $now->format('d'),
+                'mes_atual' => $now->locale('pt_BR')->translatedFormat('F'),
+                'ano_atual' => $now->format('Y'),
+                'hora_atual' => $now->format('H:i'),
+                'data_criacao' => $proposicao->created_at->format('d/m/Y'),
+                
+                'numero_proposicao' => $proposicao->id,
+                'tipo_proposicao' => $proposicao->tipo_formatado ?? 'Proposição',
+                'status_proposicao' => ucfirst($proposicao->status ?? 'rascunho'),
+                
+                'autor_nome' => $proposicao->autor->name ?? $user->name ?? 'Autor',
+                'nome_parlamentar' => $proposicao->autor->name ?? $user->name ?? 'Parlamentar',
+                'cargo_parlamentar' => 'Vereador(a)', 
+                'email_parlamentar' => $proposicao->autor->email ?? $user->email ?? '',
+                'partido_parlamentar' => '', // TODO: implementar quando tiver campo partido
+                
+                'municipio' => config('app.municipio', 'São Paulo'),
+                'nome_camara' => config('app.nome_camara', 'Câmara Municipal'),
+                'endereco_camara' => config('app.endereco_camara', ''),
+                'legislatura_atual' => config('app.legislatura_atual', '2021-2024'),
+                'sessao_legislativa' => config('app.sessao_legislativa', '2024'),
+                
+                'imagem_cabecalho' => config('app.imagem_cabecalho', '')
+            ];
+            
+            // Combinar variáveis do template com as do sistema
+            $allVariables = array_merge($systemVariables, $templateVariables);
+            
+            // Substituir variáveis no conteúdo do template
+            $processedContent = $templateContent;
+            foreach ($allVariables as $key => $value) {
+                $processedContent = str_replace('${' . $key . '}', $value, $processedContent);
+            }
+            
+            // Log para debug
+            \Log::info('Template processado com variáveis', [
+                'template_id' => $template->id,
+                'variables_count' => count($allVariables),
+                'processed_size' => strlen($processedContent)
+            ]);
+            
+            return $processedContent;
+            
+        } catch (\Exception $e) {
+            \Log::error('Erro ao processar template com variáveis', [
+                'template_id' => $template->id ?? null,
+                'error' => $e->getMessage()
+            ]);
+            
+            // Fallback: criar texto básico
+            return $this->criarTextoBasico($proposicao, $templateVariables);
+        }
+    }
+    
+    /**
+     * Gera ementa automaticamente baseada no tipo de proposição e variáveis disponíveis
+     */
+    private function gerarEmentaAutomatica($proposicao, $variaveisTemplate = [])
+    {
+        // Primeira tentativa: usar variáveis do template se existirem
+        if (!empty($variaveisTemplate)) {
+            if (isset($variaveisTemplate['ementa']['label']) && !empty($variaveisTemplate['ementa'])) {
+                // Se tem campo ementa no template mas sem valor, usar descrição padrão
+                $ementa = 'Ementa a ser definida - ' . ucfirst(str_replace('_', ' ', $proposicao->tipo));
+            } elseif (isset($variaveisTemplate['finalidade']['label']) && !empty($variaveisTemplate['finalidade'])) {
+                $ementa = 'Proposta com finalidade a ser definida';
+            } elseif (isset($variaveisTemplate['texto']['label']) && !empty($variaveisTemplate['texto'])) {
+                $ementa = 'Proposição em elaboração - conteúdo a ser definido';
+            }
+        }
+        
+        // Segunda tentativa: gerar baseado no tipo de proposição
+        if (empty($ementa)) {
+            switch ($proposicao->tipo) {
+                case 'proposta_emenda_constituicao':
+                    $ementa = 'Proposta de Emenda à Constituição - dispositivos e finalidade a serem definidos';
+                    break;
+                case 'proposta_emenda_lei_organica':
+                    $ementa = 'Proposta de Emenda à Lei Orgânica Municipal - dispositivos a serem definidos';
+                    break;
+                case 'projeto_lei_ordinaria':
+                    $ementa = 'Projeto de Lei Ordinária - matéria a ser definida';
+                    break;
+                case 'projeto_lei_complementar':
+                    $ementa = 'Projeto de Lei Complementar - matéria a ser definida';
+                    break;
+                case 'indicacao':
+                    $ementa = 'Indicação - assunto a ser definido';
+                    break;
+                case 'projeto_decreto_legislativo':
+                    $ementa = 'Projeto de Decreto Legislativo - matéria a ser definida';
+                    break;
+                case 'projeto_resolucao':
+                    $ementa = 'Projeto de Resolução - matéria a ser definida';
+                    break;
+                case 'mocao':
+                    $ementa = 'Moção - assunto a ser definido';
+                    break;
+                default:
+                    $ementa = 'Proposição em elaboração - ' . ucfirst(str_replace('_', ' ', $proposicao->tipo));
+                    break;
+            }
+        }
+        
+        return $ementa ?? null;
+    }
+    
+    /**
+     * Carrega valores existentes de diferentes fontes para pré-preencher campos
+     */
+    private function carregarValoresExistentes($proposicao)
+    {
+        $valoresExistentes = [];
+        
+        \Log::info('Carregando valores existentes', [
+            'proposicao_id' => $proposicao->id,
+            'status' => $proposicao->status
+        ]);
+        
+        // 1. Carregar variáveis do template (usa accessor que já tenta banco e sessão)
+        $variaveisTemplate = $proposicao->variaveis_template;
+        if (!empty($variaveisTemplate)) {
+            $valoresExistentes = array_merge($valoresExistentes, $variaveisTemplate);
+            \Log::info('Valores carregados via accessor', [
+                'proposicao_id' => $proposicao->id,
+                'variaveis' => array_keys($variaveisTemplate),
+                'valores' => $variaveisTemplate
+            ]);
+        }
+        
+        // 3. Mapear campos básicos da proposição para variáveis do template atual
+        // Só mapear se não existirem valores mais específicos
+        if (!empty($proposicao->conteudo) && !isset($valoresExistentes['texto'])) {
+            $valoresExistentes['texto'] = $proposicao->conteudo;
+        }
+        
+        // Para ementa, tentar mapear para finalidade se a ementa parecer automática
+        if (!empty($proposicao->ementa) && !isset($valoresExistentes['finalidade'])) {
+            // Se a ementa contém indicadores de que foi gerada automaticamente, não mapear
+            $ementaAutomatica = str_contains($proposicao->ementa, 'serem definidos') || 
+                               str_contains($proposicao->ementa, 'a ser definid') || 
+                               str_contains($proposicao->ementa, 'em elaboração');
+            
+            if (!$ementaAutomatica) {
+                // Ementa parece ter conteúdo real, mapear para finalidade
+                $valoresExistentes['finalidade'] = $proposicao->ementa;
+            }
+        }
+        
+        // 4. Para proposição "em_edicao", tentar extrair de conteúdo processado
+        if ($proposicao->status === 'em_edicao' && !empty($proposicao->conteudo_processado)) {
+            // Aqui poderia tentar extrair valores do conteúdo processado usando regex
+            // Por simplicidade, vou pular essa parte por enquanto
+        }
+        
+        \Log::info('Valores finais carregados', [
+            'proposicao_id' => $proposicao->id,
+            'total_variaveis' => count($valoresExistentes),
+            'variaveis' => array_keys($valoresExistentes)
+        ]);
+        
+        return $valoresExistentes;
     }
 }
