@@ -402,7 +402,7 @@ class DashboardController extends Controller
                 // Métricas executivas avançadas
                 $parlamentaresAtivos = User::whereHas('roles', function($q) {
                     $q->where('name', User::PERFIL_PARLAMENTAR);
-                })->where('last_login_at', '>=', now()->subDays(30))->count();
+                })->where('ultimo_acesso', '>=', now()->subDays(30))->count();
                 
                 $proposicoesHoje = Proposicao::whereDate('created_at', today())->count();
                 $proposicoesAprovadas = Proposicao::where('status', 'aprovado')->count();
@@ -411,7 +411,7 @@ class DashboardController extends Controller
                 $metricas_executivas = [
                     'parlamentares_ativos' => $parlamentaresAtivos,
                     'sessoes_hoje' => 0, // Campo sessões não implementado ainda
-                    'usuarios_online' => User::where('last_seen_at', '>=', now()->subMinutes(5))->count(),
+                    'usuarios_online' => User::where('ultimo_acesso', '>=', now()->subMinutes(5))->count(),
                     'proposicoes_hoje' => $proposicoesHoje,
                     'taxa_aprovacao' => $taxaAprovacao,
                     'tempo_medio_tramitacao' => 15, // Mock: 15 dias médio
@@ -468,7 +468,7 @@ class DashboardController extends Controller
                     $atividade_sistema->push((object)[
                         'data' => $data->format('d/m'),
                         'proposicoes' => Proposicao::whereDate('created_at', $data)->count(),
-                        'logins' => User::whereDate('last_login_at', $data)->count(),
+                        'logins' => User::whereDate('ultimo_acesso', $data)->count(),
                     ]);
                 }
             }

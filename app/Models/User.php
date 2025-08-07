@@ -463,6 +463,14 @@ class User extends Authenticatable
     }
 
     /**
+     * Relacionamento com proposições como autor
+     */
+    public function proposicoesAutor()
+    {
+        return $this->hasMany(Proposicao::class, 'autor_id');
+    }
+
+    /**
      * Scope para parlamentares
      */
     public function scopeParlamentares($query)

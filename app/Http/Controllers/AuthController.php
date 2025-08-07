@@ -43,6 +43,11 @@ class AuthController extends Controller
         // Try database authentication first
         try {
             if (Auth::attempt($credentials)) {
+                // Atualizar último acesso
+                $user = Auth::user();
+                $user->ultimo_acesso = now();
+                $user->save();
+                
                 $request->session()->regenerate();
 
                 return redirect()->intended(route('dashboard'))
