@@ -53,7 +53,7 @@
                         </div>
                         <div class="card-toolbar">
                             <div class="d-flex justify-content-end">
-                                <button type="button" class="btn btn-sm btn-light-primary me-3" onclick="adicionarVariavel()">
+                                <button type="button" class="btn btn-sm btn-light-primary me-3" data-bs-toggle="modal" data-bs-target="#modalAdicionarVariavel">
                                     <i class="ki-duotone ki-plus fs-4">
                                         <span class="path1"></span>
                                         <span class="path2"></span>
@@ -97,6 +97,14 @@
 
                             <!-- Botões de ação -->
                             <div class="d-flex justify-content-end mt-10">
+                                <div id="alteracoesPendentes" class="alert alert-warning me-3" style="display: none; padding: 8px 15px; margin: 0;">
+                                    <i class="ki-duotone ki-information fs-5 me-2">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                        <span class="path3"></span>
+                                    </i>
+                                    <small>Há alterações não salvas</small>
+                                </div>
                                 <button type="button" class="btn btn-sm btn-light me-3" onclick="window.location.href='{{ route('admin.dashboard') }}'">
                                     <i class="ki-duotone ki-cross fs-4">
                                         <span class="path1"></span>
@@ -104,7 +112,7 @@
                                     </i>
                                     Cancelar
                                 </button>
-                                <button type="submit" class="btn btn-sm btn-primary">
+                                <button type="submit" class="btn btn-sm btn-primary" id="botaoSalvar">
                                     <i class="ki-duotone ki-check fs-4">
                                         <span class="path1"></span>
                                         <span class="path2"></span>
@@ -188,9 +196,188 @@
     </div>
 </div>
 
+<!-- Modal para adicionar variável -->
+<div class="modal fade" id="modalAdicionarVariavel" tabindex="-1" aria-labelledby="modalAdicionarVariavelLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered mw-800px">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="fw-bold">Adicionar Nova Variável Dinâmica</h2>
+                <div class="btn btn-icon btn-sm btn-active-icon-primary" data-bs-dismiss="modal">
+                    <i class="ki-duotone ki-cross fs-1">
+                        <span class="path1"></span>
+                        <span class="path2"></span>
+                    </i>
+                </div>
+            </div>
+            <div class="modal-body scroll-y mx-5 mx-xl-15 my-7">
+                <form id="formNovaVariavel">
+                    <div class="row g-5">
+                        <div class="col-md-6">
+                            <div class="fv-row">
+                                <label class="required fs-6 fw-semibold form-label">Nome da Variável</label>
+                                <input type="text" id="novaVariavelNome" name="nome" 
+                                       class="form-control" 
+                                       placeholder="Ex: NOME_MUNICIPIO"
+                                       maxlength="100"
+                                       oninput="this.value = this.value.toUpperCase().replace(/[^A-Z0-9_]/g, '')">
+                                <div class="form-text">Use apenas letras, números e underscore. Será convertido para maiúsculas.</div>
+                                <div class="invalid-feedback"></div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="fv-row">
+                                <label class="required fs-6 fw-semibold form-label">Tipo</label>
+                                <select id="novaVariavelTipo" name="tipo" class="form-select" onchange="alterarTipoNovaVariavel()">
+                                    <option value="texto">Texto</option>
+                                    <option value="numero">Número</option>
+                                    <option value="data">Data</option>
+                                    <option value="boolean">Verdadeiro/Falso</option>
+                                    <option value="url">URL</option>
+                                    <option value="email">Email</option>
+                                </select>
+                                <div class="invalid-feedback"></div>
+                            </div>
+                        </div>
+                        <div class="col-md-12">
+                            <div class="fv-row">
+                                <label class="required fs-6 fw-semibold form-label">Valor</label>
+                                <input type="text" id="novaVariavelValor" name="valor" 
+                                       class="form-control" 
+                                       placeholder="Digite o valor da variável">
+                                <div class="invalid-feedback"></div>
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <div class="fv-row">
+                                <label class="fs-6 fw-semibold form-label">Descrição</label>
+                                <input type="text" id="novaVariavelDescricao" name="descricao" 
+                                       class="form-control" 
+                                       placeholder="Descrição opcional da variável"
+                                       maxlength="255">
+                                <div class="invalid-feedback"></div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="fv-row">
+                                <label class="required fs-6 fw-semibold form-label">Escopo</label>
+                                <select id="novaVariavelEscopo" name="escopo" class="form-select">
+                                    <option value="global">Global (Todo o sistema)</option>
+                                    <option value="documentos">Documentos</option>
+                                    <option value="templates">Templates</option>
+                                    <option value="sistema">Sistema</option>
+                                </select>
+                                <div class="invalid-feedback"></div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="fv-row">
+                                <label class="fs-6 fw-semibold form-label">Formato</label>
+                                <input type="text" id="novaVariavelFormato" name="formato" 
+                                       class="form-control" 
+                                       placeholder="Ex: d/m/Y para datas"
+                                       maxlength="100">
+                                <div class="form-text">Formato específico para o tipo de dado (ex: d/m/Y para datas)</div>
+                                <div class="invalid-feedback"></div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="fv-row">
+                                <label class="fs-6 fw-semibold form-label">Validação</label>
+                                <input type="text" id="novaVariavelValidacao" name="validacao" 
+                                       class="form-control" 
+                                       placeholder="Ex: required|string|max:255"
+                                       maxlength="200">
+                                <div class="form-text">Regras de validação Laravel (opcional)</div>
+                                <div class="invalid-feedback"></div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="salvarNovaVariavel()">
+                    <i class="ki-duotone ki-check fs-2">
+                        <span class="path1"></span>
+                        <span class="path2"></span>
+                    </i>
+                    Adicionar Variável
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Botão flutuante para voltar ao topo -->
+<div id="kt_scrolltop" class="scrolltop" style="display: none;">
+    <i class="ki-duotone ki-arrow-up">
+        <span class="path1"></span>
+        <span class="path2"></span>
+    </i>
+</div>
+
 @endsection
 
-@section('scripts')
+@push('styles')
+<style>
+/* Estilo para o botão de scroll to top */
+.scrolltop {
+    display: none;
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background-color: #1e1e2d;
+    color: white;
+    border: none;
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+    transition: all 0.3s ease;
+}
+
+.scrolltop:hover {
+    background-color: #009ef7;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 158, 247, 0.3);
+}
+
+.scrolltop i {
+    font-size: 1.2rem;
+}
+
+/* Animação de highlight para variáveis recém-adicionadas */
+.border-primary {
+    border: 2px solid #009ef7 !important;
+    transition: border-color 0.3s ease;
+}
+
+/* Melhorar espaçamento dos cards de variáveis */
+.variavel-item {
+    transition: all 0.3s ease;
+}
+
+.variavel-item:hover {
+    box-shadow: 0 0 20px rgba(0, 158, 247, 0.1);
+}
+
+/* Estilo para campos com erro no modal */
+.modal .is-invalid {
+    border-color: #f1416c;
+}
+
+.modal .invalid-feedback {
+    color: #f1416c;
+    font-size: 0.875rem;
+}
+</style>
+@endpush
+
+@push('scripts')
 <script>
 // Configurações e dados do PHP
 let configuracoes = @json($configuracoes);
@@ -209,6 +396,11 @@ document.addEventListener('DOMContentLoaded', function() {
         variaveisAtuais.forEach(variavel => {
             adicionarVariavel(variavel);
         });
+    } else if (variaveisPadrao && variaveisPadrao.length > 0) {
+        // Se não há variáveis salvas, carregar as padrão do sistema
+        variaveisPadrao.forEach(variavel => {
+            adicionarVariavel(variavel);
+        });
     } else {
         // Adicionar uma variável em branco para começar
         adicionarVariavel();
@@ -216,6 +408,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Configurar formulário
     configurarFormulario();
+    
+    // Inicializar botão de scroll to top
+    inicializarScrollTop();
     
     console.log('✅ Página inicializada');
 });
@@ -236,6 +431,19 @@ function adicionarVariavel(dadosVariavel = null) {
     };
     
     const container = document.getElementById('variaveisContainer');
+    
+    // Construir options do select de tipo
+    let tipoOptions = '';
+    Object.entries(tiposDisponiveis).forEach(([key, value]) => {
+        tipoOptions += `<option value="${key}" ${dados.tipo === key ? 'selected' : ''}>${value}</option>`;
+    });
+    
+    // Construir options do select de escopo
+    let escopoOptions = '';
+    Object.entries(escoposDisponiveis).forEach(([key, value]) => {
+        escopoOptions += `<option value="${key}" ${dados.escopo === key ? 'selected' : ''}>${value}</option>`;
+    });
+    
     const variavelHtml = `
         <div class="variavel-item card card-bordered mb-5" data-index="${contadorVariaveis}">
             <div class="card-header collapsible cursor-pointer rotate" data-bs-toggle="collapse" data-bs-target="#variavel_${contadorVariaveis}">
@@ -278,13 +486,8 @@ function adicionarVariavel(dadosVariavel = null) {
                                 <select name="variaveis[${contadorVariaveis}][tipo]" 
                                         class="form-select" 
                                         ${dados.sistema ? 'disabled' : ''}
-                                        onchange="alterarTipoVariavel(${contadorVariaveis})">`;
-                                        
-    Object.entries(tiposDisponiveis).forEach(([key, value]) => {
-        variavelHtml += `<option value="${key}" ${dados.tipo === key ? 'selected' : ''}>${value}</option>`;
-    });
-    
-    const htmlContinuacao = `
+                                        onchange="alterarTipoVariavel(${contadorVariaveis})">
+                                    ${tipoOptions}
                                 </select>
                             </div>
                         </div>
@@ -313,13 +516,8 @@ function adicionarVariavel(dadosVariavel = null) {
                                 <label class="required fs-6 fw-semibold form-label">Escopo</label>
                                 <select name="variaveis[${contadorVariaveis}][escopo]" 
                                         class="form-select" 
-                                        ${dados.sistema ? 'disabled' : ''}>`;
-                                        
-    Object.entries(escoposDisponiveis).forEach(([key, value]) => {
-        htmlContinuacao += `<option value="${key}" ${dados.escopo === key ? 'selected' : ''}>${value}</option>`;
-    });
-    
-    const htmlFinal = `
+                                        ${dados.sistema ? 'disabled' : ''}>
+                                    ${escopoOptions}
                                 </select>
                             </div>
                         </div>
@@ -350,7 +548,7 @@ function adicionarVariavel(dadosVariavel = null) {
         </div>
     `;
     
-    container.insertAdjacentHTML('beforeend', variavelHtml + htmlContinuacao + htmlFinal);
+    container.insertAdjacentHTML('beforeend', variavelHtml);
     console.log(`✅ Variável ${contadorVariaveis} adicionada`);
 }
 
@@ -359,6 +557,7 @@ function removerVariavel(index) {
     const elemento = document.querySelector(`.variavel-item[data-index="${index}"]`);
     if (elemento) {
         elemento.remove();
+        marcarAlteracoesPendentes();
         console.log(`🗑️ Variável ${index} removida`);
     }
 }
@@ -372,6 +571,7 @@ function atualizarNomeDisplay(index) {
         const nomeFormatado = input.value.toUpperCase();
         input.value = nomeFormatado;
         display.textContent = nomeFormatado || 'Nova Variável';
+        marcarAlteracoesPendentes();
     }
 }
 
@@ -410,6 +610,8 @@ function alterarTipoVariavel(index) {
             inputValor.type = 'text';
             inputValor.placeholder = 'Digite o valor da variável';
     }
+    
+    marcarAlteracoesPendentes();
 }
 
 // Mostrar variáveis disponíveis do sistema
@@ -451,6 +653,241 @@ function getTipoCor(tipo) {
     return cores[tipo] || 'primary';
 }
 
+// Alterar tipo de variável no modal
+function alterarTipoNovaVariavel() {
+    const select = document.getElementById('novaVariavelTipo');
+    const inputValor = document.getElementById('novaVariavelValor');
+    const inputFormato = document.getElementById('novaVariavelFormato');
+    
+    if (!select || !inputValor) return;
+    
+    const tipo = select.value;
+    
+    // Ajustar placeholder e tipo de input baseado no tipo selecionado
+    switch(tipo) {
+        case 'numero':
+            inputValor.type = 'number';
+            inputValor.placeholder = 'Digite um número';
+            inputFormato.placeholder = 'Ex: 2 (casas decimais)';
+            break;
+        case 'data':
+            inputValor.type = 'date';
+            inputValor.placeholder = 'Selecione uma data';
+            inputFormato.placeholder = 'd/m/Y';
+            inputFormato.value = 'd/m/Y';
+            break;
+        case 'email':
+            inputValor.type = 'email';
+            inputValor.placeholder = 'Digite um email válido';
+            inputFormato.placeholder = 'Formato do email';
+            break;
+        case 'url':
+            inputValor.type = 'url';
+            inputValor.placeholder = 'Digite uma URL válida';
+            inputFormato.placeholder = 'Formato da URL';
+            break;
+        case 'boolean':
+            inputValor.type = 'text';
+            inputValor.placeholder = 'true/false, sim/não, 1/0';
+            inputFormato.placeholder = 'true/false';
+            break;
+        default:
+            inputValor.type = 'text';
+            inputValor.placeholder = 'Digite o valor da variável';
+            inputFormato.placeholder = 'Ex: maiúscula, minúscula';
+    }
+}
+
+// Salvar nova variável do modal
+async function salvarNovaVariavel() {
+    const form = document.getElementById('formNovaVariavel');
+    const formData = new FormData(form);
+    
+    // Limpar erros anteriores
+    form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+    form.querySelectorAll('.invalid-feedback').forEach(el => el.textContent = '');
+    
+    // Validar campos obrigatórios
+    const nome = formData.get('nome')?.trim();
+    const valor = formData.get('valor')?.trim();
+    const tipo = formData.get('tipo');
+    const escopo = formData.get('escopo');
+    
+    let hasErrors = false;
+    
+    if (!nome) {
+        mostrarErroInput('novaVariavelNome', 'Nome da variável é obrigatório');
+        hasErrors = true;
+    } else if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(nome)) {
+        mostrarErroInput('novaVariavelNome', 'Nome deve começar com letra ou underscore e conter apenas letras, números e underscores');
+        hasErrors = true;
+    }
+    
+    if (!valor) {
+        mostrarErroInput('novaVariavelValor', 'Valor da variável é obrigatório');
+        hasErrors = true;
+    }
+    
+    // Validações específicas por tipo
+    if (tipo === 'numero' && valor && !isNumeric(valor)) {
+        mostrarErroInput('novaVariavelValor', 'Valor deve ser um número válido');
+        hasErrors = true;
+    }
+    
+    if (tipo === 'email' && valor && !isValidEmail(valor)) {
+        mostrarErroInput('novaVariavelValor', 'Valor deve ser um email válido');
+        hasErrors = true;
+    }
+    
+    if (tipo === 'url' && valor && !isValidURL(valor)) {
+        mostrarErroInput('novaVariavelValor', 'Valor deve ser uma URL válida');
+        hasErrors = true;
+    }
+    
+    if (hasErrors) {
+        return;
+    }
+    
+    // Verificar se variável já existe
+    if (verificarVariavelExistente(nome.toUpperCase())) {
+        mostrarErroInput('novaVariavelNome', 'Uma variável com este nome já existe');
+        return;
+    }
+    
+    // Adicionar variável à lista
+    const dadosVariavel = {
+        nome: nome.toUpperCase(),
+        valor: valor,
+        descricao: formData.get('descricao') || '',
+        tipo: tipo,
+        escopo: escopo,
+        formato: formData.get('formato') || '',
+        validacao: formData.get('validacao') || '',
+        sistema: false
+    };
+    
+    adicionarVariavel(dadosVariavel);
+    
+    // Marcar como alterações pendentes
+    marcarAlteracoesPendentes();
+    
+    // Fechar modal e limpar formulário
+    const modal = bootstrap.Modal.getInstance(document.getElementById('modalAdicionarVariavel'));
+    modal.hide();
+    form.reset();
+    
+    // Scroll para a nova variável
+    setTimeout(() => {
+        const novaVariavel = document.querySelector('.variavel-item:last-child');
+        if (novaVariavel) {
+            novaVariavel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            novaVariavel.classList.add('border-primary');
+            setTimeout(() => novaVariavel.classList.remove('border-primary'), 3000);
+        }
+    }, 100);
+    
+    Swal.fire({
+        icon: 'success',
+        title: 'Variável Adicionada!',
+        text: `A variável ${dadosVariavel.nome} foi adicionada com sucesso. Lembre-se de clicar em "Salvar Configurações" para persistir no banco de dados.`,
+        timer: 4000,
+        timerProgressBar: true
+    });
+}
+
+// Funções auxiliares de validação
+function isNumeric(value) {
+    return !isNaN(parseFloat(value)) && isFinite(value);
+}
+
+function isValidEmail(email) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+}
+
+function isValidURL(url) {
+    try {
+        new URL(url);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+function mostrarErroInput(inputId, mensagem) {
+    const input = document.getElementById(inputId);
+    const feedback = input.parentNode.querySelector('.invalid-feedback');
+    
+    input.classList.add('is-invalid');
+    feedback.textContent = mensagem;
+}
+
+function verificarVariavelExistente(nome) {
+    const variaveisExistentes = document.querySelectorAll('.variavel-nome');
+    for (let input of variaveisExistentes) {
+        if (input.value.toUpperCase() === nome) {
+            return true;
+        }
+    }
+    
+    // Verificar também nas variáveis padrão
+    return variaveisPadrao.some(v => v.nome === nome);
+}
+
+// Inicializar botão de scroll to top
+function inicializarScrollTop() {
+    const scrollTop = document.getElementById('kt_scrolltop');
+    
+    if (scrollTop) {
+        // Mostrar/ocultar botão baseado no scroll
+        window.addEventListener('scroll', function() {
+            if (window.pageYOffset > 300) {
+                scrollTop.style.display = 'flex';
+            } else {
+                scrollTop.style.display = 'none';
+            }
+        });
+        
+        // Click handler para voltar ao topo
+        scrollTop.addEventListener('click', function() {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+    }
+}
+
+// Marcar como alterações pendentes
+function marcarAlteracoesPendentes() {
+    const indicador = document.getElementById('alteracoesPendentes');
+    const botaoSalvar = document.getElementById('botaoSalvar');
+    
+    if (indicador) {
+        indicador.style.display = 'flex';
+    }
+    
+    if (botaoSalvar) {
+        botaoSalvar.classList.add('btn-success');
+        botaoSalvar.classList.remove('btn-primary');
+    }
+}
+
+// Esconder indicador de alterações pendentes
+function esconderAlteracoesPendentes() {
+    const indicador = document.getElementById('alteracoesPendentes');
+    const botaoSalvar = document.getElementById('botaoSalvar');
+    
+    if (indicador) {
+        indicador.style.display = 'none';
+    }
+    
+    if (botaoSalvar) {
+        botaoSalvar.classList.remove('btn-success');
+        botaoSalvar.classList.add('btn-primary');
+    }
+}
+
 // Configurar formulário
 function configurarFormulario() {
     const form = document.getElementById('formVariaveisDinamicas');
@@ -467,16 +904,28 @@ function configurarFormulario() {
         submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Salvando...';
         
         try {
+            // Verificar se há variáveis para salvar
+            const variaveisCards = document.querySelectorAll('.variavel-item');
+            if (variaveisCards.length === 0) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Nenhuma Variável',
+                    text: 'Adicione pelo menos uma variável antes de salvar.'
+                });
+                return;
+            }
+            
             // Coletar dados do formulário
             const formData = new FormData(form);
             
             // Enviar via fetch
-            const response = await fetch('{{ route("parametros.variaveis-dinamicas.store") }}', {
+            const response = await fetch('/parametros-variaveis-dinamicas', {
                 method: 'POST',
                 body: formData,
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest',
-                    'Accept': 'application/json'
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
                 }
             });
             
@@ -484,6 +933,9 @@ function configurarFormulario() {
             
             if (result.success) {
                 console.log('✅ Variáveis salvas com sucesso');
+                
+                // Esconder indicador de alterações pendentes
+                esconderAlteracoesPendentes();
                 
                 Swal.fire({
                     icon: 'success',
@@ -540,7 +992,7 @@ function configurarFormulario() {
     });
 }
 
-// Limpar erros de validação quando o usuário digitar
+// Limpar erros de validação quando o usuário digitar e marcar alterações pendentes
 document.addEventListener('input', function(e) {
     if (e.target.classList.contains('is-invalid')) {
         e.target.classList.remove('is-invalid');
@@ -549,6 +1001,11 @@ document.addEventListener('input', function(e) {
             errorDiv.remove();
         }
     }
+    
+    // Se o input está dentro do formulário de variáveis, marcar como alteração pendente
+    if (e.target.closest('#formVariaveisDinamicas')) {
+        marcarAlteracoesPendentes();
+    }
 });
 </script>
-@endsection
+@endpush

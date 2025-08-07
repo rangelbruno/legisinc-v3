@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\VariavelDinamica;
 use App\Services\Parametro\ParametroService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -37,6 +38,12 @@ class VariaveisDinamicasController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
+        \Log::info('💾 VariaveisDinamicasController::store chamado', [
+            'user' => auth()->user()->email ?? 'não autenticado',
+            'data' => $request->all(),
+            'timestamp' => now()
+        ]);
+        
         $request->validate([
             'variaveis' => 'required|array|min:1',
             'variaveis.*.nome' => 'required|string|max:100|regex:/^[a-zA-Z_][a-zA-Z0-9_]*$/',
@@ -213,58 +220,7 @@ class VariaveisDinamicasController extends Controller
      */
     private function obterVariaveisPadrao(): array
     {
-        return [
-            [
-                'nome' => 'NOME_CAMARA',
-                'valor' => 'Câmara Municipal',
-                'descricao' => 'Nome completo da câmara municipal',
-                'tipo' => 'texto',
-                'escopo' => 'global',
-                'formato' => null,
-                'validacao' => 'required|string|max:255',
-                'sistema' => true
-            ],
-            [
-                'nome' => 'SIGLA_CAMARA',
-                'valor' => 'CM',
-                'descricao' => 'Sigla da câmara municipal',
-                'tipo' => 'texto',
-                'escopo' => 'global',
-                'formato' => null,
-                'validacao' => 'required|string|max:10',
-                'sistema' => true
-            ],
-            [
-                'nome' => 'DATA_ATUAL',
-                'valor' => date('d/m/Y'),
-                'descricao' => 'Data atual do sistema',
-                'tipo' => 'data',
-                'escopo' => 'global',
-                'formato' => 'd/m/Y',
-                'validacao' => null,
-                'sistema' => true
-            ],
-            [
-                'nome' => 'ANO_ATUAL',
-                'valor' => date('Y'),
-                'descricao' => 'Ano atual',
-                'tipo' => 'numero',
-                'escopo' => 'global',
-                'formato' => null,
-                'validacao' => null,
-                'sistema' => true
-            ],
-            [
-                'nome' => 'USUARIO_LOGADO',
-                'valor' => auth()->user()->name ?? 'Sistema',
-                'descricao' => 'Nome do usuário atualmente logado',
-                'tipo' => 'texto',
-                'escopo' => 'sistema',
-                'formato' => null,
-                'validacao' => null,
-                'sistema' => true
-            ]
-        ];
+        return VariavelDinamica::getVariaveisPadrao();
     }
 
     /**
@@ -273,9 +229,28 @@ class VariaveisDinamicasController extends Controller
     private function obterVariaveisParametros(): array
     {
         try {
-            // Por enquanto retorna as variáveis padrão
-            // TODO: Implementar busca no banco quando o módulo for criado
-            return $this->obterVariaveisPadrao();
+            $variaveis = VariavelDinamica::ativo()->orderBy('ordem')->orderBy('nome')->get();
+            
+            if ($variaveis->isEmpty()) {
+                // Se não há variáveis no banco, retorna as padrão
+                return $this->obterVariaveisPadrao();
+            }
+            
+            return $variaveis->map(function ($variavel) {
+                return [
+                    'id' => $variavel->id,
+                    'nome' => $variavel->nome,
+                    'valor' => $variavel->valor,
+                    'descricao' => $variavel->descricao,
+                    'tipo' => $variavel->tipo,
+                    'escopo' => $variavel->escopo,
+                    'formato' => $variavel->formato,
+                    'validacao' => $variavel->validacao,
+                    'sistema' => $variavel->sistema,
+                    'ativo' => $variavel->ativo,
+                    'ordem' => $variavel->ordem
+                ];
+            })->toArray();
         } catch (\Exception $e) {
             \Log::error('❌ Erro ao obter variáveis dos parâmetros', [
                 'error' => $e->getMessage()
@@ -290,13 +265,46 @@ class VariaveisDinamicasController extends Controller
     private function salvarVariaveisParametros(array $variaveis): void
     {
         try {
-            // TODO: Implementar salvamento no banco quando o módulo for criado
-            \Log::info('📝 Salvando variáveis dinâmicas (simulado)', [
-                'total' => count($variaveis)
+            \DB::beginTransaction();
+            
+            $userId = auth()->id();
+            
+            // Remover variáveis não-sistema existentes
+            VariavelDinamica::where('sistema', false)->delete();
+            
+            foreach ($variaveis as $index => $variavel) {
+                // Pular variáveis do sistema se não for para atualizar
+                if ($variavel['sistema'] ?? false) {
+                    continue;
+                }
+                
+                VariavelDinamica::create([
+                    'nome' => strtoupper($variavel['nome']),
+                    'valor' => $variavel['valor'],
+                    'descricao' => $variavel['descricao'] ?? null,
+                    'tipo' => $variavel['tipo'],
+                    'escopo' => $variavel['escopo'],
+                    'formato' => $variavel['formato'] ?? null,
+                    'validacao' => $variavel['validacao'] ?? null,
+                    'sistema' => false,
+                    'ativo' => true,
+                    'ordem' => $index + 1,
+                    'created_by' => $userId,
+                    'updated_by' => $userId
+                ]);
+            }
+            
+            \DB::commit();
+            
+            \Log::info('📝 Variáveis dinâmicas salvas com sucesso', [
+                'total' => count($variaveis),
+                'user_id' => $userId
             ]);
         } catch (\Exception $e) {
+            \DB::rollBack();
             \Log::error('❌ Erro ao salvar variáveis nos parâmetros', [
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
             ]);
             throw $e;
         }

@@ -58,6 +58,7 @@ class ParametroController extends Controller
             'Marca D\'água' => 'ki-water',
             'Texto Padrão' => 'ki-text',
             'Rodapé' => 'ki-scroll-down',
+            'Variáveis Dinâmicas' => 'ki-code',
             default => 'ki-setting-2'
         };
     }
@@ -69,6 +70,7 @@ class ParametroController extends Controller
             'Marca D\'água' => 'parametros.templates.marca-dagua', 
             'Texto Padrão' => 'parametros.templates.texto-padrao',
             'Rodapé' => 'parametros.templates.rodape',
+            'Variáveis Dinâmicas' => 'parametros.variaveis-dinamicas',
             default => 'parametros.index'
         };
     }
