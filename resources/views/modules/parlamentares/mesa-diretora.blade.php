@@ -60,7 +60,7 @@
                                 <div class="card-body d-flex flex-center flex-column pt-12 p-9">
                                     <!--begin::Avatar-->
                                     <div class="symbol symbol-65px symbol-circle mb-5">
-                                        <img src="{{ asset('assets/media/avatars/300-1.jpg') }}" alt="image" />
+                                        <img src="{{ asset('assets/media/avatars/blank.png') }}" alt="image" />
                                         <div class="bg-success position-absolute border border-4 border-body h-15px w-15px rounded-circle translate-middle start-100 top-100 ms-n3 mt-n3"></div>
                                     </div>
                                     <!--end::Avatar-->
@@ -136,7 +136,7 @@
                                                 <!--begin::Avatar-->
                                                 <div class="symbol symbol-circle symbol-50px overflow-hidden me-3">
                                                     <div class="symbol-label">
-                                                        <img src="{{ asset('assets/media/avatars/300-1.jpg') }}" alt="{{ $membro['nome'] }}" class="w-100" />
+                                                        <img src="{{ asset('assets/media/avatars/blank.png') }}" alt="{{ $membro['nome'] }}" class="w-100" />
                                                     </div>
                                                 </div>
                                                 <!--end::Avatar-->

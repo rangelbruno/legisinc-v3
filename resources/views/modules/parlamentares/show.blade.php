@@ -78,7 +78,7 @@
                             <div class="d-flex flex-center flex-column py-5">
                                 <!--begin::Avatar-->
                                 <div class="symbol symbol-100px symbol-circle mb-7">
-                                    <img src="{{ isset($parlamentar['foto']) && $parlamentar['foto'] ? asset('storage/parlamentares/fotos/' . $parlamentar['foto']) : asset('assets/media/avatars/300-1.jpg') }}" alt="Foto de {{ $parlamentar['nome'] }}" />
+                                    <img src="{{ isset($parlamentar['foto']) && $parlamentar['foto'] ? asset('storage/parlamentares/fotos/' . $parlamentar['foto']) : asset('assets/media/avatars/blank.png') }}" alt="Foto de {{ $parlamentar['nome'] }}" />
                                 </div>
                                 <!--end::Avatar-->
                                 <!--begin::Name-->

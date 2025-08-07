@@ -21,7 +21,7 @@
                 <div class="d-flex align-items-start">
                     <!--begin::Preview-->
                     <div class="symbol symbol-100px symbol-circle me-5" id="foto-preview-container">
-                        <img src="{{ isset($parlamentar['foto']) && $parlamentar['foto'] ? asset('storage/parlamentares/fotos/' . $parlamentar['foto']) : asset('assets/media/avatars/300-1.jpg') }}" alt="Preview da foto" id="foto-preview" class="symbol-label" />
+                        <img src="{{ isset($parlamentar['foto']) && $parlamentar['foto'] ? asset('storage/parlamentares/fotos/' . $parlamentar['foto']) : asset('assets/media/avatars/blank.png') }}" alt="Preview da foto" id="foto-preview" class="symbol-label" />
                     </div>
                     <!--end::Preview-->
                     <!--begin::Upload input-->
@@ -201,14 +201,23 @@
                         <!--begin::Label-->
                         <label class="required form-label">Partido</label>
                         <!--end::Label-->
-                        <!--begin::Select-->
-                        <select name="partido" class="form-select mb-2" required>
-                            <option value="">Selecione o partido</option>
-                            @foreach($partidos as $sigla => $nome)
-                                <option value="{{ $sigla }}" {{ old('partido', isset($parlamentar['partido']) ? $parlamentar['partido'] : '') == $sigla ? 'selected' : '' }}>{{ $sigla }} - {{ $nome }}</option>
-                            @endforeach
-                        </select>
-                        <!--end::Select-->
+                        <!--begin::Input with autocomplete-->
+                        <div class="position-relative">
+                            <input type="text" 
+                                   id="partido_input"
+                                   name="partido" 
+                                   class="form-control mb-2" 
+                                   placeholder="Digite a sigla do partido..."
+                                   value="{{ old('partido', isset($parlamentar['partido']) ? $parlamentar['partido'] : '') }}"
+                                   autocomplete="off"
+                                   required />
+                            
+                            <!-- Dropdown de sugestões -->
+                            <div id="partido_suggestions" class="position-absolute w-100 bg-white border rounded shadow-sm" 
+                                 style="display: none; z-index: 1000; max-height: 300px; overflow-y: auto; top: 100%;">
+                            </div>
+                        </div>
+                        <!--end::Input with autocomplete-->
                         @error('partido')
                             <div class="text-danger fs-7">{{ $message }}</div>
                         @enderror
@@ -372,6 +381,350 @@ document.addEventListener('DOMContentLoaded', function() {
             e.target.value = value;
         });
     }
+    
+    // Inicializar sistema de autocomplete de partidos
+    setTimeout(() => {
+        initPartidoAutocomplete();
+    }, 500);
 });
+
+// Sistema de Autocomplete de Partidos
+function initPartidoAutocomplete() {
+    const partidoInput = document.getElementById('partido_input');
+    const partidoSuggestions = document.getElementById('partido_suggestions');
+    
+    if (!partidoInput || !partidoSuggestions) {
+        console.error('❌ Elementos do autocomplete de partido não encontrados');
+        return;
+    }
+    
+    console.log('🏦 Sistema de autocomplete de partido inicializado');
+    
+    let searchTimeout;
+    let currentPartidos = [];
+    let isSearching = false;
+    
+    // Carregar partidos iniciais
+    const partidosIniciais = @json($partidos ?? []);
+    
+    // Debounced search function
+    function debouncedSearchPartidos(query) {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            if (query.length >= 1) {
+                searchPartidos(query);
+            } else {
+                hidePartidoSuggestions();
+            }
+        }, 200);
+    }
+    
+    // Buscar partidos via API ou dados locais
+    async function searchPartidos(query) {
+        if (isSearching) {
+            console.log('⏸️ Busca de partidos já em andamento, pulando...');
+            return;
+        }
+        
+        try {
+            isSearching = true;
+            
+            // Primeiro, buscar nos dados locais
+            const partidosLocal = searchPartidosLocal(query, partidosIniciais);
+            
+            if (partidosLocal.length > 0) {
+                console.log(`🏦 Encontrados ${partidosLocal.length} partidos localmente`);
+                showPartidoSuggestions(partidosLocal, query);
+                return;
+            }
+            
+            // Se não encontrou localmente, buscar na API
+            const url = `/api/partidos/buscar-sigla?sigla=${encodeURIComponent(query)}`;
+            
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Content-Type': 'application/json',
+                    'Cache-Control': 'no-cache'
+                },
+                cache: 'no-store'
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Erro HTTP ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            if (data.success && data.partidos && data.partidos.length > 0) {
+                console.log(`🏦 Encontrados ${data.partidos.length} partidos na API`);
+                showPartidoSuggestions(data.partidos, query, true);
+            } else {
+                showNoPartidoResults(query);
+            }
+            
+        } catch (error) {
+            console.error('💥 Erro na busca de partidos:', error);
+            // Em caso de erro na API, mostrar opção de criar novo partido
+            showNoPartidoResults(query);
+        } finally {
+            isSearching = false;
+        }
+    }
+    
+    // Buscar partidos nos dados locais
+    function searchPartidosLocal(query, partidos) {
+        const queryLower = query.toLowerCase().trim();
+        const results = [];
+        
+        for (const [sigla, nome] of Object.entries(partidos)) {
+            if (sigla.toLowerCase().includes(queryLower) || 
+                nome.toLowerCase().includes(queryLower)) {
+                results.push({
+                    sigla: sigla,
+                    nome: nome,
+                    nome_completo: nome,
+                    local: true
+                });
+            }
+        }
+        
+        return results.slice(0, 10); // Limitar a 10 resultados
+    }
+    
+    // Mostrar sugestões de partidos
+    function showPartidoSuggestions(partidos, query, fromApi = false) {
+        currentPartidos = partidos;
+        let html = '';
+        
+        partidos.forEach((partido, index) => {
+            // Destacar texto que coincide com a busca
+            const highlightedSigla = highlightMatch(partido.sigla, query);
+            const highlightedNome = highlightMatch(partido.nome_completo || partido.nome, query);
+            
+            // Definir badge da fonte
+            const sourceBadge = fromApi ? '<span class="badge badge-light-info fs-8 ms-2">API Externa</span>' : 
+                                          '<span class="badge badge-light-success fs-8 ms-2">Cadastrado</span>';
+            
+            html += `
+                <div class="suggestion-item p-3 border-bottom cursor-pointer hover-bg-light partido-item" 
+                     data-index="${index}" 
+                     style="cursor: pointer; transition: all 0.2s;">
+                    <div class="d-flex align-items-center">
+                        <i class="ki-duotone ki-flag fs-2 text-primary me-3">
+                            <span class="path1"></span>
+                            <span class="path2"></span>
+                        </i>
+                        <div class="flex-grow-1">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h6 class="mb-0 text-gray-800">${highlightedSigla}</h6>
+                                    <div class="d-flex align-items-center">
+                                        <span class="text-muted fs-7 me-2">${highlightedNome}</span>
+                                        ${sourceBadge}
+                                    </div>
+                                </div>
+                                <div class="text-end">
+                                    <i class="ki-duotone ki-arrow-right fs-6 text-muted">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                    </i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        partidoSuggestions.innerHTML = html;
+        partidoSuggestions.style.display = 'block';
+        
+        // Adicionar event listeners para clique
+        partidoSuggestions.querySelectorAll('.partido-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const index = parseInt(item.dataset.index);
+                selectPartido(partidos[index]);
+            });
+        });
+    }
+    
+    // Mostrar quando nenhum partido é encontrado
+    function showNoPartidoResults(query) {
+        partidoSuggestions.innerHTML = `
+            <div class="p-4 text-center">
+                <i class="ki-duotone ki-information-2 fs-2x text-muted mb-2">
+                    <span class="path1"></span>
+                    <span class="path2"></span>
+                    <span class="path3"></span>
+                </i>
+                <p class="text-muted mb-2">Nenhum partido encontrado para "${query}"</p>
+                <div class="mt-3">
+                    <a href="/partidos/create" class="btn btn-sm btn-light-primary" target="_blank">
+                        <i class="ki-duotone ki-plus fs-6 me-1">
+                            <span class="path1"></span>
+                            <span class="path2"></span>
+                            <span class="path3"></span>
+                        </i>
+                        Cadastrar Novo Partido
+                    </a>
+                </div>
+                <small class="text-muted d-block mt-2">Você pode continuar digitando ou cadastrar um novo partido</small>
+            </div>
+        `;
+        partidoSuggestions.style.display = 'block';
+    }
+    
+    // Esconder sugestões
+    function hidePartidoSuggestions() {
+        partidoSuggestions.style.display = 'none';
+        currentPartidos = [];
+    }
+    
+    // Selecionar partido
+    function selectPartido(partido) {
+        partidoInput.value = partido.sigla;
+        hidePartidoSuggestions();
+        
+        // Mostrar feedback visual
+        partidoInput.style.borderColor = '#50cd89';
+        
+        setTimeout(() => {
+            partidoInput.style.borderColor = '';
+        }, 2000);
+        
+        console.log('✅ Partido selecionado:', partido.sigla, '-', partido.nome);
+    }
+    
+    // Função para destacar texto que coincide com a busca
+    function highlightMatch(text, query) {
+        if (!query.trim()) return text;
+        
+        const regex = new RegExp(`(${query.trim()})`, 'gi');
+        return text.replace(regex, '<mark class="bg-warning text-dark">$1</mark>');
+    }
+    
+    // Event listeners
+    partidoInput.addEventListener('input', (e) => {
+        const query = e.target.value.trim();
+        
+        if (query.length >= 1) {
+            debouncedSearchPartidos(query);
+        } else {
+            hidePartidoSuggestions();
+        }
+    });
+    
+    partidoInput.addEventListener('focus', (e) => {
+        const query = e.target.value.trim();
+        if (query.length >= 1) {
+            debouncedSearchPartidos(query);
+        }
+    });
+    
+    // Esconder sugestões quando clicar fora
+    document.addEventListener('click', (e) => {
+        if (!partidoInput.contains(e.target) && !partidoSuggestions.contains(e.target)) {
+            hidePartidoSuggestions();
+        }
+    });
+    
+    // Navegação por teclado
+    partidoInput.addEventListener('keydown', (e) => {
+        const items = partidoSuggestions.querySelectorAll('.partido-item');
+        const selected = partidoSuggestions.querySelector('.partido-item.active');
+        let newIndex = -1;
+        
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            if (selected) {
+                const currentIndex = Array.from(items).indexOf(selected);
+                newIndex = Math.min(currentIndex + 1, items.length - 1);
+            } else {
+                newIndex = 0;
+            }
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            if (selected) {
+                const currentIndex = Array.from(items).indexOf(selected);
+                newIndex = Math.max(currentIndex - 1, 0);
+            } else {
+                newIndex = items.length - 1;
+            }
+        } else if (e.key === 'Enter' && selected) {
+            e.preventDefault();
+            const index = Array.from(items).indexOf(selected);
+            selectPartido(currentPartidos[index]);
+        } else if (e.key === 'Escape') {
+            hidePartidoSuggestions();
+        }
+        
+        if (newIndex >= 0 && items[newIndex]) {
+            items.forEach(item => item.classList.remove('active', 'bg-light'));
+            items[newIndex].classList.add('active', 'bg-light');
+        }
+    });
+    
+    console.log('🏦 Autocomplete de partido configurado com sucesso');
+}
 </script>
 <!--end::Javascript-->
+
+<!--begin::Styles-->
+<style>
+/* Autocomplete de Partido */
+.suggestion-item:hover {
+    background-color: #f8f9fa !important;
+}
+.suggestion-item.active {
+    background-color: #e9ecef !important;
+}
+.hover-bg-light:hover {
+    background-color: #f8f9fa !important;
+}
+
+/* Partido specific styles */
+.partido-item {
+    transition: all 0.2s ease;
+    border-left: 3px solid transparent;
+}
+
+.partido-item:hover {
+    background-color: #f0f8ff !important;
+    border-left-color: #007bff;
+    transform: translateX(2px);
+}
+
+/* Highlight matches */
+mark {
+    padding: 1px 2px;
+    border-radius: 2px;
+    font-weight: 600;
+}
+
+/* Input feedback */
+input[style*="border-color: rgb(80, 205, 137)"] {
+    box-shadow: 0 0 0 2px rgba(80, 205, 137, 0.25);
+    transition: all 0.2s ease;
+}
+
+/* Loading spinner in dropdown */
+#partido_suggestions .spinner-border-sm {
+    width: 1rem;
+    height: 1rem;
+}
+
+/* Badge styling */
+.badge.fs-8 {
+    font-size: 0.7rem;
+    padding: 0.25rem 0.5rem;
+}
+
+/* Dropdown z-index fix */
+#partido_suggestions {
+    z-index: 1050 !important;
+}
+</style>
+<!--end::Styles-->

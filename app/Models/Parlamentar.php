@@ -72,10 +72,11 @@ class Parlamentar extends Model
     public function scopeBuscar($query, $termo)
     {
         return $query->where(function ($q) use ($termo) {
-            $q->where('nome', 'LIKE', "%{$termo}%")
-              ->orWhere('partido', 'LIKE', "%{$termo}%")
-              ->orWhere('cargo', 'LIKE', "%{$termo}%")
-              ->orWhere('profissao', 'LIKE', "%{$termo}%");
+            $q->where('nome', 'ILIKE', "%{$termo}%")
+              ->orWhere('nome_politico', 'ILIKE', "%{$termo}%")
+              ->orWhere('partido', 'ILIKE', "%{$termo}%")
+              ->orWhere('cargo', 'ILIKE', "%{$termo}%")
+              ->orWhere('profissao', 'ILIKE', "%{$termo}%");
         });
     }
 
@@ -156,7 +157,7 @@ class Parlamentar extends Model
         if ($this->foto) {
             return asset('storage/parlamentares/fotos/' . $this->foto);
         }
-        return asset('assets/media/avatars/300-1.jpg');
+        return asset('assets/media/avatars/blank.png');
     }
 
     /**

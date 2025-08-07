@@ -1208,7 +1208,6 @@
             // Buscar parlamentares via API
             async function searchParlamentares(query) {
                 if (isSearching) {
-                    console.log('⏸️ Busca de parlamentares já em andamento, pulando...');
                     return;
                 }
                 
@@ -1235,7 +1234,6 @@
                     const data = await response.json();
                     
                     if (data.success && data.parlamentares && data.parlamentares.length > 0) {
-                        console.log(`👥 Encontrados ${data.parlamentares.length} parlamentares`);
                         showPresidenteSuggestions(data.parlamentares, query);
                     } else {
                         showNoPresidenteResults(query);
