@@ -509,4 +509,59 @@ class ParlamentarController extends Controller
         }
     }
 
+    /**
+     * API de busca de parlamentares para autocomplete
+     */
+    public function apiSearch(Request $request)
+    {
+        try {
+            $termo = $request->get('q', '');
+            
+            if (empty($termo) || strlen($termo) < 2) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Termo de busca deve ter pelo menos 2 caracteres',
+                    'parlamentares' => []
+                ]);
+            }
+
+            $parlamentares = $this->parlamentarService->search($termo);
+            
+            $parlamentaresFormatados = $parlamentares->map(function ($parlamentar) {
+                return [
+                    'id' => $parlamentar->id,
+                    'nome' => $parlamentar->nome,
+                    'nome_politico' => $parlamentar->nome_politico,
+                    'partido' => $parlamentar->partido,
+                    'cargo' => $parlamentar->cargo,
+                    'status' => $parlamentar->status,
+                    'display_name' => $parlamentar->nome_politico ? 
+                        "{$parlamentar->nome_politico} ({$parlamentar->nome})" : $parlamentar->nome,
+                    'partido_cargo' => "{$parlamentar->partido} - {$parlamentar->cargo}"
+                ];
+            });
+
+            return response()->json([
+                'success' => true,
+                'parlamentares' => $parlamentaresFormatados,
+                'total' => $parlamentares->count(),
+                'message' => $parlamentares->count() > 0 ? 
+                    "Encontrados {$parlamentares->count()} parlamentares" : 
+                    'Nenhum parlamentar encontrado'
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Erro na busca de parlamentares via API', [
+                'erro' => $e->getMessage(),
+                'termo' => $request->get('q', '')
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Erro interno do servidor',
+                'parlamentares' => [],
+                'error' => config('app.debug') ? $e->getMessage() : 'Erro interno'
+            ], 500);
+        }
+    }
 }

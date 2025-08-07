@@ -70,12 +70,24 @@ class TemplateParametrosService
             '${ano_atual}' => 'Ano atual',
             '${mes_extenso}' => 'Mês por extenso',
             
-            // Dados da Câmara (dos parâmetros)
-            '${nome_camara}' => 'Nome da Câmara',
+            // Dados da Câmara (parâmetros dinâmicos)
+            '${nome_camara}' => 'Nome oficial da Câmara',
+            '${nome_camara_abreviado}' => 'Nome abreviado da Câmara',
             '${municipio}' => 'Nome do município',
-            '${endereco_camara}' => 'Endereço da Câmara',
-            '${telefone_camara}' => 'Telefone da Câmara',
-            '${website_camara}' => 'Website da Câmara',
+            '${municipio_uf}' => 'UF do município',
+            '${endereco_camara}' => 'Logradouro da Câmara',
+            '${endereco_completo}' => 'Endereço completo (logradouro, bairro, CEP)',
+            '${endereco_bairro}' => 'Bairro da Câmara',
+            '${endereco_cep}' => 'CEP da Câmara',
+            '${telefone_camara}' => 'Telefone principal',
+            '${telefone_protocolo}' => 'Telefone do protocolo',
+            '${email_camara}' => 'E-mail oficial',
+            '${website_camara}' => 'Website oficial',
+            '${cnpj_camara}' => 'CNPJ da Câmara',
+            '${presidente_nome}' => 'Nome do Presidente',
+            '${presidente_tratamento}' => 'Tratamento do Presidente',
+            '${horario_funcionamento}' => 'Horário de funcionamento',
+            '${horario_protocolo}' => 'Horário do protocolo',
             '${imagem_cabecalho}' => 'Imagem do cabeçalho',
             
             // Formatação
@@ -140,12 +152,40 @@ class TemplateParametrosService
         $variaveis['${ano_atual}'] = $dataAtual->format('Y');
         $variaveis['${mes_extenso}'] = $this->mesExtenso($dataAtual->format('n'));
         
-        // Dados da Câmara (dos parâmetros)
-        $variaveis['${nome_camara}'] = $parametros['Cabeçalho.cabecalho_nome_camara'] ?? 'CÂMARA MUNICIPAL';
-        $variaveis['${municipio}'] = $this->extrairMunicipio($parametros['Cabeçalho.cabecalho_nome_camara'] ?? '');
-        $variaveis['${endereco_camara}'] = $parametros['Cabeçalho.cabecalho_endereco'] ?? '';
-        $variaveis['${telefone_camara}'] = $parametros['Cabeçalho.cabecalho_telefone'] ?? '';
-        $variaveis['${website_camara}'] = $parametros['Cabeçalho.cabecalho_website'] ?? '';
+        // Dados da Câmara (dos novos parâmetros dinâmicos)
+        $variaveis['${nome_camara}'] = $parametros['Dados Gerais da Câmara.nome_camara_oficial'] ?? 
+                                      $parametros['Cabeçalho.cabecalho_nome_camara'] ?? 'CÂMARA MUNICIPAL';
+        $variaveis['${nome_camara_abreviado}'] = $parametros['Dados Gerais da Câmara.nome_camara_abreviado'] ?? 'CMSP';
+        $variaveis['${municipio}'] = $parametros['Dados Gerais da Câmara.municipio_nome'] ?? 
+                                    $this->extrairMunicipio($parametros['Cabeçalho.cabecalho_nome_camara'] ?? '');
+        $variaveis['${municipio_uf}'] = $parametros['Dados Gerais da Câmara.municipio_uf'] ?? 'SP';
+        
+        // Endereço completo e componentes
+        $logradouro = $parametros['Dados Gerais da Câmara.endereco_logradouro'] ?? '';
+        $bairro = $parametros['Dados Gerais da Câmara.endereco_bairro'] ?? '';
+        $cep = $parametros['Dados Gerais da Câmara.endereco_cep'] ?? '';
+        $variaveis['${endereco_camara}'] = $parametros['Dados Gerais da Câmara.endereco_logradouro'] ?? 
+                                          $parametros['Cabeçalho.cabecalho_endereco'] ?? '';
+        $variaveis['${endereco_completo}'] = trim($logradouro . ($bairro ? ", {$bairro}" : '') . ($cep ? " - CEP: {$cep}" : ''));
+        $variaveis['${endereco_bairro}'] = $bairro;
+        $variaveis['${endereco_cep}'] = $cep;
+        
+        // Contatos
+        $variaveis['${telefone_camara}'] = $parametros['Dados Gerais da Câmara.telefone_principal'] ?? 
+                                          $parametros['Cabeçalho.cabecalho_telefone'] ?? '';
+        $variaveis['${telefone_protocolo}'] = $parametros['Dados Gerais da Câmara.telefone_protocolo'] ?? '';
+        $variaveis['${email_camara}'] = $parametros['Dados Gerais da Câmara.email_oficial'] ?? '';
+        $variaveis['${website_camara}'] = $parametros['Dados Gerais da Câmara.website'] ?? 
+                                         $parametros['Cabeçalho.cabecalho_website'] ?? '';
+        
+        // Dados administrativos
+        $variaveis['${cnpj_camara}'] = $parametros['Dados Gerais da Câmara.cnpj'] ?? '';
+        $variaveis['${presidente_nome}'] = $parametros['Dados Gerais da Câmara.presidente_nome'] ?? '';
+        $variaveis['${presidente_tratamento}'] = $parametros['Dados Gerais da Câmara.presidente_tratamento'] ?? 'Excelentíssimo Senhor';
+        
+        // Horários
+        $variaveis['${horario_funcionamento}'] = $parametros['Dados Gerais da Câmara.horario_funcionamento'] ?? 'Segunda a Sexta: 8h às 17h';
+        $variaveis['${horario_protocolo}'] = $parametros['Dados Gerais da Câmara.horario_protocolo'] ?? 'Segunda a Sexta: 9h às 16h';
         
         // Imagem de cabeçalho - gerar URL completa da imagem
         $imagemCabecalho = $parametros['Cabeçalho.cabecalho_imagem'] ?? '';

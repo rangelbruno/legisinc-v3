@@ -95,6 +95,78 @@
             <div id="cards-view" class="view-container">
                 <!--begin::Row-->
                 <div class="row g-6 g-xl-9">
+                    <!--begin::Special Card - Dados Gerais da Câmara-->
+                    <div class="col-md-6 col-lg-4 col-xl-3">
+                        <!--begin::Card-->
+                        <div class="card card-flush h-xl-100 border-primary border-2">
+                            <!--begin::Card header-->
+                            <div class="card-header pt-5">
+                                <!--begin::Card title-->
+                                <div class="card-title d-flex flex-column">
+                                    <!--begin::Icon-->
+                                    <div class="d-flex align-items-center mb-3">
+                                        <i class="ki-duotone ki-bank fs-2x text-primary me-3">
+                                            <span class="path1"></span>
+                                            <span class="path2"></span>
+                                        </i>
+                                        <div class="d-flex flex-column">
+                                            <h3 class="fs-5 fw-bold text-gray-900 mb-0">Dados Gerais da Câmara</h3>
+                                            <span class="text-gray-500 fs-7">Configuração principal</span>
+                                        </div>
+                                    </div>
+                                    <!--end::Icon-->
+                                </div>
+                                <!--end::Card title-->
+                                <!--begin::Card toolbar-->
+                                <div class="card-toolbar">
+                                    <span class="badge badge-light-primary">
+                                        <i class="ki-duotone ki-star fs-6">
+                                            <span class="path1"></span>
+                                            <span class="path2"></span>
+                                        </i>
+                                        Prioritário
+                                    </span>
+                                </div>
+                                <!--end::Card toolbar-->
+                            </div>
+                            <!--end::Card header-->
+                            <!--begin::Card body-->
+                            <div class="card-body d-flex flex-column">
+                                <!--begin::Description-->
+                                <div class="flex-grow-1 mb-5">
+                                    <p class="text-gray-700 fs-6 mb-0">
+                                        Configure as informações institucionais da câmara municipal, incluindo dados de identificação, endereço, contatos e gestão atual.
+                                    </p>
+                                </div>
+                                <!--end::Description-->
+                                <!--begin::Progress-->
+                                <div class="d-flex flex-stack">
+                                    <div class="d-flex align-items-center">
+                                        <span class="badge badge-light-success">
+                                            Disponível
+                                        </span>
+                                    </div>
+                                    
+                                    <!--begin::Action-->
+                                    <div class="d-flex gap-2">
+                                        <a href="{{ route('parametros.dados-gerais-camara') }}" class="btn btn-sm btn-primary">
+                                            <i class="ki-duotone ki-setting-3 fs-6 me-1">
+                                                <span class="path1"></span>
+                                                <span class="path2"></span>
+                                            </i>
+                                            Configurar
+                                        </a>
+                                    </div>
+                                    <!--end::Action-->
+                                </div>
+                                <!--end::Progress-->
+                            </div>
+                            <!--end::Card body-->
+                        </div>
+                        <!--end::Card-->
+                    </div>
+                    <!--end::Special Card-->
+                    
                     @forelse($modulos as $modulo)
                     <!--begin::Col-->
                     <div class="col-md-6 col-lg-4 col-xl-3">

@@ -27,7 +27,7 @@ class GerarTemplatesProposicoes extends Command
 
     public function handle()
     {
-        $this->info('🚀 Iniciando geração de templates automáticos...');
+        $this->info('🚀 Iniciando geração de templates com padrões legais LC 95/1998...');
 
         // Obter parâmetros do sistema
         $parametros = $this->parametrosService->obterParametrosTemplates();

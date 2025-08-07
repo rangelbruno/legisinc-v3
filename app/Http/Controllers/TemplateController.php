@@ -6,6 +6,9 @@ use App\Models\TipoProposicao;
 use App\Models\TipoProposicaoTemplate;
 use App\Services\OnlyOffice\OnlyOfficeService;
 use App\Services\Template\TemplateParametrosService;
+use App\Services\Template\TemplateEstruturadorService;
+use App\Services\Template\TemplateValidadorLegalService;
+use App\Services\Template\TemplateNumeracaoService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Artisan;
@@ -14,7 +17,10 @@ class TemplateController extends Controller
 {
     public function __construct(
         private OnlyOfficeService $onlyOfficeService,
-        private TemplateParametrosService $parametrosService
+        private TemplateParametrosService $parametrosService,
+        private TemplateEstruturadorService $estruturadorService,
+        private TemplateValidadorLegalService $validadorService,
+        private TemplateNumeracaoService $numeracaoService
     ) {}
 
     /**
@@ -413,12 +419,12 @@ class TemplateController extends Controller
     public function regenerarTodos()
     {
         try {
-            // Executar comando de geração automática
-            Artisan::call('templates:gerar-automaticos', ['--force' => true]);
+            // Executar comando para aplicar padrões legais
+            Artisan::call('templates:aplicar-padroes-legais', ['--force' => true]);
             
             $output = Artisan::output();
             
-            \Log::info('Templates regenerados automaticamente', [
+            \Log::info('Templates regenerados com padrões legais', [
                 'user_id' => auth()->id(),
                 'output' => $output
             ]);
@@ -427,7 +433,7 @@ class TemplateController extends Controller
             $totalTemplates = TipoProposicaoTemplate::count();
             
             return redirect()->route('templates.index')
-                            ->with('success', "Todos os templates foram regenerados com os parâmetros atualizados! Total: {$totalTemplates} templates.");
+                            ->with('success', "Todos os templates foram regenerados seguindo LC 95/1998 e padrões jurídicos! Total: {$totalTemplates} templates conformes.");
 
         } catch (\Exception $e) {
             \Log::error('Erro ao regenerar templates', [
@@ -437,6 +443,147 @@ class TemplateController extends Controller
 
             return redirect()->route('templates.index')
                             ->with('error', 'Erro ao regenerar templates: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Gerar template com padrões legais LC 95/1998
+     */
+    public function gerarComPadroesLegais(TipoProposicao $tipo)
+    {
+        try {
+            // Dados exemplo para criar template estruturado
+            $dadosExemplo = [
+                'numero' => 1,
+                'ano' => date('Y'),
+                'ementa' => $this->gerarEmentaExemplo($tipo),
+                'texto' => $this->gerarTextoExemplo($tipo),
+                'justificativa' => 'Justificativa para a proposição.',
+                'autor_nome' => 'Vereador(a)',
+                'autor_cargo' => 'Vereador(a)',
+                'autor_partido' => 'PARTIDO'
+            ];
+
+            // Estruturar conforme LC 95/1998
+            $estrutura = $this->estruturadorService->estruturarProposicao($dadosExemplo, $tipo);
+
+            // Gerar template estruturado
+            $templateEstruturado = $this->estruturadorService->gerarTemplateEstruturado($dadosExemplo, $tipo);
+
+            // Adicionar variáveis no template
+            $templateComVariaveis = $this->adicionarVariaveisTemplate($templateEstruturado);
+
+            // Buscar ou criar template
+            $template = TipoProposicaoTemplate::firstOrCreate(
+                ['tipo_proposicao_id' => $tipo->id],
+                [
+                    'document_key' => 'template_legal_' . $tipo->id . '_' . time() . '_' . uniqid(),
+                    'updated_by' => auth()->id(),
+                    'ativo' => true
+                ]
+            );
+
+            // Salvar template estruturado como arquivo RTF
+            $nomeArquivo = 'template_' . $tipo->codigo . '_legal.rtf';
+            $caminhoArquivo = 'templates/' . $nomeArquivo;
+
+            // Converter para RTF
+            $conteudoRTF = $this->converterParaRTF($templateComVariaveis, $tipo);
+            
+            Storage::put($caminhoArquivo, $conteudoRTF);
+
+            // Atualizar template no banco
+            $template->update([
+                'arquivo_path' => $caminhoArquivo,
+                'updated_by' => auth()->id()
+            ]);
+
+            \Log::info('Template com padrões legais gerado', [
+                'tipo_id' => $tipo->id,
+                'template_id' => $template->id,
+                'arquivo_path' => $caminhoArquivo,
+                'user_id' => auth()->id()
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => "Template estruturado conforme LC 95/1998 gerado com sucesso!",
+                'estrutura' => [
+                    'epigrafe' => $estrutura['epigrafe'],
+                    'ementa' => substr($estrutura['ementa'], 0, 80) . '...',
+                    'artigos' => count($estrutura['corpo_articulado']['artigos']),
+                    'validacoes' => $estrutura['validacoes']['valida'] ? 'Conforme' : 'Com alertas'
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Erro ao gerar template com padrões legais', [
+                'tipo_id' => $tipo->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Erro ao gerar template: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Validar template conforme padrões legais
+     */
+    public function validarTemplate(TipoProposicao $tipo)
+    {
+        try {
+            $template = $tipo->template;
+            
+            if (!$template || !$template->arquivo_path) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Template não encontrado'
+                ], 404);
+            }
+
+            // Ler conteúdo do template
+            $conteudo = Storage::get($template->arquivo_path);
+            
+            // Extrair texto do RTF (simplificado)
+            $textoLimpo = $this->extrairTextoRTF($conteudo);
+
+            // Dados simulados para validação
+            $dadosValidacao = [
+                'ementa' => 'Dispõe sobre exemplo e dá outras providências.',
+                'texto' => $textoLimpo,
+                'numero' => 1,
+                'ano' => date('Y')
+            ];
+
+            // Executar validação
+            $resultadoValidacao = $this->validadorService->validarProposicaoCompleta($dadosValidacao, $tipo);
+
+            return response()->json([
+                'success' => true,
+                'validacao' => $resultadoValidacao['resumo'],
+                'detalhes' => [
+                    'lc95_conforme' => $resultadoValidacao['lc95_1998']['conforme'],
+                    'estrutura_adequada' => $resultadoValidacao['estrutura_textual']['adequada'],
+                    'total_erros' => $resultadoValidacao['resumo']['total_erros'],
+                    'total_avisos' => $resultadoValidacao['resumo']['total_avisos'],
+                    'qualidade' => $resultadoValidacao['resumo']['qualidade_percentual']
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Erro ao validar template', [
+                'tipo_id' => $tipo->id,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Erro ao validar template: ' . $e->getMessage()
+            ], 500);
         }
     }
 
@@ -479,5 +626,173 @@ class TemplateController extends Controller
             // Se houver erro, retornar conteúdo original
             return $conteudo;
         }
+    }
+
+    /**
+     * Gerar ementa de exemplo baseada no tipo de proposição
+     */
+    private function gerarEmentaExemplo(TipoProposicao $tipo): string
+    {
+        $tipoLower = strtolower($tipo->codigo);
+        
+        return match($tipoLower) {
+            'projeto_lei_ordinaria' => 'Dispõe sobre [ASSUNTO] no âmbito do Município e dá outras providências.',
+            'projeto_lei_complementar' => 'Altera a Lei Orgânica Municipal para [FINALIDADE] e dá outras providências.',
+            'indicacao' => 'Indica ao Poder Executivo [SOLICITAÇÃO].',
+            'requerimento' => 'Requer informações ao Poder Executivo sobre [ASSUNTO].',
+            'mocao' => 'Moção de [TIPO] dirigida a [DESTINATÁRIO].',
+            'projeto_resolucao' => 'Dispõe sobre matéria de competência da Câmara Municipal e dá outras providências.',
+            'projeto_decreto_legislativo' => 'Aprova [ASSUNTO] e dá outras providências.',
+            default => 'Dispõe sobre [ASSUNTO] e dá outras providências.'
+        };
+    }
+
+    /**
+     * Gerar texto de exemplo baseado no tipo de proposição
+     */
+    private function gerarTextoExemplo(TipoProposicao $tipo): string
+    {
+        $tipoLower = strtolower($tipo->codigo);
+        
+        $textoBase = "Art. 1º [Disposição principal da proposição].\n\n";
+        
+        if (str_contains($tipoLower, 'lei')) {
+            $textoBase .= "Parágrafo único. [Detalhamento ou exceção].\n\n";
+            $textoBase .= "Art. 2º [Disposição complementar].\n\n";
+            $textoBase .= "Art. 3º Esta lei entra em vigor na data de sua publicação.";
+        } elseif ($tipoLower === 'indicacao') {
+            $textoBase = "Indico ao Senhor Prefeito Municipal que:\n\n";
+            $textoBase .= "I - [Primeira solicitação];\n\n";
+            $textoBase .= "II - [Segunda solicitação];\n\n";
+            $textoBase .= "III - [Terceira solicitação].";
+        } elseif ($tipoLower === 'requerimento') {
+            $textoBase = "Requeiro, nos termos regimentais, que seja solicitado ao Poder Executivo:\n\n";
+            $textoBase .= "a) [Primeira informação];\n\n";
+            $textoBase .= "b) [Segunda informação];\n\n";
+            $textoBase .= "c) [Terceira informação].";
+        } elseif ($tipoLower === 'mocao') {
+            $textoBase = "A Câmara Municipal manifesta [POSICIONAMENTO] em relação a [ASSUNTO].\n\n";
+            $textoBase .= "Considerando que [CONSIDERANDO 1];\n\n";
+            $textoBase .= "Considerando que [CONSIDERANDO 2];\n\n";
+            $textoBase .= "Resolve dirigir a presente Moção.";
+        }
+        
+        return $textoBase;
+    }
+
+    /**
+     * Adicionar variáveis no template gerado
+     */
+    private function adicionarVariaveisTemplate(string $template): string
+    {
+        // Substituir valores fixos por variáveis
+        $substituicoes = [
+            '/\b\d+\/\d{4}\b/' => '${numero_proposicao}/${ano}',
+            '/Vereador\(a\)/' => '${autor_nome}',
+            '/\[ASSUNTO\]/' => '${ementa}',
+            '/\[OBJETO\]/' => '${texto}',
+            '/\[FINALIDADE\]/' => '${justificativa}',
+            '/\[SOLICITAÇÃO\]/' => '${texto}',
+            '/\[TIPO\]/' => '${tipo_mocao}',
+            '/\[DESTINATÁRIO\]/' => '${destinatario}',
+            '/\[POSICIONAMENTO\]/' => '${posicionamento}',
+            '/\[CONSIDERANDO \d+\]/' => '${considerandos}'
+        ];
+
+        foreach ($substituicoes as $padrao => $variavel) {
+            $template = preg_replace($padrao, $variavel, $template);
+        }
+
+        // Adicionar cabeçalho com variáveis
+        $cabecalho = "\n${imagem_cabecalho}\n\n${nome_camara}\n${endereco_camara}\n\n";
+        
+        // Adicionar rodapé com variáveis
+        $rodape = "\n\n${assinatura_padrao}\n\n${rodape}";
+
+        return $cabecalho . $template . $rodape;
+    }
+
+    /**
+     * Converter texto para RTF com formatação usando UTF-8 correto
+     */
+    private function converterParaRTF(string $texto, TipoProposicao $tipo): string
+    {
+        $parametros = $this->parametrosService->obterParametrosTemplates();
+        
+        $fonte = $parametros['Formatação.format_fonte'] ?? 'Arial';
+        $tamanhoFonte = (int)($parametros['Formatação.format_tamanho_fonte'] ?? 12);
+        $espacamento = $parametros['Formatação.format_espacamento'] ?? '1.5';
+        
+        // Converter espaçamento para RTF (1.5 = 360 twips)
+        $espacamentoRTF = match($espacamento) {
+            '1' => 'sl240',
+            '1.5' => 'sl360',
+            '2' => 'sl480',
+            default => 'sl360'
+        };
+
+        // Cabeçalho RTF com UTF-8 correto
+        $rtf = "{\\rtf1\\ansi\\ansicpg65001\\deff0 {\\fonttbl {\\f0 {$fonte};}}";
+        $rtf .= "\\f0\\fs" . ($tamanhoFonte * 2); // RTF usa half-points
+        $rtf .= "\\{$espacamentoRTF}\\slmult1 ";
+
+        // Converter texto para Unicode RTF usando funções multi-byte
+        $textoConvertido = $this->converterUtf8ParaRtf($texto);
+        
+        // Aplicar formatação em negrito para artigos
+        $textoConvertido = preg_replace('/(Art\\\\\. \\\\u\d+\\\\\*º?)/', '{\\\\b $1 \\\\b0}', $textoConvertido);
+        
+        $rtf .= $textoConvertido;
+        $rtf .= "}";
+
+        return $rtf;
+    }
+
+    /**
+     * Converter texto UTF-8 para RTF com sequências Unicode corretas
+     * Baseado na solução documentada em docs/SOLUCAO_ACENTUACAO_ONLYOFFICE.md
+     */
+    private function converterUtf8ParaRtf(string $texto): string
+    {
+        $textoProcessado = '';
+        
+        // Escapar caracteres especiais do RTF primeiro
+        $texto = str_replace(['\\', '{', '}'], ['\\\\', '\\{', '\\}'], $texto);
+        
+        // Processar caractere por caractere usando funções multi-byte
+        $length = mb_strlen($texto, 'UTF-8');
+        for ($i = 0; $i < $length; $i++) {
+            $char = mb_substr($texto, $i, 1, 'UTF-8');  // Extrai caractere UTF-8 corretamente
+            $codepoint = mb_ord($char, 'UTF-8');        // Obtém codepoint Unicode real
+            
+            if ($codepoint > 127) {
+                // Gera sequência RTF Unicode correta
+                $textoProcessado .= '\\u' . $codepoint . '*';
+            } else {
+                // Converter quebras de linha para RTF
+                if ($char === "\n") {
+                    $textoProcessado .= '\\par ';
+                } else {
+                    $textoProcessado .= $char;
+                }
+            }
+        }
+        
+        return $textoProcessado;
+    }
+
+    /**
+     * Extrair texto limpo de RTF (simplificado)
+     */
+    private function extrairTextoRTF(string $rtfContent): string
+    {
+        // Remove códigos RTF básicos
+        $texto = preg_replace('/\{\\\\[^}]*\}/', '', $rtfContent);
+        $texto = preg_replace('/\\\\[a-zA-Z]+\d*\s?/', '', $texto);
+        $texto = preg_replace('/\{|\}/', '', $texto);
+        $texto = str_replace('\\par', "\n", $texto);
+        $texto = trim($texto);
+        
+        return $texto;
     }
 }

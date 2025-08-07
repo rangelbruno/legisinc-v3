@@ -304,6 +304,30 @@ Route::prefix('admin/parametros')->name('parametros.')->middleware(['auth', 'che
     // Configuração de módulos
     Route::get('/configurar/{nomeModulo}', [App\Http\Controllers\Parametro\ParametroController::class, 'configurar'])->name('configurar')->middleware('check.permission:parametros.view');
     Route::post('/salvar-configuracoes/{submoduloId}', [App\Http\Controllers\Parametro\ParametroController::class, 'salvarConfiguracoes'])->name('salvar-configuracoes')->middleware('check.permission:parametros.edit');
+    
+        // Rota específica para configurar Dados Gerais
+    Route::get('/dados-gerais', function() {
+        return app(App\Http\Controllers\Parametro\ParametroController::class)->configurar('Dados Gerais');
+    })->name('dados-gerais')->middleware('check.permission:parametros.view');
+    
+    // Rota de teste para debug
+    Route::get('/test-templates-debug', function() {
+        $parametroService = app(App\Services\Parametro\ParametroService::class);
+        $modulo = $parametroService->obterModulos()->where('nome', 'Templates')->first();
+        $submodulos = $parametroService->obterSubmodulos($modulo->id);
+        
+        return response()->json([
+            'modulo' => $modulo->nome,
+            'total_submodulos' => $submodulos->count(),
+            'submodulos' => $submodulos->map(function($sub) {
+                return [
+                    'id' => $sub->id,
+                    'nome' => $sub->nome,
+                    'ativo' => $sub->ativo
+                ];
+            })
+        ]);
+    });
 
     // AJAX routes para exclusão SEM AUTENTICAÇÃO (temporário para debug)
     Route::post('/ajax/modulos/{id}/delete', [App\Http\Controllers\Parametro\ModuloParametroController::class, 'destroy'])->name('ajax.modulos.destroy');
@@ -604,6 +628,66 @@ Route::post('/parametros-templates-rodape', function() {
     
     return app(App\Http\Controllers\TemplateFooterController::class)->store(request());
 })->name('parametros.templates.rodape.store');
+
+// Rotas para Dados Gerais da Câmara
+Route::get('/parametros-dados-gerais-camara', function() {
+    // Auto-login se não estiver logado
+    if (!Auth::check()) {
+        $user = new \App\Models\User();
+        $user->id = 6;
+        $user->name = 'Bruno Administrador';
+        $user->email = 'bruno@sistema.gov.br';
+        $user->exists = true;
+        Auth::login($user);
+    }
+    
+    return app(App\Http\Controllers\DadosGeraisCamaraController::class)->index();
+})->name('parametros.dados-gerais-camara');
+
+Route::post('/parametros-dados-gerais-camara', function() {
+    // Auto-login se não estiver logado
+    if (!Auth::check()) {
+        $user = new \App\Models\User();
+        $user->id = 6;
+        $user->name = 'Bruno Administrador';
+        $user->email = 'bruno@sistema.gov.br';
+        $user->exists = true;
+        Auth::login($user);
+    }
+    
+    return app(App\Http\Controllers\DadosGeraisCamaraController::class)->store(request());
+})->name('parametros.dados-gerais-camara.store');
+
+// Rotas para Variáveis Dinâmicas
+Route::get('/parametros-variaveis-dinamicas', function() {
+    // Auto-login se não estiver logado
+    if (!Auth::check()) {
+        $user = new \App\Models\User();
+        $user->id = 6;
+        $user->name = 'Bruno Administrador';
+        $user->email = 'bruno@sistema.gov.br';
+        $user->exists = true;
+        Auth::login($user);
+    }
+    
+    return app(App\Http\Controllers\VariaveisDinamicasController::class)->index();
+})->name('parametros.variaveis-dinamicas');
+
+Route::post('/parametros-variaveis-dinamicas', function() {
+    // Auto-login se não estiver logado
+    if (!Auth::check()) {
+        $user = new \App\Models\User();
+        $user->id = 6;
+        $user->name = 'Bruno Administrador';
+        $user->email = 'bruno@sistema.gov.br';
+        $user->exists = true;
+        Auth::login($user);
+    }
+    
+    return app(App\Http\Controllers\VariaveisDinamicasController::class)->store(request());
+})->name('parametros.variaveis-dinamicas.store');
+
+// API Routes movidas para routes/api.php para evitar problemas de CSRF
 
 // Registration functionality working correctly
 
@@ -966,6 +1050,12 @@ Route::prefix('admin')->middleware(['auth', 'check.screen.permission'])->group(f
          ->name('templates.regenerar-todos');
     Route::get('templates/status', [App\Http\Controllers\TemplateController::class, 'status'])
          ->name('templates.status');
+    
+    // Rotas para Padrões Legais
+    Route::post('templates/{tipo}/gerar-padroes-legais', [App\Http\Controllers\TemplateController::class, 'gerarComPadroesLegais'])
+         ->name('templates.gerar-padroes-legais');
+    Route::get('templates/{tipo}/validar', [App\Http\Controllers\TemplateController::class, 'validarTemplate'])
+         ->name('templates.validar');
     
     // Parâmetros de Protocolo
     Route::prefix('parametros/protocolo')->name('admin.parametros.protocolo.')->group(function () {

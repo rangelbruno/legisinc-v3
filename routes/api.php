@@ -14,6 +14,27 @@ Route::post('/onlyoffice/callback/legislativo/{proposicao}/{documentKey}', [App\
 // OnlyOffice force save
 Route::post('/onlyoffice/force-save/proposicao/{proposicao}', [App\Http\Controllers\OnlyOfficeController::class, 'forceSave'])->name('api.onlyoffice.force-save');
 
+// API Routes para busca de câmaras (sem CSRF protection)
+Route::get('/camaras/buscar', function() {
+    return app(App\Http\Controllers\Api\CamaraInfoController::class)->buscarPorNome(request());
+})->name('api.camaras.buscar');
+
+// API Routes para busca de parlamentares (sem CSRF protection)
+Route::get('/parlamentares/buscar', [App\Http\Controllers\Parlamentar\ParlamentarController::class, 'apiSearch'])->name('api.parlamentares.buscar');
+
+Route::post('/camaras/buscar-completa', function() {
+    return app(App\Http\Controllers\Api\CamaraInfoController::class)->buscarCompleta(request());
+})->name('api.camaras.buscar-completa');
+
+// Novos endpoints para APIs externas
+Route::get('/camaras/status', function() {
+    return app(App\Http\Controllers\Api\CamaraInfoController::class)->verificarStatusApis();
+})->name('api.camaras.status');
+
+Route::post('/camaras/limpar-cache', function() {
+    return app(App\Http\Controllers\Api\CamaraInfoController::class)->limparCache(request());
+})->name('api.camaras.limpar-cache');
+
 
 // Parâmetros API routes - Mantido para compatibilidade, mas deprecado
 Route::prefix('parametros')->name('api.parametros.')->middleware(['web'])->group(function () {

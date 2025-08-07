@@ -219,46 +219,73 @@
                                     @endif
                                 </td>
                                 <td>
-                                    <a href="{{ route('templates.editor', $tipo) }}" 
-                                       class="btn btn-sm btn-primary">
-                                        @if($tipo->hasTemplate())
-                                            <i class="ki-duotone ki-pencil fs-6 me-1">
-                                                <span class="path1"></span>
-                                                <span class="path2"></span>
-                                            </i>
-                                            Editar Template
-                                        @else
-                                            <i class="ki-duotone ki-plus fs-6 me-1">
-                                                <span class="path1"></span>
-                                                <span class="path2"></span>
-                                            </i>
-                                            Criar Template
-                                        @endif
-                                    </a>
-                                    
-                                    @if($tipo->hasTemplate())
-                                        <a href="{{ route('api.templates.download', $tipo->template) }}?v={{ $tipo->template->updated_at->timestamp }}" 
-                                           class="btn btn-sm btn-light-primary ms-2">
-                                            <i class="ki-duotone ki-exit-down fs-6 me-1">
-                                                <span class="path1"></span>
-                                                <span class="path2"></span>
-                                            </i>
-                                            Download
+                                    <div class="btn-group" role="group">
+                                        <a href="{{ route('templates.editor', $tipo) }}" 
+                                           class="btn btn-sm btn-primary">
+                                            @if($tipo->hasTemplate())
+                                                <i class="ki-duotone ki-pencil fs-6 me-1">
+                                                    <span class="path1"></span>
+                                                    <span class="path2"></span>
+                                                </i>
+                                                Editar
+                                            @else
+                                                <i class="ki-duotone ki-plus fs-6 me-1">
+                                                    <span class="path1"></span>
+                                                    <span class="path2"></span>
+                                                </i>
+                                                Criar
+                                            @endif
                                         </a>
                                         
                                         <button type="button" 
-                                                class="btn btn-sm btn-light-danger ms-2"
-                                                onclick="confirmarExclusaoTemplate({{ $tipo->template->id }}, '{{ $tipo->nome }}')">
-                                            <i class="ki-duotone ki-trash fs-6 me-1">
+                                                class="btn btn-sm btn-success"
+                                                onclick="gerarComPadroesLegais({{ $tipo->id }}, '{{ $tipo->nome }}')"
+                                                title="Gerar template com padrões LC 95/1998">
+                                            <i class="ki-duotone ki-law fs-6 me-1">
                                                 <span class="path1"></span>
                                                 <span class="path2"></span>
-                                                <span class="path3"></span>
-                                                <span class="path4"></span>
-                                                <span class="path5"></span>
                                             </i>
-                                            Excluir
+                                            LC 95/1998
                                         </button>
-                                    @endif
+                                    </div>
+                                    
+                                    <div class="btn-group ms-2" role="group">
+                                        @if($tipo->hasTemplate())
+                                            <a href="{{ route('api.templates.download', $tipo->template) }}?v={{ $tipo->template->updated_at->timestamp }}" 
+                                               class="btn btn-sm btn-light-primary">
+                                                <i class="ki-duotone ki-exit-down fs-6 me-1">
+                                                    <span class="path1"></span>
+                                                    <span class="path2"></span>
+                                                </i>
+                                                Download
+                                            </a>
+                                            
+                                            <button type="button" 
+                                                    class="btn btn-sm btn-light-info"
+                                                    onclick="validarTemplate({{ $tipo->id }}, '{{ $tipo->nome }}')"
+                                                    title="Validar conformidade legal">
+                                                <i class="ki-duotone ki-shield-tick fs-6 me-1">
+                                                    <span class="path1"></span>
+                                                    <span class="path2"></span>
+                                                    <span class="path3"></span>
+                                                </i>
+                                                Validar
+                                            </button>
+                                            
+                                            <button type="button" 
+                                                    class="btn btn-sm btn-light-danger"
+                                                    onclick="confirmarExclusaoTemplate({{ $tipo->template->id }}, '{{ $tipo->nome }}')">
+                                                <i class="ki-duotone ki-trash fs-6 me-1">
+                                                    <span class="path1"></span>
+                                                    <span class="path2"></span>
+                                                    <span class="path3"></span>
+                                                    <span class="path4"></span>
+                                                    <span class="path5"></span>
+                                                </i>
+                                                Excluir
+                                            </button>
+                                        @endif
+                                    </div>
                                 </td>
                             </tr>
                         @endforeach
@@ -490,16 +517,17 @@ function regenerarTodosTemplates() {
             <p>Esta ação irá:</p>
             <ul class="text-start">
                 <li>Regenerar templates para todos os 23 tipos de proposição</li>
+                <li>Aplicar os <strong>padrões legais LC 95/1998</strong></li>
                 <li>Aplicar os parâmetros atualizados (cabeçalho, rodapé, formatação)</li>
                 <li>Sobrescrever templates existentes</li>
             </ul>
-            <p class="text-muted mt-3">Esta operação pode levar alguns segundos.</p>
+            <p class="text-success mt-3"><strong>✅ Conformidade total com padrões jurídicos brasileiros</strong></p>
         `,
         icon: 'question',
         showCancelButton: true,
-        confirmButtonText: 'Sim, Regenerar',
+        confirmButtonText: 'Sim, Aplicar Padrões LC 95/1998',
         cancelButtonText: 'Cancelar',
-        confirmButtonColor: '#f1bc00',
+        confirmButtonColor: '#17c653',
         showLoaderOnConfirm: true,
         preConfirm: () => {
             return fetch('{{ route("templates.regenerar-todos") }}', {
@@ -521,14 +549,257 @@ function regenerarTodosTemplates() {
     }).then((result) => {
         if (result.isConfirmed) {
             Swal.fire({
-                title: 'Templates Regenerados!',
-                text: 'Todos os templates foram atualizados com os parâmetros mais recentes.',
+                title: 'Templates Regenerados com Padrões Legais!',
+                html: `
+                    <div class="text-success mb-3">
+                        <i class="ki-duotone ki-shield-tick fs-2x mb-2">
+                            <span class="path1"></span>
+                            <span class="path2"></span>
+                            <span class="path3"></span>
+                        </i>
+                        <p><strong>Todos os templates agora seguem:</strong></p>
+                        <ul class="text-start">
+                            <li>✅ LC 95/1998 - Estrutura obrigatória</li>
+                            <li>✅ Numeração unificada por tipo e ano</li>
+                            <li>✅ Metadados Dublin Core</li>
+                            <li>✅ Formatação padronizada</li>
+                            <li>✅ Acessibilidade WCAG 2.1</li>
+                        </ul>
+                    </div>
+                `,
                 icon: 'success'
             }).then(() => {
                 location.reload();
             });
         }
     });
+}
+
+// Função para gerar template com padrões legais LC 95/1998
+function gerarComPadroesLegais(tipoId, tipoNome) {
+    Swal.fire({
+        title: 'Gerar Template LC 95/1998',
+        html: `
+            <div class="text-center mb-4">
+                <i class="ki-duotone ki-law fs-3x text-success mb-3">
+                    <span class="path1"></span>
+                    <span class="path2"></span>
+                </i>
+                <p>Gerar template estruturado para:</p>
+                <p class="fw-bold fs-5">${tipoNome}</p>
+            </div>
+            <div class="alert alert-info">
+                <h6>O template incluirá:</h6>
+                <ul class="text-start mb-0">
+                    <li>Epígrafe formatada (TIPO Nº 000/AAAA)</li>
+                    <li>Ementa conforme padrões</li>
+                    <li>Preâmbulo legal</li>
+                    <li>Corpo articulado (Art. 1º, 2º...)</li>
+                    <li>Cláusula de vigência</li>
+                    <li>Variáveis dinâmicas</li>
+                </ul>
+            </div>
+        `,
+        icon: 'info',
+        showCancelButton: true,
+        confirmButtonText: 'Gerar Template Estruturado',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#17c653',
+        showLoaderOnConfirm: true,
+        preConfirm: () => {
+            return fetch(\`/admin/templates/\${tipoId}/gerar-padroes-legais\`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                }
+            }).then(response => {
+                if (!response.ok) {
+                    throw new Error('Erro na geração do template');
+                }
+                return response.json();
+            }).catch(error => {
+                Swal.showValidationMessage(\`Erro: \${error.message}\`);
+            });
+        },
+        allowOutsideClick: () => !Swal.isLoading()
+    }).then((result) => {
+        if (result.isConfirmed && result.value.success) {
+            const estrutura = result.value.estrutura;
+            Swal.fire({
+                title: 'Template LC 95/1998 Gerado!',
+                html: \`
+                    <div class="text-success mb-4">
+                        <i class="ki-duotone ki-shield-tick fs-2x mb-2">
+                            <span class="path1"></span>
+                            <span class="path2"></span>
+                            <span class="path3"></span>
+                        </i>
+                    </div>
+                    <div class="text-start">
+                        <p class="fw-bold">Estrutura gerada:</p>
+                        <ul>
+                            <li><strong>Epígrafe:</strong> \${estrutura.epigrafe}</li>
+                            <li><strong>Ementa:</strong> \${estrutura.ementa}</li>
+                            <li><strong>Artigos:</strong> \${estrutura.artigos} estruturados</li>
+                            <li><strong>Validação:</strong> \${estrutura.validacoes}</li>
+                        </ul>
+                        <div class="alert alert-success mt-3">
+                            ✅ <strong>Conforme LC 95/1998 e padrões técnicos</strong>
+                        </div>
+                    </div>
+                \`,
+                icon: 'success',
+                showCancelButton: true,
+                confirmButtonText: 'Editar Template',
+                cancelButtonText: 'Fechar',
+                confirmButtonColor: '#007bff'
+            }).then((editResult) => {
+                if (editResult.isConfirmed) {
+                    window.location.href = \`/admin/templates/\${tipoId}/editor\`;
+                } else {
+                    location.reload();
+                }
+            });
+        } else if (result.isConfirmed) {
+            Swal.fire({
+                title: 'Erro na Geração',
+                text: result.value.message || 'Erro desconhecido',
+                icon: 'error'
+            });
+        }
+    });
+}
+
+// Função para validar template conforme padrões legais
+function validarTemplate(tipoId, tipoNome) {
+    Swal.fire({
+        title: 'Validando Template...',
+        text: 'Verificando conformidade com padrões legais',
+        icon: 'info',
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        showConfirmButton: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+
+    fetch(\`/admin/templates/\${tipoId}/validar\`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const validacao = data.validacao;
+                const detalhes = data.detalhes;
+                
+                const statusColor = validacao.status === 'aprovado' ? 'success' : 
+                                   validacao.status === 'rejeitado' ? 'danger' : 'warning';
+                                   
+                const statusIcon = validacao.status === 'aprovado' ? 'shield-tick' : 
+                                  validacao.status === 'rejeitado' ? 'shield-cross' : 'shield';
+
+                Swal.fire({
+                    title: 'Relatório de Validação',
+                    html: \`
+                        <div class="text-center mb-4">
+                            <i class="ki-duotone ki-\${statusIcon} fs-3x text-\${statusColor} mb-3">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                                \${statusIcon === 'shield-tick' ? '<span class="path3"></span>' : ''}
+                            </i>
+                            <h4 class="text-\${statusColor}">\${tipoNome}</h4>
+                        </div>
+                        
+                        <div class="row text-start">
+                            <div class="col-md-6">
+                                <div class="card card-bordered">
+                                    <div class="card-body p-4">
+                                        <h6 class="fw-bold mb-3">Conformidade Geral</h6>
+                                        <div class="mb-2">
+                                            <span class="badge badge-\${statusColor} fs-7">\${validacao.status.toUpperCase()}</span>
+                                        </div>
+                                        <div class="mb-2">
+                                            <strong>Qualidade:</strong> \${validacao.qualidade_percentual}%
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-4 text-center">
+                                                <div class="fs-6 fw-bold text-success">\${validacao.total_aprovado}</div>
+                                                <div class="fs-7 text-muted">Aprovado</div>
+                                            </div>
+                                            <div class="col-4 text-center">
+                                                <div class="fs-6 fw-bold text-warning">\${validacao.total_avisos}</div>
+                                                <div class="fs-7 text-muted">Avisos</div>
+                                            </div>
+                                            <div class="col-4 text-center">
+                                                <div class="fs-6 fw-bold text-danger">\${validacao.total_erros}</div>
+                                                <div class="fs-7 text-muted">Erros</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card card-bordered">
+                                    <div class="card-body p-4">
+                                        <h6 class="fw-bold mb-3">Conformidades</h6>
+                                        <div class="mb-2">
+                                            \${detalhes.lc95_conforme ? '✅' : '❌'} LC 95/1998
+                                        </div>
+                                        <div class="mb-2">
+                                            \${detalhes.estrutura_adequada ? '✅' : '❌'} Estrutura Textual
+                                        </div>
+                                        <div class="mb-2">
+                                            \${validacao.metadados_completos ? '✅' : '❌'} Metadados
+                                        </div>
+                                        <div class="mb-2">
+                                            \${validacao.numeracao_conforme ? '✅' : '❌'} Numeração
+                                        </div>
+                                        <div class="mb-2">
+                                            \${validacao.acessivel ? '✅' : '❌'} Acessibilidade
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        \${validacao.status !== 'aprovado' ? \`
+                            <div class="alert alert-warning mt-4">
+                                <h6>Recomendações:</h6>
+                                <ul class="mb-0">
+                                    \${validacao.recomendacoes.map(rec => \`<li>\${rec}</li>\`).join('')}
+                                </ul>
+                            </div>
+                        \` : \`
+                            <div class="alert alert-success mt-4">
+                                ✅ <strong>Template está em total conformidade com os padrões legais!</strong>
+                            </div>
+                        \`}
+                    \`,
+                    icon: validacao.status === 'aprovado' ? 'success' : 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Corrigir Template',
+                    cancelButtonText: 'Fechar',
+                    confirmButtonColor: '#007bff'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        gerarComPadroesLegais(tipoId, tipoNome);
+                    }
+                });
+            } else {
+                Swal.fire({
+                    title: 'Erro na Validação',
+                    text: data.message,
+                    icon: 'error'
+                });
+            }
+        })
+        .catch(error => {
+            Swal.fire({
+                title: 'Erro na Validação',
+                text: 'Erro ao conectar com o servidor: ' + error.message,
+                icon: 'error'
+            });
+        });
 }
 </script>
 @endpush

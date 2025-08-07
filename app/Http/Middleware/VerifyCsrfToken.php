@@ -16,6 +16,7 @@ class VerifyCsrfToken extends Middleware
         'admin/parametros/ajax/*',
         'onlyoffice/*',
         '*/onlyoffice/*',
+        'api/camaras/*',
     ];
     
 } 
