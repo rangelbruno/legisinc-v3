@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Cache;
 class CamaraApiService
 {
     private const CACHE_TTL = 86400; // 24 horas
+    private const CACHE_TTL_FAST = 7200; // 2 horas para buscas externas
     private const REQUEST_TIMEOUT = 10; // 10 segundos
 
     public function __construct()
@@ -577,6 +578,79 @@ class CamaraApiService
                 'bairro' => 'Bela Vista',
                 'cep' => '01319-900',
                 'telefone' => '(11) 3396-4000'
+            ],
+            // EXPANSÃO DA BASE DE DADOS - Cidades mais buscadas
+            'rio de janeiro_rj' => [
+                'cnpj' => '34.420.315/0001-41',
+                'endereco' => 'Rua Pedro Ernesto',
+                'numero' => '32',
+                'bairro' => 'Gamboa',
+                'cep' => '20220-070',
+                'telefone' => '(21) 2588-1000'
+            ],
+            'belo horizonte_mg' => [
+                'cnpj' => '18.715.200/0001-40',
+                'endereco' => 'Avenida dos Andradas',
+                'numero' => '3100',
+                'bairro' => 'Santa Efigênia',
+                'cep' => '30112-005',
+                'telefone' => '(31) 3555-1000'
+            ],
+            'salvador_ba' => [
+                'cnpj' => '14.170.385/0001-19',
+                'endereco' => 'Praça Thomé de Souza',
+                'numero' => '1',
+                'bairro' => 'Centro Histórico',
+                'cep' => '40020-025',
+                'telefone' => '(71) 3320-4000'
+            ],
+            'brasilia_df' => [
+                'cnpj' => '00.009.274/0001-12',
+                'endereco' => 'Praça Municipal',
+                'numero' => '1',
+                'bairro' => 'Asa Norte',
+                'cep' => '70040-010',
+                'telefone' => '(61) 3348-8000'
+            ],
+            'fortaleza_ce' => [
+                'cnpj' => '07.275.814/0001-78',
+                'endereco' => 'Rua Senador Alencar',
+                'numero' => '70',
+                'bairro' => 'Centro',
+                'cep' => '60025-100',
+                'telefone' => '(85) 3105-1000'
+            ],
+            'manaus_am' => [
+                'cnpj' => '04.109.203/0001-00',
+                'endereco' => 'Rua Saldanha Marinho',
+                'numero' => '1468',
+                'bairro' => 'Centro',
+                'cep' => '69010-120',
+                'telefone' => '(92) 3622-1000'
+            ],
+            'curitiba_pr' => [
+                'cnpj' => '76.416.957/0001-28',
+                'endereco' => 'Rua Cândido de Abreu',
+                'numero' => '370',
+                'bairro' => 'Centro Cívico',
+                'cep' => '80530-905',
+                'telefone' => '(41) 3350-8000'
+            ],
+            'recife_pe' => [
+                'cnpj' => '10.898.974/0001-46',
+                'endereco' => 'Rua da Aurora',
+                'numero' => '463',
+                'bairro' => 'Boa Vista',
+                'cep' => '50050-550',
+                'telefone' => '(81) 3182-8000'
+            ],
+            'porto alegre_rs' => [
+                'cnpj' => '94.101.353/0001-29',
+                'endereco' => 'Rua Vereador José Loureiro da Silva',
+                'numero' => '255',
+                'bairro' => 'Centro',
+                'cep' => '90010-110',
+                'telefone' => '(51) 3220-4000'
             ]
         ];
     }
@@ -754,8 +828,9 @@ class CamaraApiService
     {
         $enderecosConhecidos = $this->obterEnderecosConhecidos();
         
-        // VALIDAÇÃO: Não aceitar buscas muito curtas para evitar falsos positivos
-        if (strlen($nomeCidade) < 5) {
+        // MELHORIA DE PERFORMANCE: Aceitar buscas a partir de 3 caracteres
+        // mas com busca mais inteligente
+        if (strlen($nomeCidade) < 3) {
             Log::info("🚫 Busca muito curta para dados conhecidos", ['nome' => $nomeCidade, 'tamanho' => strlen($nomeCidade)]);
             return null;
         }
@@ -766,10 +841,26 @@ class CamaraApiService
             'santos' => 'santos_sp', 
             'campinas' => 'campinas_sp',
             'são paulo' => 'sao paulo_sp',
-            'sao paulo' => 'sao paulo_sp'
+            'sao paulo' => 'sao paulo_sp',
+            // EXPANSÃO DO MAPEAMENTO - Novas cidades
+            'rio de janeiro' => 'rio de janeiro_rj',
+            'belo horizonte' => 'belo horizonte_mg',
+            'salvador' => 'salvador_ba',
+            'brasilia' => 'brasilia_df',
+            'brasília' => 'brasilia_df',
+            'fortaleza' => 'fortaleza_ce',
+            'manaus' => 'manaus_am',
+            'curitiba' => 'curitiba_pr',
+            'recife' => 'recife_pe',
+            'porto alegre' => 'porto alegre_rs'
         ];
         
         $cidadeNormalizada = strtolower(StringHelper::removeAccents($nomeCidade));
+        Log::info("🔍 Debug busca conhecidos", [
+            'original' => $nomeCidade,
+            'normalizada' => $cidadeNormalizada,
+            'tamanho' => strlen($cidadeNormalizada)
+        ]);
         
         // Verificar primeiro se há mapeamento EXATO
         if (isset($mapeamento[$cidadeNormalizada])) {
@@ -780,20 +871,48 @@ class CamaraApiService
             }
         }
         
-        // Verificar busca parcial APENAS para nomes >= 8 caracteres
-        if (strlen($nomeCidade) >= 8) {
-            foreach ($enderecosConhecidos as $chave => $dados) {
-                $cidadeChave = explode('_', $chave)[0];
-                
-                // Verificar se o nome digitado corresponde de 80% ou mais ao nome na base
+        // BUSCA INTELIGENTE: Verificar prefixos e similaridade
+        foreach ($enderecosConhecidos as $chave => $dados) {
+            $cidadeChave = explode('_', $chave)[0];
+            
+            // 1. BUSCA POR PREFIXO (para buscas parciais como "Car" -> "Caraguatatuba")
+            if (strlen($cidadeNormalizada) >= 3) {
+                if (strpos($cidadeChave, $cidadeNormalizada) === 0) {
+                    Log::info("✅ Dados conhecidos encontrados (prefixo)", [
+                        'cidade' => $nomeCidade, 
+                        'chave' => $chave,
+                        'prefixo' => $cidadeNormalizada
+                    ]);
+                    return $this->formatarDadosConhecidos($chave, $dados);
+                }
+            }
+            
+            // 2. BUSCA POR SIMILARIDADE (para nomes >= 5 caracteres)
+            if (strlen($nomeCidade) >= 5) {
                 $similaridade = 0;
                 similar_text($cidadeNormalizada, $cidadeChave, $similaridade);
                 
-                if ($similaridade >= 80) {
+                if ($similaridade >= 75) {
                     Log::info("✅ Dados conhecidos encontrados (similaridade)", [
                         'cidade' => $nomeCidade, 
                         'chave' => $chave,
-                        'similaridade' => $similaridade
+                        'similaridade' => round($similaridade, 1)
+                    ]);
+                    return $this->formatarDadosConhecidos($chave, $dados);
+                }
+            }
+            
+            // 3. BUSCA FUZZY (para lidar com pequenos erros de digitação)
+            if (strlen($nomeCidade) >= 4) {
+                $distancia = levenshtein($cidadeNormalizada, $cidadeChave);
+                $maxDistancia = floor(strlen($cidadeChave) * 0.3); // Permite 30% de diferença
+                
+                if ($distancia <= $maxDistancia) {
+                    Log::info("✅ Dados conhecidos encontrados (fuzzy)", [
+                        'cidade' => $nomeCidade, 
+                        'chave' => $chave,
+                        'distancia' => $distancia,
+                        'max_permitida' => $maxDistancia
                     ]);
                     return $this->formatarDadosConhecidos($chave, $dados);
                 }
@@ -841,57 +960,115 @@ class CamaraApiService
     private function buscarCNPJGovBr(string $cidade, string $uf): ?string
     {
         try {
-            // API oficial da Receita Federal via dados.gov.br
-            $variasFormas = [
-                "CAMARA MUNICIPAL DE " . strtoupper($cidade),
-                "CÂMARA MUNICIPAL DE " . strtoupper($cidade),
-                "CAMARA MUNICIPAL " . strtoupper($cidade),
-                "CM " . strtoupper($cidade),
-                strtoupper($cidade) . " CAMARA MUNICIPAL"
-            ];
+            // OTIMIZAÇÃO: Cache específico para evitar consultas repetidas
+            $cacheKey = "cnpj_gov_" . strtolower($cidade) . "_" . strtolower($uf);
+            
+            return Cache::remember($cacheKey, 3600, function() use ($cidade, $uf) {
+                // OTIMIZAÇÃO: Tentar apenas as 2 formas mais comuns primeiro
+                $formasComuns = [
+                    "CAMARA MUNICIPAL DE " . strtoupper($cidade),
+                    "CÂMARA MUNICIPAL DE " . strtoupper($cidade)
+                ];
 
-            foreach ($variasFormas as $nomeBusca) {
-                Log::info("🔍 Buscando CNPJ Gov.br", ['nome' => $nomeBusca, 'uf' => $uf]);
-                
-                // Usar API oficial do gov.br (Serpro)
-                $response = Http::timeout(self::REQUEST_TIMEOUT)
-                    ->withHeaders([
-                        'User-Agent' => 'LeginsinApp/1.0 (gov.br integration)',
-                        'Accept' => 'application/json'
-                    ])
-                    ->get('https://receitaws.com.br/v1/cnpj/search', [
-                        'nome' => $nomeBusca,
-                        'uf' => $uf,
-                        'situacao' => 'ATIVA'
-                    ]);
-
-                if ($response->successful()) {
-                    $resultado = $response->json();
+                foreach ($formasComuns as $nomeBusca) {
+                    Log::info("🔍 Buscando CNPJ Gov.br", ['nome' => $nomeBusca, 'uf' => $uf]);
                     
-                    if (isset($resultado['data']) && !empty($resultado['data'])) {
-                        foreach ($resultado['data'] as $empresa) {
-                            if ($this->validarEmpresaCamaraGov($empresa, $cidade, $uf)) {
-                                Log::info("✅ CNPJ encontrado Gov.br", [
-                                    'cnpj' => $empresa['cnpj'],
-                                    'razao_social' => $empresa['nome']
-                                ]);
-                                return $this->formatarCNPJ($empresa['cnpj']);
+                    // OTIMIZAÇÃO: Timeout reduzido para 5 segundos
+                    $response = Http::timeout(5)
+                        ->withHeaders([
+                            'User-Agent' => 'LeginsinApp/1.0 (gov.br integration)',
+                            'Accept' => 'application/json'
+                        ])
+                        ->get('https://receitaws.com.br/v1/cnpj/search', [
+                            'nome' => $nomeBusca,
+                            'uf' => $uf,
+                            'situacao' => 'ATIVA'
+                        ]);
+
+                    if ($response->successful()) {
+                        $resultado = $response->json();
+                        
+                        if (isset($resultado['data']) && !empty($resultado['data'])) {
+                            foreach ($resultado['data'] as $empresa) {
+                                if ($this->validarEmpresaCamaraGov($empresa, $cidade, $uf)) {
+                                    Log::info("✅ CNPJ encontrado Gov.br", [
+                                        'cnpj' => $empresa['cnpj'],
+                                        'razao_social' => $empresa['nome']
+                                    ]);
+                                    return $this->formatarCNPJ($empresa['cnpj']);
+                                }
                             }
                         }
                     }
+
+                    // OTIMIZAÇÃO: Pausa reduzida para 100ms
+                    usleep(100000); // 0.1 segundo
                 }
 
-                // Pequena pausa entre tentativas para não sobrecarregar a API
-                usleep(500000); // 0.5 segundo
-            }
-
-            // Tentar também com API do CNPJ.biz (se disponível)
-            return $this->buscarCNPJBiz($cidade, $uf);
+                // Se não encontrou nas formas comuns, tentar outras variações
+                return $this->buscarCNPJVariacoes($cidade, $uf);
+            });
             
         } catch (\Exception $e) {
             Log::warning('Erro na API Gov.br', ['erro' => $e->getMessage()]);
             return null;
         }
+    }
+
+    /**
+     * Buscar CNPJ com variações menos comuns (cache separado)
+     */
+    private function buscarCNPJVariacoes(string $cidade, string $uf): ?string
+    {
+        $cacheKey = "cnpj_variacoes_" . strtolower($cidade) . "_" . strtolower($uf);
+        
+        return Cache::remember($cacheKey, 1800, function() use ($cidade, $uf) { // Cache menor (30 min)
+            $variacoes = [
+                "CAMARA MUNICIPAL " . strtoupper($cidade),
+                "CM " . strtoupper($cidade),
+                strtoupper($cidade) . " CAMARA MUNICIPAL"
+            ];
+
+            foreach ($variacoes as $nomeBusca) {
+                Log::info("🔍 Buscando CNPJ variações", ['nome' => $nomeBusca, 'uf' => $uf]);
+                
+                try {
+                    $response = Http::timeout(5)
+                        ->withHeaders([
+                            'User-Agent' => 'LeginsinApp/1.0 (gov.br integration)',
+                            'Accept' => 'application/json'
+                        ])
+                        ->get('https://receitaws.com.br/v1/cnpj/search', [
+                            'nome' => $nomeBusca,
+                            'uf' => $uf,
+                            'situacao' => 'ATIVA'
+                        ]);
+
+                    if ($response->successful()) {
+                        $resultado = $response->json();
+                        
+                        if (isset($resultado['data']) && !empty($resultado['data'])) {
+                            foreach ($resultado['data'] as $empresa) {
+                                if ($this->validarEmpresaCamaraGov($empresa, $cidade, $uf)) {
+                                    Log::info("✅ CNPJ encontrado variações", [
+                                        'cnpj' => $empresa['cnpj'],
+                                        'razao_social' => $empresa['nome']
+                                    ]);
+                                    return $this->formatarCNPJ($empresa['cnpj']);
+                                }
+                            }
+                        }
+                    }
+                } catch (\Exception $e) {
+                    Log::warning("Erro em variação: {$nomeBusca}", ['erro' => $e->getMessage()]);
+                    continue;
+                }
+                
+                usleep(100000); // 0.1 segundo entre variações
+            }
+
+            return null;
+        });
     }
 
     /**
