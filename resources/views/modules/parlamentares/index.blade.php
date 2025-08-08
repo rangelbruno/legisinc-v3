@@ -86,6 +86,7 @@
                 </div>
                 <!--end::Export menu-->
                 
+                @if(\App\Models\ScreenPermission::userCanAccessRoute('parlamentares.mesa-diretora'))
                 <a href="{{ route('parlamentares.mesa-diretora') }}" class="btn btn-sm fw-bold btn-light-info">
                     <i class="ki-duotone ki-crown fs-2">
                         <span class="path1"></span>
@@ -93,11 +94,14 @@
                     </i>
                     Mesa Diretora
                 </a>
+                @endif
                 
+                @if(\App\Models\ScreenPermission::userCanAccessRoute('parlamentares.create'))
                 <a href="{{ route('parlamentares.create') }}" class="btn btn-sm fw-bold btn-primary">
                     <i class="ki-duotone ki-plus fs-2"></i>
                     Novo Parlamentar
                 </a>
+                @endif
             </div>
             <!--end::Actions-->
         </div>

@@ -50,8 +50,8 @@
                             </div>
                             @endif
 
-                            {{-- Seção: Sistema Parlamentar (apenas se não for PARLAMENTAR puro) --}}
-                            @if(!\auth()->user()->hasRole('PARLAMENTAR') && (\App\Models\ScreenPermission::userCanAccessModule('parlamentares') || \App\Models\ScreenPermission::userCanAccessModule('comissoes') || \App\Models\ScreenPermission::userCanAccessModule('proposicoes')))
+                            {{-- Seção: Sistema Parlamentar --}}
+                            @if(\App\Models\ScreenPermission::userCanAccessModule('parlamentares') || \App\Models\ScreenPermission::userCanAccessModule('comissoes') || \App\Models\ScreenPermission::userCanAccessModule('proposicoes'))
                             <div class="menu-item">
                                 <div class="menu-content pt-8 pb-2">
                                     <span class="menu-section text-muted text-uppercase fs-8 ls-1">Sistema Parlamentar</span>
@@ -59,8 +59,8 @@
                             </div>
                             @endif
 
-                            {{-- Parlamentares (apenas para ADMIN e outros perfis, não PARLAMENTAR) --}}
-                            @if(!\auth()->user()->hasRole('PARLAMENTAR') && \App\Models\ScreenPermission::userCanAccessModule('parlamentares'))
+                            {{-- Parlamentares --}}
+                            @if(\App\Models\ScreenPermission::userCanAccessModule('parlamentares'))
                             <div data-kt-menu-trigger="click" class="menu-item menu-accordion {{ request()->routeIs('parlamentares.*') ? 'here show' : '' }}">
                                 <span class="menu-link">
                                     <span class="menu-icon">
@@ -104,8 +104,8 @@
                             </div>
                             @endif
 
-                            {{-- Comissões (apenas para ADMIN e outros perfis, não PARLAMENTAR) --}}
-                            @if(!\auth()->user()->hasRole('PARLAMENTAR') && \App\Models\ScreenPermission::userCanAccessModule('comissoes'))
+                            {{-- Comissões --}}
+                            @if(\App\Models\ScreenPermission::userCanAccessModule('comissoes'))
                             <div data-kt-menu-trigger="click" class="menu-item menu-accordion {{ request()->routeIs('comissoes.*') ? 'here show' : '' }}">
                                 <span class="menu-link">
                                     <span class="menu-icon">
@@ -317,8 +317,8 @@
                             </div>
                             @endif
 
-                            {{-- Sessões (ocultar para PARLAMENTAR) --}}
-                            @if(!\auth()->user()->hasRole('PARLAMENTAR') && \App\Models\ScreenPermission::userCanAccessModule('sessoes'))
+                            {{-- Sessões --}}
+                            @if(\App\Models\ScreenPermission::userCanAccessModule('sessoes'))
                             <div data-kt-menu-trigger="click" class="menu-item menu-accordion {{ request()->routeIs('sessoes.*') ? 'here show' : '' }}">
                                 <span class="menu-link">
                                     <span class="menu-icon">
@@ -359,8 +359,8 @@
                             </div>
                             @endif
 
-                            {{-- Votações (ocultar para PARLAMENTAR) --}}
-                            @if(!\auth()->user()->hasRole('PARLAMENTAR') && \App\Models\ScreenPermission::userCanAccessModule('votacoes'))
+                            {{-- Votações --}}
+                            @if(\App\Models\ScreenPermission::userCanAccessModule('votacoes'))
                             <div data-kt-menu-trigger="click" class="menu-item menu-accordion {{ request()->routeIs('votacoes.*') ? 'here show' : '' }}">
                                 <span class="menu-link">
                                     <span class="menu-icon">
@@ -395,8 +395,8 @@
                             </div>
                             @endif
 
-                            {{-- Seção: Administração (apenas para ADMIN) --}}
-                            @if(auth()->user()->isAdmin())
+                            {{-- Seção: Administração --}}
+                            @if(\App\Models\ScreenPermission::userCanAccessModule('usuarios') || \App\Models\ScreenPermission::userCanAccessModule('documentos') || auth()->user()->isAdmin())
                             <div class="menu-item">
                                 <div class="menu-content pt-8 pb-2">
                                     <span class="menu-section text-muted text-uppercase fs-8 ls-1">Administração</span>
@@ -404,8 +404,8 @@
                             </div>
                             @endif
 
-                            {{-- Usuários (apenas para ADMIN) --}}
-                            @if(auth()->user()->isAdmin())
+                            {{-- Usuários --}}
+                            @if(\App\Models\ScreenPermission::userCanAccessModule('usuarios'))
                             <div data-kt-menu-trigger="click" class="menu-item menu-accordion {{ request()->routeIs('usuarios.*') ? 'here show' : '' }}">
                                 <span class="menu-link">
                                     <span class="menu-icon">
@@ -438,8 +438,8 @@
                             </div>
                             @endif
 
-                            {{-- Documentos (apenas para ADMIN) --}}
-                            @if(auth()->user()->isAdmin())
+                            {{-- Documentos --}}
+                            @if(\App\Models\ScreenPermission::userCanAccessModule('documentos'))
                             <div data-kt-menu-trigger="click" class="menu-item menu-accordion {{ request()->routeIs('documentos.*') ? 'here show' : '' }}">
                                 <span class="menu-link">
                                     <span class="menu-icon">

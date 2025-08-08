@@ -239,7 +239,7 @@
                                         
                                         <button type="button" 
                                                 class="btn btn-sm btn-success"
-                                                onclick="gerarComPadroesLegais({{ $tipo->id }}, '{{ $tipo->nome }}')"
+                                                onclick="gerarComPadroesLegais({{ $tipo->id }}, {{ json_encode($tipo->nome) }})"
                                                 title="Gerar template com padrões LC 95/1998">
                                             <i class="ki-duotone ki-law fs-6 me-1">
                                                 <span class="path1"></span>
@@ -262,7 +262,7 @@
                                             
                                             <button type="button" 
                                                     class="btn btn-sm btn-light-info"
-                                                    onclick="validarTemplate({{ $tipo->id }}, '{{ $tipo->nome }}')"
+                                                    onclick="validarTemplate({{ $tipo->id }}, {{ json_encode($tipo->nome) }})"
                                                     title="Validar conformidade legal">
                                                 <i class="ki-duotone ki-shield-tick fs-6 me-1">
                                                     <span class="path1"></span>
@@ -274,7 +274,7 @@
                                             
                                             <button type="button" 
                                                     class="btn btn-sm btn-light-danger"
-                                                    onclick="confirmarExclusaoTemplate({{ $tipo->template->id }}, '{{ $tipo->nome }}')">
+                                                    onclick="confirmarExclusaoTemplate({{ $tipo->template->id }}, {{ json_encode($tipo->nome) }})">
                                                 <i class="ki-duotone ki-trash fs-6 me-1">
                                                     <span class="path1"></span>
                                                     <span class="path2"></span>
@@ -453,7 +453,7 @@ document.querySelector('[data-kt-templates-table-filter="search"]').addEventList
 function confirmarExclusaoTemplate(templateId, tipoNome) {
     Swal.fire({
         title: 'Confirmar Exclusão',
-        html: `Tem certeza que deseja excluir o template do tipo:<br><strong>${tipoNome}</strong>?`,
+        html: 'Tem certeza que deseja excluir o template do tipo:<br><strong>' + tipoNome + '</strong>?',
         icon: 'warning',
         showCancelButton: true,
         confirmButtonText: 'Sim, Excluir',
@@ -579,27 +579,25 @@ function regenerarTodosTemplates() {
 function gerarComPadroesLegais(tipoId, tipoNome) {
     Swal.fire({
         title: 'Gerar Template LC 95/1998',
-        html: `
-            <div class="text-center mb-4">
-                <i class="ki-duotone ki-law fs-3x text-success mb-3">
-                    <span class="path1"></span>
-                    <span class="path2"></span>
-                </i>
-                <p>Gerar template estruturado para:</p>
-                <p class="fw-bold fs-5">${tipoNome}</p>
-            </div>
-            <div class="alert alert-info">
-                <h6>O template incluirá:</h6>
-                <ul class="text-start mb-0">
-                    <li>Epígrafe formatada (TIPO Nº 000/AAAA)</li>
-                    <li>Ementa conforme padrões</li>
-                    <li>Preâmbulo legal</li>
-                    <li>Corpo articulado (Art. 1º, 2º...)</li>
-                    <li>Cláusula de vigência</li>
-                    <li>Variáveis dinâmicas</li>
-                </ul>
-            </div>
-        `,
+        html: '<div class="text-center mb-4">' +
+                '<i class="ki-duotone ki-law fs-3x text-success mb-3">' +
+                    '<span class="path1"></span>' +
+                    '<span class="path2"></span>' +
+                '</i>' +
+                '<p>Gerar template estruturado para:</p>' +
+                '<p class="fw-bold fs-5">' + tipoNome + '</p>' +
+            '</div>' +
+            '<div class="alert alert-info">' +
+                '<h6>O template incluirá:</h6>' +
+                '<ul class="text-start mb-0">' +
+                    '<li>Epígrafe formatada (TIPO Nº 000/AAAA)</li>' +
+                    '<li>Ementa conforme padrões</li>' +
+                    '<li>Preâmbulo legal</li>' +
+                    '<li>Corpo articulado (Art. 1º, 2º...)</li>' +
+                    '<li>Cláusula de vigência</li>' +
+                    '<li>Variáveis dinâmicas</li>' +
+                '</ul>' +
+            '</div>',
         icon: 'info',
         showCancelButton: true,
         confirmButtonText: 'Gerar Template Estruturado',
@@ -766,7 +764,7 @@ function validarTemplate(tipoId, tipoNome) {
                             <div class="alert alert-warning mt-4">
                                 <h6>Recomendações:</h6>
                                 <ul class="mb-0">
-                                    \${validacao.recomendacoes.map(rec => \`<li>\${rec}</li>\`).join('')}
+                                    \${validacao.recomendacoes.map(rec => '<li>' + rec + '</li>').join('')}
                                 </ul>
                             </div>
                         \` : \`

@@ -46,8 +46,9 @@ class UserTypeScreenPermissionsSeeder extends Seeder
             // Core - Acesso básico
             ['route' => 'dashboard', 'name' => 'Dashboard', 'module' => 'dashboard'],
             ['route' => 'profile.edit', 'name' => 'Editar Perfil', 'module' => 'profile'],
+            ['route' => 'profile.show', 'name' => 'Visualizar Perfil', 'module' => 'profile'],
             
-            // Proposições - Criação e gerenciamento das próprias
+            // Proposições - FOCO PRINCIPAL: Criação e gerenciamento das próprias proposições
             ['route' => 'proposicoes.index', 'name' => 'Minhas Proposições', 'module' => 'proposicoes'],
             ['route' => 'proposicoes.show', 'name' => 'Visualizar Proposição', 'module' => 'proposicoes'],
             ['route' => 'proposicoes.create', 'name' => 'Criar Proposição', 'module' => 'proposicoes'],
@@ -57,23 +58,14 @@ class UserTypeScreenPermissionsSeeder extends Seeder
             ['route' => 'proposicoes.salvar-rascunho', 'name' => 'Salvar Rascunho', 'module' => 'proposicoes'],
             ['route' => 'proposicoes.buscar-modelos', 'name' => 'Buscar Modelos', 'module' => 'proposicoes'],
             
-            // Assinatura - Processo de assinatura
+            // Assinatura - Processo de assinatura das próprias proposições
             ['route' => 'proposicoes.assinatura', 'name' => 'Assinar Proposições', 'module' => 'proposicoes'],
             ['route' => 'proposicoes.assinatura.index', 'name' => 'Assinaturas Pendentes', 'module' => 'proposicoes'],
             ['route' => 'proposicoes.assinatura.assinar', 'name' => 'Efetuar Assinatura', 'module' => 'proposicoes'],
             ['route' => 'proposicoes.historico-assinaturas', 'name' => 'Histórico de Assinaturas', 'module' => 'proposicoes'],
             
-            // Consultas - Visualização de informações relevantes
-            ['route' => 'parlamentares.index', 'name' => 'Lista de Parlamentares', 'module' => 'parlamentares'],
-            ['route' => 'parlamentares.show', 'name' => 'Perfil do Parlamentar', 'module' => 'parlamentares'],
-            ['route' => 'parlamentares.mesa-diretora', 'name' => 'Mesa Diretora', 'module' => 'parlamentares'],
-            ['route' => 'partidos.index', 'name' => 'Partidos', 'module' => 'partidos'],
-            ['route' => 'partidos.show', 'name' => 'Detalhes do Partido', 'module' => 'partidos'],
-            ['route' => 'usuarios.index', 'name' => 'Usuários do Sistema', 'module' => 'usuarios'],
-            ['route' => 'usuarios.show', 'name' => 'Perfil do Usuário', 'module' => 'usuarios'],
-            
             // Relatórios - Apenas das próprias proposições
-            ['route' => 'relatorios.proposicoes', 'name' => 'Relatório de Proposições', 'module' => 'relatorios'],
+            ['route' => 'relatorios.proposicoes', 'name' => 'Relatório de Minhas Proposições', 'module' => 'relatorios'],
         ];
 
         $this->applyScreenPermissions('PARLAMENTAR', $screens);

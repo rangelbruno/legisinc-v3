@@ -265,10 +265,12 @@
                                     </div>
                                 </form>
                             </div>
+                            @if(\App\Models\ScreenPermission::userCanAccessRoute('usuarios.create'))
                             <a href="{{ route('usuarios.create') }}" class="btn btn-primary">
                                 <i class="ki-duotone ki-plus fs-2"></i>
                                 Novo Usuário
                             </a>
+                            @endif
                         </div>
                     </div>
                 </div>
