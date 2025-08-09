@@ -58,8 +58,8 @@ class OnlyOfficeController extends Controller
      */
     private function generateOnlyOfficeConfig(Proposicao $proposicao)
     {
-        // Gerar key único para o documento (incluir timestamp atual para evitar cache)
-        $documentKey = $proposicao->id . '_' . time() . '_' . substr(md5($proposicao->conteudo ?? ''), 0, 8);
+        // Gerar key único para o documento (incluir timestamp e random para evitar cache)
+        $documentKey = $proposicao->id . '_' . time() . '_' . bin2hex(random_bytes(4));
 
         // URL base do OnlyOffice (usando nome do container conforme DOCKER.md)
         // Esta variável não é mais necessária pois usamos config na view
@@ -87,11 +87,44 @@ class OnlyOfficeController extends Controller
             $callbackUrl = str_replace(['http://localhost:8001', 'http://127.0.0.1:8001'], 'http://legisinc-app', $callbackUrl);
         }
 
+        // Detectar tipo de arquivo baseado no conteúdo da proposição
+        $fileType = 'docx'; // Default para documentos modernos
+        $documentType = 'word';
+        
+        // Se há conteúdo IA e sem template específico, usar DOCX para melhor compatibilidade
+        if (!empty($proposicao->conteudo) && $proposicao->template_id === null) {
+            $fileType = 'docx';
+        }
+        
+        // Priorizar arquivo existente da proposição
+        if ($proposicao->arquivo_path) {
+            if (str_ends_with(strtolower($proposicao->arquivo_path), '.rtf')) {
+                $fileType = 'rtf';
+            } elseif (str_ends_with(strtolower($proposicao->arquivo_path), '.docx')) {
+                $fileType = 'docx';
+            } elseif (str_ends_with(strtolower($proposicao->arquivo_path), '.doc')) {
+                $fileType = 'doc';
+            }
+        } elseif ($proposicao->template && $proposicao->template->arquivo_path) {
+            // Se não tem arquivo próprio, verificar template
+            if (str_ends_with(strtolower($proposicao->template->arquivo_path), '.rtf')) {
+                $fileType = 'rtf';
+            }
+        }
+        
+        Log::info('OnlyOffice file type detection', [
+            'proposicao_id' => $proposicao->id,
+            'detected_file_type' => $fileType,
+            'arquivo_path' => $proposicao->arquivo_path,
+            'template_path' => $proposicao->template->arquivo_path ?? null,
+            'has_ai_content' => !empty($proposicao->conteudo)
+        ]);
+
         $config = [
             'type' => 'desktop',
-            'documentType' => 'word',
+            'documentType' => $documentType,
             'document' => [
-                'fileType' => 'rtf',
+                'fileType' => $fileType,
                 'key' => $documentKey,
                 'title' => "Proposição {$proposicao->tipo} - {$proposicao->id}",
                 'url' => $documentUrl,
@@ -259,12 +292,13 @@ class OnlyOfficeController extends Controller
     /**
      * Editor OnlyOffice para Parlamentares editarem suas próprias proposições
      */
-    public function editorParlamentar(Proposicao $proposicao)
+    public function editorParlamentar(Proposicao $proposicao, Request $request)
     {
         // Log do acesso
         Log::info('OnlyOffice Editor Access - Parlamentar', [
             'user_id' => Auth::id(),
-            'proposicao_id' => $proposicao->id
+            'proposicao_id' => $proposicao->id,
+            'ai_content' => $request->has('ai_content')
         ]);
         
         $user = Auth::user();
@@ -284,9 +318,26 @@ class OnlyOfficeController extends Controller
         // Carregar relacionamentos necessários
         $proposicao->load('autor');
         
+        // Se há conteúdo de IA, forçar regeneração do documento
+        if ($request->has('ai_content') || (!empty($proposicao->conteudo) && $proposicao->template_id === null)) {
+            // Limpar arquivo_path para forçar regeneração com conteúdo IA
+            $proposicao->update([
+                'status' => 'em_edicao',
+                'arquivo_path' => null
+            ]);
+            
+            Log::info('Forçando regeneração para conteúdo IA', [
+                'proposicao_id' => $proposicao->id,
+                'ai_content_param' => $request->has('ai_content'),
+                'has_conteudo' => !empty($proposicao->conteudo),
+                'template_id' => $proposicao->template_id
+            ]);
+        }
+        
         // Gerar configurações do OnlyOffice
         $config = $this->generateOnlyOfficeConfig($proposicao);
 
-        return view('proposicoes.legislativo.onlyoffice-editor', compact('proposicao', 'config'));
+        // Usar view específica para parlamentares
+        return view('proposicoes.parlamentar.onlyoffice-editor', compact('proposicao', 'config'));
     }
 }

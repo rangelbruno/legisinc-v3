@@ -93,6 +93,15 @@
                             </div>
                         </div>
 
+                        <!-- Ementa -->
+                        <div class="mb-4" id="ementa-container" style="display: none;">
+                            <label for="ementa" class="form-label required">Ementa da Proposição</label>
+                            <textarea name="ementa" id="ementa" class="form-control" rows="3" placeholder="Descreva resumidamente o objetivo da proposição..." required></textarea>
+                            <div class="form-text">
+                                Descreva de forma clara e objetiva o que a proposição pretende regulamentar ou modificar.
+                            </div>
+                        </div>
+
                         <!-- Modelo -->
                         <div class="mb-4" id="modelo-container" style="display: none;">
                             <label for="modelo" class="form-label required">Selecionar Modelo</label>
@@ -101,6 +110,40 @@
                             </select>
                             <div class="form-text">
                                 Escolha um modelo base para sua proposição.
+                            </div>
+                        </div>
+
+                        <!-- Geração via IA -->
+                        <div class="mb-4" id="ia-container" style="display: none;">
+                            <div class="card border-primary">
+                                <div class="card-header bg-light-primary">
+                                    <h6 class="card-title mb-0">
+                                        <i class="fas fa-robot text-primary me-2"></i>
+                                        Geração Automática via IA
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <p class="text-muted mb-3">
+                                        Use inteligência artificial para gerar automaticamente o texto da proposição baseado na ementa fornecida.
+                                    </p>
+                                    <div class="d-flex gap-2 align-items-center">
+                                        <button type="button" class="btn btn-primary" id="btn-gerar-ia">
+                                            <i class="fas fa-magic me-2"></i>Gerar Texto via IA
+                                        </button>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="usar_ia" name="usar_ia" value="1">
+                                            <label class="form-check-label" for="usar_ia">
+                                                Usar IA para gerar texto
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div id="ia-status" class="mt-3" style="display: none;">
+                                        <div class="alert alert-info">
+                                            <i class="fas fa-spinner fa-spin me-2"></i>
+                                            Gerando texto via IA, aguarde...
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -166,6 +209,109 @@
 <script>
 $(document).ready(function() {
     let proposicaoId = null;
+    
+    // Chaves para localStorage
+    const STORAGE_KEY = 'proposicao_form_data';
+    const AI_TEXT_KEY = 'proposicao_ai_text';
+    
+    // Função para salvar dados no localStorage
+    function salvarDadosFormulario() {
+        const dados = {
+            tipo: $('#tipo').val(),
+            ementa: $('#ementa').val(),
+            modelo: $('#modelo').val(),
+            usar_ia: $('#usar_ia').is(':checked'),
+            timestamp: Date.now()
+        };
+        
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(dados));
+        
+        // Salvar texto da IA separadamente se existir
+        if (window.textoGeradoIA) {
+            localStorage.setItem(AI_TEXT_KEY, window.textoGeradoIA);
+        }
+    }
+    
+    // Função para carregar dados do localStorage
+    function carregarDadosFormulario() {
+        try {
+            const dadosString = localStorage.getItem(STORAGE_KEY);
+            if (!dadosString) return false;
+            
+            const dados = JSON.parse(dadosString);
+            console.log('Carregando dados salvos:', dados);
+            
+            // Verificar se os dados não são muito antigos (1 hora)
+            const agora = Date.now();
+            const umHora = 60 * 60 * 1000;
+            
+            if (agora - dados.timestamp > umHora) {
+                console.log('Dados expirados, limpando...');
+                limparDadosFormulario();
+                return false;
+            }
+            
+            // Restaurar campos
+            if (dados.tipo) {
+                console.log('Restaurando tipo:', dados.tipo);
+                $('#tipo').val(dados.tipo).trigger('change');
+                
+                // Mostrar containers que dependem do tipo
+                $('#ementa-container').show();
+                $('#modelo-container').show();
+                $('#ia-container').show();
+                
+                // Carregar modelos para o tipo selecionado
+                carregarModelos(dados.tipo);
+                
+                // Aguardar um pouco para os modelos serem carregados
+                setTimeout(() => {
+                    if (dados.modelo) {
+                        console.log('Restaurando modelo:', dados.modelo);
+                        $('#modelo').val(dados.modelo).trigger('change');
+                    }
+                }, 1000); // Aumentei o tempo para garantir que os modelos sejam carregados
+            }
+            
+            if (dados.ementa) {
+                console.log('Restaurando ementa:', dados.ementa.substring(0, 50) + '...');
+                $('#ementa').val(dados.ementa);
+            }
+            
+            if (dados.usar_ia) {
+                console.log('Restaurando usar_ia:', dados.usar_ia);
+                $('#usar_ia').prop('checked', true);
+            }
+            
+            // Restaurar texto da IA se existir
+            const textoIA = localStorage.getItem(AI_TEXT_KEY);
+            if (textoIA) {
+                window.textoGeradoIA = textoIA;
+                mostrarPreviewTextoIA(textoIA);
+            }
+            
+            // Validar formulário após restaurar dados
+            setTimeout(() => {
+                validarFormulario();
+            }, 600);
+            
+            return true;
+        } catch (e) {
+            console.warn('Erro ao carregar dados do formulário:', e);
+            limparDadosFormulario();
+            return false;
+        }
+    }
+    
+    // Função para limpar dados do localStorage
+    function limparDadosFormulario() {
+        localStorage.removeItem(STORAGE_KEY);
+        localStorage.removeItem(AI_TEXT_KEY);
+        window.textoGeradoIA = null;
+    }
+    
+    // Carregar dados salvos na inicialização
+    carregarDadosFormulario();
 
     // Inicializar Select2
     $('#tipo').select2({
@@ -188,10 +334,16 @@ $(document).ready(function() {
         
         if (tipo) {
             carregarModelos(tipo);
+            $('#ementa-container').show();
             $('#modelo-container').show();
+            $('#ia-container').show();
         } else {
+            $('#ementa-container').hide();
             $('#modelo-container').hide();
-            $('#modelo').val(''); // Limpar seleção de modelo
+            $('#ia-container').hide();
+            $('#ementa').val('');
+            $('#modelo').val('');
+            $('#usar_ia').prop('checked', false);
             $('#btn-continuar').prop('disabled', true);
         }
         
@@ -200,8 +352,37 @@ $(document).ready(function() {
     });
 
     // Validar se pode continuar
-    $('#modelo').on('change', function() {
+    $('#modelo, #ementa').on('change keyup', function() {
         validarFormulario();
+    });
+
+    // Funcionalidade de geração via IA
+    $('#btn-gerar-ia').on('click', function() {
+        gerarTextoViaIA();
+    });
+
+    // Alternar entre usar IA e não usar
+    $('#usar_ia').on('change', function() {
+        console.log('DEBUG: Checkbox usar_ia mudou para:', $(this).is(':checked'));
+        validarFormulario();
+        salvarDadosFormulario(); // Auto-salvar quando mudar
+    });
+
+    // Auto-salvar quando campos importantes mudarem
+    $('#tipo').on('change', function() {
+        salvarDadosFormulario();
+    });
+    
+    $('#ementa').on('input keyup blur', function() {
+        // Debounce para evitar muitas chamadas
+        clearTimeout(window.ementaTimeout);
+        window.ementaTimeout = setTimeout(() => {
+            salvarDadosFormulario();
+        }, 500);
+    });
+    
+    $('#modelo').on('change', function() {
+        salvarDadosFormulario();
     });
 
     // Salvar rascunho
@@ -213,22 +394,64 @@ $(document).ready(function() {
     $('#form-criar-proposicao').on('submit', function(e) {
         e.preventDefault();
         
+        const usarIA = $('#usar_ia').is(':checked');
         const modeloId = $('#modelo').val();
-        if (!modeloId) {
+        
+        console.log('DEBUG: Form submit initiated', {
+            usarIA: usarIA,
+            modeloId: modeloId,
+            temTextoIA: !!window.textoGeradoIA,
+            textoIA: window.textoGeradoIA ? window.textoGeradoIA.substring(0, 50) + '...' : 'null',
+            proposicaoId: proposicaoId
+        });
+        
+        // Só exigir modelo se NÃO estiver usando IA
+        if (!usarIA && !modeloId) {
             alert('Selecione um modelo para continuar.');
+            return;
+        }
+        
+        // Se usar IA, verificar se há texto gerado
+        if (usarIA && !window.textoGeradoIA) {
+            alert('Gere o texto via IA antes de continuar.');
             return;
         }
         
         if (proposicaoId) {
             // Já tem proposição salva, continuar direto
-            window.location.href = `/proposicoes/${proposicaoId}/preencher-modelo/${modeloId}`;
+            console.log('Debug: Proposição já existe', {
+                proposicaoId: proposicaoId,
+                usarIA: usarIA,
+                temTextoIA: !!window.textoGeradoIA,
+                modeloId: modeloId
+            });
+            
+            if (usarIA && window.textoGeradoIA) {
+                // Se usou IA, ir direto ao editor OnlyOffice para parlamentares
+                console.log('Debug: Redirecionando para OnlyOffice com IA');
+                // Limpar dados salvos pois vamos continuar
+                limparDadosFormulario();
+                window.location.href = `/proposicoes/${proposicaoId}/onlyoffice/editor-parlamentar?ai_content=true`;
+            } else {
+                // Fluxo normal - preencher modelo
+                console.log('Debug: Redirecionando para preencher modelo, modeloId:', modeloId);
+                if (!modeloId) {
+                    alert('Erro: Modelo não selecionado para fluxo tradicional');
+                    return;
+                }
+                // Limpar dados salvos pois vamos continuar
+                limparDadosFormulario();
+                window.location.href = `/proposicoes/${proposicaoId}/preencher-modelo/${modeloId}`;
+            }
         } else {
             // Salvar rascunho primeiro, depois continuar
             $('#btn-continuar').prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i>Salvando...');
             
             const dados = {
                 tipo: $('#tipo').val(),
-                ementa: 'Proposição em elaboração', // Ementa padrão temporária
+                ementa: $('#ementa').val() || 'Proposição em elaboração',
+                usar_ia: usarIA ? 1 : 0,
+                texto_ia: usarIA ? window.textoGeradoIA : null,
                 _token: $('meta[name="csrf-token"]').attr('content')
             };
 
@@ -236,7 +459,30 @@ $(document).ready(function() {
                 .done(function(response) {
                     if (response.success) {
                         proposicaoId = response.proposicao_id;
-                        window.location.href = `/proposicoes/${proposicaoId}/preencher-modelo/${modeloId}`;
+                        console.log('Debug: Proposição salva com sucesso', {
+                            proposicaoId: proposicaoId,
+                            usarIA: usarIA,
+                            temTextoIA: !!window.textoGeradoIA,
+                            modeloId: modeloId
+                        });
+                        
+                        if (usarIA && window.textoGeradoIA) {
+                            // Se usou IA, ir direto ao editor OnlyOffice para parlamentares
+                            console.log('Debug: Redirecionando para OnlyOffice com IA após salvar');
+                            // Limpar dados salvos pois vamos continuar
+                            limparDadosFormulario();
+                            window.location.href = `/proposicoes/${proposicaoId}/onlyoffice/editor-parlamentar?ai_content=true`;
+                        } else {
+                            // Fluxo normal - preencher modelo
+                            console.log('Debug: Redirecionando para preencher modelo após salvar, modeloId:', modeloId);
+                            if (!modeloId) {
+                                alert('Erro: Modelo não selecionado para fluxo tradicional após salvar');
+                                return;
+                            }
+                            // Limpar dados salvos pois vamos continuar
+                            limparDadosFormulario();
+                            window.location.href = `/proposicoes/${proposicaoId}/preencher-modelo/${modeloId}`;
+                        }
                     }
                 })
                 .fail(function(xhr) {
@@ -290,7 +536,7 @@ $(document).ready(function() {
     function salvarRascunho() {
         const dados = {
             tipo: $('#tipo').val(),
-            ementa: 'Proposição em elaboração', // Ementa padrão temporária
+            ementa: $('#ementa').val() || 'Proposição em elaboração',
             _token: $('meta[name="csrf-token"]').attr('content')
         };
 
@@ -320,11 +566,92 @@ $(document).ready(function() {
 
     function validarFormulario() {
         const tipo = $('#tipo').val();
+        const ementa = $('#ementa').val();
         const modelo = $('#modelo').val();
+        const usarIA = $('#usar_ia').is(':checked');
 
-        // Permitir continuar se tipo e modelo estão selecionados
-        const valido = tipo && modelo;
+        // Permitir continuar se tipo, ementa e modelo estão preenchidos
+        // OU se vai usar IA (tipo e ementa suficientes)
+        const valido = tipo && ementa && (modelo || usarIA);
         $('#btn-continuar').prop('disabled', !valido);
+        
+        // Mostrar/esconder seleção de modelo baseado no uso de IA
+        if (usarIA) {
+            $('#modelo-container').slideUp();
+        } else {
+            $('#modelo-container').slideDown();
+        }
+    }
+
+    // Função para gerar texto via IA
+    function gerarTextoViaIA() {
+        const tipo = $('#tipo').val();
+        const ementa = $('#ementa').val();
+
+        if (!tipo || !ementa) {
+            toastr.warning('Selecione o tipo de proposição e preencha a ementa');
+            return;
+        }
+
+        // Mostrar status de carregamento
+        $('#ia-status').show();
+        $('#btn-gerar-ia').prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i>Gerando...');
+
+        // Fazer requisição para gerar texto
+        $.post('/proposicoes/gerar-texto-ia', {
+            tipo: tipo,
+            ementa: ementa,
+            _token: $('meta[name="csrf-token"]').attr('content')
+        })
+        .done(function(response) {
+            $('#ia-status').hide();
+            
+            if (response.success) {
+                toastr.success('Texto gerado via IA com sucesso!');
+                $('#usar_ia').prop('checked', true);
+                
+                // Salvar o texto gerado para usar depois
+                window.textoGeradoIA = response.texto;
+                
+                // Salvar dados do formulário incluindo texto da IA
+                salvarDadosFormulario();
+                
+                // Validar formulário novamente
+                validarFormulario();
+                
+                // Mostrar preview se possível
+                if (response.texto) {
+                    mostrarPreviewTextoIA(response.texto);
+                }
+            } else {
+                toastr.error('Erro ao gerar texto: ' + (response.message || 'Erro desconhecido'));
+            }
+        })
+        .fail(function(xhr) {
+            $('#ia-status').hide();
+            console.error('Erro na requisição:', xhr);
+            toastr.error('Erro ao conectar com o serviço de IA');
+        })
+        .always(function() {
+            $('#btn-gerar-ia').prop('disabled', false).html('<i class="fas fa-magic me-2"></i>Gerar Texto via IA');
+        });
+    }
+
+    // Função para mostrar preview do texto gerado
+    function mostrarPreviewTextoIA(texto) {
+        const maxLength = 200;
+        const preview = texto.length > maxLength ? texto.substring(0, maxLength) + '...' : texto;
+        
+        $('#ia-status').html(`
+            <div class="alert alert-success">
+                <h6><i class="fas fa-check me-2"></i>Texto gerado com sucesso!</h6>
+                <p class="mb-2"><strong>Preview:</strong></p>
+                <div class="bg-light p-2 rounded small">${preview}</div>
+                <small class="text-muted mt-2 d-block">
+                    Texto completo será usado na próxima etapa (${texto.length} caracteres)
+                </small>
+            </div>
+        `).show();
     }
 });
 </script>

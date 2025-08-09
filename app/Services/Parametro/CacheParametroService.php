@@ -124,6 +124,21 @@ class CacheParametroService
     }
 
     /**
+     * Cache para valores de um submódulo específico
+     */
+    public function rememberValores(int $submoduloId, callable $callback, int $ttl = null): mixed
+    {
+        $key = $this->generateKey('valores', $submoduloId);
+        
+        if ($this->supportsTagging()) {
+            return Cache::tags([self::TAGS['valores'], self::TAGS['submodulos']])
+                ->remember($key, $ttl ?? self::DEFAULT_TTL, $callback);
+        }
+        
+        return Cache::remember($key, $ttl ?? self::DEFAULT_TTL, $callback);
+    }
+
+    /**
      * Invalida cache de módulos
      */
     public function invalidateModulos(): void

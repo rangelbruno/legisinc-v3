@@ -20,8 +20,8 @@
                         <i class="fas fa-file-word me-2"></i>Editar
                     </a>
                 @else
-                    <a href="{{ route('proposicoes.editar-texto', $proposicao->id) }}" class="btn btn-primary ms-2">
-                        <i class="fas fa-edit me-2"></i>Editar
+                    <a href="{{ route('proposicoes.onlyoffice.editor-parlamentar', $proposicao->id) }}" class="btn btn-primary ms-2">
+                        <i class="fas fa-file-word me-2"></i>Editar no OnlyOffice
                     </a>
                 @endif
             @endif
@@ -224,8 +224,8 @@
                                         <i class="fas fa-file-word me-2"></i>Adicionar Conteúdo
                                     </a>
                                 @else
-                                    <a href="{{ route('proposicoes.editar-texto', $proposicao->id) }}" class="btn btn-primary">
-                                        <i class="fas fa-edit me-2"></i>Adicionar Conteúdo
+                                    <a href="{{ route('proposicoes.onlyoffice.editor-parlamentar', $proposicao->id) }}" class="btn btn-primary">
+                                        <i class="fas fa-file-word me-2"></i>Adicionar Conteúdo no OnlyOffice
                                     </a>
                                 @endif
                             @endif
@@ -263,8 +263,8 @@
                                     </small>
                                 @endif
                             @else
-                                <a href="{{ route('proposicoes.editar-texto', $proposicao->id) }}" class="btn btn-primary">
-                                    <i class="fas fa-edit me-2"></i>Editar Proposição
+                                <a href="{{ route('proposicoes.onlyoffice.editor-parlamentar', $proposicao->id) }}" class="btn btn-primary">
+                                    <i class="fas fa-file-word me-2"></i>Editar Proposição no OnlyOffice
                                 </a>
                             @endif
                             @if($podeEnviarLegislativo)
@@ -296,7 +296,7 @@
                                 </button>
                             @endif
                             <a href="{{ route('proposicoes.onlyoffice.editor-parlamentar', $proposicao->id) }}" class="btn btn-outline-primary">
-                                <i class="fas fa-edit me-2"></i>Continuar Editando
+                                <i class="fas fa-file-word me-2"></i>Continuar Editando no OnlyOffice
                             </a>
                             <button type="button" class="btn btn-outline-danger" onclick="excluirProposicao()">
                                 <i class="fas fa-trash me-2"></i>Excluir Proposição
@@ -352,8 +352,8 @@
                                     Aceitar Edições
                                 @endif
                             </button>
-                            <a href="{{ route('proposicoes.editar-texto', $proposicao->id) }}" class="btn btn-outline-warning">
-                                <i class="fas fa-edit me-2"></i>Fazer Novas Edições
+                            <a href="{{ route('proposicoes.onlyoffice.editor-parlamentar', $proposicao->id) }}" class="btn btn-outline-warning">
+                                <i class="fas fa-file-word me-2"></i>Fazer Novas Edições no OnlyOffice
                             </a>
                             <button class="btn btn-outline-info btn-sm" onclick="verHistoricoEdicoes()">
                                 <i class="fas fa-history me-2"></i>Ver Histórico
@@ -361,24 +361,20 @@
                         </div>
                     @elseif($proposicao->status === 'em_edicao')
                         <div class="d-grid gap-2">
-                            @if($proposicao->template_id)
-                                <a href="{{ route('proposicoes.editar-onlyoffice', ['proposicao' => $proposicao->id, 'template' => $proposicao->template_id]) }}" class="btn btn-primary">
-                                    <i class="fas fa-file-word me-2"></i>Continuar Edição no Editor
+                            <!-- Sempre usar OnlyOffice para edição -->
+                            <a href="{{ route('proposicoes.onlyoffice.editor-parlamentar', $proposicao->id) }}" class="btn btn-primary">
+                                <i class="fas fa-file-word me-2"></i>Continuar Edição no OnlyOffice
+                            </a>
+
+                            <!-- Botão para preencher template apenas se houver template_id -->
+                            @if($proposicao->template_id && (str_contains($proposicao->ementa ?? '', 'a ser definid') || str_contains($proposicao->ementa ?? '', 'em elaboração') || str_contains($proposicao->ementa ?? '', 'serem definidos') || str_contains($proposicao->ementa ?? '', 'definidos') || empty($proposicao->ementa)))
+                                <a href="{{ route('proposicoes.preencher-modelo', ['proposicao' => $proposicao->id, 'modeloId' => $proposicao->template_id]) }}" class="btn btn-outline-info">
+                                    <i class="fas fa-form me-2"></i>Preencher Campos do Template
                                 </a>
-                                <!-- Botão para preencher/repreencher template -->
-                                @if(str_contains($proposicao->ementa ?? '', 'a ser definid') || str_contains($proposicao->ementa ?? '', 'em elaboração') || str_contains($proposicao->ementa ?? '', 'serem definidos') || str_contains($proposicao->ementa ?? '', 'definidos') || empty($proposicao->ementa))
-                                    <a href="{{ route('proposicoes.preencher-modelo', ['proposicao' => $proposicao->id, 'modeloId' => $proposicao->template_id]) }}" class="btn btn-outline-info">
-                                        <i class="fas fa-form me-2"></i>Preencher Campos do Template
-                                    </a>
-                                    <small class="text-muted d-block mt-1">
-                                        <i class="fas fa-lightbulb me-1"></i>
-                                        Complete os campos para gerar uma ementa específica
-                                    </small>
-                                @endif
-                            @else
-                                <a href="{{ route('proposicoes.editar-texto', $proposicao->id) }}" class="btn btn-primary">
-                                    <i class="fas fa-edit me-2"></i>Continuar Edição
-                                </a>
+                                <small class="text-muted d-block mt-1">
+                                    <i class="fas fa-lightbulb me-1"></i>
+                                    Complete os campos para gerar uma ementa específica
+                                </small>
                             @endif
                             @if($podeEnviarLegislativo)
                                 <button class="btn btn-success" onclick="enviarParaLegislativo()">

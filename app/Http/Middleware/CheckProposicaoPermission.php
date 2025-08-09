@@ -31,6 +31,7 @@ class CheckProposicaoPermission
             // Rotas do Parlamentar
             case 'proposicoes.criar':
             case 'proposicoes.salvar-rascunho':
+            case 'proposicoes.gerar-texto-ia':
             case 'proposicoes.preencher-modelo':
             case 'proposicoes.gerar-texto':
             case 'proposicoes.editar-texto':

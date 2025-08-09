@@ -206,6 +206,11 @@ Route::prefix('templates')->group(function () {
 
 // Route duplicada removida - usar a rota correta no grupo onlyoffice acima
 
+// ===== AI API ROUTES =====
+Route::prefix('ai')->name('api.ai.')->middleware(['web', 'auth'])->group(function () {
+    Route::post('/testar-conexao', [App\Http\Controllers\Api\AIController::class, 'testarConexao'])->name('testar-conexao');
+});
+
 // ===== NOTIFICATIONS API ROUTES =====
 Route::middleware(['web', 'auth'])->group(function () {
     Route::get('/notifications', [App\Http\Controllers\Api\NotificationController::class, 'index'])->name('api.notifications.index');

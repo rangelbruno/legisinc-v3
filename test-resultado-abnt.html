@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Template Padrão ABNT - Proposição Legislativa</title>
+    <style>
+        /* Configurações gerais seguindo normas ABNT NBR 14724:2023 e NBR 6022:2018 */
+        body {
+            font-family: 'Times New Roman', serif; /* Fonte serifada recomendada para impressão */
+            font-size: 12pt; /* Corpo principal */
+            line-height: 1.5; /* Espaçamento 1,5 */
+            margin: 3cm 2cm 2cm 3cm; /* Margens ABNT */
+            color: #000;
+            text-align: justify;
+            background: #fff;
+        }
+        
+        /* Fonte alternativa Arial para telas (configuração disponível via parâmetros) */
+        body.arial-font {
+            font-family: Arial, sans-serif;
+        }
+        
+        /* Cabeçalho com imagem */
+        .cabecalho {
+            text-align: center;
+            margin-bottom: 20pt;
+            page-break-after: avoid;
+        }
+        
+        .cabecalho img {
+            max-width: 100%;
+            height: auto;
+            margin-bottom: 10pt;
+        }
+        
+        .cabecalho .instituicao {
+            font-weight: bold;
+            font-size: 14pt;
+            margin-bottom: 5pt;
+            text-transform: uppercase;
+        }
+        
+        .cabecalho .endereco {
+            font-size: 10pt;
+            margin-bottom: 15pt;
+        }
+        
+        /* Epígrafe - Tipo + Número + Ano */
+        .epigrafe {
+            font-size: 12pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            text-align: center;
+            margin: 20pt 0;
+            line-height: 1.0;
+        }
+        
+        /* Ementa */
+        .ementa {
+            font-size: 12pt;
+            font-weight: normal;
+            text-align: justify;
+            margin: 20pt 0;
+            line-height: 1.5;
+        }
+        
+        .ementa-label {
+            font-weight: bold;
+            margin-bottom: 10pt;
+        }
+        
+        /* Preâmbulo */
+        .preambulo {
+            font-size: 12pt;
+            text-align: justify;
+            margin: 20pt 0;
+            line-height: 1.5;
+        }
+        
+        /* Artigos, parágrafos e incisos */
+        .artigo {
+            font-size: 12pt;
+            line-height: 1.5;
+            margin: 12pt 0;
+            text-align: justify;
+        }
+        
+        .artigo-numero {
+            font-weight: bold;
+        }
+        
+        .paragrafo {
+            margin-left: 2cm;
+            margin: 10pt 0;
+        }
+        
+        .inciso {
+            margin-left: 4cm;
+            margin: 6pt 0;
+        }
+        
+        .alinea {
+            margin-left: 6cm;
+            margin: 4pt 0;
+        }
+        
+        /* Títulos hierárquicos */
+        .titulo-1 {
+            font-size: 16pt;
+            font-weight: bold;
+            margin: 12pt 0 6pt 0;
+            text-align: center;
+            text-transform: uppercase;
+        }
+        
+        .titulo-2 {
+            font-size: 14pt;
+            font-weight: bold;
+            margin: 10pt 0 4pt 0;
+            text-align: left;
+        }
+        
+        /* Citações diretas longas (> 3 linhas) */
+        .citacao-longa {
+            font-size: 10pt;
+            margin-left: 4cm;
+            line-height: 1.0;
+            margin: 10pt 0;
+        }
+        
+        /* Notas de rodapé */
+        .nota-rodape {
+            font-size: 10pt;
+            line-height: 1.0;
+            border-top: 1px solid #000;
+            margin-top: 20pt;
+            padding-top: 10pt;
+        }
+        
+        /* Justificativa */
+        .justificativa {
+            margin-top: 30pt;
+            page-break-before: avoid;
+        }
+        
+        .justificativa-titulo {
+            font-size: 12pt;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 20pt;
+            text-transform: uppercase;
+        }
+        
+        .justificativa-texto {
+            font-size: 12pt;
+            line-height: 1.5;
+            text-align: justify;
+        }
+        
+        /* Assinatura */
+        .assinatura {
+            margin-top: 40pt;
+            text-align: center;
+        }
+        
+        .autor-nome {
+            font-weight: bold;
+            margin-bottom: 5pt;
+        }
+        
+        .autor-cargo {
+            font-size: 11pt;
+            margin-bottom: 20pt;
+        }
+        
+        /* Data e local */
+        .data-local {
+            text-align: right;
+            margin: 30pt 0;
+            font-size: 12pt;
+        }
+        
+        /* Tabelas (quando necessário) */
+        table {
+            font-size: 10pt;
+            border-collapse: collapse;
+            width: 100%;
+            margin: 12pt 0;
+        }
+        
+        table th,
+        table td {
+            border: 1px solid #000;
+            padding: 6pt;
+            text-align: left;
+        }
+        
+        table th {
+            font-weight: bold;
+            background-color: #f0f0f0;
+        }
+        
+        /* Quebras de página */
+        .quebra-pagina {
+            page-break-before: always;
+        }
+        
+        /* Configurações de impressão */
+        @media print {
+            body {
+                font-size: 12pt;
+                color: #000;
+                background: #fff;
+            }
+            
+            .cabecalho {
+                margin-bottom: 15pt;
+            }
+            
+            .no-print {
+                display: none;
+            }
+        }
+        
+        /* Marcadores de variáveis (destacados para edição) */
+        .variavel {
+            background-color: #fff3cd;
+            border: 1px dashed #856404;
+            padding: 2pt;
+            font-weight: bold;
+            color: #856404;
+        }
+        
+        @media print {
+            .variavel {
+                background: transparent;
+                border: none;
+                color: #000;
+                font-weight: normal;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Cabeçalho institucional -->
+    <div class="cabecalho">
+        <div class="imagem-cabecalho">
+            
+        </div>
+        <div class="instituicao">
+            CÂMARA MUNICIPAL DE SÃO PAULO
+        </div>
+        <div class="endereco">
+            Viaduto Jacareí, 100 - Bela Vista - São Paulo/SP<br>
+            São Paulo - Legislatura: 2021-2024 - Sessão: 2025
+        </div>
+    </div>
+    
+    <!-- Epígrafe -->
+    <div class="epigrafe">
+        MOÇÃO Nº 0010, de 2025
+    </div>
+    
+    <!-- Ementa -->
+    <div class="ementa">
+        <div class="ementa-label">EMENTA:</div>
+        Moção de aplausos para Bruno José Pereira Rangel
+    </div>
+    
+    <!-- Preâmbulo -->
+    <div class="preambulo">
+        O(A) Vereador(a) que este subscreve, no uso das atribuições que lhe confere o Regimento Interno desta Casa Legislativa, apresenta o presente MOÇÃO, nos termos que seguem:
+    </div>
+    
+    <!-- Corpo da proposição com articulado -->
+    <div class="articulado">
+        **MUNICÍPIO DE [Nome do Município]** **PODER LEGISLATIVO** **CÂMARA MUNICIPAL** **MOÇÃO Nº [Número da Moção], DE [Data]** **MOÇÃO DE APLAUSOS** O(A) Vereador(a) [Nome do Vereador(a) proponente], membro desta Egrégia Câmara Municipal, vem, respeitosamente, à presença dos Nobres Pares, apresentar a seguinte MOÇÃO DE APLAUSOS: **Considerando** a importância da valorização dos cidadãos que se destacam por suas contribuições à comunidade; **Considerando** os relevantes serviços prestados por Bruno José Pereira Rangel ao município de [Nome do Município]; **Art. 1º** Aplaudir e homenagear o cidadão Bruno José Pereira Rangel pelos relevantes serviços prestados.
+    </div>
+    
+    <!-- Disposições finais (se aplicável) -->
+    <div class="artigo">
+        <span class="artigo-numero">Art. 2º</span> Esta MOÇÃO entra em vigor na data de sua publicação.
+    </div>
+    
+    <div class="artigo">
+        <span class="artigo-numero">Art. 3º</span> Revogam-se as disposições em contrário.
+    </div>
+    
+    <!-- Data e local -->
+    <div class="data-local">
+        São Paulo, 08 de agosto de 2025.
+    </div>
+    
+    <!-- Assinatura -->
+    <div class="assinatura">
+        <div style="margin-top: 50pt; margin-bottom: 10pt;">
+            _________________________________
+        </div>
+        <div class="autor-nome">
+            Jessica Santos
+        </div>
+        <div class="autor-cargo">
+            Vereador(a)
+        </div>
+        <div style="font-size: 10pt; margin-top: 10pt;">
+            ${partido_parlamentar}
+        </div>
+    </div>
+    
+    <!-- Justificativa (quebra de página) -->
+    <div class="quebra-pagina">
+        <div class="justificativa">
+            <div class="justificativa-titulo">
+                JUSTIFICATIVA
+            </div>
+            <div class="justificativa-texto">
+                A presente moção justifica-se pela necessidade de reconhecer publicamente os méritos de Bruno José Pereira Rangel, cujas contribuições para nossa comunidade são dignas de nota e aplausos.
+            </div>
+            
+            <!-- Data e assinatura da justificativa -->
+            <div class="data-local" style="margin-top: 30pt;">
+                São Paulo, 08 de agosto de 2025.
+            </div>
+            
+            <div class="assinatura">
+                <div style="margin-top: 40pt; margin-bottom: 10pt;">
+                    _________________________________
+                </div>
+                <div class="autor-nome">
+                    Jessica Santos
+                </div>
+                <div class="autor-cargo">
+                    Vereador(a)
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

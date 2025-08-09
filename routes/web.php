@@ -279,10 +279,7 @@ Route::prefix('admin/parametros')->name('admin.parametros.')->middleware(['auth'
         return redirect()->route('parametros.edit', $id);
     })->name('edit');
     
-    // Adicionar aviso de depreciação nas outras rotas
-    Route::any('/{any}', function () {
-        return redirect()->route('parametros.index')->with('warning', 'Esta funcionalidade foi movida para o novo sistema de parâmetros modulares.');
-    })->where('any', '.*');
+    // Legacy catch-all route removed to prevent conflicts with specific routes
 });
 
 // Sistema de Parâmetros Modulares (protected with auth and permissions - Admin only)
@@ -291,18 +288,37 @@ Route::prefix('admin/parametros')->name('parametros.')->middleware(['auth', 'che
     Route::get('/', [App\Http\Controllers\Parametro\ParametroController::class, 'index'])->name('index')->middleware('check.permission:parametros.view');
     Route::get('/create', [App\Http\Controllers\Parametro\ParametroController::class, 'create'])->name('create')->middleware('check.permission:parametros.create');
     Route::post('/', [App\Http\Controllers\Parametro\ParametroController::class, 'store'])->name('store')->middleware('check.permission:parametros.create');
-    Route::get('/{id}', [App\Http\Controllers\Parametro\ParametroController::class, 'show'])->name('show')->middleware('check.permission:parametros.view');
-    Route::get('/{id}/edit', [App\Http\Controllers\Parametro\ParametroController::class, 'edit'])->name('edit')->middleware('check.permission:parametros.edit');
-    Route::put('/{id}', [App\Http\Controllers\Parametro\ParametroController::class, 'update'])->name('update')->middleware('check.permission:parametros.edit');
-    Route::delete('/{id}', [App\Http\Controllers\Parametro\ParametroController::class, 'destroy'])->name('destroy')->middleware('check.permission:parametros.delete');
+    
+    // Rota específica para configuração de IA (deve vir antes das rotas com {id})
+    Route::get('/configurar-ia', function() {
+        \Log::info('configurar-ia route hit', ['request_path' => request()->path()]);
+        return app(App\Http\Controllers\Parametro\ParametroController::class)->configurar('Configuração de IA');
+    })->name('configurar-ia')->middleware('check.permission:parametros.view');
+    
+    Route::get('/{id}', [App\Http\Controllers\Parametro\ParametroController::class, 'show'])->name('show')->middleware('check.permission:parametros.view')->where('id', '[0-9]+');
+    Route::get('/{id}/edit', [App\Http\Controllers\Parametro\ParametroController::class, 'edit'])->name('edit')->middleware('check.permission:parametros.edit')->where('id', '[0-9]+');
+    Route::put('/{id}', [App\Http\Controllers\Parametro\ParametroController::class, 'update'])->name('update')->middleware('check.permission:parametros.edit')->where('id', '[0-9]+');
+    Route::delete('/{id}', [App\Http\Controllers\Parametro\ParametroController::class, 'destroy'])->name('destroy')->middleware('check.permission:parametros.delete')->where('id', '[0-9]+');
     
     // Página de teste isolada
     Route::get('/test-page', function() {
         return view('test-page');
     })->name('test.page')->middleware('auth');
     
+    // Rota de teste para debug do configurar-ia
+    Route::get('/debug-configurar-ia', function() {
+        return response()->json([
+            'route_exists' => Route::has('parametros.configurar-ia'),
+            'route_url' => route('parametros.configurar-ia'),
+            'timestamp' => now(),
+            'user_authenticated' => auth()->check(),
+            'user_email' => auth()->check() ? auth()->user()->email : null
+        ]);
+    })->name('debug.configurar-ia');
+    
     // Configuração de módulos
     Route::get('/configurar/{nomeModulo}', [App\Http\Controllers\Parametro\ParametroController::class, 'configurar'])->name('configurar')->middleware('check.permission:parametros.view');
+    
     Route::post('/salvar-configuracoes/{submoduloId}', [App\Http\Controllers\Parametro\ParametroController::class, 'salvarConfiguracoes'])->name('salvar-configuracoes')->middleware('check.permission:parametros.edit');
     
         // Rota específica para configurar Dados Gerais
@@ -575,6 +591,8 @@ Route::post('/parametros-templates-marca-dagua', function() {
     return app(App\Http\Controllers\TemplateWatermarkController::class)->store(request());
 })->name('parametros.templates.marca-dagua.store');
 
+Route::get('/test-criar-docx', [App\Http\Controllers\ProposicaoController::class, 'criarArquivoTesteDOCX'])->name('test.criar.docx');
+
 Route::get('/parametros-templates-texto-padrao', function() {
     // Auto-login se não estiver logado
     if (!Auth::check()) {
@@ -737,8 +755,18 @@ Route::prefix('proposicoes')->name('proposicoes.')->middleware(['auth', 'check.s
     // ===== PARLAMENTAR - CRIAÇÃO =====
     Route::get('/criar', [App\Http\Controllers\ProposicaoController::class, 'create'])->name('criar')->middleware('check.parlamentar.access');
     Route::post('/salvar-rascunho', [App\Http\Controllers\ProposicaoController::class, 'salvarRascunho'])->name('salvar-rascunho')->middleware('check.parlamentar.access');
+    Route::post('/gerar-texto-ia', [App\Http\Controllers\ProposicaoController::class, 'gerarTextoIA'])->name('gerar-texto-ia')->middleware('check.parlamentar.access');
     Route::get('/modelos/{tipo}', [App\Http\Controllers\ProposicaoController::class, 'buscarModelos'])->name('buscar-modelos')->middleware('check.parlamentar.access');
     Route::get('/{proposicao}/preencher-modelo/{modeloId}', [App\Http\Controllers\ProposicaoController::class, 'preencherModelo'])->name('preencher-modelo')->middleware('check.parlamentar.access');
+    
+    // Validação ABNT para proposições
+    Route::prefix('abnt')->name('abnt.')->group(function () {
+        Route::post('/validar', [App\Http\Controllers\Template\ABNTValidationController::class, 'validarDocumento'])->name('validar');
+        Route::post('/corrigir', [App\Http\Controllers\Template\ABNTValidationController::class, 'aplicarCorrecoes'])->name('corrigir');
+        Route::get('/estatisticas', [App\Http\Controllers\Template\ABNTValidationController::class, 'obterEstatisticasTemplate'])->name('estatisticas');
+        Route::post('/relatorio', [App\Http\Controllers\Template\ABNTValidationController::class, 'gerarRelatorioDetalhado'])->name('relatorio');
+        Route::get('/painel', [App\Http\Controllers\Template\ABNTValidationController::class, 'exibirPagina'])->name('painel');
+    });
     Route::post('/{proposicao}/gerar-texto', [App\Http\Controllers\ProposicaoController::class, 'gerarTexto'])->name('gerar-texto')->middleware('check.parlamentar.access');
     Route::get('/{proposicao}/editar-texto', [App\Http\Controllers\ProposicaoController::class, 'editarTexto'])->name('editar-texto')->middleware('check.parlamentar.access');
     Route::get('/{proposicao}/editar-onlyoffice/{template}', [App\Http\Controllers\ProposicaoController::class, 'editarOnlyOffice'])->name('editar-onlyoffice')->middleware('check.parlamentar.access');

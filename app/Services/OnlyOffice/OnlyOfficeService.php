@@ -1564,8 +1564,29 @@ ${texto}
             'ementa_length' => strlen($proposicao->ementa ?? ''),
             'conteudo_length' => strlen($proposicao->conteudo ?? ''),
             'has_conteudo' => !empty($proposicao->conteudo),
-            'conteudo_preview' => $proposicao->conteudo ? substr(strip_tags($proposicao->conteudo), 0, 100) : 'VAZIO'
+            'conteudo_preview' => $proposicao->conteudo ? substr(strip_tags($proposicao->conteudo), 0, 200) : 'VAZIO',
+            'status' => $proposicao->status,
+            'autor_nome' => $proposicao->autor->name ?? 'SEM AUTOR'
         ]);
+
+        // FORÇAR uso do template ABNT se há conteúdo de IA ou se está em edição
+        $temConteudoIA = !empty($proposicao->conteudo) && 
+                        (str_contains($proposicao->conteudo, 'PODER LEGISLATIVO') || 
+                         str_contains($proposicao->conteudo, 'CÂMARA MUNICIPAL') ||
+                         str_contains($proposicao->conteudo, 'Art.') ||
+                         strlen($proposicao->conteudo) > 200);
+        
+        if ($temConteudoIA || $proposicao->status === 'em_edicao') {
+            \Log::info('FORÇANDO uso do Template ABNT', [
+                'proposicao_id' => $proposicao->id,
+                'motivo' => $temConteudoIA ? 'conteudo_ia_detectado' : 'status_em_edicao',
+                'conteudo_length' => strlen($proposicao->conteudo ?? ''),
+                'status' => $proposicao->status
+            ]);
+            
+            // Ir direto para o método ABNT - DOCX para melhor compatibilidade
+            return $this->gerarDocumentoDOCXProposicao($proposicao);
+        }
         
         // PRIMEIRO: Verificar se a proposição já tem um arquivo salvo (documento editado anteriormente)
         $arquivoSalvo = null;
@@ -1803,9 +1824,314 @@ ${texto}
     }
 
     /**
-     * Gerar documento RTF simples de uma proposição
+     * Gerar documento DOCX usando Template Padrão ABNT
+     */
+    private function gerarDocumentoDOCXProposicao(\App\Models\Proposicao $proposicao)
+    {
+        try {
+            \Log::info('Gerando documento DOCX com template ABNT', [
+                'proposicao_id' => $proposicao->id,
+                'conteudo_length' => strlen($proposicao->conteudo ?? ''),
+                'ementa' => $proposicao->ementa
+            ]);
+            
+            if (!class_exists('\PhpOffice\PhpWord\PhpWord')) {
+                // Fallback para RTF se PhpWord não disponível
+                return $this->gerarDocumentoRTFProposicao($proposicao);
+            }
+            
+            $phpWord = new \PhpOffice\PhpWord\PhpWord();
+            $section = $phpWord->addSection([
+                'marginTop' => \PhpOffice\PhpWord\Shared\Converter::cmToTwip(3),
+                'marginLeft' => \PhpOffice\PhpWord\Shared\Converter::cmToTwip(3),
+                'marginRight' => \PhpOffice\PhpWord\Shared\Converter::cmToTwip(2),
+                'marginBottom' => \PhpOffice\PhpWord\Shared\Converter::cmToTwip(2)
+            ]);
+            
+            // Estilos ABNT
+            $phpWord->addFontStyle('abntTitle', ['name' => 'Times New Roman', 'size' => 14, 'bold' => true]);
+            $phpWord->addFontStyle('abntHeader', ['name' => 'Times New Roman', 'size' => 12, 'bold' => true]);
+            $phpWord->addFontStyle('abntNormal', ['name' => 'Times New Roman', 'size' => 12]);
+            $phpWord->addFontStyle('abntEmenta', ['name' => 'Times New Roman', 'size' => 12, 'bold' => true]);
+            
+            $phpWord->addParagraphStyle('center', ['alignment' => \PhpOffice\PhpWord\SimpleType\Jc::CENTER, 'lineHeight' => 1.5]);
+            $phpWord->addParagraphStyle('justified', ['alignment' => \PhpOffice\PhpWord\SimpleType\Jc::BOTH, 'lineHeight' => 1.5]);
+            $phpWord->addParagraphStyle('right', ['alignment' => \PhpOffice\PhpWord\SimpleType\Jc::END]);
+            
+            // Cabeçalho institucional
+            $section->addText('CÂMARA MUNICIPAL DE SÃO PAULO', 'abntTitle', 'center');
+            $section->addText('Viaduto Jacareí, 100 - Bela Vista - São Paulo/SP', 'abntNormal', 'center');
+            $section->addText('Legislatura: 2021-2024 - Sessão: 2025', 'abntNormal', 'center');
+            $section->addTextBreak(2);
+            
+            // Epígrafe
+            $tipoFormatado = $this->formatarTipoProposicao($proposicao->tipo);
+            $numero = $proposicao->numero ?: sprintf('%04d', $proposicao->id);
+            $section->addText(strtoupper($tipoFormatado) . ' Nº ' . $numero . ', DE ' . date('Y'), 'abntHeader', 'center');
+            $section->addTextBreak(1);
+            
+            // Ementa
+            $section->addText('EMENTA:', 'abntEmenta', 'justified');
+            $section->addText($proposicao->ementa ?? '', 'abntNormal', 'justified');
+            $section->addTextBreak(1);
+            
+            // Preâmbulo
+            $section->addText('O(A) Vereador(a) que este subscreve, no uso das atribuições que lhe confere o Regimento Interno desta Casa Legislativa, apresenta a presente proposição:', 'abntNormal', 'justified');
+            $section->addTextBreak(1);
+            
+            // Processar conteúdo da IA
+            if (!empty($proposicao->conteudo)) {
+                $this->processarConteudoDOCX($proposicao->conteudo, $section, $phpWord);
+            } else {
+                $section->addText('Art. 1º [INSERIR TEXTO DA PROPOSIÇÃO]', 'abntNormal', 'justified');
+                $section->addTextBreak(1);
+                $section->addText('Art. 2º Esta proposição entra em vigor na data de sua aprovação.', 'abntNormal', 'justified');
+            }
+            
+            $section->addTextBreak(2);
+            
+            // Data e assinatura
+            $section->addText('São Paulo, ' . date('d') . ' de ' . $this->obterMesPortugues(date('n')) . ' de ' . date('Y') . '.', 'abntNormal', 'right');
+            $section->addTextBreak(2);
+            
+            $section->addText('__________________________________', 'abntNormal', 'center');
+            $section->addTextBreak(1);
+            $section->addText($proposicao->autor->name ?? 'AUTOR', 'abntHeader', 'center');
+            $section->addText('Vereador(a)', 'abntNormal', 'center');
+            
+            // Salvar documento temporário
+            $tempFile = tempnam(sys_get_temp_dir(), 'proposicao_abnt_') . '.docx';
+            $objWriter = \PhpOffice\PhpWord\IOFactory::createWriter($phpWord, 'Word2007');
+            $objWriter->save($tempFile);
+            
+            \Log::info('Documento DOCX gerado', [
+                'proposicao_id' => $proposicao->id,
+                'arquivo_temp' => $tempFile,
+                'file_size' => filesize($tempFile)
+            ]);
+            
+            // Retornar arquivo DOCX
+            return response()->download($tempFile, "proposicao_{$proposicao->id}.docx", [
+                'Content-Type' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+            ])->deleteFileAfterSend(true);
+            
+        } catch (\Exception $e) {
+            \Log::error('Erro ao gerar DOCX direto', [
+                'proposicao_id' => $proposicao->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            // Fallback para RTF
+            return $this->gerarDocumentoRTFProposicao($proposicao);
+        }
+    }
+    
+    /**
+     * Gerar documento RTF usando Template Padrão ABNT (fallback)
      */
     private function gerarDocumentoRTFProposicao(\App\Models\Proposicao $proposicao)
+    {
+        try {
+            \Log::info('Gerando documento RTF com template ABNT', [
+                'proposicao_id' => $proposicao->id,
+                'conteudo_length' => strlen($proposicao->conteudo ?? ''),
+                'ementa' => $proposicao->ementa
+            ]);
+            
+            // Gerar RTF direto com dados da proposição (método simplificado)
+            $rtfContent = $this->gerarRTFDireto($proposicao);
+            
+            // Salvar documento RTF temporário
+            $tempFile = tempnam(sys_get_temp_dir(), 'proposicao_abnt_') . '.rtf';
+            file_put_contents($tempFile, $rtfContent);
+            
+            // DEBUG: Salvar uma cópia para verificação
+            $debugFile = storage_path('app/public/debug_proposicao_' . $proposicao->id . '.rtf');
+            file_put_contents($debugFile, $rtfContent);
+            
+            \Log::info('Documento RTF direto gerado', [
+                'proposicao_id' => $proposicao->id,
+                'arquivo_temp' => $tempFile,
+                'debug_file' => $debugFile,
+                'rtf_size' => strlen($rtfContent),
+                'rtf_preview' => substr($rtfContent, 0, 500)
+            ]);
+            
+            // Retornar conteúdo RTF diretamente
+            return response($rtfContent)
+                ->header('Content-Type', 'application/rtf')
+                ->header('Content-Disposition', 'attachment; filename="proposicao_' . $proposicao->id . '.rtf"');
+            
+        } catch (\Exception $e) {
+            \Log::error('Erro ao gerar RTF direto', [
+                'proposicao_id' => $proposicao->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            // Fallback para método antigo
+            return $this->gerarDocumentoRTFSimples($proposicao);
+        }
+    }
+
+    /**
+     * Gerar RTF direto com dados da proposição
+     */
+    private function gerarRTFDireto(\App\Models\Proposicao $proposicao): string
+    {
+        // Cabeçalho RTF compatível com OnlyOffice DocumentServer
+        $rtf = "{\rtf1\ansi\deff0\deflang1046
+{\fonttbl{\f0\fnil\fcharset0 Times New Roman;}}
+{\colortbl;\red0\green0\blue0;}
+\viewkind4\uc1\pard\cf1\f0\fs24
+";
+
+        // Cabeçalho institucional
+        $rtf .= "{\qc\b\fs28 CÂMARA MUNICIPAL DE SÃO PAULO\par}
+{\qc Viaduto Jacareí, 100 - Bela Vista - São Paulo/SP\par}
+{\qc Legislatura: 2021-2024 - Sessão: 2025\par}
+\par
+\par
+";
+
+        // Epígrafe
+        $tipoFormatado = $this->formatarTipoProposicao($proposicao->tipo);
+        $numero = $proposicao->numero ?: sprintf('%04d', $proposicao->id);
+        $rtf .= "{\qc\b\fs24 " . strtoupper($tipoFormatado) . " Nº {$numero}, DE " . date('Y') . "\par}
+\par
+";
+
+        // Ementa
+        $rtf .= "{\b EMENTA:}\par
+" . $this->escaparRTF($proposicao->ementa) . "\par
+\par
+
+";
+
+        // Preâmbulo
+        $rtf .= "O(A) Vereador(a) que este subscreve, no uso das atribuições que lhe confere o Regimento Interno desta Casa Legislativa, apresenta a presente proposição:\par
+\par
+
+";
+
+        // Conteúdo da IA processado
+        if (!empty($proposicao->conteudo)) {
+            $rtf .= $this->processarConteudoIA($proposicao->conteudo);
+        } else {
+            $rtf .= "{\b Art. 1º} [INSERIR TEXTO DA PROPOSIÇÃO]\par\par
+{\b Art. 2º} Esta proposição entra em vigor na data de sua aprovação.\par\par
+";
+        }
+
+        // Data e local
+        $rtf .= "{\qr São Paulo, " . date('d') . " de " . $this->obterMesPortugues(date('n')) . " de " . date('Y') . ".\par}
+\par\par
+
+";
+
+        // Assinatura
+        $rtf .= "{\qc __________________________________\par}
+\par
+{\qc\b " . $this->escaparRTF($proposicao->autor->name ?? 'AUTOR') . "\par}
+{\qc Vereador(a)\par}
+
+";
+
+        // Justificativa em nova página
+        $justificativa = $this->extrairJustificativa($proposicao->conteudo);
+        if ($justificativa) {
+            $rtf .= "\page
+
+{\qc\b\fs24 JUSTIFICATIVA\par}
+\par\par
+
+" . $this->escaparRTF($justificativa) . "\par
+\par\par
+
+{\qr São Paulo, " . date('d') . " de " . $this->obterMesPortugues(date('n')) . " de " . date('Y') . ".\par}
+\par\par
+
+{\qc __________________________________\par}
+\par
+{\qc\b " . $this->escaparRTF($proposicao->autor->name ?? 'AUTOR') . "\par}
+{\qc Vereador(a)\par}
+
+";
+        }
+
+        $rtf .= "}";
+
+        return $rtf;
+    }
+
+    /**
+     * Processar conteúdo da IA para formato DOCX
+     */
+    private function processarConteudoDOCX(string $conteudo, $section, $phpWord)
+    {
+        if (empty($conteudo)) {
+            return;
+        }
+        
+        $linhas = explode("\n", strip_tags($conteudo));
+        
+        foreach ($linhas as $linha) {
+            $linha = trim($linha);
+            if (empty($linha)) continue;
+            
+            // Detectar diferentes tipos de estrutura
+            if (preg_match('/^\*\*Art\.?\s*(\d+).*?\*\*(.*)/', $linha, $matches)) {
+                // Artigo em markdown bold
+                $numero = $matches[1];
+                $texto = trim($matches[2]);
+                $textRun = $section->addTextRun('justified');
+                $textRun->addText('Art. ' . $numero . 'º ', 'abntEmenta');
+                $textRun->addText($texto, 'abntNormal');
+                $section->addTextBreak(1);
+            } elseif (preg_match('/^Art\.?\s*(\d+).*?[\.\-\s](.*)/', $linha, $matches)) {
+                // Artigo normal
+                $numero = $matches[1];
+                $texto = trim($matches[2]);
+                $textRun = $section->addTextRun('justified');
+                $textRun->addText('Art. ' . $numero . 'º ', 'abntEmenta');
+                $textRun->addText($texto, 'abntNormal');
+                $section->addTextBreak(1);
+            } elseif (preg_match('/^\*\*(.+?)\*\*(.*)/', $linha, $matches)) {
+                // Título em bold
+                $titulo = trim($matches[1]);
+                $resto = trim($matches[2]);
+                if ($resto) {
+                    $textRun = $section->addTextRun('justified');
+                    $textRun->addText($titulo . ' ', 'abntEmenta');
+                    $textRun->addText($resto, 'abntNormal');
+                } else {
+                    $section->addText($titulo, 'abntHeader', 'center');
+                }
+                $section->addTextBreak(1);
+            } elseif (preg_match('/^\*\*?Considerando/', $linha)) {
+                // Considerandos
+                $texto = str_replace(['**', '*'], '', $linha);
+                $textRun = $section->addTextRun('justified');
+                $textRun->addText($texto, 'abntEmenta');
+                $section->addTextBreak(1);
+            } elseif (preg_match('/^\*\*?Resolve/', $linha)) {
+                // Resolve
+                $texto = str_replace(['**', '*'], '', $linha);
+                $section->addText($texto, 'abntHeader', 'center');
+                $section->addTextBreak(1);
+            } else {
+                // Texto normal
+                $section->addText($linha, 'abntNormal', 'justified');
+                $section->addTextBreak(1);
+            }
+        }
+    }
+
+    /**
+     * Gerar documento RTF simples (fallback)
+     */
+    private function gerarDocumentoRTFSimples(\App\Models\Proposicao $proposicao)
     {
         $conteudo = $proposicao->conteudo ? str_replace("\n", "\par\n", strip_tags($proposicao->conteudo)) : '[CONTEÚDO NÃO DISPONÍVEL - Adicione o texto da proposição aqui]';
         
@@ -1868,6 +2194,383 @@ Status: " . ucfirst(str_replace('_', ' ', $proposicao->status)) . "\par
         // Retornar arquivo
         return response()->download($tempFile, "proposicao_{$proposicao->id}.rtf")
             ->deleteFileAfterSend(true);
+    }
+
+    /**
+     * Converter HTML do template ABNT para RTF
+     */
+    private function converterHtmlParaRTF(string $htmlContent, \App\Models\Proposicao $proposicao): string
+    {
+        // Se o HTML contém as tags do template ABNT, extrair conteúdo estruturado
+        if (str_contains($htmlContent, 'class="epigrafe"')) {
+            // Extrair conteúdo das tags HTML principais
+            $titulo = $this->extrairConteudoTag($htmlContent, 'epigrafe');
+            $ementa = $this->extrairConteudoTag($htmlContent, 'ementa');
+            $preambulo = $this->extrairConteudoTag($htmlContent, 'preambulo');
+            $articulado = $this->extrairConteudoTag($htmlContent, 'articulado');
+            $justificativa = $this->extrairConteudoTag($htmlContent, 'justificativa-texto');
+            $assinatura = $this->extrairConteudoTag($htmlContent, 'autor-nome');
+            $cargo = $this->extrairConteudoTag($htmlContent, 'autor-cargo');
+            $dataLocal = $this->extrairConteudoTag($htmlContent, 'data-local');
+        } else {
+            // HTML simples ou texto - usar dados da proposição
+            $titulo = strtoupper($this->formatarTipoProposicao($proposicao->tipo)) . " Nº " . 
+                     ($proposicao->numero ?: sprintf('%04d', $proposicao->id)) . ", DE " . date('Y');
+            $ementa = $proposicao->ementa;
+            $preambulo = "O(A) Vereador(a) que este subscreve, no uso das atribuições que lhe confere o Regimento Interno desta Casa Legislativa, apresenta a presente proposição:";
+            
+            // Processar conteúdo da IA como articulado
+            $articulado = $this->processarConteudoIA($proposicao->conteudo);
+            $justificativa = $this->extrairJustificativa($proposicao->conteudo);
+            $assinatura = $proposicao->autor->name ?? '';
+            $cargo = 'Vereador(a)';
+            $dataLocal = 'São Paulo, ' . date('d') . ' de ' . $this->obterMesPortugues(date('n')) . ' de ' . date('Y') . '.';
+            
+            // Log do processamento para debug
+            \Log::info('Processamento conteúdo IA para RTF', [
+                'proposicao_id' => $proposicao->id,
+                'titulo' => $titulo,
+                'ementa_length' => strlen($ementa),
+                'articulado_length' => strlen($articulado),
+                'justificativa_length' => strlen($justificativa),
+                'assinatura' => $assinatura,
+                'conteudo_original_preview' => substr($proposicao->conteudo, 0, 200)
+            ]);
+        }
+
+        // Cabeçalho institucional
+        $cabecalho = $this->obterParametroCabecalho();
+        
+        // Construir RTF seguindo normas ABNT
+        $rtf = "{\rtf1\ansi\deff0 
+{\fonttbl 
+{\f0\froman\fcharset0 Times New Roman;}
+{\f1\fswiss\fcharset0 Arial;}
+}
+{\colortbl;\red0\green0\blue0;}
+\margl1701\margr1134\margt1701\margb1134
+\f0\fs24
+";
+        
+        // Cabeçalho (centralizado)
+        if ($cabecalho) {
+            $rtf .= "{\qc\b\fs28 " . $this->escaparRTF($cabecalho) . "\par}
+\par\par
+";
+        }
+        
+        // Epígrafe (centralizado, caixa alta)
+        if ($titulo) {
+            $rtf .= "{\qc\b\fs24\caps " . $this->escaparRTF(strip_tags($titulo)) . "\par}
+\par
+";
+        }
+        
+        // Ementa
+        if ($ementa) {
+            $rtf .= "{\b EMENTA:}\par
+" . $this->escaparRTF(strip_tags($ementa)) . "\par
+\par
+";
+        }
+        
+        // Preâmbulo
+        if ($preambulo) {
+            $rtf .= $this->escaparRTF(strip_tags($preambulo)) . "\par
+\par
+";
+        }
+        
+        // Articulado (processar estrutura de artigos)
+        if ($articulado) {
+            $artigosProcessados = $this->processarArticulado($articulado);
+            $rtf .= $artigosProcessados . "\par
+";
+        }
+        
+        // Data e local (alinhado à direita)
+        if ($dataLocal) {
+            $rtf .= "{\qr " . $this->escaparRTF(strip_tags($dataLocal)) . "\par}
+\par\par
+";
+        }
+        
+        // Assinatura (centralizada)
+        $rtf .= "{\qc __________________________________\par}
+\par
+";
+        if ($assinatura) {
+            $rtf .= "{\qc\b " . $this->escaparRTF(strip_tags($assinatura)) . "\par}
+";
+        }
+        if ($cargo) {
+            $rtf .= "{\qc " . $this->escaparRTF(strip_tags($cargo)) . "\par}
+";
+        }
+        
+        // Nova página para justificativa
+        if ($justificativa) {
+            $rtf .= "\page
+{\qc\b\fs24 JUSTIFICATIVA\par}
+\par\par
+" . $this->escaparRTF(strip_tags($justificativa)) . "\par
+\par\par
+";
+            
+            // Data e assinatura da justificativa
+            if ($dataLocal) {
+                $rtf .= "{\qr " . $this->escaparRTF(strip_tags($dataLocal)) . "\par}
+\par\par
+";
+            }
+            
+            $rtf .= "{\qc __________________________________\par}
+\par
+";
+            if ($assinatura) {
+                $rtf .= "{\qc\b " . $this->escaparRTF(strip_tags($assinatura)) . "\par}
+";
+            }
+            if ($cargo) {
+                $rtf .= "{\qc " . $this->escaparRTF(strip_tags($cargo)) . "\par}
+";
+            }
+        }
+        
+        $rtf .= "}";
+        
+        return $rtf;
+    }
+
+    /**
+     * Extrair conteúdo de uma tag HTML por classe
+     */
+    private function extrairConteudoTag(string $html, string $classe): string
+    {
+        if (preg_match('/<[^>]*class=["\'][^"\']*' . $classe . '[^"\']*["\'][^>]*>(.*?)<\/[^>]*>/s', $html, $matches)) {
+            return trim($matches[1]);
+        }
+        return '';
+    }
+
+    /**
+     * Processar articulado HTML para RTF
+     */
+    private function processarArticulado(string $articulado): string
+    {
+        $rtf = '';
+        
+        // Encontrar todas as divs de artigo
+        if (preg_match_all('/<div[^>]*class=["\'][^"\']*artigo[^"\']*["\'][^>]*>(.*?)<\/div>/s', $articulado, $matches)) {
+            foreach ($matches[1] as $artigo) {
+                // Extrair número do artigo
+                if (preg_match('/<span[^>]*class=["\'][^"\']*artigo-numero[^"\']*["\'][^>]*>(.*?)<\/span>/s', $artigo, $numeroMatch)) {
+                    $numero = strip_tags($numeroMatch[1]);
+                    $texto = str_replace($numeroMatch[0], '', $artigo);
+                    $texto = strip_tags($texto);
+                    
+                    $rtf .= "{\b " . $this->escaparRTF($numero) . "} " . $this->escaparRTF(trim($texto)) . "\par
+\par
+";
+                } else {
+                    // Artigo sem numeração específica
+                    $rtf .= $this->escaparRTF(strip_tags($artigo)) . "\par
+\par
+";
+                }
+            }
+        }
+        
+        return $rtf;
+    }
+
+    /**
+     * Escapar texto para RTF (versão simplificada)
+     */
+    private function escaparRTF(string $texto): string
+    {
+        // Primeiro escapar caracteres especiais RTF
+        $texto = str_replace(['\\', '{', '}'], ['\\\\', '\\{', '\\}'], $texto);
+        
+        // Remover caracteres problemáticos e manter acentos simples
+        $texto = str_replace(['"', "'", "'", '"', '"'], ['"', "'", "'", '"', '"'], $texto);
+        
+        // Para OnlyOffice, é melhor manter UTF-8 simples
+        return $texto;
+    }
+
+    /**
+     * Obter parâmetro do cabeçalho
+     */
+    private function obterParametroCabecalho(): string
+    {
+        try {
+            $parametroService = app(\App\Services\Parametro\ParametroService::class);
+            $nomeCamara = $parametroService->obterValor('Dados Gerais', 'Informações da Câmara', 'nome_camara');
+            $municipio = $parametroService->obterValor('Dados Gerais', 'Informações da Câmara', 'municipio');
+            $endereco = $parametroService->obterValor('Dados Gerais', 'Informações da Câmara', 'endereco_camara');
+            
+            $cabecalho = '';
+            if ($nomeCamara) {
+                $cabecalho .= strtoupper($nomeCamara);
+            }
+            if ($endereco) {
+                $cabecalho .= "\par" . $endereco;
+            }
+            if ($municipio && !str_contains($cabecalho, $municipio)) {
+                $cabecalho .= "\par" . $municipio;
+            }
+            
+            return $cabecalho;
+            
+        } catch (\Exception $e) {
+            \Log::warning('Erro ao obter parâmetros do cabeçalho', [
+                'error' => $e->getMessage()
+            ]);
+            
+            return 'CÂMARA MUNICIPAL';
+        }
+    }
+
+    /**
+     * Processar conteúdo da IA para RTF estruturado
+     */
+    private function processarConteudoIA(string $conteudo): string
+    {
+        if (empty($conteudo)) {
+            \Log::warning('Conteúdo IA vazio para processamento RTF');
+            return '';
+        }
+
+        \Log::info('Iniciando processamento conteúdo IA', [
+            'conteudo_length' => strlen($conteudo),
+            'conteudo_preview' => substr($conteudo, 0, 300)
+        ]);
+
+        $rtf = '';
+        $linhas = explode("\n", strip_tags($conteudo));
+        $numeroArtigo = 1;
+        
+        \Log::info('Conteúdo IA dividido em linhas', [
+            'total_linhas' => count($linhas),
+            'linhas_nao_vazias' => count(array_filter($linhas, fn($l) => !empty(trim($l))))
+        ]);
+
+        foreach ($linhas as $linha) {
+            $linha = trim($linha);
+            if (empty($linha)) continue;
+
+            // Detectar diferentes tipos de estrutura
+            if (preg_match('/^\*\*Art\.?\s*(\d+).*?\*\*(.*)/', $linha, $matches)) {
+                // Artigo em markdown bold
+                $numero = $matches[1];
+                $texto = trim($matches[2]);
+                $rtf .= "{\b Art. {$numero}º} " . $this->escaparRTF($texto) . "\par\par";
+            } elseif (preg_match('/^Art\.?\s*(\d+).*?[\.\-\s](.*)/', $linha, $matches)) {
+                // Artigo normal
+                $numero = $matches[1];
+                $texto = trim($matches[2]);
+                $rtf .= "{\b Art. {$numero}º} " . $this->escaparRTF($texto) . "\par\par";
+            } elseif (preg_match('/^\*\*(.+?)\*\*(.*)/', $linha, $matches)) {
+                // Título em bold
+                $titulo = trim($matches[1]);
+                $resto = trim($matches[2]);
+                if ($resto) {
+                    $rtf .= "{\b " . $this->escaparRTF($titulo) . "} " . $this->escaparRTF($resto) . "\par\par";
+                } else {
+                    $rtf .= "{\qc\b " . $this->escaparRTF($titulo) . "\par}\par";
+                }
+            } elseif (preg_match('/^\*\*?Considerando/', $linha)) {
+                // Considerandos
+                $texto = str_replace(['**', '*'], '', $linha);
+                $rtf .= "{\b " . $this->escaparRTF($texto) . "}\par\par";
+            } elseif (preg_match('/^\*\*?Resolve/', $linha)) {
+                // Resolve
+                $texto = str_replace(['**', '*'], '', $linha);
+                $rtf .= "{\b " . $this->escaparRTF($texto) . "}\par\par";
+            } else {
+                // Texto normal - verificar se deve ser tratado como artigo
+                if (strlen($linha) > 50 && !str_starts_with($linha, '**') && $numeroArtigo <= 10) {
+                    $rtf .= "{\b Art. {$numeroArtigo}º} " . $this->escaparRTF($linha) . "\par\par";
+                    $numeroArtigo++;
+                } else {
+                    $rtf .= $this->escaparRTF($linha) . "\par\par";
+                }
+            }
+        }
+
+        \Log::info('Processamento conteúdo IA finalizado', [
+            'rtf_length' => strlen($rtf),
+            'rtf_preview' => substr($rtf, 0, 200)
+        ]);
+
+        return $rtf;
+    }
+
+    /**
+     * Extrair justificativa do conteúdo da IA
+     */
+    private function extrairJustificativa(string $conteudo): string
+    {
+        if (empty($conteudo)) {
+            return 'A presente proposição tem como objetivo atender às necessidades da população e promover o bem comum, conforme preceitos constitucionais e legais vigentes.';
+        }
+
+        // Procurar por seção de justificativa explícita
+        if (preg_match('/(?:JUSTIFICATIV|justificativ)[^:]*:?\s*(.+?)(?:\n\s*\n|$)/si', $conteudo, $matches)) {
+            return strip_tags(trim($matches[1]));
+        }
+
+        // Procurar por considerandos que podem servir como justificativa
+        if (preg_match_all('/\*\*?Considerando\*\*?\s*(.+?)(?=\*\*?Considerando|\*\*?Resolve|\*\*?Art\.|\n\s*\n|$)/si', $conteudo, $matches)) {
+            $considerandos = array_map('strip_tags', $matches[1]);
+            $considerandos = array_map('trim', $considerandos);
+            return 'A presente proposição justifica-se pelos seguintes considerandos: ' . implode(' ', $considerandos);
+        }
+
+        // Fallback: usar as primeiras linhas como justificativa
+        $linhas = explode("\n", strip_tags($conteudo));
+        $primeirasLinhas = array_slice($linhas, 0, 3);
+        $primeirasLinhas = array_filter($primeirasLinhas, fn($l) => !empty(trim($l)));
+        
+        if (!empty($primeirasLinhas)) {
+            return 'A presente proposição visa ' . implode(' ', array_map('trim', $primeirasLinhas));
+        }
+
+        return 'A presente proposição tem como objetivo atender às necessidades da população e promover o bem comum.';
+    }
+
+    /**
+     * Obter mês em português
+     */
+    private function obterMesPortugues(int $mes): string
+    {
+        $meses = [
+            1 => 'janeiro', 2 => 'fevereiro', 3 => 'março', 4 => 'abril',
+            5 => 'maio', 6 => 'junho', 7 => 'julho', 8 => 'agosto',
+            9 => 'setembro', 10 => 'outubro', 11 => 'novembro', 12 => 'dezembro'
+        ];
+
+        return $meses[$mes] ?? 'mês inválido';
+    }
+
+    /**
+     * Formatar tipo de proposição
+     */
+    private function formatarTipoProposicao(string $tipo): string
+    {
+        $tipos = [
+            'projeto_lei_ordinaria' => 'Projeto de Lei Ordinária',
+            'projeto_lei_complementar' => 'Projeto de Lei Complementar', 
+            'indicacao' => 'Indicação',
+            'mocao' => 'Moção',
+            'projeto_decreto_legislativo' => 'Projeto de Decreto Legislativo',
+            'projeto_resolucao' => 'Projeto de Resolução',
+            'requerimento' => 'Requerimento',
+            'emenda' => 'Emenda'
+        ];
+
+        return $tipos[$tipo] ?? ucfirst(str_replace('_', ' ', $tipo));
     }
 
     /**

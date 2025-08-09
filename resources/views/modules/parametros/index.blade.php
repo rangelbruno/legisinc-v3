@@ -212,7 +212,7 @@
                                         <!--end::Menu item-->
                                         <!--begin::Menu item-->
                                         <div class="menu-item px-3">
-                                            <a href="{{ route('parametros.configurar', $modulo->nome) }}" class="menu-link px-3">
+                                            <a href="{{ $modulo->nome === 'Configuração de IA' ? route('parametros.configurar-ia') : route('parametros.configurar', $modulo->nome) }}" class="menu-link px-3">
                                                 <i class="ki-duotone ki-setting-3 fs-6 me-2"></i>
                                                 Configurar
                                             </a>
@@ -272,7 +272,7 @@
                                                 Acessar
                                             </a>
                                         @else
-                                            <a href="{{ route('parametros.configurar', $modulo->nome) }}" class="btn btn-sm btn-primary">
+                                            <a href="{{ $modulo->nome === 'Configuração de IA' ? route('parametros.configurar-ia') : route('parametros.configurar', $modulo->nome) }}" class="btn btn-sm btn-primary">
                                                 <i class="ki-duotone ki-setting-3 fs-6 me-1">
                                                     <span class="path1"></span>
                                                     <span class="path2"></span>
@@ -627,7 +627,7 @@
                                             <a href="/admin/parametros/${row.id}" class="menu-link px-3">Visualizar</a>
                                         </div>
                                         <div class="menu-item px-3">
-                                            <a href="/admin/parametros/configurar/${row.nome}" class="menu-link px-3">Configurar</a>
+                                            <a href="${row.nome === 'Configuração de IA' ? '/admin/parametros/configurar-ia' : '/admin/parametros/configurar/' + row.nome}" class="menu-link px-3">Configurar</a>
                                         </div>
                                         <div class="menu-item px-3">
                                             <a href="/admin/parametros/${row.id}/edit" class="menu-link px-3">Editar</a>

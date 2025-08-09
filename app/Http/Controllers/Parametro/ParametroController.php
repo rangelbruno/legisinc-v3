@@ -121,15 +121,20 @@ class ParametroController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(int $id): View
+    public function show(string|int $id): View
     {
-        $modulo = $this->parametroService->obterModulos()->find($id);
+        // Tentar buscar por ID primeiro, depois por nome
+        if (is_numeric($id)) {
+            $modulo = $this->parametroService->obterModulos()->find((int)$id);
+        } else {
+            $modulo = $this->parametroService->obterModulos()->where('nome', $id)->first();
+        }
         
         if (!$modulo) {
             abort(404, 'Módulo não encontrado');
         }
 
-        $submodulos = $this->parametroService->obterSubmodulos($id);
+        $submodulos = $this->parametroService->obterSubmodulos($modulo->id);
 
         // Se for Templates, mostrar página especial com cards dos submódulos
         if ($modulo->nome === 'Templates') {
@@ -156,9 +161,14 @@ class ParametroController extends Controller
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(int $id): View
+    public function edit(string|int $id): View
     {
-        $modulo = $this->parametroService->obterModulos()->find($id);
+        // Tentar buscar por ID primeiro, depois por nome
+        if (is_numeric($id)) {
+            $modulo = $this->parametroService->obterModulos()->find((int)$id);
+        } else {
+            $modulo = $this->parametroService->obterModulos()->where('nome', $id)->first();
+        }
         
         if (!$modulo) {
             abort(404, 'Módulo não encontrado');
@@ -170,7 +180,7 @@ class ParametroController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, int $id): RedirectResponse
+    public function update(Request $request, string|int $id): RedirectResponse
     {
         try {
             $dados = $request->validate([
@@ -197,11 +207,17 @@ class ParametroController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(int $id): RedirectResponse
+    public function destroy(string|int $id): RedirectResponse
     {
         try {
+            // Converter para ID se necessário
+            if (!is_numeric($id)) {
+                $modulo = $this->parametroService->obterModulos()->where('nome', $id)->first();
+                $id = $modulo ? $modulo->id : $id;
+            }
+            
             // Verificar se pode excluir
-            $verificacao = $this->parametroService->podeExcluirModulo($id);
+            $verificacao = $this->parametroService->podeExcluirModulo((int)$id);
             
             if (!$verificacao['pode']) {
                 return back()
@@ -209,7 +225,7 @@ class ParametroController extends Controller
             }
 
             // Executar exclusão
-            $this->parametroService->excluirModulo($id);
+            $this->parametroService->excluirModulo((int)$id);
             
             return redirect()
                 ->route('parametros.index')
@@ -253,6 +269,12 @@ class ParametroController extends Controller
             })->sortBy('ordem');
             
             return view('modules.parametros.templates.index', compact('modulo', 'cards'));
+        }
+        
+        // Para submódulos normais, buscar os campos e valores atuais
+        foreach ($submodulos as $submodulo) {
+            $submodulo->campos = $this->parametroService->obterCampos($submodulo->id);
+            $submodulo->valores = $this->parametroService->obterValores($submodulo->id);
         }
         
         return view('modules.parametros.configurar', compact('modulo', 'submodulos'));

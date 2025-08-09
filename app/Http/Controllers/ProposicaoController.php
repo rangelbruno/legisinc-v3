@@ -8,6 +8,8 @@ use App\Models\DocumentoTemplate;
 use App\Services\Template\TemplateProcessorService;
 use App\Services\Template\TemplateInstanceService;
 use App\Services\Template\TemplateParametrosService;
+use App\Services\Template\TemplatePadraoABNTService;
+use App\Services\Template\ABNTValidationService;
 use App\Services\TemplateVariablesService;
 use App\Models\TipoProposicaoTemplate;
 use Illuminate\Http\Request;
@@ -63,22 +65,76 @@ class ProposicaoController extends Controller
         $request->validate([
             'tipo' => 'required|in:' . implode(',', $tiposValidos),
             'ementa' => 'required|string|max:1000',
+            'usar_ia' => 'nullable|in:true,false,1,0',
+            'texto_ia' => 'nullable|string'
         ]);
 
-        // Criar proposição no banco de dados
-        $proposicao = Proposicao::create([
+        // Preparar dados para criação
+        $dadosProposicao = [
             'tipo' => $request->tipo,
             'ementa' => $request->ementa,
             'autor_id' => Auth::id(),
             'status' => 'rascunho',
             'ano' => date('Y'),
-        ]);
+        ];
+
+        // Se foi usado IA e há texto, armazenar no campo conteudo
+        $usarIA = in_array($request->usar_ia, [true, 'true', 1, '1']);
+        if ($usarIA && $request->texto_ia) {
+            $dadosProposicao['conteudo'] = $request->texto_ia;
+        }
+
+        // Criar proposição no banco de dados
+        $proposicao = Proposicao::create($dadosProposicao);
 
         return response()->json([
             'success' => true,
             'proposicao_id' => $proposicao->id,
             'message' => 'Rascunho salvo com sucesso!'
         ]);
+    }
+
+    /**
+     * Gerar texto para proposição via IA
+     */
+    public function gerarTextoIA(Request $request)
+    {
+        $request->validate([
+            'tipo' => 'required|string',
+            'ementa' => 'required|string|max:1000'
+        ]);
+
+        try {
+            $aiService = app(\App\Services\AI\AITextGenerationService::class);
+            $resultado = $aiService->gerarTextoProposicao($request->tipo, $request->ementa);
+
+            if ($resultado['success']) {
+                return response()->json([
+                    'success' => true,
+                    'texto' => $resultado['texto'],
+                    'provider' => $resultado['provider'] ?? null,
+                    'model' => $resultado['model'] ?? null,
+                    'message' => 'Texto gerado com sucesso!'
+                ]);
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'message' => $resultado['message']
+                ], 400);
+            }
+
+        } catch (\Exception $e) {
+            \Log::error('Erro ao gerar texto via IA', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'request_data' => $request->all()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Erro interno do servidor. Tente novamente.'
+            ], 500);
+        }
     }
 
     /**
@@ -99,35 +155,48 @@ class ProposicaoController extends Controller
             
             \Log::info('Tipo encontrado, buscando modelos para ID: ' . $tipoProposicao->id);
             
-            // Usar o DocumentoModeloService para buscar modelos e templates
-            $documentoModeloService = app(\App\Services\Documento\DocumentoModeloService::class);
-            $modelos = $documentoModeloService->obterModelosDisponiveis($tipoProposicao->id);
+            // Buscar templates específicos para este tipo de proposição
+            $templates = \App\Models\TipoProposicaoTemplate::where('tipo_proposicao_id', $tipoProposicao->id)
+                ->where('ativo', true)
+                ->get();
             
-            \Log::info('Modelos encontrados: ' . $modelos->count());
+            \Log::info('Templates específicos encontrados: ' . $templates->count());
             
-            // Converter para formato esperado pelo frontend - apenas templates OnlyOffice
+            // Converter templates específicos para formato esperado pelo frontend
             $modelosArray = [];
-            foreach ($modelos as $modelo) {
-                // Incluir apenas modelos que sejam templates (usam OnlyOffice)
-                if ($modelo->is_template ?? false) {
-                    $modelosArray[] = [
-                        'id' => 'template_' . $modelo->template_id,
-                        'nome' => $modelo->nome,
-                        'descricao' => $modelo->descricao ?? '',
-                        'is_template' => true,
-                        'template_id' => $modelo->template_id
-                    ];
-                }
+            foreach ($templates as $template) {
+                $modelosArray[] = [
+                    'id' => 'template_' . $template->id,
+                    'nome' => $tipoProposicao->nome . ' - Template #' . $template->id,
+                    'descricao' => 'Template específico para ' . $tipoProposicao->nome,
+                    'is_template' => true,
+                    'template_id' => $template->id,
+                    'document_key' => $template->document_key,
+                    'arquivo_path' => $template->arquivo_path
+                ];
             }
             
-            // Sempre adicionar template em branco como primeira opção
+            // Sempre adicionar template padrão ABNT como primeira opção
             array_unshift($modelosArray, [
-                'id' => 'template_blank',
-                'nome' => 'Documento em Branco',
-                'descricao' => 'Criar proposição com template em branco usando OnlyOffice',
+                'id' => 'template_abnt_padrao',
+                'nome' => 'Template Padrão ABNT',
+                'descricao' => 'Template único padronizado seguindo normas ABNT NBR 14724:2023 e NBR 6022:2018',
                 'is_template' => true,
-                'template_id' => 'blank'
+                'template_id' => 'abnt_padrao',
+                'is_recommended' => true
             ]);
+            
+            // Se não há templates específicos, adicionar opção em branco
+            if (count($modelosArray) === 1) { // Só tem o template ABNT
+                \Log::info('Nenhum template específico encontrado, adicionando opção em branco');
+                $modelosArray[] = [
+                    'id' => 'template_blank',
+                    'nome' => 'Documento em Branco',
+                    'descricao' => 'Criar ' . $tipoProposicao->nome . ' sem template específico',
+                    'is_template' => true,
+                    'template_id' => 'blank'
+                ];
+            }
 
             \Log::info('Modelos formatados para retorno:', [
                 'count' => count($modelosArray),
@@ -246,14 +315,74 @@ class ProposicaoController extends Controller
         $templateVariablesGrouped = [];
         $modelo = null;
         
-        // Tentar encontrar o template diretamente pelo ID ou processando o formato template_
+        // Log para debug
+        \Log::info('Buscando template com modeloId', ['modeloId' => $modeloId, 'type' => gettype($modeloId)]);
+        
+        // Tentar encontrar o template ou DocumentoModelo
         $template = null;
+        $documentoModelo = null;
+        
         if (str_starts_with($modeloId, 'template_')) {
             $templateId = str_replace('template_', '', $modeloId);
-            $template = TipoProposicaoTemplate::find($templateId);
-        } else {
-            // Tentar buscar diretamente pelo ID numérico
+            
+            // Verificar se é o template padrão ABNT
+            if ($modeloId === 'template_abnt_padrao') {
+                return $this->processarTemplatePadraoABNT($proposicao);
+            }
+            
+            // Primeiro, tentar buscar como DocumentoModelo
+            $documentoModelo = \App\Models\Documento\DocumentoModelo::where('template_id', $templateId)
+                ->orWhere('template_id', $modeloId)
+                ->first();
+            
+            if ($documentoModelo) {
+                // Se encontrou DocumentoModelo, tentar buscar TipoProposicaoTemplate associado
+                if ($documentoModelo->tipo_proposicao_id) {
+                    $template = TipoProposicaoTemplate::where('tipo_proposicao_id', $documentoModelo->tipo_proposicao_id)
+                        ->ativo()
+                        ->first();
+                }
+                
+                // Se não encontrou TipoProposicaoTemplate mas tem DocumentoModelo, criar um objeto simulado
+                if (!$template && $documentoModelo->arquivo_path) {
+                    $template = (object) [
+                        'id' => 'doc_modelo_' . $documentoModelo->id,
+                        'tipo_proposicao_id' => $documentoModelo->tipo_proposicao_id,
+                        'arquivo_path' => $documentoModelo->arquivo_path,
+                        'variaveis' => $documentoModelo->variaveis,
+                        'nome' => $documentoModelo->nome,
+                        'is_documento_modelo' => true
+                    ];
+                }
+            } elseif (is_numeric($templateId)) {
+                // Se não encontrou DocumentoModelo e é numérico, tentar como TipoProposicaoTemplate
+                $template = TipoProposicaoTemplate::find($templateId);
+            }
+        } elseif (is_numeric($modeloId)) {
+            // Se for um ID numérico, buscar diretamente na tabela tipo_proposicao_templates
             $template = TipoProposicaoTemplate::find($modeloId);
+        } else {
+            // Se for uma string (como "decreto_legislativo"), buscar pelo template_id no DocumentoModelo
+            $documentoModelo = \App\Models\Documento\DocumentoModelo::where('template_id', $modeloId)->first();
+            if ($documentoModelo) {
+                if ($documentoModelo->tipo_proposicao_id) {
+                    $template = TipoProposicaoTemplate::where('tipo_proposicao_id', $documentoModelo->tipo_proposicao_id)
+                        ->ativo()
+                        ->first();
+                }
+                
+                // Se não encontrou TipoProposicaoTemplate mas tem DocumentoModelo, criar um objeto simulado
+                if (!$template && $documentoModelo->arquivo_path) {
+                    $template = (object) [
+                        'id' => 'doc_modelo_' . $documentoModelo->id,
+                        'tipo_proposicao_id' => $documentoModelo->tipo_proposicao_id,
+                        'arquivo_path' => $documentoModelo->arquivo_path,
+                        'variaveis' => $documentoModelo->variaveis,
+                        'nome' => $documentoModelo->nome,
+                        'is_documento_modelo' => true
+                    ];
+                }
+            }
         }
         
         if ($template) {
@@ -345,9 +474,42 @@ class ProposicaoController extends Controller
             if ($templateId === 'blank') {
                 $template = null; // Template em branco não precisa de template específico
             } else {
-                $template = \App\Models\TipoProposicaoTemplate::find($templateId);
+                // Primeiro, tentar buscar como DocumentoModelo
+                $documentoModelo = \App\Models\Documento\DocumentoModelo::where('template_id', $templateId)->first();
+                
+                if ($documentoModelo) {
+                    // Se encontrou DocumentoModelo, tentar buscar TipoProposicaoTemplate associado
+                    if ($documentoModelo->tipo_proposicao_id) {
+                        $template = \App\Models\TipoProposicaoTemplate::where('tipo_proposicao_id', $documentoModelo->tipo_proposicao_id)
+                            ->ativo()
+                            ->first();
+                    }
+                    
+                    // Se não encontrou TipoProposicaoTemplate mas tem DocumentoModelo, criar um objeto simulado
+                    if (!$template && $documentoModelo->arquivo_path) {
+                        $template = (object) [
+                            'id' => 'doc_modelo_' . $documentoModelo->id,
+                            'tipo_proposicao_id' => $documentoModelo->tipo_proposicao_id,
+                            'arquivo_path' => $documentoModelo->arquivo_path,
+                            'variaveis' => $documentoModelo->variaveis,
+                            'nome' => $documentoModelo->nome,
+                            'is_documento_modelo' => true
+                        ];
+                    }
+                } elseif (is_numeric($templateId)) {
+                    // Se não encontrou DocumentoModelo e é numérico, tentar como TipoProposicaoTemplate
+                    $template = \App\Models\TipoProposicaoTemplate::find($templateId);
+                } else {
+                    $template = null;
+                }
                 
                 if (!$template) {
+                    \Log::warning('Template não encontrado no gerarTexto', [
+                        'templateId' => $templateId,
+                        'modeloId' => $modeloId,
+                        'documentoModelo_found' => $documentoModelo ? 'yes' : 'no'
+                    ]);
+                    
                     return response()->json([
                         'success' => false,
                         'message' => 'Template não encontrado.'
@@ -710,7 +872,20 @@ class ProposicaoController extends Controller
             // Se não tem variáveis na sessão, mas tem template_id, tentar extrair do template
             if (empty($variaveisTemplate) && !empty($proposicao->template_id)) {
                 try {
-                    $template = \App\Models\TipoProposicaoTemplate::find($proposicao->template_id);
+                    // Verificar se o template_id é numérico ou string
+                    if (is_numeric($proposicao->template_id)) {
+                        $template = \App\Models\TipoProposicaoTemplate::find($proposicao->template_id);
+                    } else {
+                        // Se for uma string como "decreto_legislativo", buscar pelo template_id no DocumentoModelo
+                        $documentoModelo = \App\Models\Documento\DocumentoModelo::where('template_id', $proposicao->template_id)->first();
+                        if ($documentoModelo && $documentoModelo->tipo_proposicao_id) {
+                            $template = \App\Models\TipoProposicaoTemplate::where('tipo_proposicao_id', $documentoModelo->tipo_proposicao_id)
+                                ->ativo()
+                                ->first();
+                        } else {
+                            $template = null;
+                        }
+                    }
                     if ($template) {
                         $templateVariablesService = app(\App\Services\TemplateVariablesService::class);
                         $variaveisTemplate = $templateVariablesService->extractVariablesFromTemplate($template);
@@ -1104,7 +1279,7 @@ class ProposicaoController extends Controller
         try {
             // Definir nome do arquivo da proposição (usar DOCX)
             $templateIdForFile = $template ? $template->id : 'blank';
-            $nomeArquivo = "proposicao_{$proposicaoId}_template_{$templateIdForFile}.rtf";
+            $nomeArquivo = "proposicao_{$proposicaoId}_template_{$templateIdForFile}.docx";
             $pathDestino = "proposicoes/{$nomeArquivo}";
             $pathCompleto = storage_path('app/public/' . $pathDestino);
             
@@ -1154,8 +1329,8 @@ class ProposicaoController extends Controller
                     $textoCompleto .= $conteudo;
                 }
                 
-                // Criar arquivo DOCX usando RTF
-                $conteudoDocx = $this->criarArquivoDocx($textoCompleto);
+                // Criar arquivo DOCX real
+                $conteudoDocx = $this->criarArquivoDOCXReal($textoCompleto);
                 $pathCompleto = storage_path('app/public/' . $pathDestino);
                 
                 // Criar diretório se não existir
@@ -2079,6 +2254,65 @@ ${texto}
     }
 
     /**
+     * Criar arquivo DOCX real usando ZIP
+     */
+    private function criarArquivoDOCXReal($texto)
+    {
+        // Converter texto simples para XML do Word
+        $textoLimpo = htmlspecialchars($texto, ENT_XML1 | ENT_QUOTES, 'UTF-8');
+        $textoXML = str_replace("\n", '</w:t><w:br/><w:t>', $textoLimpo);
+        
+        $documentXML = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:body>
+    <w:p>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/>
+          <w:sz w:val="22"/>
+        </w:rPr>
+        <w:t>' . $textoXML . '</w:t>
+      </w:r>
+    </w:p>
+  </w:body>
+</w:document>';
+
+        // Criar arquivo ZIP temporário
+        $tempZip = tempnam(sys_get_temp_dir(), 'docx_');
+        $zip = new \ZipArchive();
+        
+        if ($zip->open($tempZip, \ZipArchive::CREATE) !== TRUE) {
+            throw new \Exception("Não foi possível criar arquivo DOCX");
+        }
+
+        // Estrutura básica do DOCX
+        $zip->addFromString('[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+</Types>');
+
+        $zip->addFromString('_rels/.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+</Relationships>');
+
+        $zip->addFromString('word/_rels/document.xml.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+</Relationships>');
+
+        $zip->addFromString('word/document.xml', $documentXML);
+
+        $zip->close();
+        
+        $content = file_get_contents($tempZip);
+        unlink($tempZip);
+        
+        return $content;
+    }
+
+    /**
      * Criar arquivo DOCX usando formato RTF (compatível com OnlyOffice)
      */
     private function criarArquivoDocx($texto)
@@ -2116,6 +2350,32 @@ ${texto}
                         ->with('success', 'Dados de teste da sessão foram limpos.');
     }
     
+    /**
+     * Criar arquivo de teste DOCX
+     */
+    public function criarArquivoTesteDOCX()
+    {
+        $textoTeste = "MOÇÃO\n\nEMENTA\n\nTeste de documento DOCX para OnlyOffice\n\nCONTEÚDO\n\nEste é um documento de teste criado para verificar a integração com OnlyOffice.\n\nAutor: Sistema de Teste\nData: " . date('d/m/Y');
+        
+        $conteudoDocx = $this->criarArquivoDocx($textoTeste);
+        $pathTeste = storage_path('app/public/proposicoes/teste_mocao.docx');
+        
+        // Criar diretório se não existir
+        $diretorio = dirname($pathTeste);
+        if (!file_exists($diretorio)) {
+            mkdir($diretorio, 0775, true);
+        }
+        
+        file_put_contents($pathTeste, $conteudoDocx);
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Arquivo de teste DOCX criado',
+            'path' => 'proposicoes/teste_mocao.docx',
+            'size' => strlen($conteudoDocx)
+        ]);
+    }
+
     /**
      * Servir arquivo para OnlyOffice
      */
@@ -2433,7 +2693,20 @@ ${texto}
         ];
 
         // Buscar template
-        $template = \App\Models\TipoProposicaoTemplate::find($templateId);
+        // Verificar se o templateId é numérico ou string
+        if (is_numeric($templateId)) {
+            $template = \App\Models\TipoProposicaoTemplate::find($templateId);
+        } else {
+            // Se for uma string como "decreto_legislativo", buscar pelo template_id no DocumentoModelo
+            $documentoModelo = \App\Models\Documento\DocumentoModelo::where('template_id', $templateId)->first();
+            if ($documentoModelo && $documentoModelo->tipo_proposicao_id) {
+                $template = \App\Models\TipoProposicaoTemplate::where('tipo_proposicao_id', $documentoModelo->tipo_proposicao_id)
+                    ->ativo()
+                    ->first();
+            } else {
+                $template = null;
+            }
+        }
         
         if (!$template) {
             return redirect()->route('proposicoes.minhas-proposicoes')
@@ -4496,6 +4769,76 @@ ${texto}
         }
         
         return $ementa ?? null;
+    }
+
+    /**
+     * Processar proposição usando Template Padrão ABNT
+     */
+    protected function processarTemplatePadraoABNT(Proposicao $proposicao)
+    {
+        try {
+            $templatePadraoService = app(TemplatePadraoABNTService::class);
+            $abntValidationService = app(ABNTValidationService::class);
+            
+            // Preparar dados da proposição
+            $dadosProposicao = [
+                'tipo' => $proposicao->tipo,
+                'ementa' => $proposicao->ementa,
+                'conteudo' => $proposicao->conteudo,
+                'texto' => $proposicao->conteudo, // Alias para compatibilidade
+                'numero' => $proposicao->numero,
+                'status' => $proposicao->status,
+                'created_at' => $proposicao->created_at,
+                'autor_nome' => $proposicao->autor->name ?? '',
+                'nome_parlamentar' => $proposicao->autor->name ?? '',
+                'cargo_parlamentar' => 'Vereador(a)', // Padrão
+                'email_parlamentar' => $proposicao->autor->email ?? '',
+                'partido_parlamentar' => '' // Pode ser obtido de relacionamento se existir
+            ];
+            
+            // Gerar documento usando template ABNT
+            $resultado = $templatePadraoService->gerarDocumento($dadosProposicao);
+            
+            if (!$resultado['success']) {
+                \Log::error('Erro ao gerar documento ABNT', [
+                    'proposicao_id' => $proposicao->id,
+                    'error' => $resultado['message']
+                ]);
+                
+                return redirect()->back()
+                    ->with('error', 'Erro ao processar template ABNT: ' . $resultado['message']);
+            }
+            
+            // Salvar resultado na proposição
+            $proposicao->update([
+                'conteudo_processado' => $resultado['documento_html'],
+                'status' => 'em_edicao',
+                'template_usado' => 'Template Padrão ABNT',
+                'validacao_abnt' => json_encode($resultado['validacao_abnt'])
+            ]);
+            
+            \Log::info('Documento ABNT gerado com sucesso', [
+                'proposicao_id' => $proposicao->id,
+                'score_abnt' => $resultado['validacao_abnt']['score_geral']['percentual'] ?? 0,
+                'template_usado' => $resultado['template_usado']
+            ]);
+            
+            // Redirecionar para visualização com relatório ABNT
+            return redirect()->route('proposicoes.show', $proposicao->id)
+                ->with('success', 'Documento gerado com sucesso usando Template Padrão ABNT!')
+                ->with('abnt_score', $resultado['validacao_abnt']['score_geral']['percentual'] ?? 0)
+                ->with('abnt_status', $resultado['validacao_abnt']['score_geral']['status'] ?? 'desconhecido');
+                
+        } catch (\Exception $e) {
+            \Log::error('Erro no processamento do template ABNT', [
+                'proposicao_id' => $proposicao->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return redirect()->back()
+                ->with('error', 'Erro interno ao processar template ABNT. Tente novamente.');
+        }
     }
     
     /**

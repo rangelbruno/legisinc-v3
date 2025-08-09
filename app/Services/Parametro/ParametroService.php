@@ -69,6 +69,25 @@ class ParametroService
     }
 
     /**
+     * Obtém valores salvos de um submódulo específico
+     */
+    public function obterValores(int $submoduloId): array
+    {
+        return $this->cacheService->rememberValores($submoduloId, function () use ($submoduloId) {
+            $valores = ParametroValor::whereHas('campo', function ($query) use ($submoduloId) {
+                $query->where('submodulo_id', $submoduloId);
+            })->with('campo')->get();
+            
+            $valoresArray = [];
+            foreach ($valores as $valor) {
+                $valoresArray[$valor->campo->nome] = $valor->valor;
+            }
+            
+            return $valoresArray;
+        }, $this->cacheTtl);
+    }
+
+    /**
      * Obtém configurações de um módulo/submódulo específico
      */
     public function obterConfiguracoes(string $nomeModulo, string $nomeSubmodulo): array

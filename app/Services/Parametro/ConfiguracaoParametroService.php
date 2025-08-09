@@ -34,6 +34,7 @@ class ConfiguracaoParametroService
             $this->criarModuloTipoSessao();
             $this->criarModuloMomentoSessao();
             $this->criarModuloTipoVotacao();
+            $this->criarModuloConfiguracaoIA();
         });
     }
 
@@ -391,6 +392,122 @@ class ConfiguracaoParametroService
                 ],
                 'validacao' => ['required', 'in:ativo,inativo'],
                 'ordem' => 4,
+            ],
+        ];
+
+        foreach ($campos as $dadosCampo) {
+            $dadosCampo['submodulo_id'] = $submodulo->id;
+            $dadosCampo['ativo'] = true;
+            $this->parametroService->criarCampo($dadosCampo);
+        }
+    }
+
+    /**
+     * Cria o módulo "Configuração de IA"
+     */
+    protected function criarModuloConfiguracaoIA(): void
+    {
+        $modulo = $this->parametroService->criarModulo([
+            'nome' => 'Configuração de IA',
+            'descricao' => 'Configurações para geração de texto via Inteligência Artificial',
+            'icon' => 'ki-technology-1',
+            'ordem' => 6,
+            'ativo' => true,
+        ]);
+
+        $submodulo = $this->parametroService->criarSubmodulo([
+            'modulo_id' => $modulo->id,
+            'nome' => 'Configurações de API',
+            'descricao' => 'Configuração das chaves e parâmetros da IA',
+            'tipo' => 'form',
+            'ordem' => 1,
+            'ativo' => true,
+        ]);
+
+        $campos = [
+            [
+                'nome' => 'ai_provider',
+                'label' => 'Provedor de IA',
+                'tipo_campo' => 'select',
+                'obrigatorio' => true,
+                'opcoes' => [
+                    'openai' => 'OpenAI (GPT)',
+                    'anthropic' => 'Anthropic (Claude)',
+                    'google' => 'Google (Gemini)',
+                    'local' => 'Modelo Local (Ollama)',
+                ],
+                'valor_padrao' => 'openai',
+                'validacao' => ['required', 'in:openai,anthropic,google,local'],
+                'ordem' => 1,
+                'help_text' => 'Selecione o provedor de IA a ser utilizado para geração de texto das proposições'
+            ],
+            [
+                'nome' => 'ai_api_key',
+                'label' => 'Chave da API',
+                'tipo_campo' => 'text',
+                'obrigatorio' => true,
+                'placeholder' => 'Insira a chave da API do provedor escolhido',
+                'validacao' => ['required', 'string'],
+                'ordem' => 2,
+                'help_text' => 'Chave de API fornecida pelo provedor de IA (será criptografada)'
+            ],
+            [
+                'nome' => 'ai_model',
+                'label' => 'Modelo de IA',
+                'tipo_campo' => 'select',
+                'obrigatorio' => true,
+                'opcoes' => [
+                    'gpt-3.5-turbo' => 'GPT-3.5 Turbo (Rápido e econômico)',
+                    'gpt-4' => 'GPT-4 (Mais preciso)',
+                    'gpt-4-turbo' => 'GPT-4 Turbo (Balanceado)',
+                    'claude-3-haiku' => 'Claude 3 Haiku (Rápido)',
+                    'claude-3-sonnet' => 'Claude 3 Sonnet (Balanceado)',
+                    'gemini-pro' => 'Gemini Pro',
+                    'llama2' => 'Llama 2 (Local)',
+                ],
+                'valor_padrao' => 'gpt-3.5-turbo',
+                'validacao' => ['required', 'string'],
+                'ordem' => 3,
+                'help_text' => 'Modelo específico a ser usado para geração de texto'
+            ],
+            [
+                'nome' => 'ai_max_tokens',
+                'label' => 'Máximo de Tokens',
+                'tipo_campo' => 'number',
+                'obrigatorio' => true,
+                'valor_padrao' => '2000',
+                'validacao' => ['required', 'integer', 'min:100', 'max:8000'],
+                'ordem' => 4,
+                'help_text' => 'Quantidade máxima de tokens (palavras) na resposta da IA'
+            ],
+            [
+                'nome' => 'ai_temperature',
+                'label' => 'Criatividade (Temperature)',
+                'tipo_campo' => 'number',
+                'obrigatorio' => true,
+                'valor_padrao' => '0.7',
+                'validacao' => ['required', 'numeric', 'min:0', 'max:2'],
+                'ordem' => 5,
+                'help_text' => 'Nível de criatividade da IA (0.0 = conservador, 1.0 = criativo, 2.0 = muito criativo)'
+            ],
+            [
+                'nome' => 'ai_enabled',
+                'label' => 'Ativar Geração via IA',
+                'tipo_campo' => 'checkbox',
+                'obrigatorio' => false,
+                'valor_padrao' => 'true',
+                'ordem' => 6,
+                'help_text' => 'Ativar ou desativar a funcionalidade de geração de texto via IA'
+            ],
+            [
+                'nome' => 'ai_custom_prompt',
+                'label' => 'Prompt Personalizado',
+                'tipo_campo' => 'textarea',
+                'obrigatorio' => false,
+                'placeholder' => 'Você é um especialista em legislação municipal. Crie um texto para proposição baseado na ementa fornecida...',
+                'validacao' => ['nullable', 'string', 'max:2000'],
+                'ordem' => 7,
+                'help_text' => 'Prompt personalizado para guiar a IA (deixe vazio para usar o padrão)'
             ],
         ];
 

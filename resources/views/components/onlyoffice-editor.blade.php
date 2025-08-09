@@ -11,7 +11,8 @@
     'documentKey',
     'documentUrl',
     'documentTitle' => 'Documento',
-    'documentType' => 'rtf',
+    'documentType' => 'word',
+    'fileType' => 'docx',
     'callbackUrl',
     'mode' => 'edit', // edit ou view
     'userType' => 'parlamentar', // admin, parlamentar, legislativo
@@ -408,30 +409,24 @@
                     "width": "100%",
                     "height": "100%",
                     "type": "desktop",
-                    "documentType": "word",
+                    "documentType": "{{ $documentType }}",
                     "document": {
-                        "fileType": "{{ $documentType }}",
+                        "fileType": "{{ $fileType }}",
                         "key": "{{ $documentKey }}",
                         "title": "{{ $documentTitle }}",
                         "url": "{{ $documentUrl }}",
                         "permissions": {
-                            "comment": false,
-                            "download": true,
                             "edit": {{ $mode === 'edit' ? 'true' : 'false' }},
-                            "fillForms": true,
-                            "modifyFilter": true,
-                            "modifyContentControl": true,
-                            "review": false,
-                            "chat": false,
-                            "copy": true,
-                            "print": true
+                            "download": true,
+                            "print": true,
+                            "review": true,
+                            "comment": true
                         }
                     },
                     "editorConfig": {
                         "mode": "{{ $mode }}",
                         "lang": "pt-BR",
                         "region": "pt-BR",
-                        "callbackUrl": "{{ $callbackUrl }}",
                         "user": {
                             "id": "{{ $userId }}",
                             "name": "{{ $userName }}",
@@ -440,13 +435,8 @@
                         "customization": {
                             "about": false,
                             "feedback": false,
-                            "forcesave": true,
-                            "autosave": true,
-                            "goback": {
-                                "blank": false,
-                                "text": "Voltar",
-                                "url": "{{ $backRoute ?? '#' }}"
-                            },
+                            "forcesave": false,
+                            "autosave": false,
                             "toolbarNoTabs": true,
                             "toolbarHideFileName": true,
                             "zoom": 100,
@@ -532,7 +522,27 @@
             
             onError: function(event) {
                 console.error('Erro OnlyOffice:', event);
-                this.showToast('Erro no editor. Tente recarregar a página', 'error', 6000);
+                console.log('Detalhes do erro:', {
+                    data: event?.data,
+                    target: event?.target,
+                    type: event?.type,
+                    message: event?.message
+                });
+                
+                let errorMessage = 'Erro no editor';
+                if (event?.data?.errorDescription) {
+                    errorMessage = event.data.errorDescription;
+                } else if (event?.message) {
+                    errorMessage = event.message;
+                }
+                
+                this.showToast(errorMessage + '. Tente recarregar a página', 'error', 8000);
+                
+                // Esconder loading se ainda estiver visível
+                const loadingElement = document.getElementById('loading-' + this.editorId);
+                if (loadingElement && !loadingElement.classList.contains('hidden')) {
+                    loadingElement.classList.add('hidden');
+                }
             },
             
             onRequestSave: function() {

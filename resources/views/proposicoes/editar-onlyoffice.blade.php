@@ -9,7 +9,7 @@
     :document-key="$documentKey"
     :document-url="$documentUrl"
     :document-title="$titulo"
-    document-type="rtf"
+    document-type="docx"
     :callback-url="$callbackUrl"
     mode="edit"
     user-type="parlamentar"

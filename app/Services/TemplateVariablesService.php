@@ -260,11 +260,20 @@ class TemplateVariablesService
     /**
      * Extrai variáveis de um template
      */
-    public function extractVariablesFromTemplate(TipoProposicaoTemplate $template): array
+    public function extractVariablesFromTemplate($template): array
     {
+        // Handle both TipoProposicaoTemplate and simulated DocumentoModelo objects
+        if (is_object($template) && property_exists($template, 'is_documento_modelo') && $template->is_documento_modelo) {
+            // For DocumentoModelo, return variaveis if they exist
+            if (property_exists($template, 'variaveis') && is_array($template->variaveis)) {
+                return $template->variaveis;
+            }
+            return [];
+        }
+        
         $content = $this->getTemplateContent($template);
         if (!$content) {
-            \Log::warning('Template content is empty', ['template_id' => $template->id]);
+            \Log::warning('Template content is empty', ['template_id' => $template->id ?? 'unknown']);
             return [];
         }
 
@@ -311,9 +320,14 @@ class TemplateVariablesService
     /**
      * Obtém o conteúdo do template
      */
-    private function getTemplateContent(TipoProposicaoTemplate $template): ?string
+    private function getTemplateContent($template): ?string
     {
-        if (!$template->arquivo_path || !Storage::exists($template->arquivo_path)) {
+        // Handle both TipoProposicaoTemplate and simulated DocumentoModelo objects
+        if (!$template || !property_exists($template, 'arquivo_path') || !$template->arquivo_path) {
+            return null;
+        }
+        
+        if (!Storage::exists($template->arquivo_path)) {
             return null;
         }
 
