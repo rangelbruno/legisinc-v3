@@ -554,20 +554,66 @@
             forceSave: function() {
                 console.log('Force save triggered');
                 this.updateStatusBadge('saving');
-                this.showToast('Iniciando salvamento...', 'info', 2000);
+                this.showToast('Salvando documento...', 'info', 2000);
                 
                 if (this.docEditor) {
-                    if (typeof this.docEditor.downloadAs === 'function') {
-                        this.docEditor.downloadAs('{{ $documentType }}');
+                    try {
+                        let saveTriggered = false;
+                        
+                        // Tentar usar o método nativo de salvamento do OnlyOffice
+                        if (typeof this.docEditor.requestSaveAs === 'function') {
+                            this.docEditor.requestSaveAs();
+                            saveTriggered = true;
+                            console.log('Usado requestSaveAs()');
+                        } else if (typeof this.docEditor.serviceCommand === 'function') {
+                            // Método mais direto usando serviceCommand
+                            this.docEditor.serviceCommand('save');
+                            saveTriggered = true;
+                            console.log('Usado serviceCommand(save)');
+                        }
+                        
+                        // Fallback mais agressivo: forçar mudança real no documento
+                        if (!saveTriggered) {
+                            // Usar postMessage para comunicar com o iframe do OnlyOffice
+                            try {
+                                const iframe = document.querySelector('#' + this.editorId + ' iframe');
+                                if (iframe && iframe.contentWindow) {
+                                    iframe.contentWindow.postMessage({
+                                        type: 'onExternalPluginMessage',
+                                        data: {
+                                            type: 'save'
+                                        }
+                                    }, '*');
+                                    console.log('Usado postMessage para save');
+                                    saveTriggered = true;
+                                }
+                            } catch (postError) {
+                                console.log('PostMessage falhou, usando fallback final');
+                            }
+                        }
+                        
+                        // Último recurso: marcar como modificado
+                        if (!saveTriggered) {
+                            this.documentModified = true;
+                            this.onDocumentStateChange({ data: true });
+                            console.log('Fallback: marcando documento como modificado');
+                        }
                         
                         setTimeout(() => {
-                            this.documentModified = false;
-                            this.updateStatusBadge('saved');
-                            this.showToast('Documento salvo com sucesso!', 'success', 3000);
-                        }, 2000);
+                            if (saveTriggered) {
+                                this.showToast('Salvamento solicitado ao OnlyOffice', 'success', 3000);
+                            } else {
+                                this.showToast('Use Ctrl+S para salvar manualmente', 'info', 3000);
+                            }
+                        }, 500);
+                        
+                    } catch (error) {
+                        console.error('Erro no salvamento:', error);
+                        this.updateStatusBadge('error');
+                        this.showToast('Use Ctrl+S para salvar', 'warning', 4000);
                     }
                 } else {
-                    this.showToast('Editor ainda não foi carregado completamente', 'warning', 4000);
+                    this.showToast('Editor ainda não foi carregado', 'warning', 4000);
                 }
             },
             
@@ -729,6 +775,17 @@
             if (onlyofficeEditor.documentModified) {
                 e.preventDefault();
                 e.returnValue = 'Você tem alterações não salvas. Tem certeza que deseja sair?';
+            }
+        });
+        
+        // Adicionar suporte para Ctrl+S
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 's') {
+                e.preventDefault(); // Impedir o save padrão do browser
+                if (onlyofficeEditor && typeof onlyofficeEditor.forceSave === 'function') {
+                    onlyofficeEditor.forceSave();
+                    console.log('Ctrl+S interceptado, chamando forceSave()');
+                }
             }
         });
         

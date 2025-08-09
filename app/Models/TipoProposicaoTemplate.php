@@ -11,6 +11,8 @@ class TipoProposicaoTemplate extends Model
         'tipo_proposicao_id',
         'document_key', 
         'arquivo_path',
+        'conteudo',
+        'formato',
         'variaveis',
         'ativo',
         'updated_by'

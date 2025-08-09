@@ -3,10 +3,18 @@
 namespace App\Services;
 
 use App\Models\TipoProposicaoTemplate;
+use App\Services\Template\TemplateParametrosService;
 use Illuminate\Support\Facades\Storage;
 
 class TemplateVariablesService
 {
+    private $templateParametrosService;
+
+    public function __construct(TemplateParametrosService $templateParametrosService)
+    {
+        $this->templateParametrosService = $templateParametrosService;
+    }
+
     /**
      * Lista das variáveis disponíveis no sistema
      */
@@ -239,6 +247,50 @@ class TemplateVariablesService
             'type' => 'auto',
             'required' => false
         ],
+
+        // Cabeçalho e Rodapé (parâmetros dinâmicos)
+        'cabecalho_nome_camara' => [
+            'label' => 'Nome da Câmara',
+            'description' => 'Nome oficial da Câmara',
+            'category' => 'instituicao',
+            'type' => 'auto',
+            'required' => false
+        ],
+        'cabecalho_endereco' => [
+            'label' => 'Endereço da Câmara',
+            'description' => 'Endereço completo da Câmara',
+            'category' => 'instituicao',
+            'type' => 'auto',
+            'required' => false
+        ],
+        'cabecalho_telefone' => [
+            'label' => 'Telefone da Câmara',
+            'description' => 'Telefone oficial da Câmara',
+            'category' => 'instituicao',
+            'type' => 'auto',
+            'required' => false
+        ],
+        'cabecalho_website' => [
+            'label' => 'Website da Câmara',
+            'description' => 'Website oficial da Câmara',
+            'category' => 'instituicao',
+            'type' => 'auto',
+            'required' => false
+        ],
+        'rodape_texto' => [
+            'label' => 'Texto do Rodapé',
+            'description' => 'Texto padrão do rodapé',
+            'category' => 'instituicao',
+            'type' => 'auto',
+            'required' => false
+        ],
+        'assinatura_padrao' => [
+            'label' => 'Assinatura Padrão',
+            'description' => 'Texto padrão para assinatura',
+            'category' => 'instituicao',
+            'type' => 'auto',
+            'required' => false
+        ],
         
         // Campos específicos para templates de Lei Orgânica
         'artigo_alterado' => [
@@ -256,6 +308,41 @@ class TemplateVariablesService
             'required' => true
         ]
     ];
+
+    /**
+     * Obtém todas as variáveis disponíveis, incluindo parâmetros dinâmicos
+     */
+    public function getAllAvailableVariables(): array
+    {
+        $systemVariables = self::SYSTEM_VARIABLES;
+        
+        // Adicionar variáveis dos parâmetros dinâmicos
+        $parametros = $this->templateParametrosService->obterParametrosTemplates();
+        
+        foreach ($parametros as $chave => $valor) {
+            $partes = explode('.', $chave);
+            if (count($partes) === 2) {
+                $submodulo = $partes[0];
+                $campo = $partes[1];
+                
+                // Converter chave para formato de variável (substituir pontos por underscores)
+                $variableName = str_replace('.', '_', strtolower($chave));
+                
+                if (!isset($systemVariables[$variableName])) {
+                    $systemVariables[$variableName] = [
+                        'label' => ucfirst(str_replace(['_', '.'], [' ', ' '], $campo)),
+                        'description' => "Parâmetro do sistema: {$submodulo} - {$campo}",
+                        'category' => strtolower(str_replace(' ', '_', $submodulo)),
+                        'type' => 'auto',
+                        'required' => false,
+                        'is_parameter' => true
+                    ];
+                }
+            }
+        }
+        
+        return $systemVariables;
+    }
 
     /**
      * Extrai variáveis de um template
@@ -293,9 +380,12 @@ class TemplateVariablesService
             'content_preview' => substr($content, 0, 200)
         ]);
 
+        // Obter todas as variáveis disponíveis (incluindo parâmetros dinâmicos)
+        $allAvailableVariables = $this->getAllAvailableVariables();
+
         foreach ($foundVariables as $variable) {
-            if (isset(self::SYSTEM_VARIABLES[$variable])) {
-                $templateVariables[$variable] = self::SYSTEM_VARIABLES[$variable];
+            if (isset($allAvailableVariables[$variable])) {
+                $templateVariables[$variable] = $allAvailableVariables[$variable];
             } else {
                 // Variável personalizada encontrada no template
                 $templateVariables[$variable] = [
@@ -558,5 +648,42 @@ class TemplateVariablesService
         return array_filter($variables, function($variable) {
             return $variable['type'] !== 'auto';
         });
+    }
+
+    /**
+     * Processar template substituindo variáveis com valores dos parâmetros
+     */
+    public function processTemplateWithParameters(string $conteudo, array $dadosUsuario = []): string
+    {
+        // Usar o serviço de parâmetros para processar o template
+        return $this->templateParametrosService->processarTemplate($conteudo, $dadosUsuario);
+    }
+
+    /**
+     * Obter o valor atual de uma variável específica dos parâmetros
+     */
+    public function getVariableValue(string $variableName, array $dados = []): string
+    {
+        // Preparar dados para o processamento
+        $parametros = $this->templateParametrosService->obterParametrosTemplates();
+        
+        // Mapear nome da variável para chave do parâmetro
+        $mapeamento = [
+            'cabecalho_nome_camara' => 'Cabeçalho.cabecalho_nome_camara',
+            'cabecalho_endereco' => 'Cabeçalho.cabecalho_endereco',
+            'cabecalho_telefone' => 'Cabeçalho.cabecalho_telefone',
+            'cabecalho_website' => 'Cabeçalho.cabecalho_website',
+            'rodape_texto' => 'Rodapé.rodape_texto',
+            'assinatura_padrao' => 'Variáveis Dinâmicas.var_assinatura_padrao',
+            'imagem_cabecalho' => 'Cabeçalho.cabecalho_imagem'
+        ];
+        
+        if (isset($mapeamento[$variableName])) {
+            return $parametros[$mapeamento[$variableName]] ?? '';
+        }
+        
+        // Se não encontrou no mapeamento, tentar buscar diretamente
+        $chaveParametro = str_replace('_', '.', ucfirst($variableName));
+        return $parametros[$chaveParametro] ?? '';
     }
 }

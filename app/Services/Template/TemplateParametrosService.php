@@ -235,6 +235,13 @@ class TemplateParametrosService
         }
         
         $variaveis['${rodape}'] = $parametros['Rodapé.rodape_texto'] ?? '';
+
+        // Mapeamentos diretos para as novas variáveis de cabeçalho/rodapé
+        $variaveis['${cabecalho_nome_camara}'] = $parametros['Cabeçalho.cabecalho_nome_camara'] ?? 'CÂMARA MUNICIPAL';
+        $variaveis['${cabecalho_endereco}'] = $parametros['Cabeçalho.cabecalho_endereco'] ?? '';
+        $variaveis['${cabecalho_telefone}'] = $parametros['Cabeçalho.cabecalho_telefone'] ?? '';
+        $variaveis['${cabecalho_website}'] = $parametros['Cabeçalho.cabecalho_website'] ?? '';
+        $variaveis['${rodape_texto}'] = $parametros['Rodapé.rodape_texto'] ?? '';
         
         // Adicionar variáveis customizadas passadas diretamente
         if (isset($dados['variaveis'])) {

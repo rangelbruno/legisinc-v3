@@ -11,6 +11,49 @@ class TipoProposicaoTemplatesSeeder extends Seeder
 {
     /**
      * Seeder para criar todos os templates de proposições seguindo padrões legais LC 95/1998
+     * 
+     * VARIÁVEIS DISPONÍVEIS NOS TEMPLATES:
+     * 
+     * === CABEÇALHO ===
+     * ${imagem_cabecalho}           - Imagem do cabeçalho (se configurada)
+     * ${cabecalho_nome_camara}      - Nome oficial da Câmara
+     * ${cabecalho_endereco}         - Endereço completo da Câmara
+     * ${cabecalho_telefone}         - Telefone oficial
+     * ${cabecalho_website}          - Website oficial
+     * 
+     * === PROPOSIÇÃO ===
+     * ${numero_proposicao}          - Número da proposição
+     * ${tipo_proposicao}            - Tipo da proposição
+     * ${ementa}                     - Ementa da proposição
+     * ${texto}                      - Texto principal
+     * ${justificativa}              - Justificativa
+     * ${protocolo}                  - Número do protocolo
+     * 
+     * === AUTOR ===
+     * ${autor_nome}                 - Nome do autor
+     * ${autor_cargo}                - Cargo do autor
+     * ${autor_partido}              - Partido do autor
+     * 
+     * === DATAS ===
+     * ${data_atual}                 - Data atual (dd/mm/aaaa)
+     * ${data_criacao}               - Data de criação
+     * ${data_protocolo}             - Data do protocolo
+     * ${dia}                        - Dia atual
+     * ${mes}                        - Mês atual
+     * ${ano_atual}                  - Ano atual
+     * ${mes_extenso}                - Mês por extenso
+     * 
+     * === INSTITUIÇÃO ===
+     * ${municipio}                  - Nome do município
+     * ${nome_camara}                - Nome da câmara
+     * ${endereco_camara}            - Endereço da câmara
+     * ${telefone_camara}            - Telefone principal
+     * ${email_camara}               - E-mail oficial
+     * ${cnpj_camara}                - CNPJ da câmara
+     * 
+     * === RODAPÉ ===
+     * ${assinatura_padrao}          - Área de assinatura padrão
+     * ${rodape_texto}               - Texto do rodapé institucional
      */
     public function run(): void
     {
@@ -79,13 +122,13 @@ class TipoProposicaoTemplatesSeeder extends Seeder
             [
                 'codigo' => 'projeto_lei_ordinaria',
                 'nome' => 'Projeto de Lei Ordinária',
-                'epigrafe' => 'PROJETO DE LEI ORDINÁRIA Nº 001/${ano}',
-                'ementa' => 'Dispõe sobre ${assunto} no âmbito do Município e dá outras providências.',
+                'epigrafe' => 'PROJETO DE LEI ORDINÁRIA Nº ${numero_proposicao}/${ano_atual}',
+                'ementa' => '${ementa}',
                 'preambulo' => 'A CÂMARA MUNICIPAL DECRETA:',
                 'articulado' => [
-                    'Art. 1º ${texto}.',
-                    'Parágrafo único. ${detalhamento}.',
-                    'Art. 2º ${disposicao_complementar}.',
+                    'Art. 1º ${texto}',
+                    'Parágrafo único. ${detalhamento}',
+                    'Art. 2º ${disposicao_complementar}',
                     'Art. 3º Esta lei entra em vigor na data de sua publicação.'
                 ]
             ],
@@ -115,36 +158,34 @@ class TipoProposicaoTemplatesSeeder extends Seeder
             [
                 'codigo' => 'requerimento',
                 'nome' => 'Requerimento',
-                'epigrafe' => 'REQUERIMENTO Nº 001/${ano}',
-                'ementa' => 'Requer informações ao Poder Executivo sobre ${assunto}.',
-                'preambulo' => 'Requeiro, nos termos regimentais, que seja solicitado ao Poder Executivo:',
+                'epigrafe' => 'REQUERIMENTO Nº ${numero_proposicao}/${ano_atual}',
+                'ementa' => '${ementa}',
+                'preambulo' => 'Requeiro, nos termos regimentais:',
                 'articulado' => [
-                    'a) ${informacao_1};',
-                    'b) ${informacao_2};',
-                    'c) ${informacao_3}.'
+                    '${texto}',
+                    '${justificativa}'
                 ]
             ],
             [
                 'codigo' => 'indicacao',
                 'nome' => 'Indicação',
-                'epigrafe' => 'INDICAÇÃO Nº 001/${ano}',
-                'ementa' => 'Indica ao Poder Executivo ${solicitacao}.',
-                'preambulo' => 'Indico ao Senhor Prefeito Municipal que:',
+                'epigrafe' => 'INDICAÇÃO Nº ${numero_proposicao}/${ano_atual}',
+                'ementa' => '${ementa}',
+                'preambulo' => 'Indico ao Senhor Prefeito Municipal:',
                 'articulado' => [
-                    'I - ${primeira_solicitacao};',
-                    'II - ${segunda_solicitacao};',
-                    'III - ${terceira_solicitacao}.'
+                    '${texto}',
+                    '${justificativa}'
                 ]
             ],
             [
                 'codigo' => 'mocao',
                 'nome' => 'Moção',
-                'epigrafe' => 'MOÇÃO Nº 001/${ano}',
-                'ementa' => 'Moção de ${tipo} dirigida a ${destinatario}.',
-                'preambulo' => 'A Câmara Municipal manifesta ${posicionamento} em relação a ${assunto}.',
+                'epigrafe' => 'MOÇÃO Nº ${numero_proposicao}/${ano_atual}',
+                'ementa' => '${ementa}',
+                'preambulo' => 'A Câmara Municipal manifesta:',
                 'articulado' => [
-                    'Considerando que ${considerando_1};',
-                    'Considerando que ${considerando_2};',
+                    '${texto}',
+                    '${justificativa}',
                     'Resolve dirigir a presente Moção.'
                 ]
             ],
@@ -343,25 +384,29 @@ class TipoProposicaoTemplatesSeeder extends Seeder
     }
 
     /**
-     * Gerar conteúdo RTF com formatação LC 95/1998
+     * Gerar conteúdo RTF com formatação LC 95/1998 e todas as variáveis disponíveis
      */
     private function gerarConteudoRTF(array $template): string
     {
         // Cabeçalho RTF com formatação padrão
         $rtf = '{\rtf1\ansi\ansicpg65001\deff0 {\fonttbl {\f0 Arial;}}\f0\fs24\sl360\slmult1 ';
         
-        // Cabeçalho do documento
-        $rtf .= '${imagem_cabecalho}\par \par ';
-        $rtf .= '${nome_camara}\par ';
-        $rtf .= '${endereco_camara}\par \par ';
+        // CABEÇALHO COMPLETO
+        // Verificar se deve incluir imagem ou texto
+        $rtf .= '${imagem_cabecalho}\par ';
+        $rtf .= '${cabecalho_nome_camara}\par ';
+        $rtf .= '${cabecalho_endereco}\par ';
+        $rtf .= '${cabecalho_telefone}\par ';
+        $rtf .= '${cabecalho_website}\par \par ';
         
-        // Epígrafe
-        $epigrafe = $this->converterParaRTF($template['epigrafe']);
+        // Epígrafe com variáveis atualizadas
+        $epigrafe = str_replace('${ano}', '${ano_atual}', $template['epigrafe']);
+        $epigrafe = $this->converterParaRTF($epigrafe);
         $rtf .= '\b ' . $epigrafe . '\par \b0\par ';
         
         // Ementa
         $ementa = $this->converterParaRTF($template['ementa']);
-        $rtf .= $ementa . '\par \par ';
+        $rtf .= '\b EMENTA: \b0 ' . $ementa . '\par \par ';
         
         // Preâmbulo
         $preambulo = $this->converterParaRTF($template['preambulo']);
@@ -373,10 +418,17 @@ class TipoProposicaoTemplatesSeeder extends Seeder
             $rtf .= $artigoRTF . '\par \par ';
         }
         
-        // Rodapé
-        $rtf .= '${municipio}, ${data_atual}.\par \par ';
-        $rtf .= '${assinatura_padrao}\par \par ';
-        $rtf .= '${rodape}';
+        // RODAPÉ COMPLETO com todas as variáveis disponíveis
+        $rtf .= '\par ';
+        $rtf .= '${municipio}, ${dia} de ${mes_extenso} de ${ano_atual}.\par \par ';
+        
+        // Área de assinatura com dados do autor
+        $rtf .= '${assinatura_padrao}\par ';
+        $rtf .= '${autor_nome}\par ';
+        $rtf .= '${autor_cargo}\par \par ';
+        
+        // Rodapé institucional
+        $rtf .= '${rodape_texto}\par ';
         
         // Fechar RTF
         $rtf .= '}';

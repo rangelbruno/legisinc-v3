@@ -261,7 +261,7 @@
                                             <!-- Preview (Ação Secundária Importante) -->
                                             <button type="button" 
                                                     class="btn btn-sm btn-light-info me-2"
-                                                    onclick="previewTemplate({{ $tipo->id }}, {{ json_encode($tipo->nome) }})"
+                                                    onclick="previewTemplate({{ $tipo->id }}, {{ json_encode($tipo->nome, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) }})"
                                                     title="Visualizar preview do template">
                                                 <i class="ki-duotone ki-eye fs-6">
                                                     <span class="path1"></span>
@@ -284,7 +284,7 @@
                                                 <!-- Geração com Padrões Legais -->
                                                 <li>
                                                     <button class="dropdown-item" type="button" 
-                                                            onclick="gerarComPadroesLegais({{ $tipo->id }}, {{ json_encode($tipo->nome) }})">
+                                                            onclick="gerarComPadroesLegais({{ $tipo->id }}, {{ json_encode($tipo->nome, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) }})">
                                                         <i class="ki-duotone ki-law fs-6 me-2 text-success">
                                                             <span class="path1"></span>
                                                             <span class="path2"></span>
@@ -311,7 +311,7 @@
                                                     <!-- Variáveis -->
                                                     <li>
                                                         <button class="dropdown-item" type="button"
-                                                                onclick="visualizarVariaveis({{ $tipo->id }}, {{ json_encode($tipo->nome) }})">
+                                                                onclick="visualizarVariaveis({{ $tipo->id }}, {{ json_encode($tipo->nome, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) }})">
                                                             <i class="ki-duotone ki-code fs-6 me-2 text-info">
                                                                 <span class="path1"></span>
                                                                 <span class="path2"></span>
@@ -325,7 +325,7 @@
                                                     <!-- Validação -->
                                                     <li>
                                                         <button class="dropdown-item" type="button"
-                                                                onclick="validarTemplate({{ $tipo->id }}, {{ json_encode($tipo->nome) }})">
+                                                                onclick="validarTemplate({{ $tipo->id }}, {{ json_encode($tipo->nome, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) }})">
                                                             <i class="ki-duotone ki-shield-tick fs-6 me-2 text-success">
                                                                 <span class="path1"></span>
                                                                 <span class="path2"></span>
@@ -340,7 +340,7 @@
                                                     <!-- Excluir -->
                                                     <li>
                                                         <button class="dropdown-item text-danger" type="button"
-                                                                onclick="confirmarExclusaoTemplate({{ $tipo->template->id }}, {{ json_encode($tipo->nome) }})">
+                                                                onclick="confirmarExclusaoTemplate({{ $tipo->template->id }}, {{ json_encode($tipo->nome, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) }})">
                                                             <i class="ki-duotone ki-trash fs-6 me-2">
                                                                 <span class="path1"></span>
                                                                 <span class="path2"></span>
@@ -992,7 +992,7 @@ function gerarComPadroesLegais(tipoId, tipoNome) {
         confirmButtonColor: '#17c653',
         showLoaderOnConfirm: true,
         preConfirm: () => {
-            return fetch(\`/admin/templates/\${tipoId}/gerar-padroes-legais\`, {
+            return fetch(`/admin/templates/${tipoId}/gerar-padroes-legais`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -1004,7 +1004,7 @@ function gerarComPadroesLegais(tipoId, tipoNome) {
                 }
                 return response.json();
             }).catch(error => {
-                Swal.showValidationMessage(\`Erro: \${error.message}\`);
+                Swal.showValidationMessage(`Erro: ${error.message}`);
             });
         },
         allowOutsideClick: () => !Swal.isLoading()
@@ -1013,7 +1013,7 @@ function gerarComPadroesLegais(tipoId, tipoNome) {
             const estrutura = result.value.estrutura;
             Swal.fire({
                 title: 'Template LC 95/1998 Gerado!',
-                html: \`
+                html: `
                     <div class="text-success mb-4">
                         <i class="ki-duotone ki-shield-tick fs-2x mb-2">
                             <span class="path1"></span>
@@ -1024,16 +1024,16 @@ function gerarComPadroesLegais(tipoId, tipoNome) {
                     <div class="text-start">
                         <p class="fw-bold">Estrutura gerada:</p>
                         <ul>
-                            <li><strong>Epígrafe:</strong> \${estrutura.epigrafe}</li>
-                            <li><strong>Ementa:</strong> \${estrutura.ementa}</li>
-                            <li><strong>Artigos:</strong> \${estrutura.artigos} estruturados</li>
-                            <li><strong>Validação:</strong> \${estrutura.validacoes}</li>
+                            <li><strong>Epígrafe:</strong> ${estrutura.epigrafe}</li>
+                            <li><strong>Ementa:</strong> ${estrutura.ementa}</li>
+                            <li><strong>Artigos:</strong> ${estrutura.artigos} estruturados</li>
+                            <li><strong>Validação:</strong> ${estrutura.validacoes}</li>
                         </ul>
                         <div class="alert alert-success mt-3">
                             ✅ <strong>Conforme LC 95/1998 e padrões técnicos</strong>
                         </div>
                     </div>
-                \`,
+                `,
                 icon: 'success',
                 showCancelButton: true,
                 confirmButtonText: 'Editar Template',
@@ -1041,7 +1041,7 @@ function gerarComPadroesLegais(tipoId, tipoNome) {
                 confirmButtonColor: '#007bff'
             }).then((editResult) => {
                 if (editResult.isConfirmed) {
-                    window.location.href = \`/admin/templates/\${tipoId}/editor\`;
+                    window.location.href = `/admin/templates/${tipoId}/editor`;
                 } else {
                     location.reload();
                 }
@@ -1070,7 +1070,7 @@ function validarTemplate(tipoId, tipoNome) {
         }
     });
 
-    fetch(\`/admin/templates/\${tipoId}/validar\`)
+    fetch(`/admin/templates/${tipoId}/validar`)
         .then(response => response.json())
         .then(data => {
             if (data.success) {
@@ -1085,14 +1085,14 @@ function validarTemplate(tipoId, tipoNome) {
 
                 Swal.fire({
                     title: 'Relatório de Validação',
-                    html: \`
+                    html: `
                         <div class="text-center mb-4">
-                            <i class="ki-duotone ki-\${statusIcon} fs-3x text-\${statusColor} mb-3">
+                            <i class="ki-duotone ki-${statusIcon} fs-3x text-${statusColor} mb-3">
                                 <span class="path1"></span>
                                 <span class="path2"></span>
-                                \${statusIcon === 'shield-tick' ? '<span class="path3"></span>' : ''}
+                                ${statusIcon === 'shield-tick' ? '<span class="path3"></span>' : ''}
                             </i>
-                            <h4 class="text-\${statusColor}">\${tipoNome}</h4>
+                            <h4 class="text-${statusColor}">${tipoNome}</h4>
                         </div>
                         
                         <div class="row text-start">
@@ -1101,22 +1101,22 @@ function validarTemplate(tipoId, tipoNome) {
                                     <div class="card-body p-4">
                                         <h6 class="fw-bold mb-3">Conformidade Geral</h6>
                                         <div class="mb-2">
-                                            <span class="badge badge-\${statusColor} fs-7">\${validacao.status.toUpperCase()}</span>
+                                            <span class="badge badge-${statusColor} fs-7">${validacao.status.toUpperCase()}</span>
                                         </div>
                                         <div class="mb-2">
-                                            <strong>Qualidade:</strong> \${validacao.qualidade_percentual}%
+                                            <strong>Qualidade:</strong> ${validacao.qualidade_percentual}%
                                         </div>
                                         <div class="row">
                                             <div class="col-4 text-center">
-                                                <div class="fs-6 fw-bold text-success">\${validacao.total_aprovado}</div>
+                                                <div class="fs-6 fw-bold text-success">${validacao.total_aprovado}</div>
                                                 <div class="fs-7 text-muted">Aprovado</div>
                                             </div>
                                             <div class="col-4 text-center">
-                                                <div class="fs-6 fw-bold text-warning">\${validacao.total_avisos}</div>
+                                                <div class="fs-6 fw-bold text-warning">${validacao.total_avisos}</div>
                                                 <div class="fs-7 text-muted">Avisos</div>
                                             </div>
                                             <div class="col-4 text-center">
-                                                <div class="fs-6 fw-bold text-danger">\${validacao.total_erros}</div>
+                                                <div class="fs-6 fw-bold text-danger">${validacao.total_erros}</div>
                                                 <div class="fs-7 text-muted">Erros</div>
                                             </div>
                                         </div>
@@ -1128,38 +1128,38 @@ function validarTemplate(tipoId, tipoNome) {
                                     <div class="card-body p-4">
                                         <h6 class="fw-bold mb-3">Conformidades</h6>
                                         <div class="mb-2">
-                                            \${detalhes.lc95_conforme ? '✅' : '❌'} LC 95/1998
+                                            ${detalhes.lc95_conforme ? '✅' : '❌'} LC 95/1998
                                         </div>
                                         <div class="mb-2">
-                                            \${detalhes.estrutura_adequada ? '✅' : '❌'} Estrutura Textual
+                                            ${detalhes.estrutura_adequada ? '✅' : '❌'} Estrutura Textual
                                         </div>
                                         <div class="mb-2">
-                                            \${validacao.metadados_completos ? '✅' : '❌'} Metadados
+                                            ${validacao.metadados_completos ? '✅' : '❌'} Metadados
                                         </div>
                                         <div class="mb-2">
-                                            \${validacao.numeracao_conforme ? '✅' : '❌'} Numeração
+                                            ${validacao.numeracao_conforme ? '✅' : '❌'} Numeração
                                         </div>
                                         <div class="mb-2">
-                                            \${validacao.acessivel ? '✅' : '❌'} Acessibilidade
+                                            ${validacao.acessivel ? '✅' : '❌'} Acessibilidade
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                         
-                        \${validacao.status !== 'aprovado' ? \`
+                        ${validacao.status !== 'aprovado' ? `
                             <div class="alert alert-warning mt-4">
                                 <h6>Recomendações:</h6>
                                 <ul class="mb-0">
-                                    \${validacao.recomendacoes.map(rec => '<li>' + rec + '</li>').join('')}
+                                    ${validacao.recomendacoes.map(rec => '<li>' + rec + '</li>').join('')}
                                 </ul>
                             </div>
-                        \` : \`
+                        ` : `
                             <div class="alert alert-success mt-4">
                                 ✅ <strong>Template está em total conformidade com os padrões legais!</strong>
                             </div>
-                        \`}
-                    \`,
+                        `}
+                    `,
                     icon: validacao.status === 'aprovado' ? 'success' : 'warning',
                     showCancelButton: true,
                     confirmButtonText: 'Corrigir Template',
@@ -1294,7 +1294,7 @@ function previewTemplate(tipoId, tipoNome) {
                 
                 for (const [key, value] of Object.entries(dadosExemplo)) {
                     tabelaHtml += `<tr>
-                        <td><code class="text-primary">\${${key}}</code></td>
+                        <td><code class="text-primary">\$\{${key}\}</code></td>
                         <td class="text-gray-700">${String(value).substring(0, 50)}${String(value).length > 50 ? '...' : ''}</td>
                     </tr>`;
                 }

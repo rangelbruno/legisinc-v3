@@ -48,11 +48,11 @@ class OnlyOfficeService
         switch ($fileExtension) {
             case 'txt':
                 $fileType = 'txt';
-                $documentType = 'text';
+                $documentType = 'word'; // Usar "word" para compatibilidade
                 break;
             case 'rtf':
                 $fileType = 'rtf';
-                $documentType = 'text'; // RTF é tratado como texto no OnlyOffice
+                $documentType = 'word'; // RTF deve usar documentType "word"
                 break;
             case 'docx':
                 $fileType = 'docx';
@@ -64,7 +64,7 @@ class OnlyOfficeService
                 break;
             default:
                 $fileType = 'rtf';
-                $documentType = 'text';
+                $documentType = 'word'; // Padrão "word" para todos os documentos
                 break;
         }
         
@@ -107,7 +107,7 @@ class OnlyOfficeService
                         'lang' => ['pt-BR']
                     ],
                     'autosave' => true, // Habilitar autosave para garantir salvamento
-                    'autosaveTimeout' => 30000, // 30 segundos
+                    'autosaveTimeout' => 10000, // 10 segundos para resposta mais rápida
                     'autosaveType' => 0, // 0 = strict mode
                     'forcesave' => true, // Permitir salvamento manual
                     'compactHeader' => true,
@@ -209,15 +209,23 @@ class OnlyOfficeService
         
         try {
             // Status 2 = Pronto para salvar (save)
-            // Status 6 = Force save (salvamento forçado pelo usuário)
-            if (in_array($status, [2, 6]) && isset($data['url'])) {
+            // Status 6 = Force save (salvamento forçado pelo usuário)  
+            // Status 4 = Documento fechado sem mudanças (mas vamos tentar salvar se tiver URL)
+            if ((in_array($status, [2, 6]) && isset($data['url'])) || 
+                ($status === 4 && isset($data['url']) && !empty($data['url']))) {
                 
                 // Verificar se não está processando outro callback
                 if ($lock->get()) {
                     \Log::info('Processando salvamento do template', [
                         'document_key' => $documentKey,
                         'status' => $status,
-                        'status_type' => $status === 2 ? 'auto_save' : 'force_save'
+                        'status_type' => match($status) {
+                            2 => 'auto_save',
+                            6 => 'force_save', 
+                            4 => 'closing_with_url',
+                            default => 'unknown'
+                        },
+                        'url' => $data['url']
                     ]);
                     
                     $this->salvarTemplate($template, $data['url']);
@@ -260,7 +268,7 @@ class OnlyOfficeService
     }
 
     /**
-     * Salvar template automaticamente
+     * Salvar template diretamente no banco de dados PostgreSQL
      */
     private function salvarTemplate(TipoProposicaoTemplate $template, string $url): void
     {
@@ -276,12 +284,13 @@ class OnlyOfficeService
                 $urlCorrigida = str_replace('http://localhost:8080', 'http://legisinc-onlyoffice', $urlCorrigida);
             }
             
-            \Log::info('Tentando baixar arquivo do OnlyOffice', [
+            \Log::info('Baixando conteúdo do OnlyOffice para salvar no banco', [
+                'template_id' => $template->id,
                 'url_original' => $url,
                 'url_corrigida' => $urlCorrigida
             ]);
             
-            // Download direto com timeout aumentado
+            // Download do conteúdo com timeout aumentado
             $response = Http::timeout(60)->get($urlCorrigida);
             
             if (!$response->successful()) {
@@ -292,7 +301,8 @@ class OnlyOfficeService
                 ];
                 
                 foreach ($urlsFallback as $urlFallback) {
-                    \Log::warning('Tentando URL fallback', [
+                    \Log::warning('Tentando URL fallback para download', [
+                        'template_id' => $template->id,
                         'url_fallback' => $urlFallback,
                         'status_anterior' => $response->status()
                     ]);
@@ -308,17 +318,16 @@ class OnlyOfficeService
                 \Log::error('OnlyOffice callback - falha no download', [
                     'template_id' => $template->id,
                     'url' => $url,
-                    'url_otimizada' => $urlOtimizada,
                     'response_status' => $response ? $response->status() : 'null_response',
-                    'response_body' => $response ? $response->body() : 'null_response'
+                    'response_body_preview' => $response ? substr($response->body(), 0, 200) : 'null_response'
                 ]);
                 return;
             }
 
-            // Validar e possivelmente combinar conteúdo do template
+            // Obter conteúdo do OnlyOffice
             $conteudo = $response->body();
             
-            // Verificar se o arquivo não está vazio ou corrompido
+            // Validar conteúdo
             if (empty($conteudo) || strlen($conteudo) < 50) {
                 \Log::error('OnlyOffice callback - conteúdo inválido ou vazio', [
                     'template_id' => $template->id,
@@ -329,69 +338,40 @@ class OnlyOfficeService
                 return;
             }
             
-            // Verificar se é realmente um arquivo RTF
-            if (!str_starts_with($conteudo, '{\rtf')) {
-                \Log::error('OnlyOffice callback - arquivo não é RTF válido', [
-                    'template_id' => $template->id,
-                    'url' => $url,
-                    'content_start' => substr($conteudo, 0, 50)
-                ]);
-                return;
+            // Detectar formato do conteúdo
+            $formato = 'rtf'; // padrão
+            if (str_starts_with($conteudo, '{\rtf')) {
+                $formato = 'rtf';
+            } elseif (str_starts_with($conteudo, 'PK')) {
+                $formato = 'docx'; // ZIP-based format
+            } elseif (str_contains($conteudo, '<html') || str_contains($conteudo, '<HTML')) {
+                $formato = 'html';
             }
             
-            $conteudoFinal = $this->prepararConteudoTemplate($conteudo, $template);
+            \Log::info('Formato detectado do conteúdo OnlyOffice', [
+                'template_id' => $template->id,
+                'formato' => $formato,
+                'content_start' => substr($conteudo, 0, 50),
+                'content_length' => strlen($conteudo)
+            ]);
             
-            if (!$conteudoFinal) {
-                \Log::warning('Template rejeitado - não foi possível preparar conteúdo válido', [
-                    'template_id' => $template->id,
-                    'tipo_proposicao_id' => $template->tipo_proposicao_id
-                ]);
-                return;
-            }
+            // Processar conteúdo se necessário
+            $conteudoProcessado = $this->processarConteudoTemplate($conteudo, $formato, $template);
             
-            // Usar conteúdo preparado em vez do original
-            $conteudo = $conteudoFinal;
-            
-            // Salvar arquivo com extensão RTF
-            $nomeArquivo = "template_{$template->tipo_proposicao_id}.rtf";
-            $path = "templates/{$nomeArquivo}";
-            
-            // Fazer backup do template atual antes de sobrescrever
-            $this->backupTemplateAtual($template);
-            
-            // Usar transação para garantir atomicidade e performance
-            \DB::transaction(function() use ($template, $path, $conteudo) {
-                // Garantir que o conteúdo está em UTF-8 e correto para RTF
-                $conteudoCorrigido = $this->corrigirEncodingRTF($conteudo);
-                
-                // Corrigir encoding adicional para exibição no OnlyOffice
-                $conteudoCorrigido = $this->corrigirEncodingParaExibicao($conteudoCorrigido);
-                
-                // Salvar no storage padrão (público)
-                $saved = Storage::put($path, $conteudoCorrigido);
-                
-                \Log::info('Arquivo salvo no storage com encoding corrigido', [
-                    'path' => $path,
-                    'saved' => $saved,
-                    'size_original' => strlen($conteudo),
-                    'size_corrigido' => strlen($conteudoCorrigido)
-                ]);
-                
-                // Forçar refresh do modelo para evitar cache
-                $template->refresh();
-                
-                // Atualizar template
-                $updated = $template->update([
-                    'arquivo_path' => $path,
+            // Salvar diretamente no banco de dados PostgreSQL
+            \DB::transaction(function() use ($template, $conteudoProcessado, $formato) {
+                $template->update([
+                    'conteudo' => $conteudoProcessado,
+                    'formato' => $formato,
                     'updated_by' => auth()->id(),
-                    'updated_at' => now() // Forçar atualização do timestamp
+                    'updated_at' => now()
                 ]);
                 
-                \Log::info('Template atualizado no banco', [
+                \Log::info('Template salvo no banco de dados', [
                     'template_id' => $template->id,
-                    'updated' => $updated,
-                    'arquivo_path' => $template->arquivo_path,
-                    'updated_at' => $template->updated_at
+                    'formato' => $formato,
+                    'content_length' => strlen($conteudoProcessado),
+                    'updated_at' => $template->fresh()->updated_at
                 ]);
                 
                 // Limpar cache
@@ -402,10 +382,10 @@ class OnlyOfficeService
                 $this->extrairVariaveis($template);
             });
             
-            \Log::info('Template salvo com sucesso', [
-                'id' => $template->id,
-                'path' => $path,
-                'size' => strlen($response->body())
+            \Log::info('Template salvo com sucesso no banco de dados', [
+                'template_id' => $template->id,
+                'formato' => $formato,
+                'content_size' => strlen($conteudoProcessado)
             ]);
             
         } catch (\Exception $e) {
@@ -420,15 +400,80 @@ class OnlyOfficeService
     }
 
     /**
+     * Processar conteúdo do template para armazenamento no banco
+     */
+    private function processarConteudoTemplate(string $conteudo, string $formato, TipoProposicaoTemplate $template): string
+    {
+        try {
+            // Para RTF, fazer correções de encoding
+            if ($formato === 'rtf') {
+                // Garantir que está em UTF-8
+                $conteudo = mb_convert_encoding($conteudo, 'UTF-8', 'auto');
+                
+                // Corrigir caracteres especiais do RTF
+                $conteudo = $this->corrigirEncodingRTF($conteudo);
+            }
+            
+            // Aplicar processamento de variáveis se necessário
+            if (!empty($template->conteudo)) {
+                // Se já existe conteúdo no template, preservar variáveis específicas
+                $conteudo = $this->preservarVariaveisTemplate($conteudo, $template);
+            }
+            
+            return $conteudo;
+            
+        } catch (\Exception $e) {
+            \Log::warning('Erro no processamento do conteúdo do template', [
+                'template_id' => $template->id,
+                'formato' => $formato,
+                'error' => $e->getMessage()
+            ]);
+            
+            // Retornar conteúdo original se houver erro
+            return $conteudo;
+        }
+    }
+    
+    /**
+     * Preservar variáveis específicas do template
+     */
+    private function preservarVariaveisTemplate(string $conteudo, TipoProposicaoTemplate $template): string
+    {
+        // Adicionar verificação para manter variáveis importantes do sistema
+        $variaveisImportantes = [
+            '${cabecalho_nome_camara}',
+            '${cabecalho_endereco}',
+            '${rodape_texto}',
+            '${numero}',
+            '${ano}',
+            '${ementa}'
+        ];
+        
+        foreach ($variaveisImportantes as $variavel) {
+            if (!str_contains($conteudo, $variavel) && str_contains($template->conteudo, $variavel)) {
+                \Log::info('Preservando variável importante no template', [
+                    'template_id' => $template->id,
+                    'variavel' => $variavel
+                ]);
+                // Se a variável não está no novo conteúdo mas estava no antigo, avisar
+            }
+        }
+        
+        return $conteudo;
+    }
+
+    /**
      * Extrair variáveis do documento
      */
     private function extrairVariaveis(TipoProposicaoTemplate $template): void
     {
-        if (!$template->arquivo_path) {
+        // Usar o conteúdo do banco em vez do arquivo
+        if (!$template->conteudo) {
             return;
         }
 
-        $conteudo = Storage::get($template->arquivo_path);
+        // Usar conteúdo do banco de dados
+        $conteudo = $template->conteudo;
         
         // Buscar padrão ${variavel}
         preg_match_all('/\$\{([^}]+)\}/', $conteudo, $matches);
@@ -533,31 +578,27 @@ class OnlyOfficeService
         // Gerar conteúdo do template baseado no tipo
         $template_content = $this->obterTemplateBase($tipo);
         
-        // Aplicar parâmetros de cabeçalho
-        // Primeiro, verificar se deve usar imagem ou texto
-        $usarImagem = !empty($parametros['Cabeçalho.cabecalho_imagem']);
+        // Aplicar parâmetros de cabeçalho usando variáveis dinâmicas
+        // Substituir placeholders estáticos por variáveis dinâmicas
+        $template_content = str_replace('{{NOME_CAMARA}}', '${cabecalho_nome_camara}', $template_content);
+        $template_content = str_replace('{{ENDERECO_CAMARA}}', '${cabecalho_endereco}', $template_content);
+        $template_content = str_replace('{{TELEFONE_CAMARA}}', '${cabecalho_telefone}', $template_content);
+        $template_content = str_replace('{{WEBSITE_CAMARA}}', '${cabecalho_website}', $template_content);
         
+        // Verificar se deve usar imagem no cabeçalho
+        $usarImagem = !empty($parametros['Cabeçalho.cabecalho_imagem']);
         if ($usarImagem) {
-            // Usar placeholder para imagem no cabeçalho
-            $cabecalhoImagem = '${imagem_cabecalho}';
-            $template_content = str_replace('{{NOME_CAMARA}}', $cabecalhoImagem, $template_content);
-            $template_content = str_replace('{{ENDERECO_CAMARA}}', '', $template_content);
-            $template_content = str_replace('{{TELEFONE_CAMARA}}', '', $template_content);
-        } else {
-            // Usar texto dos parâmetros como fallback
-            if (!empty($parametros['Cabeçalho.cabecalho_nome_camara'])) {
-                $template_content = str_replace('{{NOME_CAMARA}}', $parametros['Cabeçalho.cabecalho_nome_camara'], $template_content);
-            }
-            
-            if (!empty($parametros['Cabeçalho.cabecalho_endereco'])) {
-                $template_content = str_replace('{{ENDERECO_CAMARA}}', $parametros['Cabeçalho.cabecalho_endereco'], $template_content);
-            }
-            
-            if (!empty($parametros['Cabeçalho.cabecalho_telefone'])) {
-                $template_content = str_replace('{{TELEFONE_CAMARA}}', $parametros['Cabeçalho.cabecalho_telefone'], $template_content);
+            // Adicionar variável de imagem no início do template se ainda não existir
+            if (strpos($template_content, '${imagem_cabecalho}') === false) {
+                $template_content = '${imagem_cabecalho}' . "\n\n" . $template_content;
             }
         }
 
+        // Garantir que o rodapé seja incluído no final do template
+        if (strpos($template_content, '${rodape_texto}') === false) {
+            $template_content = $template_content . "\n\n" . '${rodape_texto}';
+        }
+        
         // Aplicar parâmetros de formatação
         $fonte = $parametros['Formatação.format_fonte'] ?? 'Arial';
         $tamanhoFonte = $parametros['Formatação.format_tamanho_fonte'] ?? '12';
@@ -721,7 +762,19 @@ ${assinatura_padrao}
     {
         $textoProcessado = '';
         
-        // Escapar caracteres especiais do RTF primeiro
+        // Preservar variáveis de template antes de escapar
+        $variaveisTemplate = [];
+        $placeholderCounter = 0;
+        
+        // Encontrar e preservar variáveis ${...}
+        $texto = preg_replace_callback('/\$\{([^}]+)\}/', function($matches) use (&$variaveisTemplate, &$placeholderCounter) {
+            $placeholder = '___TEMPLATE_VAR_' . $placeholderCounter . '___';
+            $variaveisTemplate[$placeholder] = '$\\{' . $matches[1] . '\\}';
+            $placeholderCounter++;
+            return $placeholder;
+        }, $texto);
+        
+        // Escapar caracteres especiais do RTF (depois de preservar as variáveis)
         $texto = str_replace(['\\', '{', '}'], ['\\\\', '\\{', '\\}'], $texto);
         
         // Processar caractere por caractere usando funções multi-byte
@@ -741,6 +794,11 @@ ${assinatura_padrao}
                     $textoProcessado .= $char;
                 }
             }
+        }
+        
+        // Restaurar variáveis de template
+        foreach ($variaveisTemplate as $placeholder => $variavel) {
+            $textoProcessado = str_replace($placeholder, $variavel, $textoProcessado);
         }
         
         return $textoProcessado;

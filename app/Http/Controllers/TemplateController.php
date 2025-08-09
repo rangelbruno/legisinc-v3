@@ -163,7 +163,8 @@ class TemplateController extends Controller
         // Adicionar informação de sessão para evitar refresh desnecessário
         $config['editorConfig']['customization'] = $config['editorConfig']['customization'] ?? [];
         $config['editorConfig']['customization']['forcesave'] = true;
-        $config['editorConfig']['customization']['autosave'] = true; // Manter autosave habilitado
+        $config['editorConfig']['customization']['autosave'] = true;
+        $config['editorConfig']['customization']['autosaveTimeout'] = 10000; // 10 segundos
         
         // Adicionar callback URL correta com document_key versionado
         $callbackUrl = route('api.onlyoffice.callback', $config['document']['key']);
@@ -193,8 +194,9 @@ class TemplateController extends Controller
         \Log::info('Template download requested', [
             'template_id' => $template->id,
             'ativo' => $template->ativo,
-            'arquivo_path' => $template->arquivo_path,
-            'file_exists' => $template->arquivo_path ? Storage::exists($template->arquivo_path) : false
+            'has_content' => !empty($template->conteudo),
+            'formato' => $template->formato ?? 'rtf',
+            'content_length' => $template->conteudo ? strlen($template->conteudo) : 0
         ]);
 
         if (!$template->ativo) {
@@ -202,36 +204,58 @@ class TemplateController extends Controller
             abort(404, 'Template não está ativo');
         }
 
-        if (!$template->arquivo_path) {
-            \Log::warning('Template sem arquivo', ['template_id' => $template->id]);
-            abort(404, 'Template não possui arquivo');
-        }
-
-        // Limpar cache de arquivo antes de verificar
-        clearstatcache();
+        // Verificar se há conteúdo no banco, senão usar arquivo como fallback
+        $conteudoArquivo = null;
         
-        if (!Storage::exists($template->arquivo_path)) {
-            \Log::error('Arquivo do template não encontrado', [
+        if (!empty($template->conteudo)) {
+            // Usar conteúdo do banco de dados (abordagem principal)
+            $conteudoArquivo = $template->conteudo;
+            \Log::info('Usando conteúdo do banco de dados', [
                 'template_id' => $template->id,
-                'path' => $template->arquivo_path
+                'content_length' => strlen($conteudoArquivo)
             ]);
-            abort(404, 'Arquivo do template não encontrado');
+        } elseif ($template->arquivo_path && Storage::exists($template->arquivo_path)) {
+            // Fallback para arquivo (compatibilidade)
+            $conteudoArquivo = Storage::get($template->arquivo_path);
+            \Log::info('Usando arquivo como fallback', [
+                'template_id' => $template->id,
+                'arquivo_path' => $template->arquivo_path
+            ]);
+        } else {
+            \Log::error('Template sem conteúdo nem arquivo', [
+                'template_id' => $template->id,
+                'has_content' => !empty($template->conteudo),
+                'has_file' => $template->arquivo_path ? Storage::exists($template->arquivo_path) : false
+            ]);
+            abort(404, 'Template não possui conteúdo');
         }
 
-        // Gerar nome do arquivo baseado no tipo de proposição
-        $nomeArquivo = \Illuminate\Support\Str::slug($template->tipoProposicao->nome) . '.rtf';
+        // Determinar formato e nome do arquivo
+        $formato = $template->formato ?? 'rtf';
+        $extensao = match($formato) {
+            'docx' => 'docx',
+            'html' => 'html',
+            default => 'rtf'
+        };
         
-        // Verificar se o arquivo precisa de correção de encoding antes do download
-        $conteudoArquivo = Storage::get($template->arquivo_path);
+        $nomeArquivo = \Illuminate\Support\Str::slug($template->tipoProposicao->nome) . '.' . $extensao;
         
-        // Processar variáveis do template se for arquivo RTF
-        if (pathinfo($template->arquivo_path, PATHINFO_EXTENSION) === 'rtf') {
+        // Processar variáveis do template apenas se NÃO for requisição do OnlyOffice
+        $isOnlyOfficeRequest = request()->hasHeader('User-Agent') && 
+                              str_contains(request()->header('User-Agent'), 'ONLYOFFICE');
+        
+        if (!$isOnlyOfficeRequest && pathinfo($template->arquivo_path, PATHINFO_EXTENSION) === 'rtf') {
             $conteudoArquivo = $this->processarVariaveisTemplate($conteudoArquivo);
             
-            \Log::info('Variáveis do template processadas', [
+            \Log::info('Variáveis do template processadas para download final', [
                 'template_id' => $template->id,
                 'arquivo_path' => $template->arquivo_path,
                 'tamanho_processado' => strlen($conteudoArquivo)
+            ]);
+        } elseif ($isOnlyOfficeRequest) {
+            \Log::info('Servindo template original para OnlyOffice (sem processar variáveis)', [
+                'template_id' => $template->id,
+                'user_agent' => request()->header('User-Agent')
             ]);
         }
         
@@ -274,41 +298,22 @@ class TemplateController extends Controller
             )->deleteFileAfterSend(true);
         }
         
-        // Detectar tipo de arquivo e definir Content-Type apropriado
-        $extension = pathinfo($template->arquivo_path, PATHINFO_EXTENSION);
-        $contentType = match($extension) {
+        // Detectar tipo de arquivo baseado no formato do banco
+        $contentType = match($formato) {
             'txt' => 'text/plain; charset=utf-8',
             'rtf' => 'application/rtf',
             'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'html' => 'text/html; charset=utf-8',
             default => 'application/octet-stream'
         };
         
-        // Se o conteúdo foi processado, criar arquivo temporário
-        if (isset($conteudoArquivo)) {
-            $tempFile = tempnam(sys_get_temp_dir(), 'template_processed_') . '.rtf';
-            file_put_contents($tempFile, $conteudoArquivo);
-            
-            return response()->download(
-                $tempFile,
-                $nomeArquivo,
-                [
-                    'Cache-Control' => 'no-cache, no-store, must-revalidate',
-                    'Content-Type' => $contentType,
-                    'Content-Disposition' => 'attachment; filename="' . $nomeArquivo . '"'
-                ]
-            )->deleteFileAfterSend(true);
-        }
-        
-        // Fallback para arquivo original (caso não tenha sido processado)
-        return response()->download(
-            Storage::path($template->arquivo_path), 
-            $nomeArquivo,
-            [
-                'Cache-Control' => 'no-cache, no-store, must-revalidate',
-                'Content-Type' => $contentType,
-                'Content-Disposition' => 'attachment; filename="' . $nomeArquivo . '"'
-            ]
-        );
+        // Retornar conteúdo do banco diretamente
+        return response($conteudoArquivo, 200, [
+            'Cache-Control' => 'no-cache, no-store, must-revalidate',
+            'Content-Type' => $contentType,
+            'Content-Disposition' => 'inline; filename="' . $nomeArquivo . '"',
+            'Content-Length' => strlen($conteudoArquivo)
+        ]);
     }
 
     /**
@@ -607,6 +612,7 @@ class TemplateController extends Controller
     
     /**
      * Processar variáveis no template usando TemplateParametrosService
+     * Incluindo todos os parâmetros: cabeçalho, rodapé, variáveis dinâmicas e dados da câmara
      */
     private function processarVariaveisTemplate(string $conteudo): string
     {
@@ -615,8 +621,50 @@ class TemplateController extends Controller
             // De $\{variavel\} para ${variavel}
             $conteudo = str_replace(['$\\{', '\\}'], ['${', '}'], $conteudo);
             
-            // Processar o template com variáveis padrão
-            return $this->parametrosService->processarTemplate($conteudo, []);
+            // Obter todos os parâmetros disponíveis
+            $parametros = $this->parametrosService->obterParametrosTemplates();
+            
+            // Preparar dados com todos os parâmetros
+            $dados = [
+                'variaveis' => [
+                    // Cabeçalho
+                    'cabecalho_nome_camara' => $parametros['Cabeçalho.cabecalho_nome_camara'] ?? '',
+                    'cabecalho_endereco' => $parametros['Cabeçalho.cabecalho_endereco'] ?? '',
+                    'cabecalho_telefone' => $parametros['Cabeçalho.cabecalho_telefone'] ?? '',
+                    'cabecalho_website' => $parametros['Cabeçalho.cabecalho_website'] ?? '',
+                    'cabecalho_imagem' => $parametros['Cabeçalho.cabecalho_imagem'] ?? '',
+                    
+                    // Rodapé
+                    'rodape_texto' => $parametros['Rodapé.rodape_texto'] ?? '',
+                    'rodape_numeracao' => $parametros['Rodapé.rodape_numeracao'] ?? '',
+                    
+                    // Variáveis Dinâmicas
+                    'var_prefixo_numeracao' => $parametros['Variáveis Dinâmicas.var_prefixo_numeracao'] ?? '',
+                    'var_formato_data' => $parametros['Variáveis Dinâmicas.var_formato_data'] ?? '',
+                    'var_assinatura_padrao' => $parametros['Variáveis Dinâmicas.var_assinatura_padrao'] ?? '',
+                    
+                    // Dados Gerais da Câmara
+                    'nome_camara' => $parametros['Dados Gerais da Câmara.nome_camara_oficial'] ?? '',
+                    'nome_camara_abreviado' => $parametros['Dados Gerais da Câmara.nome_camara_abreviado'] ?? '',
+                    'municipio' => $parametros['Dados Gerais da Câmara.municipio_nome'] ?? '',
+                    'municipio_uf' => $parametros['Dados Gerais da Câmara.municipio_uf'] ?? '',
+                    'endereco_camara' => $parametros['Dados Gerais da Câmara.endereco_logradouro'] ?? '',
+                    'endereco_bairro' => $parametros['Dados Gerais da Câmara.endereco_bairro'] ?? '',
+                    'endereco_cep' => $parametros['Dados Gerais da Câmara.endereco_cep'] ?? '',
+                    'telefone_camara' => $parametros['Dados Gerais da Câmara.telefone_principal'] ?? '',
+                    'telefone_protocolo' => $parametros['Dados Gerais da Câmara.telefone_protocolo'] ?? '',
+                    'email_camara' => $parametros['Dados Gerais da Câmara.email_oficial'] ?? '',
+                    'website_camara' => $parametros['Dados Gerais da Câmara.website'] ?? '',
+                    'cnpj_camara' => $parametros['Dados Gerais da Câmara.cnpj'] ?? '',
+                    'presidente_nome' => $parametros['Dados Gerais da Câmara.presidente_nome'] ?? '',
+                    'presidente_tratamento' => $parametros['Dados Gerais da Câmara.presidente_tratamento'] ?? '',
+                    'horario_funcionamento' => $parametros['Dados Gerais da Câmara.horario_funcionamento'] ?? '',
+                    'horario_protocolo' => $parametros['Dados Gerais da Câmara.horario_protocolo'] ?? ''
+                ]
+            ];
+            
+            // Processar o template com todas as variáveis
+            return $this->parametrosService->processarTemplate($conteudo, $dados);
             
         } catch (\Exception $e) {
             \Log::warning('Erro ao processar variáveis do template:', [
@@ -682,6 +730,7 @@ class TemplateController extends Controller
 
     /**
      * Adicionar variáveis no template gerado
+     * Inclui todos os parâmetros configurados: cabeçalho, rodapé, variáveis dinâmicas e dados da câmara
      */
     private function adicionarVariaveisTemplate(string $template): string
     {
@@ -703,11 +752,38 @@ class TemplateController extends Controller
             $template = preg_replace($padrao, $variavel, $template);
         }
 
-        // Adicionar cabeçalho com variáveis
-        $cabecalho = "\n${imagem_cabecalho}\n\n${nome_camara}\n${endereco_camara}\n\n";
+        // Criar cabeçalho completo com todos os parâmetros de cabeçalho
+        $cabecalho = ""; 
         
-        // Adicionar rodapé com variáveis
-        $rodape = "\n\n${assinatura_padrao}\n\n${rodape}";
+        // Imagem do cabeçalho (se houver)
+        $cabecalho .= "${cabecalho_imagem}\n\n";
+        
+        // Dados da câmara no cabeçalho
+        $cabecalho .= "${cabecalho_nome_camara}\n";
+        $cabecalho .= "${cabecalho_endereco}\n";
+        $cabecalho .= "Tel: ${cabecalho_telefone} - ${cabecalho_website}\n";
+        $cabecalho .= "CNPJ: ${cnpj_camara}\n";
+        $cabecalho .= "\n" . str_repeat("=", 80) . "\n\n";
+        
+        // Criar rodapé completo com todos os parâmetros de rodapé
+        $rodape = "\n\n" . str_repeat("-", 80) . "\n";
+        
+        // Área de assinatura (de variáveis dinâmicas)
+        $rodape .= "\n${var_assinatura_padrao}\n\n";
+        
+        // Texto do rodapé
+        $rodape .= "${rodape_texto}\n";
+        
+        // Informações de contato no rodapé
+        $rodape .= "${endereco_camara}, ${endereco_bairro} - CEP: ${endereco_cep}\n";
+        $rodape .= "${municipio}/${municipio_uf}\n";
+        $rodape .= "Tel: ${telefone_camara} | Protocolo: ${telefone_protocolo}\n";
+        $rodape .= "E-mail: ${email_camara} | ${website_camara}\n";
+        $rodape .= "Horário de Funcionamento: ${horario_funcionamento}\n";
+        $rodape .= "Horário do Protocolo: ${horario_protocolo}\n";
+        
+        // Adicionar numeração de página se configurado
+        $rodape .= "\n${rodape_numeracao}";
 
         return $cabecalho . $template . $rodape;
     }
@@ -814,8 +890,12 @@ class TemplateController extends Controller
             // Ler conteúdo do template
             $conteudoTemplate = Storage::get($template->arquivo_path);
             
-            // Dados de exemplo para preview
+            // Obter parâmetros do sistema
+            $parametros = $this->parametrosService->obterParametrosTemplates();
+            
+            // Dados de exemplo para preview com todos os parâmetros
             $dadosExemplo = [
+                // Dados da proposição
                 'numero_proposicao' => '001/' . date('Y'),
                 'tipo_proposicao' => $tipo->nome,
                 'ementa' => $this->gerarEmentaExemplo($tipo),
@@ -826,14 +906,40 @@ class TemplateController extends Controller
                 'autor_partido' => 'PARTIDO',
                 'data_atual' => date('d/m/Y'),
                 'ano' => date('Y'),
-                'nome_camara' => 'Câmara Municipal de São Paulo',
-                'municipio' => 'São Paulo',
-                'endereco_camara' => 'Viaduto Jacareí, 100 - Bela Vista, São Paulo - SP',
-                'telefone_camara' => '(11) 3396-4000',
-                'website_camara' => 'www.camara.sp.gov.br',
-                'imagem_cabecalho' => '[LOGO DA CÂMARA]',
-                'assinatura_padrao' => "\n_____________________________\nJoão Silva\nVereador",
-                'rodape' => 'Câmara Municipal de São Paulo'
+                
+                // Parâmetros de Cabeçalho
+                'cabecalho_nome_camara' => $parametros['Cabeçalho.cabecalho_nome_camara'] ?? 'CÂMARA MUNICIPAL',
+                'cabecalho_endereco' => $parametros['Cabeçalho.cabecalho_endereco'] ?? '',
+                'cabecalho_telefone' => $parametros['Cabeçalho.cabecalho_telefone'] ?? '',
+                'cabecalho_website' => $parametros['Cabeçalho.cabecalho_website'] ?? '',
+                'cabecalho_imagem' => '[LOGO DA CÂMARA]',
+                
+                // Parâmetros de Rodapé
+                'rodape_texto' => $parametros['Rodapé.rodape_texto'] ?? 'Documento oficial',
+                'rodape_numeracao' => $parametros['Rodapé.rodape_numeracao'] ?? 'Página 1',
+                
+                // Variáveis Dinâmicas
+                'var_prefixo_numeracao' => $parametros['Variáveis Dinâmicas.var_prefixo_numeracao'] ?? 'PROP',
+                'var_formato_data' => $parametros['Variáveis Dinâmicas.var_formato_data'] ?? 'd/m/Y',
+                'var_assinatura_padrao' => $parametros['Variáveis Dinâmicas.var_assinatura_padrao'] ?? "\n_____________________________\nJoão Silva\nVereador",
+                
+                // Dados Gerais da Câmara
+                'nome_camara' => $parametros['Dados Gerais da Câmara.nome_camara_oficial'] ?? 'CÂMARA MUNICIPAL DE SÃO PAULO',
+                'nome_camara_abreviado' => $parametros['Dados Gerais da Câmara.nome_camara_abreviado'] ?? 'CMSP',
+                'municipio' => $parametros['Dados Gerais da Câmara.municipio_nome'] ?? 'São Paulo',
+                'municipio_uf' => $parametros['Dados Gerais da Câmara.municipio_uf'] ?? 'SP',
+                'endereco_camara' => $parametros['Dados Gerais da Câmara.endereco_logradouro'] ?? 'Viaduto Jacareí, 100',
+                'endereco_bairro' => $parametros['Dados Gerais da Câmara.endereco_bairro'] ?? 'Bela Vista',
+                'endereco_cep' => $parametros['Dados Gerais da Câmara.endereco_cep'] ?? '01319-900',
+                'telefone_camara' => $parametros['Dados Gerais da Câmara.telefone_principal'] ?? '(11) 3396-4000',
+                'telefone_protocolo' => $parametros['Dados Gerais da Câmara.telefone_protocolo'] ?? '(11) 3396-4100',
+                'email_camara' => $parametros['Dados Gerais da Câmara.email_oficial'] ?? 'contato@camara.sp.gov.br',
+                'website_camara' => $parametros['Dados Gerais da Câmara.website'] ?? 'www.camara.sp.gov.br',
+                'cnpj_camara' => $parametros['Dados Gerais da Câmara.cnpj'] ?? '',
+                'presidente_nome' => $parametros['Dados Gerais da Câmara.presidente_nome'] ?? '',
+                'presidente_tratamento' => $parametros['Dados Gerais da Câmara.presidente_tratamento'] ?? 'Excelentíssimo Senhor',
+                'horario_funcionamento' => $parametros['Dados Gerais da Câmara.horario_funcionamento'] ?? 'Segunda a Sexta: 8h às 17h',
+                'horario_protocolo' => $parametros['Dados Gerais da Câmara.horario_protocolo'] ?? 'Segunda a Sexta: 9h às 16h'
             ];
 
             // Processar template com dados de exemplo
