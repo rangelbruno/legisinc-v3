@@ -2,6 +2,7 @@
 
 namespace App\Services\AI;
 
+use App\Models\AIConfiguration;
 use App\Services\Parametro\ParametroService;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -22,58 +23,83 @@ class AITextGenerationService
     public function gerarTextoProposicao(string $tipoProposicao, string $ementa): array
     {
         try {
-            // Verificar se a IA está habilitada
-            if (!$this->isAIEnabled()) {
+            // Obter configurações ativas ordenadas por prioridade
+            $configuracoes = $this->getActiveConfigurations();
+            
+            if ($configuracoes->isEmpty()) {
                 return [
                     'success' => false,
-                    'message' => 'Geração de texto via IA está desabilitada',
+                    'message' => 'Nenhuma configuração de IA ativa encontrada',
                     'texto' => null
                 ];
             }
 
-            // Obter configurações da IA
-            $config = $this->getAIConfig();
-            if (!$config) {
-                return [
-                    'success' => false,
-                    'message' => 'Configurações de IA não encontradas',
-                    'texto' => null
-                ];
+            $erros = [];
+
+            // Tentar cada configuração até encontrar uma que funcione
+            foreach ($configuracoes as $config) {
+                if (!$config->canBeUsed()) {
+                    $erros[] = "Configuração '{$config->name}' não pode ser usada (limite atingido ou inativa)";
+                    continue;
+                }
+
+                try {
+                    // Gerar prompt baseado no tipo e ementa
+                    $prompt = $this->criarPrompt($tipoProposicao, $ementa, $config->toApiConfig());
+
+                    // Chamar API da IA
+                    $response = $this->chamarAI($prompt, $config->toApiConfig());
+
+                    if ($response['success']) {
+                        // Estimar tokens usados (aproximação)
+                        $tokensUsados = $this->estimateTokens($prompt . $response['texto']);
+                        $config->addTokensUsed($tokensUsados);
+
+                        Log::info('Texto gerado via IA com sucesso', [
+                            'configuration' => $config->name,
+                            'provider' => $config->provider,
+                            'model' => $config->model,
+                            'tipo_proposicao' => $tipoProposicao,
+                            'ementa_length' => strlen($ementa),
+                            'texto_length' => strlen($response['texto']),
+                            'tokens_estimados' => $tokensUsados
+                        ]);
+
+                        return [
+                            'success' => true,
+                            'texto' => $response['texto'],
+                            'provider' => $config->provider,
+                            'model' => $config->model,
+                            'configuration_name' => $config->name,
+                            'tokens_used' => $tokensUsados
+                        ];
+                    } else {
+                        $erros[] = "Configuração '{$config->name}': {$response['message']}";
+                        Log::warning('Falha em configuração de IA, tentando próxima', [
+                            'configuration' => $config->name,
+                            'error' => $response['message']
+                        ]);
+                    }
+                } catch (\Exception $e) {
+                    $erros[] = "Configuração '{$config->name}': {$e->getMessage()}";
+                    Log::error('Erro em configuração de IA', [
+                        'configuration' => $config->name,
+                        'error' => $e->getMessage()
+                    ]);
+                }
             }
 
-            // Gerar prompt baseado no tipo e ementa
-            $prompt = $this->criarPrompt($tipoProposicao, $ementa, $config);
+            // Todas as configurações falharam
+            Log::error('Todas as configurações de IA falharam', [
+                'tipo_proposicao' => $tipoProposicao,
+                'errors' => $erros
+            ]);
 
-            // Chamar API da IA
-            $response = $this->chamarAI($prompt, $config);
-
-            if ($response['success']) {
-                Log::info('Texto gerado via IA com sucesso', [
-                    'tipo_proposicao' => $tipoProposicao,
-                    'ementa_length' => strlen($ementa),
-                    'texto_length' => strlen($response['texto']),
-                    'provider' => $config['provider']
-                ]);
-
-                return [
-                    'success' => true,
-                    'texto' => $response['texto'],
-                    'provider' => $config['provider'],
-                    'model' => $config['model']
-                ];
-            } else {
-                Log::error('Erro ao gerar texto via IA', [
-                    'error' => $response['message'],
-                    'tipo_proposicao' => $tipoProposicao,
-                    'provider' => $config['provider']
-                ]);
-
-                return [
-                    'success' => false,
-                    'message' => $response['message'],
-                    'texto' => null
-                ];
-            }
+            return [
+                'success' => false,
+                'message' => 'Todas as APIs de IA falharam. Erros: ' . implode('; ', $erros),
+                'texto' => null
+            ];
 
         } catch (\Exception $e) {
             Log::error('Erro no serviço de geração de texto via IA', [
@@ -90,17 +116,23 @@ class AITextGenerationService
     }
 
     /**
-     * Verifica se a IA está habilitada
+     * Obtém configurações ativas ordenadas por prioridade
      */
-    protected function isAIEnabled(): bool
+    protected function getActiveConfigurations()
     {
-        try {
-            $enabled = $this->parametroService->obterValor('Configuração de IA', 'Configurações de API', 'ai_enabled');
-            return filter_var($enabled, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? false;
-        } catch (\Exception $e) {
-            Log::warning('Erro ao verificar se IA está habilitada', ['error' => $e->getMessage()]);
-            return false;
-        }
+        return AIConfiguration::active()
+            ->withTokensAvailable()
+            ->byPriority()
+            ->get();
+    }
+
+    /**
+     * Estima quantidade de tokens (aproximação simples)
+     */
+    protected function estimateTokens(string $text): int
+    {
+        // Aproximação: 1 token ≈ 4 caracteres para texto em português
+        return (int) ceil(strlen($text) / 4);
     }
 
     /**
@@ -427,26 +459,47 @@ IMPORTANTE: O texto deve estar pronto para ser inserido no template ABNT padroni
     }
 
     /**
-     * Testa conexão com a IA
+     * Testa conexão com uma configuração específica
      */
-    public function testarConexao(?array $configData = null): array
+    public function testarConexao(?array $configData = null, ?int $configurationId = null): array
     {
         try {
-            // Usar configurações fornecidas ou buscar do banco
-            $config = $configData ?: $this->getAIConfig();
-            
-            if (!$config) {
+            if ($configurationId) {
+                // Testar configuração específica do banco
+                $aiConfig = AIConfiguration::find($configurationId);
+                if (!$aiConfig) {
+                    return [
+                        'success' => false,
+                        'message' => 'Configuração não encontrada'
+                    ];
+                }
+                
+                $config = $aiConfig->toApiConfig();
+                $configName = $aiConfig->name;
+            } elseif ($configData) {
+                // Testar dados fornecidos (para nova configuração)
+                $config = $configData;
+                $configName = $configData['name'] ?? 'Teste';
+                $aiConfig = null;
+            } else {
                 return [
                     'success' => false,
-                    'message' => 'Configurações de IA não encontradas'
+                    'message' => 'Nenhuma configuração fornecida para teste'
                 ];
             }
 
             // Validar configurações essenciais
-            if (empty($config['provider']) || empty($config['api_key']) || empty($config['model'])) {
+            if (empty($config['provider']) || empty($config['model'])) {
                 return [
                     'success' => false,
-                    'message' => 'Configurações incompletas. Provider, API Key e Model são obrigatórios.'
+                    'message' => 'Configurações incompletas. Provider e Model são obrigatórios.'
+                ];
+            }
+
+            if ($config['provider'] !== 'local' && empty($config['api_key'])) {
+                return [
+                    'success' => false,
+                    'message' => 'API Key é obrigatória para este provedor.'
                 ];
             }
 
@@ -454,22 +507,62 @@ IMPORTANTE: O texto deve estar pronto para ser inserido no template ABNT padroni
             
             $response = $this->chamarAI($promptTeste, $config);
 
+            // Atualizar resultado do teste no banco se for uma configuração existente
+            if ($aiConfig) {
+                $aiConfig->updateTestResult($response['success'], 
+                    $response['success'] ? null : $response['message']);
+            }
+
             if ($response['success']) {
                 return [
                     'success' => true,
-                    'message' => 'Conexão com IA estabelecida com sucesso',
+                    'message' => "Conexão estabelecida com sucesso para '{$configName}'",
                     'provider' => $config['provider'],
-                    'model' => $config['model']
+                    'model' => $config['model'],
+                    'response_preview' => substr($response['texto'] ?? '', 0, 100)
                 ];
             }
 
-            return $response;
+            return [
+                'success' => false,
+                'message' => "Falha na conexão para '{$configName}': " . $response['message'],
+                'provider' => $config['provider'],
+                'model' => $config['model']
+            ];
 
         } catch (\Exception $e) {
+            // Atualizar erro no banco se for uma configuração existente
+            if (isset($aiConfig) && $aiConfig) {
+                $aiConfig->updateTestResult(false, $e->getMessage());
+            }
+
             return [
                 'success' => false,
                 'message' => 'Erro no teste de conexão: ' . $e->getMessage()
             ];
         }
+    }
+
+    /**
+     * Testa todas as configurações ativas
+     */
+    public function testarTodasConfiguracoes(): array
+    {
+        $configuracoes = AIConfiguration::active()->get();
+        $resultados = [];
+
+        foreach ($configuracoes as $config) {
+            $resultado = $this->testarConexao(null, $config->id);
+            $resultados[] = [
+                'id' => $config->id,
+                'name' => $config->name,
+                'provider' => $config->provider,
+                'model' => $config->model,
+                'success' => $resultado['success'],
+                'message' => $resultado['message']
+            ];
+        }
+
+        return $resultados;
     }
 }

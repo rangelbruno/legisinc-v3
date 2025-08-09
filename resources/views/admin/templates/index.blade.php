@@ -59,6 +59,12 @@
                     <div class="card-title d-flex flex-column">
                         <div class="d-flex align-items-center">
                             <span class="fs-4 fw-semibold text-white me-1 align-self-start">{{ $tipos->filter(fn($t) => $t->hasTemplate())->count() }}</span>
+                            @if($tipos->filter(fn($t) => $t->hasTemplate())->count() === $tipos->count())
+                                <i class="ki-duotone ki-check-circle fs-3 text-white ms-2">
+                                    <span class="path1"></span>
+                                    <span class="path2"></span>
+                                </i>
+                            @endif
                         </div>
                         <span class="text-white opacity-75 pt-1 fw-semibold fs-6">Com Template</span>
                     </div>
@@ -99,6 +105,12 @@
                     <div class="card-title d-flex flex-column">
                         <div class="d-flex align-items-center">
                             <span class="fs-4 fw-semibold text-white me-1 align-self-start">{{ round($tipos->count() > 0 ? ($tipos->filter(fn($t) => $t->hasTemplate())->count() / $tipos->count()) * 100 : 0) }}%</span>
+                            @if($tipos->count() > 0 && ($tipos->filter(fn($t) => $t->hasTemplate())->count() / $tipos->count()) * 100 == 100)
+                                <i class="ki-duotone ki-crown fs-3 text-white ms-2">
+                                    <span class="path1"></span>
+                                    <span class="path2"></span>
+                                </i>
+                            @endif
                         </div>
                         <span class="text-white opacity-75 pt-1 fw-semibold fs-6">Cobertura</span>
                     </div>
@@ -160,13 +172,13 @@
         </div>
         <div class="card-body">
             <div class="table-responsive">
-                <table class="table table-row-bordered align-middle">
-                    <thead>
-                        <tr class="fw-bold fs-6 text-gray-800">
-                            <th>Tipo de Proposição</th>
-                            <th>Status do Template</th>
-                            <th>Última Atualização</th>
-                            <th>Ações</th>
+                <table class="table table-row-bordered align-middle gs-7 gy-4">
+                    <thead class="border-bottom border-gray-200 fs-7 text-uppercase">
+                        <tr class="fw-bold text-gray-600">
+                            <th class="min-w-200px">Tipo de Proposição</th>
+                            <th class="min-w-100px text-center">Status</th>
+                            <th class="min-w-150px">Última Atualização</th>
+                            <th class="min-w-150px text-end">Ações</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -180,26 +192,27 @@
                                         </i>
                                         <div>
                                             <div class="fw-bold">{{ $tipo->nome }}</div>
-                                            @if($tipo->template?->variaveis)
-                                                <div class="text-muted fs-7">
-                                                    {{ count($tipo->template->variaveis) }} variáveis
-                                                </div>
-                                            @endif
+                                            <div class="text-muted fs-7">
+                                                Código: {{ $tipo->codigo ?? 'N/A' }}
+                                                @if($tipo->template?->variaveis)
+                                                    • {{ count($tipo->template->variaveis) }} variáveis
+                                                @endif
+                                            </div>
                                         </div>
                                     </div>
                                 </td>
-                                <td>
+                                <td class="text-center">
                                     @if($tipo->hasTemplate())
-                                        <span class="badge badge-success">
-                                            <i class="ki-duotone ki-check fs-7 me-1">
+                                        <span class="badge badge-light-success fw-bold fs-7 px-3 py-2">
+                                            <i class="ki-duotone ki-check fs-8 me-1">
                                                 <span class="path1"></span>
                                                 <span class="path2"></span>
                                             </i>
                                             Ativo
                                         </span>
                                     @else
-                                        <span class="badge badge-warning">
-                                            <i class="ki-duotone ki-information fs-7 me-1">
+                                        <span class="badge badge-light-warning fw-bold fs-7 px-3 py-2">
+                                            <i class="ki-duotone ki-information fs-8 me-1">
                                                 <span class="path1"></span>
                                                 <span class="path2"></span>
                                                 <span class="path3"></span>
@@ -210,18 +223,25 @@
                                 </td>
                                 <td>
                                     @if($tipo->template)
-                                        <div>{{ $tipo->template->updated_at->format('d/m/Y H:i') }}</div>
-                                        <div class="text-muted fs-7">
-                                            por {{ $tipo->template->updatedBy->name ?? 'Sistema' }}
+                                        <div class="fw-bold text-gray-800 fs-6">{{ $tipo->template->updated_at->format('d/m/Y H:i') }}</div>
+                                        <div class="text-muted fs-7 d-flex align-items-center">
+                                            <i class="ki-duotone ki-profile-user fs-8 me-1">
+                                                <span class="path1"></span>
+                                                <span class="path2"></span>
+                                                <span class="path3"></span>
+                                                <span class="path4"></span>
+                                            </i>
+                                            {{ $tipo->template->updatedBy->name ?? 'Sistema' }}
                                         </div>
                                     @else
-                                        <span class="text-muted">—</span>
+                                        <span class="text-muted fs-6">—</span>
                                     @endif
                                 </td>
                                 <td>
-                                    <div class="btn-group" role="group">
+                                    <div class="d-flex justify-content-end flex-shrink-0">
+                                        <!-- Ação Principal -->
                                         <a href="{{ route('templates.editor', $tipo) }}" 
-                                           class="btn btn-sm btn-primary">
+                                           class="btn btn-sm btn-primary me-2">
                                             @if($tipo->hasTemplate())
                                                 <i class="ki-duotone ki-pencil fs-6 me-1">
                                                     <span class="path1"></span>
@@ -237,54 +257,103 @@
                                             @endif
                                         </a>
                                         
-                                        <button type="button" 
-                                                class="btn btn-sm btn-success"
-                                                onclick="gerarComPadroesLegais({{ $tipo->id }}, {{ json_encode($tipo->nome) }})"
-                                                title="Gerar template com padrões LC 95/1998">
-                                            <i class="ki-duotone ki-law fs-6 me-1">
-                                                <span class="path1"></span>
-                                                <span class="path2"></span>
-                                            </i>
-                                            LC 95/1998
-                                        </button>
-                                    </div>
-                                    
-                                    <div class="btn-group ms-2" role="group">
                                         @if($tipo->hasTemplate())
-                                            <a href="{{ route('api.templates.download', $tipo->template) }}?v={{ $tipo->template->updated_at->timestamp }}" 
-                                               class="btn btn-sm btn-light-primary">
-                                                <i class="ki-duotone ki-exit-down fs-6 me-1">
-                                                    <span class="path1"></span>
-                                                    <span class="path2"></span>
-                                                </i>
-                                                Download
-                                            </a>
-                                            
+                                            <!-- Preview (Ação Secundária Importante) -->
                                             <button type="button" 
-                                                    class="btn btn-sm btn-light-info"
-                                                    onclick="validarTemplate({{ $tipo->id }}, {{ json_encode($tipo->nome) }})"
-                                                    title="Validar conformidade legal">
-                                                <i class="ki-duotone ki-shield-tick fs-6 me-1">
+                                                    class="btn btn-sm btn-light-info me-2"
+                                                    onclick="previewTemplate({{ $tipo->id }}, {{ json_encode($tipo->nome) }})"
+                                                    title="Visualizar preview do template">
+                                                <i class="ki-duotone ki-eye fs-6">
                                                     <span class="path1"></span>
                                                     <span class="path2"></span>
                                                     <span class="path3"></span>
                                                 </i>
-                                                Validar
-                                            </button>
-                                            
-                                            <button type="button" 
-                                                    class="btn btn-sm btn-light-danger"
-                                                    onclick="confirmarExclusaoTemplate({{ $tipo->template->id }}, {{ json_encode($tipo->nome) }})">
-                                                <i class="ki-duotone ki-trash fs-6 me-1">
-                                                    <span class="path1"></span>
-                                                    <span class="path2"></span>
-                                                    <span class="path3"></span>
-                                                    <span class="path4"></span>
-                                                    <span class="path5"></span>
-                                                </i>
-                                                Excluir
                                             </button>
                                         @endif
+                                        
+                                        <!-- Menu de Ações -->
+                                        <div class="btn-group" role="group">
+                                            <button type="button" class="btn btn-sm btn-light btn-active-light-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                                                <i class="ki-duotone ki-dots-horizontal fs-5">
+                                                    <span class="path1"></span>
+                                                    <span class="path2"></span>
+                                                    <span class="path3"></span>
+                                                </i>
+                                            </button>
+                                            <ul class="dropdown-menu dropdown-menu-end">
+                                                <!-- Geração com Padrões Legais -->
+                                                <li>
+                                                    <button class="dropdown-item" type="button" 
+                                                            onclick="gerarComPadroesLegais({{ $tipo->id }}, {{ json_encode($tipo->nome) }})">
+                                                        <i class="ki-duotone ki-law fs-6 me-2 text-success">
+                                                            <span class="path1"></span>
+                                                            <span class="path2"></span>
+                                                        </i>
+                                                        Gerar com LC 95/1998
+                                                    </button>
+                                                </li>
+                                                
+                                                @if($tipo->hasTemplate())
+                                                    <li><hr class="dropdown-divider"></li>
+                                                    
+                                                    <!-- Download -->
+                                                    <li>
+                                                        <a class="dropdown-item" 
+                                                           href="{{ route('api.templates.download', $tipo->template) }}?v={{ $tipo->template->updated_at->timestamp }}">
+                                                            <i class="ki-duotone ki-exit-down fs-6 me-2 text-primary">
+                                                                <span class="path1"></span>
+                                                                <span class="path2"></span>
+                                                            </i>
+                                                            Download Template
+                                                        </a>
+                                                    </li>
+                                                    
+                                                    <!-- Variáveis -->
+                                                    <li>
+                                                        <button class="dropdown-item" type="button"
+                                                                onclick="visualizarVariaveis({{ $tipo->id }}, {{ json_encode($tipo->nome) }})">
+                                                            <i class="ki-duotone ki-code fs-6 me-2 text-info">
+                                                                <span class="path1"></span>
+                                                                <span class="path2"></span>
+                                                                <span class="path3"></span>
+                                                                <span class="path4"></span>
+                                                            </i>
+                                                            Ver Variáveis
+                                                        </button>
+                                                    </li>
+                                                    
+                                                    <!-- Validação -->
+                                                    <li>
+                                                        <button class="dropdown-item" type="button"
+                                                                onclick="validarTemplate({{ $tipo->id }}, {{ json_encode($tipo->nome) }})">
+                                                            <i class="ki-duotone ki-shield-tick fs-6 me-2 text-success">
+                                                                <span class="path1"></span>
+                                                                <span class="path2"></span>
+                                                                <span class="path3"></span>
+                                                            </i>
+                                                            Validar Conformidade
+                                                        </button>
+                                                    </li>
+                                                    
+                                                    <li><hr class="dropdown-divider"></li>
+                                                    
+                                                    <!-- Excluir -->
+                                                    <li>
+                                                        <button class="dropdown-item text-danger" type="button"
+                                                                onclick="confirmarExclusaoTemplate({{ $tipo->template->id }}, {{ json_encode($tipo->nome) }})">
+                                                            <i class="ki-duotone ki-trash fs-6 me-2">
+                                                                <span class="path1"></span>
+                                                                <span class="path2"></span>
+                                                                <span class="path3"></span>
+                                                                <span class="path4"></span>
+                                                                <span class="path5"></span>
+                                                            </i>
+                                                            Excluir Template
+                                                        </button>
+                                                    </li>
+                                                @endif
+                                            </ul>
+                                        </div>
                                     </div>
                                 </td>
                             </tr>
@@ -415,19 +484,337 @@
 </div>
 <!--end::Modal - Como Usar-->
 
+<!--begin::Modal - Visualizar Variáveis-->
+<div class="modal fade" id="kt_modal_variables" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered mw-800px">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="fw-bold" id="modal_variables_title">Variáveis Disponíveis</h2>
+                <div class="btn btn-icon btn-sm btn-active-icon-primary" data-bs-dismiss="modal">
+                    <i class="ki-duotone ki-cross fs-1">
+                        <span class="path1"></span>
+                        <span class="path2"></span>
+                    </i>
+                </div>
+            </div>
+            <div class="modal-body py-10 px-lg-17">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="mb-10">
+                            <h3 class="text-gray-900 fw-bold fs-4 mb-5">
+                                <i class="ki-duotone ki-code fs-2 text-primary me-2">
+                                    <span class="path1"></span>
+                                    <span class="path2"></span>
+                                    <span class="path3"></span>
+                                    <span class="path4"></span>
+                                </i>
+                                Variáveis da Proposição
+                            </h3>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-4 p-3 bg-light-primary rounded">
+                                        <code class="fs-6 fw-bold text-primary">${numero_proposicao}</code>
+                                        <div class="text-muted fs-7 mt-1">Número da proposição</div>
+                                    </div>
+                                    <div class="mb-4 p-3 bg-light-primary rounded">
+                                        <code class="fs-6 fw-bold text-primary">${tipo_proposicao}</code>
+                                        <div class="text-muted fs-7 mt-1">Tipo da proposição</div>
+                                    </div>
+                                    <div class="mb-4 p-3 bg-light-primary rounded">
+                                        <code class="fs-6 fw-bold text-primary">${ementa}</code>
+                                        <div class="text-muted fs-7 mt-1">Ementa da proposição</div>
+                                    </div>
+                                    <div class="mb-4 p-3 bg-light-primary rounded">
+                                        <code class="fs-6 fw-bold text-primary">${texto}</code>
+                                        <div class="text-muted fs-7 mt-1">Texto principal do conteúdo</div>
+                                    </div>
+                                    <div class="mb-4 p-3 bg-light-primary rounded">
+                                        <code class="fs-6 fw-bold text-primary">${justificativa}</code>
+                                        <div class="text-muted fs-7 mt-1">Justificativa</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-4 p-3 bg-light-success rounded">
+                                        <code class="fs-6 fw-bold text-success">${autor_nome}</code>
+                                        <div class="text-muted fs-7 mt-1">Nome do autor</div>
+                                    </div>
+                                    <div class="mb-4 p-3 bg-light-success rounded">
+                                        <code class="fs-6 fw-bold text-success">${autor_cargo}</code>
+                                        <div class="text-muted fs-7 mt-1">Cargo do autor</div>
+                                    </div>
+                                    <div class="mb-4 p-3 bg-light-success rounded">
+                                        <code class="fs-6 fw-bold text-success">${autor_partido}</code>
+                                        <div class="text-muted fs-7 mt-1">Partido do autor</div>
+                                    </div>
+                                    <div class="mb-4 p-3 bg-light-info rounded">
+                                        <code class="fs-6 fw-bold text-info">${data_atual}</code>
+                                        <div class="text-muted fs-7 mt-1">Data atual</div>
+                                    </div>
+                                    <div class="mb-4 p-3 bg-light-info rounded">
+                                        <code class="fs-6 fw-bold text-info">${ano}</code>
+                                        <div class="text-muted fs-7 mt-1">Ano atual</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-10">
+                            <h3 class="text-gray-900 fw-bold fs-4 mb-5">
+                                <i class="ki-duotone ki-home fs-2 text-success me-2">
+                                    <span class="path1"></span>
+                                    <span class="path2"></span>
+                                </i>
+                                Variáveis da Câmara
+                            </h3>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-4 p-3 bg-light-warning rounded">
+                                        <code class="fs-6 fw-bold text-warning">${nome_camara}</code>
+                                        <div class="text-muted fs-7 mt-1">Nome da câmara</div>
+                                    </div>
+                                    <div class="mb-4 p-3 bg-light-warning rounded">
+                                        <code class="fs-6 fw-bold text-warning">${municipio}</code>
+                                        <div class="text-muted fs-7 mt-1">Município</div>
+                                    </div>
+                                    <div class="mb-4 p-3 bg-light-warning rounded">
+                                        <code class="fs-6 fw-bold text-warning">${endereco_camara}</code>
+                                        <div class="text-muted fs-7 mt-1">Endereço da câmara</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-4 p-3 bg-light-warning rounded">
+                                        <code class="fs-6 fw-bold text-warning">${telefone_camara}</code>
+                                        <div class="text-muted fs-7 mt-1">Telefone da câmara</div>
+                                    </div>
+                                    <div class="mb-4 p-3 bg-light-warning rounded">
+                                        <code class="fs-6 fw-bold text-warning">${website_camara}</code>
+                                        <div class="text-muted fs-7 mt-1">Website da câmara</div>
+                                    </div>
+                                    <div class="mb-4 p-3 bg-light-secondary rounded">
+                                        <code class="fs-6 fw-bold text-secondary">${imagem_cabecalho}</code>
+                                        <div class="text-muted fs-7 mt-1">Logo/brasão para cabeçalho</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-10">
+                            <h3 class="text-gray-900 fw-bold fs-4 mb-5">
+                                <i class="ki-duotone ki-setting-2 fs-2 text-dark me-2">
+                                    <span class="path1"></span>
+                                    <span class="path2"></span>
+                                </i>
+                                Variáveis de Formatação
+                            </h3>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-4 p-3 bg-light-dark rounded">
+                                        <code class="fs-6 fw-bold text-dark">${assinatura_padrao}</code>
+                                        <div class="text-muted fs-7 mt-1">Área de assinatura padrão</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-4 p-3 bg-light-dark rounded">
+                                        <code class="fs-6 fw-bold text-dark">${rodape}</code>
+                                        <div class="text-muted fs-7 mt-1">Texto do rodapé</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Fechar</button>
+                <button type="button" class="btn btn-primary" onclick="copiarTodasVariaveis()">
+                    <i class="ki-duotone ki-copy fs-6 me-1">
+                        <span class="path1"></span>
+                        <span class="path2"></span>
+                    </i>
+                    Copiar Lista de Variáveis
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+<!--end::Modal - Visualizar Variáveis-->
+
+<!--begin::Modal - Preview Template-->
+<div class="modal fade" id="kt_modal_preview" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered mw-900px">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="fw-bold" id="modal_preview_title">Preview do Template</h2>
+                <div class="btn btn-icon btn-sm btn-active-icon-primary" data-bs-dismiss="modal">
+                    <i class="ki-duotone ki-cross fs-1">
+                        <span class="path1"></span>
+                        <span class="path2"></span>
+                    </i>
+                </div>
+            </div>
+            <div class="modal-body py-10 px-lg-17">
+                <div class="row">
+                    <div class="col-12">
+                        <div id="preview_loading" class="text-center py-10">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="sr-only">Carregando...</span>
+                            </div>
+                            <div class="mt-3">Gerando preview do template...</div>
+                        </div>
+                        
+                        <div id="preview_content" style="display: none;">
+                            <div class="mb-5">
+                                <div class="notice d-flex bg-light-info rounded border-info border border-dashed p-4">
+                                    <i class="ki-duotone ki-information-5 fs-2 text-info me-4">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                        <span class="path3"></span>
+                                    </i>
+                                    <div class="d-flex flex-stack flex-grow-1">
+                                        <div class="fw-semibold">
+                                            <div class="fs-6 text-gray-700">Este é um preview com dados de exemplo</div>
+                                            <div class="fs-7 text-muted">As variáveis foram substituídas por valores fictícios para demonstração</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="card card-bordered">
+                                <div class="card-header">
+                                    <h3 class="card-title">
+                                        <i class="ki-duotone ki-document fs-3 text-primary me-2">
+                                            <span class="path1"></span>
+                                            <span class="path2"></span>
+                                        </i>
+                                        Documento Gerado
+                                    </h3>
+                                    <div class="card-toolbar">
+                                        <span class="badge badge-light-primary" id="preview_file_type"></span>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <pre id="preview_text" class="text-gray-800 fs-6" style="white-space: pre-wrap; font-family: 'Times New Roman', serif; line-height: 1.6;"></pre>
+                                </div>
+                            </div>
+                            
+                            <div class="separator my-8"></div>
+                            
+                            <div class="card card-bordered">
+                                <div class="card-header">
+                                    <h3 class="card-title">
+                                        <i class="ki-duotone ki-information-5 fs-3 text-success me-2">
+                                            <span class="path1"></span>
+                                            <span class="path2"></span>
+                                            <span class="path3"></span>
+                                        </i>
+                                        Dados de Exemplo Utilizados
+                                    </h3>
+                                </div>
+                                <div class="card-body">
+                                    <div id="preview_dados_exemplo"></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="preview_error" style="display: none;">
+                            <div class="alert alert-danger">
+                                <div class="alert-text" id="preview_error_message"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Fechar</button>
+                <button type="button" class="btn btn-primary" id="btn_editar_template" onclick="editarTemplateFromPreview()">
+                    <i class="ki-duotone ki-pencil fs-6 me-1">
+                        <span class="path1"></span>
+                        <span class="path2"></span>
+                    </i>
+                    Editar Template
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+<!--end::Modal - Preview Template-->
+
 @endsection
 
 @push('styles')
 <style>
-    /* Reduzir espaçamento entre linhas da tabela */
+    /* Melhor espaçamento da tabela */
     .table td {
-        padding-top: 0.5rem !important;
-        padding-bottom: 0.5rem !important;
+        padding: 1rem 0.75rem !important;
+        vertical-align: middle !important;
     }
     
     .table th {
-        padding-top: 0.75rem !important;
-        padding-bottom: 0.75rem !important;
+        padding: 1rem 0.75rem !important;
+        font-weight: 600 !important;
+        background-color: #f8f9fa !important;
+        border-bottom: 2px solid #e9ecef !important;
+    }
+    
+    /* Hover effect nas linhas */
+    .table tbody tr:hover {
+        background-color: #f8f9fa !important;
+        transition: background-color 0.15s ease;
+    }
+    
+    /* Melhor aparência dos badges */
+    .badge {
+        font-size: 0.75rem !important;
+        font-weight: 500 !important;
+        padding: 0.5rem 0.75rem !important;
+    }
+    
+    /* Botões mais compactos e alinhados */
+    .btn-sm {
+        padding: 0.4rem 0.8rem !important;
+        font-size: 0.75rem !important;
+        font-weight: 500 !important;
+    }
+    
+    /* Dropdown menu melhorado */
+    .dropdown-menu {
+        border: 1px solid #e9ecef !important;
+        box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.1) !important;
+    }
+    
+    .dropdown-item {
+        padding: 0.6rem 1rem !important;
+        font-size: 0.85rem !important;
+    }
+    
+    .dropdown-item:hover {
+        background-color: #f8f9fa !important;
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .table td, .table th {
+            padding: 0.75rem 0.5rem !important;
+        }
+        
+        .btn-sm {
+            padding: 0.3rem 0.6rem !important;
+            font-size: 0.7rem !important;
+        }
+        
+        .min-w-200px {
+            min-width: 150px !important;
+        }
+        
+        .min-w-150px {
+            min-width: 100px !important;
+        }
+    }
+    
+    /* Ícones com melhor alinhamento */
+    .ki-duotone {
+        display: inline-flex !important;
+        align-items: center !important;
     }
 </style>
 @endpush
@@ -798,6 +1185,142 @@ function validarTemplate(tipoId, tipoNome) {
                 icon: 'error'
             });
         });
+}
+
+// Função para visualizar variáveis do template
+function visualizarVariaveis(tipoId, tipoNome) {
+    // Atualizar título do modal
+    document.getElementById('modal_variables_title').textContent = 'Variáveis do Template: ' + tipoNome;
+    
+    // Exibir modal
+    const modal = new bootstrap.Modal(document.getElementById('kt_modal_variables'));
+    modal.show();
+}
+
+// Função para copiar todas as variáveis
+function copiarTodasVariaveis() {
+    const variaveis = [
+        // Variáveis da Proposição
+        '${numero_proposicao}',
+        '${tipo_proposicao}',
+        '${ementa}',
+        '${texto}',
+        '${justificativa}',
+        
+        // Variáveis do Autor
+        '${autor_nome}',
+        '${autor_cargo}',
+        '${autor_partido}',
+        
+        // Variáveis de Data
+        '${data_atual}',
+        '${ano}',
+        
+        // Variáveis da Câmara
+        '${nome_camara}',
+        '${municipio}',
+        '${endereco_camara}',
+        '${telefone_camara}',
+        '${website_camara}',
+        '${imagem_cabecalho}',
+        
+        // Variáveis de Formatação
+        '${assinatura_padrao}',
+        '${rodape}'
+    ];
+    
+    const textoVariaveis = variaveis.join('\n');
+    
+    navigator.clipboard.writeText(textoVariaveis).then(function() {
+        Swal.fire({
+            icon: 'success',
+            title: 'Copiado!',
+            text: 'Lista de variáveis copiada para a área de transferência.',
+            timer: 2000,
+            showConfirmButton: false
+        });
+    }, function(err) {
+        // Fallback para browsers mais antigos
+        const textArea = document.createElement('textarea');
+        textArea.value = textoVariaveis;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        
+        Swal.fire({
+            icon: 'success',
+            title: 'Copiado!',
+            text: 'Lista de variáveis copiada para a área de transferência.',
+            timer: 2000,
+            showConfirmButton: false
+        });
+    });
+}
+
+// Variáveis globais para o preview
+let currentPreviewTipoId = null;
+
+// Função para gerar preview do template
+function previewTemplate(tipoId, tipoNome) {
+    currentPreviewTipoId = tipoId;
+    
+    // Atualizar título do modal
+    document.getElementById('modal_preview_title').textContent = 'Preview: ' + tipoNome;
+    
+    // Resetar modal
+    document.getElementById('preview_loading').style.display = 'block';
+    document.getElementById('preview_content').style.display = 'none';
+    document.getElementById('preview_error').style.display = 'none';
+    
+    // Exibir modal
+    const modal = new bootstrap.Modal(document.getElementById('kt_modal_preview'));
+    modal.show();
+    
+    // Fazer requisição para gerar preview
+    fetch(`/templates/${tipoId}/preview`)
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('preview_loading').style.display = 'none';
+            
+            if (data.success) {
+                // Exibir conteúdo do preview
+                document.getElementById('preview_text').textContent = data.preview.conteudo;
+                document.getElementById('preview_file_type').textContent = data.preview.arquivo_tipo.toUpperCase();
+                
+                // Gerar tabela com dados de exemplo
+                const dadosExemplo = data.preview.dados_exemplo;
+                let tabelaHtml = '<div class="table-responsive"><table class="table table-row-bordered align-middle"><thead><tr class="fw-bold fs-6 text-gray-800"><th>Variável</th><th>Valor Exemplo</th></tr></thead><tbody>';
+                
+                for (const [key, value] of Object.entries(dadosExemplo)) {
+                    tabelaHtml += `<tr>
+                        <td><code class="text-primary">\${${key}}</code></td>
+                        <td class="text-gray-700">${String(value).substring(0, 50)}${String(value).length > 50 ? '...' : ''}</td>
+                    </tr>`;
+                }
+                
+                tabelaHtml += '</tbody></table></div>';
+                document.getElementById('preview_dados_exemplo').innerHTML = tabelaHtml;
+                
+                document.getElementById('preview_content').style.display = 'block';
+            } else {
+                // Exibir erro
+                document.getElementById('preview_error_message').textContent = data.message;
+                document.getElementById('preview_error').style.display = 'block';
+            }
+        })
+        .catch(error => {
+            document.getElementById('preview_loading').style.display = 'none';
+            document.getElementById('preview_error_message').textContent = 'Erro ao conectar com o servidor: ' + error.message;
+            document.getElementById('preview_error').style.display = 'block';
+        });
+}
+
+// Função para editar template a partir do preview
+function editarTemplateFromPreview() {
+    if (currentPreviewTipoId) {
+        window.location.href = `/templates/${currentPreviewTipoId}/editor`;
+    }
 }
 </script>
 @endpush

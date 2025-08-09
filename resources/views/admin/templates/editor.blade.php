@@ -1,10 +1,11 @@
 {{-- Editor de Template - Administrador --}}
 <x-onlyoffice-editor
-    :document-key="$config['document']['key'] ?? $template->document_key ?? 'template_' . $tipo->id . '_' . time()"
-    :document-url="$config['document']['url'] ?? route('api.templates.download', $template->id)"
-    :document-title="'Template: ' . $tipo->nome"
-    document-type="rtf"
-    :callback-url="$config['editorConfig']['callbackUrl'] ?? route('api.onlyoffice.callback', $template->document_key ?? 'test')"
+    :document-key="$config['document']['key']"
+    :document-url="$config['document']['url']"
+    :document-title="$config['document']['title']"
+    :document-type="$config['documentType']"
+    :file-type="$config['document']['fileType']"
+    :callback-url="$config['editorConfig']['callbackUrl']"
     mode="edit"
     user-type="admin"
     :save-route="route('templates.salvar', $tipo)"

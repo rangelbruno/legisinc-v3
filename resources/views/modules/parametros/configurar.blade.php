@@ -40,7 +40,7 @@
             <!--begin::Actions-->
             <div class="d-flex align-items-center gap-2 gap-lg-3">
                 <!--begin::Secondary button-->
-                <a href="{{ route('parametros.show', $modulo->id) }}" class="btn btn-sm btn-flex btn-secondary">
+                <a href="{{ route('parametros.index') }}" class="btn btn-sm btn-flex btn-secondary">
                     <i class="ki-duotone ki-arrow-left fs-3"></i>
                     Voltar
                 </a>
@@ -313,9 +313,9 @@
                                     <p class="text-gray-600 fs-6 mb-6">
                                         Este módulo ainda não possui submódulos configurados.
                                     </p>
-                                    <a href="{{ route('parametros.show', $modulo->id) }}" class="btn btn-primary">
-                                        <i class="ki-duotone ki-plus fs-3"></i>
-                                        Criar Submódulo
+                                    <a href="{{ route('parametros.index') }}" class="btn btn-primary">
+                                        <i class="ki-duotone ki-arrow-left fs-3"></i>
+                                        Voltar aos Parâmetros
                                     </a>
                                 </div>
                             </div>

@@ -35,6 +35,13 @@ Route::post('/camaras/limpar-cache', function() {
     return app(App\Http\Controllers\Api\CamaraInfoController::class)->limparCache(request());
 })->name('api.camaras.limpar-cache');
 
+// AI Configuration API routes
+Route::prefix('ai')->name('api.ai.')->middleware(['web'])->group(function () {
+    Route::post('/test-connection', [App\Http\Controllers\Api\AIController::class, 'testarConexao'])->name('test-connection');
+    Route::get('/configurations', [App\Http\Controllers\Api\AIController::class, 'listarConfiguracoes'])->name('configurations');
+    Route::get('/stats', [App\Http\Controllers\Api\AIController::class, 'estatisticas'])->name('stats');
+});
+
 
 // Parâmetros API routes - Mantido para compatibilidade, mas deprecado
 Route::prefix('parametros')->name('api.parametros.')->middleware(['web'])->group(function () {

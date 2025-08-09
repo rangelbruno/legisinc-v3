@@ -427,6 +427,7 @@
                         "mode": "{{ $mode }}",
                         "lang": "pt-BR",
                         "region": "pt-BR",
+                        "callbackUrl": "{{ $callbackUrl }}",
                         "user": {
                             "id": "{{ $userId }}",
                             "name": "{{ $userName }}",

@@ -795,4 +795,77 @@ class TemplateController extends Controller
         
         return $texto;
     }
+    
+    /**
+     * Gerar preview do template com dados de exemplo
+     */
+    public function previewTemplate(TipoProposicao $tipo)
+    {
+        try {
+            $template = $tipo->template;
+            
+            if (!$template || !$template->arquivo_path) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Template não encontrado'
+                ], 404);
+            }
+
+            // Ler conteúdo do template
+            $conteudoTemplate = Storage::get($template->arquivo_path);
+            
+            // Dados de exemplo para preview
+            $dadosExemplo = [
+                'numero_proposicao' => '001/' . date('Y'),
+                'tipo_proposicao' => $tipo->nome,
+                'ementa' => $this->gerarEmentaExemplo($tipo),
+                'texto' => $this->gerarTextoExemplo($tipo),
+                'justificativa' => 'Esta é uma justificativa de exemplo para demonstrar como a variável será substituída no template.',
+                'autor_nome' => 'João Silva',
+                'autor_cargo' => 'Vereador',
+                'autor_partido' => 'PARTIDO',
+                'data_atual' => date('d/m/Y'),
+                'ano' => date('Y'),
+                'nome_camara' => 'Câmara Municipal de São Paulo',
+                'municipio' => 'São Paulo',
+                'endereco_camara' => 'Viaduto Jacareí, 100 - Bela Vista, São Paulo - SP',
+                'telefone_camara' => '(11) 3396-4000',
+                'website_camara' => 'www.camara.sp.gov.br',
+                'imagem_cabecalho' => '[LOGO DA CÂMARA]',
+                'assinatura_padrao' => "\n_____________________________\nJoão Silva\nVereador",
+                'rodape' => 'Câmara Municipal de São Paulo'
+            ];
+
+            // Processar template com dados de exemplo
+            $conteudoProcessado = $this->parametrosService->processarTemplate($conteudoTemplate, $dadosExemplo);
+            
+            // Se for RTF, extrair texto para preview
+            if (pathinfo($template->arquivo_path, PATHINFO_EXTENSION) === 'rtf') {
+                $textoLimpo = $this->extrairTextoRTF($conteudoProcessado);
+            } else {
+                $textoLimpo = $conteudoProcessado;
+            }
+
+            return response()->json([
+                'success' => true,
+                'preview' => [
+                    'conteudo' => $textoLimpo,
+                    'dados_exemplo' => $dadosExemplo,
+                    'tipo' => $tipo->nome,
+                    'arquivo_tipo' => pathinfo($template->arquivo_path, PATHINFO_EXTENSION)
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Erro ao gerar preview do template', [
+                'tipo_id' => $tipo->id,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Erro ao gerar preview: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }

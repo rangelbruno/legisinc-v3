@@ -289,10 +289,10 @@ Route::prefix('admin/parametros')->name('parametros.')->middleware(['auth', 'che
     Route::get('/create', [App\Http\Controllers\Parametro\ParametroController::class, 'create'])->name('create')->middleware('check.permission:parametros.create');
     Route::post('/', [App\Http\Controllers\Parametro\ParametroController::class, 'store'])->name('store')->middleware('check.permission:parametros.create');
     
-    // Rota específica para configuração de IA (deve vir antes das rotas com {id})
+    // Rota específica para configuração de IA (nova arquitetura com múltiplas APIs)
     Route::get('/configurar-ia', function() {
-        \Log::info('configurar-ia route hit', ['request_path' => request()->path()]);
-        return app(App\Http\Controllers\Parametro\ParametroController::class)->configurar('Configuração de IA');
+        \Log::info('Redirecionando para configurações de IA', ['user' => auth()->id()]);
+        return redirect()->route('admin.ai-configurations.index');
     })->name('configurar-ia')->middleware('check.permission:parametros.view');
     
     Route::get('/{id}', [App\Http\Controllers\Parametro\ParametroController::class, 'show'])->name('show')->middleware('check.permission:parametros.view')->where('id', '[0-9]+');
@@ -1078,6 +1078,8 @@ Route::prefix('admin')->middleware(['auth', 'check.screen.permission'])->group(f
          ->name('templates.regenerar-todos');
     Route::get('templates/status', [App\Http\Controllers\TemplateController::class, 'status'])
          ->name('templates.status');
+    Route::get('templates/{tipo}/preview', [App\Http\Controllers\TemplateController::class, 'previewTemplate'])
+         ->name('templates.preview');
     
     // Rotas para Padrões Legais
     Route::post('templates/{tipo}/gerar-padroes-legais', [App\Http\Controllers\TemplateController::class, 'gerarComPadroesLegais'])
@@ -1109,6 +1111,29 @@ Route::prefix('admin')->middleware(['auth', 'check.screen.permission'])->group(f
         Route::post('/{documentoTemplate}/duplicate', [App\Http\Controllers\DocumentoTemplateController::class, 'duplicate'])->name('duplicate');
     });
     
+    // AI Configurations routes
+    Route::prefix('ai-configurations')->name('admin.ai-configurations.')->group(function () {
+        Route::get('/', [App\Http\Controllers\Admin\AIConfigurationController::class, 'index'])->name('index');
+        Route::get('/create', [App\Http\Controllers\Admin\AIConfigurationController::class, 'create'])->name('create');
+        Route::post('/', [App\Http\Controllers\Admin\AIConfigurationController::class, 'store'])->name('store');
+        
+        // AJAX routes (must come BEFORE parameterized routes)
+        Route::post('/test-data', [App\Http\Controllers\Admin\AIConfigurationController::class, 'testConnectionData'])->name('test-data');
+        Route::post('/test-all', [App\Http\Controllers\Admin\AIConfigurationController::class, 'testAllConnections'])->name('test-all');
+        Route::get('/provider-models', [App\Http\Controllers\Admin\AIConfigurationController::class, 'getProviderModels'])->name('provider-models');
+        Route::post('/reorder', [App\Http\Controllers\Admin\AIConfigurationController::class, 'reorder'])->name('reorder');
+        Route::get('/usage-stats', [App\Http\Controllers\Admin\AIConfigurationController::class, 'getUsageStats'])->name('usage-stats');
+        
+        // Parameterized routes (must come AFTER specific routes)
+        Route::get('/{aiConfiguration}', [App\Http\Controllers\Admin\AIConfigurationController::class, 'show'])->name('show');
+        Route::get('/{aiConfiguration}/edit', [App\Http\Controllers\Admin\AIConfigurationController::class, 'edit'])->name('edit');
+        Route::put('/{aiConfiguration}', [App\Http\Controllers\Admin\AIConfigurationController::class, 'update'])->name('update');
+        Route::delete('/{aiConfiguration}', [App\Http\Controllers\Admin\AIConfigurationController::class, 'destroy'])->name('destroy');
+        Route::post('/{aiConfiguration}/test', [App\Http\Controllers\Admin\AIConfigurationController::class, 'testConnection'])->name('test');
+        Route::post('/{aiConfiguration}/toggle-active', [App\Http\Controllers\Admin\AIConfigurationController::class, 'toggleActive'])->name('toggle-active');
+        Route::post('/{aiConfiguration}/reset-usage', [App\Http\Controllers\Admin\AIConfigurationController::class, 'resetDailyUsage'])->name('reset-usage');
+    });
+
     // System Diagnostic routes
     Route::get('system-diagnostic', [App\Http\Controllers\Admin\SystemDiagnosticController::class, 'index'])
          ->name('admin.system-diagnostic.index');

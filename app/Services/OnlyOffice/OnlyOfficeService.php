@@ -43,8 +43,30 @@ class OnlyOfficeService
         
         // Detectar tipo de arquivo pelo caminho
         $fileExtension = pathinfo($template->arquivo_path, PATHINFO_EXTENSION);
-        $fileType = $fileExtension === 'txt' ? 'txt' : 'rtf';
-        $documentType = $fileExtension === 'txt' ? 'text' : 'word';
+        
+        // Configurar tipo correto para OnlyOffice
+        switch ($fileExtension) {
+            case 'txt':
+                $fileType = 'txt';
+                $documentType = 'text';
+                break;
+            case 'rtf':
+                $fileType = 'rtf';
+                $documentType = 'text'; // RTF é tratado como texto no OnlyOffice
+                break;
+            case 'docx':
+                $fileType = 'docx';
+                $documentType = 'word';
+                break;
+            case 'doc':
+                $fileType = 'doc';
+                $documentType = 'word';
+                break;
+            default:
+                $fileType = 'rtf';
+                $documentType = 'text';
+                break;
+        }
         
         $config = [
             'document' => [
@@ -71,7 +93,7 @@ class OnlyOfficeService
             'documentType' => $documentType,
             'editorConfig' => [
                 'mode' => 'edit',
-                'callbackUrl' => $this->ajustarCallbackUrl(route('api.onlyoffice.callback', $template->document_key)),
+                'callbackUrl' => $this->ajustarCallbackUrl(route('api.onlyoffice.callback', $documentKeyWithVersion)),
                 'lang' => 'pt-BR',
                 'region' => 'pt-BR',
                 'user' => [

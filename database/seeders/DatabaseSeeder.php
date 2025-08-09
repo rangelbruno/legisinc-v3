@@ -46,6 +46,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             ParametrosTemplatesSeeder::class,
             DocumentoModeloTemplateSeeder::class,
+            TipoProposicaoTemplatesSeeder::class,
         ]);
 
         // Seeder de permissões de tela por tipo de usuário
