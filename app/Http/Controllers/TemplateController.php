@@ -110,13 +110,13 @@ class TemplateController extends Controller
         
         // Sempre gerar novo document_key se:
         // 1. Não houver um key
-        // 2. Passou mais de 2 minutos desde a última modificação
+        // 2. Passou mais de 30 minutos desde a última modificação (tempo aumentado para evitar conflitos)
         // 3. Não há callback em processamento
         // 4. Nova sessão detectada (logout/login)
         $tempoDesdeUltimaModificacao = $template->updated_at->diffInMinutes(now());
         
         if (empty($template->document_key) || 
-            ($tempoDesdeUltimaModificacao > 2 && !$callbackEmProcessamento) ||
+            ($tempoDesdeUltimaModificacao > 30 && !$callbackEmProcessamento) ||
             $novaSessao) {
             
             $novoDocumentKey = 'template_' . $tipo->id . '_' . time() . '_' . uniqid();

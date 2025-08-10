@@ -436,8 +436,8 @@
                         "customization": {
                             "about": false,
                             "feedback": false,
-                            "forcesave": false,
-                            "autosave": false,
+                            "forcesave": true,
+                            "autosave": true,
                             "toolbarNoTabs": true,
                             "toolbarHideFileName": true,
                             "zoom": 100,
@@ -558,59 +558,22 @@
                 
                 if (this.docEditor) {
                     try {
-                        let saveTriggered = false;
+                        // Método correto do OnlyOffice para forçar salvamento
+                        // Este método deve gerar um callback com status 6 (force save)
+                        this.docEditor.serviceCommand("forcesave", null);
+                        console.log('serviceCommand forcesave executado');
                         
-                        // Tentar usar o método nativo de salvamento do OnlyOffice
-                        if (typeof this.docEditor.requestSaveAs === 'function') {
-                            this.docEditor.requestSaveAs();
-                            saveTriggered = true;
-                            console.log('Usado requestSaveAs()');
-                        } else if (typeof this.docEditor.serviceCommand === 'function') {
-                            // Método mais direto usando serviceCommand
-                            this.docEditor.serviceCommand('save');
-                            saveTriggered = true;
-                            console.log('Usado serviceCommand(save)');
-                        }
-                        
-                        // Fallback mais agressivo: forçar mudança real no documento
-                        if (!saveTriggered) {
-                            // Usar postMessage para comunicar com o iframe do OnlyOffice
-                            try {
-                                const iframe = document.querySelector('#' + this.editorId + ' iframe');
-                                if (iframe && iframe.contentWindow) {
-                                    iframe.contentWindow.postMessage({
-                                        type: 'onExternalPluginMessage',
-                                        data: {
-                                            type: 'save'
-                                        }
-                                    }, '*');
-                                    console.log('Usado postMessage para save');
-                                    saveTriggered = true;
-                                }
-                            } catch (postError) {
-                                console.log('PostMessage falhou, usando fallback final');
-                            }
-                        }
-                        
-                        // Último recurso: marcar como modificado
-                        if (!saveTriggered) {
-                            this.documentModified = true;
-                            this.onDocumentStateChange({ data: true });
-                            console.log('Fallback: marcando documento como modificado');
-                        }
-                        
+                        // Aguardar resposta do callback
                         setTimeout(() => {
-                            if (saveTriggered) {
-                                this.showToast('Salvamento solicitado ao OnlyOffice', 'success', 3000);
-                            } else {
-                                this.showToast('Use Ctrl+S para salvar manualmente', 'info', 3000);
-                            }
-                        }, 500);
+                            this.showToast('Documento salvo!', 'success', 3000);
+                            this.updateStatusBadge('saved');
+                            this.documentModified = false;
+                        }, 3000);
                         
                     } catch (error) {
-                        console.error('Erro no salvamento:', error);
+                        console.error('Erro no serviceCommand forcesave:', error);
                         this.updateStatusBadge('error');
-                        this.showToast('Use Ctrl+S para salvar', 'warning', 4000);
+                        this.showToast('Erro ao salvar. Tente usar Ctrl+S', 'error', 5000);
                     }
                 } else {
                     this.showToast('Editor ainda não foi carregado', 'warning', 4000);
