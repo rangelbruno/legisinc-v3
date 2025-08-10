@@ -102,23 +102,75 @@
                             </div>
                         </div>
 
-                        <!-- Modelo -->
+                        <!-- Opções de Preenchimento -->
+                        <div class="mb-4" id="opcoes-preenchimento-container" style="display: none;">
+                            <label class="form-label required">Como deseja criar o texto da proposição?</label>
+                            <div class="row g-3 justify-content-center">
+                                <div class="col-md-5">
+                                    <div class="card h-100 opcao-card" data-opcao="manual">
+                                        <div class="card-body text-center">
+                                            <i class="fas fa-edit fa-2x text-success mb-3"></i>
+                                            <h6 class="card-title">Texto Personalizado</h6>
+                                            <p class="card-text small">Escreva o texto principal e use modelo para formatação</p>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="opcao_preenchimento" id="escrever_manual" value="manual">
+                                                <label class="form-check-label" for="escrever_manual">
+                                                    Texto Personalizado
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-5">
+                                    <div class="card h-100 opcao-card" data-opcao="ia">
+                                        <div class="card-body text-center">
+                                            <i class="fas fa-robot fa-2x text-info mb-3"></i>
+                                            <h6 class="card-title">Texto com IA</h6>
+                                            <p class="card-text small">IA gera o texto e aplica no modelo para formatação</p>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="opcao_preenchimento" id="usar_ia_radio" value="ia">
+                                                <label class="form-check-label" for="usar_ia_radio">
+                                                    Texto com IA
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Modelo (sempre aparece quando uma opção for selecionada) -->
                         <div class="mb-4" id="modelo-container" style="display: none;">
-                            <label for="modelo" class="form-label required">Selecionar Modelo</label>
+                            <label for="modelo" class="form-label required">Selecionar Modelo (para formatação)</label>
                             <select name="modelo" id="modelo" class="form-select" data-control="select2" data-placeholder="Selecione um modelo">
                                 <option value="">Carregando modelos...</option>
                             </select>
                             <div class="form-text">
-                                Escolha um modelo base para sua proposição.
+                                O modelo será usado para manter a formatação correta da proposição, independente de como o texto for criado.
+                            </div>
+                        </div>
+
+                        <!-- Texto Manual -->
+                        <div class="mb-4" id="texto-manual-container" style="display: none;">
+                            <label for="texto_principal" class="form-label required">Texto Principal da Proposição</label>
+                            <textarea name="texto_principal" id="texto_principal" class="form-control" rows="10" placeholder="Digite aqui o texto principal da sua proposição..."></textarea>
+                            <div class="form-text">
+                                Escreva o conteúdo completo da proposição. Use linguagem técnica e formal apropriada.
+                            </div>
+                            <div class="mt-2">
+                                <small class="text-muted">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    <strong>Dica:</strong> Você pode formatar o texto na etapa seguinte usando o editor avançado.
+                                </small>
                             </div>
                         </div>
 
                         <!-- Geração via IA -->
                         <div class="mb-4" id="ia-container" style="display: none;">
-                            <div class="card border-primary">
-                                <div class="card-header bg-light-primary">
+                            <div class="card border-info">
+                                <div class="card-header bg-light-info">
                                     <h6 class="card-title mb-0">
-                                        <i class="fas fa-robot text-primary me-2"></i>
+                                        <i class="fas fa-robot text-info me-2"></i>
                                         Geração Automática via IA
                                     </h6>
                                 </div>
@@ -127,15 +179,9 @@
                                         Use inteligência artificial para gerar automaticamente o texto da proposição baseado na ementa fornecida.
                                     </p>
                                     <div class="d-flex gap-2 align-items-center">
-                                        <button type="button" class="btn btn-primary" id="btn-gerar-ia">
+                                        <button type="button" class="btn btn-info" id="btn-gerar-ia">
                                             <i class="fas fa-magic me-2"></i>Gerar Texto via IA
                                         </button>
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" id="usar_ia" name="usar_ia" value="1">
-                                            <label class="form-check-label" for="usar_ia">
-                                                Usar IA para gerar texto
-                                            </label>
-                                        </div>
                                     </div>
                                     <div id="ia-status" class="mt-3" style="display: none;">
                                         <div class="alert alert-info">
@@ -192,6 +238,18 @@
                         </ul>
                     </div>
 
+                    <div class="mb-3">
+                        <h6 class="fw-bold">Opções de Texto:</h6>
+                        <ul class="list-unstyled small">
+                            <li><strong>Personalizado:</strong> Escreva seu próprio texto</li>
+                            <li><strong>IA:</strong> Texto gerado automaticamente</li>
+                        </ul>
+                        <p class="small text-muted">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Em ambos os casos, o modelo será usado para manter a formatação ABNT.
+                        </p>
+                    </div>
+
                     <div class="alert alert-info">
                         <small>
                             <i class="fas fa-lightbulb me-1"></i>
@@ -219,8 +277,9 @@ $(document).ready(function() {
         const dados = {
             tipo: $('#tipo').val(),
             ementa: $('#ementa').val(),
+            opcao_preenchimento: $('input[name="opcao_preenchimento"]:checked').val(),
             modelo: $('#modelo').val(),
-            usar_ia: $('#usar_ia').is(':checked'),
+            texto_manual: $('#texto_principal').val(),
             timestamp: Date.now()
         };
         
@@ -258,8 +317,7 @@ $(document).ready(function() {
                 
                 // Mostrar containers que dependem do tipo
                 $('#ementa-container').show();
-                $('#modelo-container').show();
-                $('#ia-container').show();
+                $('#opcoes-preenchimento-container').show();
                 
                 // Carregar modelos para o tipo selecionado
                 carregarModelos(dados.tipo);
@@ -270,7 +328,7 @@ $(document).ready(function() {
                         console.log('Restaurando modelo:', dados.modelo);
                         $('#modelo').val(dados.modelo).trigger('change');
                     }
-                }, 1000); // Aumentei o tempo para garantir que os modelos sejam carregados
+                }, 1000);
             }
             
             if (dados.ementa) {
@@ -278,9 +336,16 @@ $(document).ready(function() {
                 $('#ementa').val(dados.ementa);
             }
             
-            if (dados.usar_ia) {
-                console.log('Restaurando usar_ia:', dados.usar_ia);
-                $('#usar_ia').prop('checked', true);
+            // Restaurar opção de preenchimento
+            if (dados.opcao_preenchimento) {
+                console.log('Restaurando opção de preenchimento:', dados.opcao_preenchimento);
+                $(`input[name="opcao_preenchimento"][value="${dados.opcao_preenchimento}"]`).prop('checked', true).trigger('change');
+            }
+            
+            // Restaurar texto manual se existir
+            if (dados.texto_manual) {
+                console.log('Restaurando texto manual:', dados.texto_manual.substring(0, 50) + '...');
+                $('#texto_principal').val(dados.texto_manual);
             }
             
             // Restaurar texto da IA se existir
@@ -333,21 +398,59 @@ $(document).ready(function() {
         const tipo = $(this).val();
         
         if (tipo) {
-            carregarModelos(tipo);
             $('#ementa-container').show();
-            $('#modelo-container').show();
-            $('#ia-container').show();
+            $('#opcoes-preenchimento-container').show();
+            carregarModelos(tipo); // Carrega os modelos mas não mostra o container ainda
         } else {
             $('#ementa-container').hide();
+            $('#opcoes-preenchimento-container').hide();
             $('#modelo-container').hide();
+            $('#texto-manual-container').hide();
             $('#ia-container').hide();
             $('#ementa').val('');
             $('#modelo').val('');
-            $('#usar_ia').prop('checked', false);
+            $('#texto_principal').val('');
+            $('input[name="opcao_preenchimento"]').prop('checked', false);
+            $('.opcao-card').removeClass('selected');
             $('#btn-continuar').prop('disabled', true);
         }
         
         // Validar formulário quando tipo for alterado
+        validarFormulario();
+    });
+
+    // Gerenciar opções de preenchimento
+    $('input[name="opcao_preenchimento"]').on('change', function() {
+        const opcao = $(this).val();
+        
+        // Remove seleção visual de todos os cards
+        $('.opcao-card').removeClass('selected');
+        
+        // Adiciona seleção visual ao card escolhido
+        $(this).closest('.opcao-card').addClass('selected');
+        
+        // SEMPRE mostra o modelo (necessário para formatação)
+        $('#modelo-container').show();
+        
+        // Esconde os containers opcionais
+        $('#texto-manual-container').hide();
+        $('#ia-container').hide();
+        
+        // Mostra container adicional conforme opção
+        switch(opcao) {
+            case 'manual':
+                $('#texto-manual-container').show();
+                break;
+            case 'ia':
+                $('#ia-container').show();
+                break;
+        }
+        
+        validarFormulario();
+    });
+
+    // Validação para o texto manual
+    $('#texto_principal').on('input keyup', function() {
         validarFormulario();
     });
 
@@ -361,11 +464,9 @@ $(document).ready(function() {
         gerarTextoViaIA();
     });
 
-    // Alternar entre usar IA e não usar
-    $('#usar_ia').on('change', function() {
-        console.log('DEBUG: Checkbox usar_ia mudou para:', $(this).is(':checked'));
-        validarFormulario();
-        salvarDadosFormulario(); // Auto-salvar quando mudar
+    // Auto-salvar quando opção de preenchimento mudar
+    $('input[name="opcao_preenchimento"]').on('change', function() {
+        salvarDadosFormulario();
     });
 
     // Auto-salvar quando campos importantes mudarem
@@ -385,6 +486,15 @@ $(document).ready(function() {
         salvarDadosFormulario();
     });
 
+    // Auto-salvar para texto manual
+    $('#texto_principal').on('input keyup blur', function() {
+        // Debounce para evitar muitas chamadas
+        clearTimeout(window.textoManualTimeout);
+        window.textoManualTimeout = setTimeout(() => {
+            salvarDadosFormulario();
+        }, 500);
+    });
+
     // Salvar rascunho
     $('#btn-salvar-rascunho').on('click', function() {
         salvarRascunho();
@@ -394,54 +504,65 @@ $(document).ready(function() {
     $('#form-criar-proposicao').on('submit', function(e) {
         e.preventDefault();
         
-        const usarIA = $('#usar_ia').is(':checked');
+        const opcaoPreenchimento = $('input[name="opcao_preenchimento"]:checked').val();
         const modeloId = $('#modelo').val();
+        const textoManual = $('#texto_principal').val();
         
         console.log('DEBUG: Form submit initiated', {
-            usarIA: usarIA,
+            opcaoPreenchimento: opcaoPreenchimento,
             modeloId: modeloId,
+            textoManual: textoManual ? textoManual.substring(0, 50) + '...' : null,
             temTextoIA: !!window.textoGeradoIA,
             textoIA: window.textoGeradoIA ? window.textoGeradoIA.substring(0, 50) + '...' : 'null',
             proposicaoId: proposicaoId
         });
         
-        // Só exigir modelo se NÃO estiver usando IA
-        if (!usarIA && !modeloId) {
-            alert('Selecione um modelo para continuar.');
+        // Validações específicas por opção - SEMPRE precisa de modelo para manter formatação
+        if (!modeloId) {
+            alert('Selecione um modelo para manter a formatação correta da proposição.');
             return;
         }
         
-        // Se usar IA, verificar se há texto gerado
-        if (usarIA && !window.textoGeradoIA) {
-            alert('Gere o texto via IA antes de continuar.');
-            return;
+        switch(opcaoPreenchimento) {
+            case 'manual':
+                if (!textoManual || textoManual.trim().length < 10) {
+                    alert('Digite o texto principal da proposição (mínimo 10 caracteres).');
+                    return;
+                }
+                break;
+            case 'ia':
+                if (!window.textoGeradoIA) {
+                    alert('Gere o texto via IA antes de continuar.');
+                    return;
+                }
+                break;
+            default:
+                alert('Selecione como deseja criar o texto da proposição.');
+                return;
         }
         
         if (proposicaoId) {
             // Já tem proposição salva, continuar direto
             console.log('Debug: Proposição já existe', {
                 proposicaoId: proposicaoId,
-                usarIA: usarIA,
+                opcaoPreenchimento: opcaoPreenchimento,
                 temTextoIA: !!window.textoGeradoIA,
-                modeloId: modeloId
+                modeloId: modeloId,
+                textoManual: textoManual
             });
             
-            if (usarIA && window.textoGeradoIA) {
-                // Se usou IA, ir direto ao editor OnlyOffice para parlamentares
-                console.log('Debug: Redirecionando para OnlyOffice com IA');
-                // Limpar dados salvos pois vamos continuar
-                limparDadosFormulario();
-                window.location.href = `/proposicoes/${proposicaoId}/onlyoffice/editor-parlamentar?ai_content=true`;
-            } else {
-                // Fluxo normal - preencher modelo
-                console.log('Debug: Redirecionando para preencher modelo, modeloId:', modeloId);
-                if (!modeloId) {
-                    alert('Erro: Modelo não selecionado para fluxo tradicional');
-                    return;
-                }
-                // Limpar dados salvos pois vamos continuar
-                limparDadosFormulario();
-                window.location.href = `/proposicoes/${proposicaoId}/preencher-modelo/${modeloId}`;
+            // Limpar dados salvos pois vamos continuar
+            limparDadosFormulario();
+            
+            switch(opcaoPreenchimento) {
+                case 'manual':
+                    console.log('Debug: Processando texto manual e redirecionando para visualização');
+                    window.location.href = `/proposicoes/${proposicaoId}/processar-texto-e-redirecionar/${modeloId}?tipo=manual`;
+                    break;
+                case 'ia':
+                    console.log('Debug: Processando texto IA e redirecionando para visualização');
+                    window.location.href = `/proposicoes/${proposicaoId}/processar-texto-e-redirecionar/${modeloId}?tipo=ia`;
+                    break;
             }
         } else {
             // Salvar rascunho primeiro, depois continuar
@@ -450,8 +571,10 @@ $(document).ready(function() {
             const dados = {
                 tipo: $('#tipo').val(),
                 ementa: $('#ementa').val() || 'Proposição em elaboração',
-                usar_ia: usarIA ? 1 : 0,
-                texto_ia: usarIA ? window.textoGeradoIA : null,
+                opcao_preenchimento: opcaoPreenchimento,
+                usar_ia: opcaoPreenchimento === 'ia' ? 1 : 0,
+                texto_ia: opcaoPreenchimento === 'ia' ? window.textoGeradoIA : null,
+                texto_manual: opcaoPreenchimento === 'manual' ? textoManual : null,
                 _token: $('meta[name="csrf-token"]').attr('content')
             };
 
@@ -461,27 +584,24 @@ $(document).ready(function() {
                         proposicaoId = response.proposicao_id;
                         console.log('Debug: Proposição salva com sucesso', {
                             proposicaoId: proposicaoId,
-                            usarIA: usarIA,
+                            opcaoPreenchimento: opcaoPreenchimento,
                             temTextoIA: !!window.textoGeradoIA,
-                            modeloId: modeloId
+                            modeloId: modeloId,
+                            textoManual: textoManual
                         });
                         
-                        if (usarIA && window.textoGeradoIA) {
-                            // Se usou IA, ir direto ao editor OnlyOffice para parlamentares
-                            console.log('Debug: Redirecionando para OnlyOffice com IA após salvar');
-                            // Limpar dados salvos pois vamos continuar
-                            limparDadosFormulario();
-                            window.location.href = `/proposicoes/${proposicaoId}/onlyoffice/editor-parlamentar?ai_content=true`;
-                        } else {
-                            // Fluxo normal - preencher modelo
-                            console.log('Debug: Redirecionando para preencher modelo após salvar, modeloId:', modeloId);
-                            if (!modeloId) {
-                                alert('Erro: Modelo não selecionado para fluxo tradicional após salvar');
-                                return;
-                            }
-                            // Limpar dados salvos pois vamos continuar
-                            limparDadosFormulario();
-                            window.location.href = `/proposicoes/${proposicaoId}/preencher-modelo/${modeloId}`;
+                        // Limpar dados salvos pois vamos continuar
+                        limparDadosFormulario();
+                        
+                        switch(opcaoPreenchimento) {
+                            case 'manual':
+                                console.log('Debug: Processando texto manual após salvar e redirecionando para visualização');
+                                window.location.href = `/proposicoes/${proposicaoId}/processar-texto-e-redirecionar/${modeloId}?tipo=manual`;
+                                break;
+                            case 'ia':
+                                console.log('Debug: Processando texto IA após salvar e redirecionando para visualização');
+                                window.location.href = `/proposicoes/${proposicaoId}/processar-texto-e-redirecionar/${modeloId}?tipo=ia`;
+                                break;
                         }
                     }
                 })
@@ -567,20 +687,24 @@ $(document).ready(function() {
     function validarFormulario() {
         const tipo = $('#tipo').val();
         const ementa = $('#ementa').val();
+        const opcaoPreenchimento = $('input[name="opcao_preenchimento"]:checked').val();
         const modelo = $('#modelo').val();
-        const usarIA = $('#usar_ia').is(':checked');
+        const textoManual = $('#texto_principal').val();
 
-        // Permitir continuar se tipo, ementa e modelo estão preenchidos
-        // OU se vai usar IA (tipo e ementa suficientes)
-        const valido = tipo && ementa && (modelo || usarIA);
-        $('#btn-continuar').prop('disabled', !valido);
-        
-        // Mostrar/esconder seleção de modelo baseado no uso de IA
-        if (usarIA) {
-            $('#modelo-container').slideUp();
-        } else {
-            $('#modelo-container').slideDown();
+        let valido = false;
+
+        if (tipo && ementa && opcaoPreenchimento && modelo) {
+            switch(opcaoPreenchimento) {
+                case 'manual':
+                    valido = textoManual && textoManual.trim().length > 10; // Mínimo 10 caracteres
+                    break;
+                case 'ia':
+                    valido = !!window.textoGeradoIA; // Deve ter texto gerado
+                    break;
+            }
         }
+
+        $('#btn-continuar').prop('disabled', !valido);
     }
 
     // Função para gerar texto via IA
@@ -608,7 +732,7 @@ $(document).ready(function() {
             
             if (response.success) {
                 toastr.success('Texto gerado via IA com sucesso!');
-                $('#usar_ia').prop('checked', true);
+                $('#usar_ia_radio').prop('checked', true).trigger('change');
                 
                 // Salvar o texto gerado para usar depois
                 window.textoGeradoIA = response.texto;
@@ -677,6 +801,65 @@ $(document).ready(function() {
 .form-text {
     font-size: 0.875rem;
     color: #6c757d;
+}
+
+/* Estilos para os cards de opções */
+.opcao-card {
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 2px solid #e1e5e9;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.opcao-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0,123,255,0.15);
+    border-color: #007bff;
+}
+
+.opcao-card.selected {
+    border-color: #007bff;
+    background: linear-gradient(145deg, rgba(0,123,255,0.05) 0%, rgba(0,123,255,0.02) 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0,123,255,0.2);
+}
+
+.opcao-card .form-check-input:checked {
+    background-color: #007bff;
+    border-color: #007bff;
+}
+
+.opcao-card .card-body {
+    padding: 1.5rem;
+}
+
+.opcao-card .card-title {
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 0.75rem;
+}
+
+.opcao-card.selected .card-title {
+    color: #007bff;
+}
+
+.opcao-card .card-text {
+    color: #6c757d;
+    line-height: 1.4;
+    margin-bottom: 1rem;
+}
+
+.opcao-card .form-check {
+    margin-bottom: 0;
+}
+
+.opcao-card .form-check-label {
+    font-weight: 500;
+    color: #495057;
+}
+
+.opcao-card.selected .form-check-label {
+    color: #007bff;
 }
 
 /* Estilos Select2 Moderno - Tema Padrão */

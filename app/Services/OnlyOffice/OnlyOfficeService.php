@@ -13,12 +13,32 @@ class OnlyOfficeService
     private string $serverUrl;
     private string $internalUrl;
     private string $jwtSecret;
+    private TemplateParametrosService $templateParametrosService;
 
-    public function __construct()
+    public function __construct(TemplateParametrosService $templateParametrosService)
     {
         $this->serverUrl = config('onlyoffice.server_url');
         $this->internalUrl = config('onlyoffice.internal_url');
         $this->jwtSecret = config('onlyoffice.jwt_secret');
+        $this->templateParametrosService = $templateParametrosService;
+    }
+
+    /**
+     * Obter dados da câmara dos parâmetros
+     */
+    private function obterDadosCamara(): array
+    {
+        $parametros = $this->templateParametrosService->obterParametrosTemplates();
+        
+        return [
+            'nome_oficial' => $parametros['Dados Gerais da Câmara.nome_camara_oficial'] ?? 'CÂMARA MUNICIPAL DE SÃO PAULO',
+            'endereco' => $parametros['Dados Gerais da Câmara.endereco_logradouro'] ?? 'Viaduto Jacareí, 100',
+            'bairro' => $parametros['Dados Gerais da Câmara.endereco_bairro'] ?? 'Bela Vista',
+            'municipio' => $parametros['Dados Gerais da Câmara.municipio_nome'] ?? 'São Paulo',
+            'uf' => $parametros['Dados Gerais da Câmara.municipio_uf'] ?? 'SP',
+            'legislatura' => $parametros['Dados Gerais da Câmara.legislatura_atual'] ?? '2021-2024',
+            'sessao' => $parametros['Dados Gerais da Câmara.sessao_atual'] ?? '2025'
+        ];
     }
 
     /**
@@ -1937,9 +1957,10 @@ ${texto}
             $phpWord->addParagraphStyle('right', ['alignment' => \PhpOffice\PhpWord\SimpleType\Jc::END]);
             
             // Cabeçalho institucional
-            $section->addText('CÂMARA MUNICIPAL DE SÃO PAULO', 'abntTitle', 'center');
-            $section->addText('Viaduto Jacareí, 100 - Bela Vista - São Paulo/SP', 'abntNormal', 'center');
-            $section->addText('Legislatura: 2021-2024 - Sessão: 2025', 'abntNormal', 'center');
+            $dadosCamara = $this->obterDadosCamara();
+            $section->addText($dadosCamara['nome_oficial'], 'abntTitle', 'center');
+            $section->addText($dadosCamara['endereco'] . ' - ' . $dadosCamara['bairro'] . ' - ' . $dadosCamara['municipio'] . '/' . $dadosCamara['uf'], 'abntNormal', 'center');
+            $section->addText('Legislatura: ' . $dadosCamara['legislatura'] . ' - Sessão: ' . $dadosCamara['sessao'], 'abntNormal', 'center');
             $section->addTextBreak(2);
             
             // Epígrafe
@@ -2066,9 +2087,13 @@ ${texto}
 ";
 
         // Cabeçalho institucional
-        $rtf .= "{\qc\b\fs28 CÂMARA MUNICIPAL DE SÃO PAULO\par}
-{\qc Viaduto Jacareí, 100 - Bela Vista - São Paulo/SP\par}
-{\qc Legislatura: 2021-2024 - Sessão: 2025\par}
+        $dadosCamara = $this->obterDadosCamara();
+        $enderecoCompleto = $dadosCamara['endereco'] . ' - ' . $dadosCamara['bairro'] . ' - ' . $dadosCamara['municipio'] . '/' . $dadosCamara['uf'];
+        $legislaturaCompleta = 'Legislatura: ' . $dadosCamara['legislatura'] . ' - Sessão: ' . $dadosCamara['sessao'];
+        
+        $rtf .= "{\qc\b\fs28 {$dadosCamara['nome_oficial']}\par}
+{\qc {$enderecoCompleto}\par}
+{\qc {$legislaturaCompleta}\par}
 \par
 \par
 ";

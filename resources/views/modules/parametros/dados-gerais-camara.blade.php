@@ -98,362 +98,386 @@
             <form id="dados-gerais-form" method="POST" action="{{ route('parametros.dados-gerais-camara.store') }}">
                 @csrf
                 
-                <div class="row g-6">
-                    <!--begin::Col-->
-                    <div class="col-lg-6">
-                        <!--begin::Card-->
-                        <div class="card card-flush">
-                            <!--begin::Card header-->
-                            <div class="card-header pt-5">
-                                <div class="card-title">
-                                    <h3 class="fw-bold text-gray-900">Identificação</h3>
-                                </div>
-                            </div>
-                            <!--end::Card header-->
-                            <!--begin::Card body-->
-                            <div class="card-body pt-0">
-                                <!--begin::Input group-->
-                                <div class="fv-row mb-7">
-                                    <label class="form-label fw-semibold fs-6 required">Nome da Câmara</label>
-                                    <div class="position-relative">
-                                        <input type="text" class="form-control form-control-solid" name="nome_camara" 
-                                               id="nome_camara_input"
-                                               value="" 
-                                               placeholder="Ex: Câmara Municipal de São Paulo ou digite apenas: São Paulo"
-                                               autocomplete="off"
-                                               required />
-                                        <div id="busca_loading" class="position-absolute top-50 end-0 translate-middle-y me-3" style="display: none;">
-                                            <div class="spinner-border spinner-border-sm text-primary" role="status">
-                                                <span class="visually-hidden">Buscando...</span>
-                                            </div>
-                                        </div>
-                                        <!-- Dropdown de sugestões -->
-                                        <div id="camara_suggestions" class="position-absolute w-100 bg-white border rounded shadow-sm" 
-                                             style="display: none; z-index: 1000; max-height: 300px; overflow-y: auto;">
-                                        </div>
-                                    </div>
-                                    <div class="form-text">
-                                        <i class="ki-duotone ki-information fs-6 text-warning me-1">
-                                            <span class="path1"></span>
-                                            <span class="path2"></span>
-                                            <span class="path3"></span>
-                                        </i>
-                                        Digite a cidade para preenchimento automático (dados são modelos genéricos - sempre verificar antes de salvar)
-                                    </div>
-                                    <!-- Alert de busca -->
-                                    <div id="busca_alert" class="alert alert-info d-none mt-3" role="alert">
-                                        <i class="ki-duotone ki-information-4 fs-2 text-info me-3">
-                                            <span class="path1"></span>
-                                            <span class="path2"></span>
-                                            <span class="path3"></span>
-                                        </i>
-                                        <div class="d-flex flex-column">
-                                            <h5 class="mb-1">Dados encontrados!</h5>
-                                            <span id="busca_message">Os campos serão preenchidos automaticamente</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <!--end::Input group-->
-
-                                <!--begin::Input group-->
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="fv-row mb-7">
-                                            <label class="form-label fw-semibold fs-6 required">Sigla</label>
-                                            <input type="text" class="form-control form-control-solid" name="sigla_camara" 
-                                                   value="{{ $configuracoes['sigla_camara'] ?? '' }}" maxlength="20" required />
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="fv-row mb-7">
-                                            <label class="form-label fw-semibold fs-6 required">CNPJ</label>
-                                            <input type="text" class="form-control form-control-solid" name="cnpj" 
-                                                   data-mask="00.000.000/0000-00"
-                                                   value="{{ $configuracoes['cnpj'] ?? '' }}" required />
-                                        </div>
-                                    </div>
-                                </div>
-                                <!--end::Input group-->
-                            </div>
-                            <!--end::Card body-->
+                <!--begin::Card with tabs-->
+                <div class="card card-flush">
+                    <!--begin::Card header-->
+                    <div class="card-header">
+                        <!--begin::Card title-->
+                        <div class="card-title">
+                            <h2 class="fw-bold">Configuração de Dados Gerais da Câmara</h2>
                         </div>
-                        <!--end::Card-->
-
-                        <!--begin::Card-->
-                        <div class="card card-flush mt-6">
-                            <!--begin::Card header-->
-                            <div class="card-header pt-5">
-                                <div class="card-title">
-                                    <h3 class="fw-bold text-gray-900">Endereço</h3>
-                                </div>
-                            </div>
-                            <!--end::Card header-->
-                            <!--begin::Card body-->
-                            <div class="card-body pt-0">
-                                <!--begin::Input group-->
-                                <div class="row">
-                                    <div class="col-md-8">
-                                        <div class="fv-row mb-7">
-                                            <label class="form-label fw-semibold fs-6 required">Endereço</label>
-                                            <input type="text" class="form-control form-control-solid" name="endereco" 
-                                                   value="{{ $configuracoes['endereco'] ?? '' }}" required />
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <div class="fv-row mb-7">
-                                            <label class="form-label fw-semibold fs-6">Número</label>
-                                            <input type="text" class="form-control form-control-solid" name="numero" 
-                                                   value="{{ $configuracoes['numero'] ?? '' }}" />
-                                        </div>
-                                    </div>
-                                </div>
-                                <!--end::Input group-->
-
-                                <!--begin::Input group-->
-                                <div class="fv-row mb-7">
-                                    <label class="form-label fw-semibold fs-6">Complemento</label>
-                                    <input type="text" class="form-control form-control-solid" name="complemento" 
-                                           value="{{ $configuracoes['complemento'] ?? '' }}" />
-                                </div>
-                                <!--end::Input group-->
-
-                                <!--begin::Input group-->
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="fv-row mb-7">
-                                            <label class="form-label fw-semibold fs-6 required">Bairro</label>
-                                            <input type="text" class="form-control form-control-solid" name="bairro" 
-                                                   value="{{ $configuracoes['bairro'] ?? '' }}" required />
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="fv-row mb-7">
-                                            <label class="form-label fw-semibold fs-6 required">CEP</label>
-                                            <input type="text" class="form-control form-control-solid" name="cep" 
-                                                   data-mask="00000-000"
-                                                   value="{{ $configuracoes['cep'] ?? '' }}" required />
-                                        </div>
-                                    </div>
-                                </div>
-                                <!--end::Input group-->
-
-                                <!--begin::Input group-->
-                                <div class="row">
-                                    <div class="col-md-8">
-                                        <div class="fv-row mb-7">
-                                            <label class="form-label fw-semibold fs-6 required">Cidade</label>
-                                            <input type="text" class="form-control form-control-solid" name="cidade" 
-                                                   value="{{ $configuracoes['cidade'] ?? '' }}" required />
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <div class="fv-row mb-7">
-                                            <label class="form-label fw-semibold fs-6 required">Estado</label>
-                                            <select class="form-select form-select-solid" name="estado" required>
-                                                <option value="">Selecione</option>
-                                                @foreach(['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'] as $uf)
-                                                    <option value="{{ $uf }}" {{ ($configuracoes['estado'] ?? '') == $uf ? 'selected' : '' }}>{{ $uf }}</option>
-                                                @endforeach
-                                            </select>
-                                        </div>
-                                    </div>
-                                </div>
-                                <!--end::Input group-->
-                            </div>
-                            <!--end::Card body-->
-                        </div>
-                        <!--end::Card-->
+                        <!--end::Card title-->
                     </div>
-                    <!--end::Col-->
-
-                    <!--begin::Col-->
-                    <div class="col-lg-6">
-                        <!--begin::Card-->
-                        <div class="card card-flush">
-                            <!--begin::Card header-->
-                            <div class="card-header pt-5">
-                                <div class="card-title">
-                                    <h3 class="fw-bold text-gray-900">Contatos</h3>
-                                </div>
-                            </div>
-                            <!--end::Card header-->
-                            <!--begin::Card body-->
-                            <div class="card-body pt-0">
-                                <!--begin::Input group-->
-                                <div class="row">
-                                    <div class="col-md-6">
+                    <!--end::Card header-->
+                    
+                    <!--begin::Card body-->
+                    <div class="card-body">
+                        <!--begin::Tabs-->
+                        <ul class="nav nav-tabs nav-line-tabs nav-line-tabs-2x mb-5 fs-6">
+                            <li class="nav-item">
+                                <a class="nav-link active" data-bs-toggle="tab" href="#kt_tab_identificacao">
+                                    <i class="ki-duotone ki-bank fs-3 me-2">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                    </i>
+                                    Identificação
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" data-bs-toggle="tab" href="#kt_tab_endereco">
+                                    <i class="ki-duotone ki-geolocation fs-3 me-2">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                    </i>
+                                    Endereço
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" data-bs-toggle="tab" href="#kt_tab_contatos">
+                                    <i class="ki-duotone ki-telephone fs-3 me-2">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                    </i>
+                                    Contatos
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" data-bs-toggle="tab" href="#kt_tab_funcionamento">
+                                    <i class="ki-duotone ki-time fs-3 me-2">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                    </i>
+                                    Funcionamento
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" data-bs-toggle="tab" href="#kt_tab_gestao">
+                                    <i class="ki-duotone ki-user-square fs-3 me-2">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                        <span class="path3"></span>
+                                    </i>
+                                    Gestão Atual
+                                </a>
+                            </li>
+                        </ul>
+                        <!--end::Tabs-->
+                        
+                        <!--begin::Tab content-->
+                        <div class="tab-content" id="myTabContent">
+                            <!--begin::Tab pane - Identificação-->
+                            <div class="tab-pane fade show active" id="kt_tab_identificacao" role="tabpanel">
+                                <div class="row g-6">
+                                    <div class="col-12">
+                                        <!--begin::Input group-->
                                         <div class="fv-row mb-7">
-                                            <label class="form-label fw-semibold fs-6 required">Telefone Principal</label>
-                                            <input type="text" class="form-control form-control-solid" name="telefone" 
-                                                   data-mask="(00) 0000-0000"
-                                                   value="{{ $configuracoes['telefone'] ?? '' }}" required />
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="fv-row mb-7">
-                                            <label class="form-label fw-semibold fs-6">Telefone Secundário</label>
-                                            <input type="text" class="form-control form-control-solid" name="telefone_secundario" 
-                                                   data-mask="(00) 0000-0000"
-                                                   value="{{ $configuracoes['telefone_secundario'] ?? '' }}" />
-                                        </div>
-                                    </div>
-                                </div>
-                                <!--end::Input group-->
-
-                                <!--begin::Input group-->
-                                <div class="fv-row mb-7">
-                                    <label class="form-label fw-semibold fs-6 required">E-mail Institucional</label>
-                                    <input type="email" class="form-control form-control-solid" name="email_institucional" 
-                                           value="{{ $configuracoes['email_institucional'] ?? '' }}" required />
-                                    <div class="form-text">E-mail principal da instituição</div>
-                                </div>
-                                <!--end::Input group-->
-
-                                <!--begin::Input group-->
-                                <div class="fv-row mb-7">
-                                    <label class="form-label fw-semibold fs-6">E-mail de Contato</label>
-                                    <input type="email" class="form-control form-control-solid" name="email_contato" 
-                                           value="{{ $configuracoes['email_contato'] ?? '' }}" />
-                                    <div class="form-text">E-mail para atendimento ao público</div>
-                                </div>
-                                <!--end::Input group-->
-
-                                <!--begin::Input group-->
-                                <div class="fv-row mb-7">
-                                    <label class="form-label fw-semibold fs-6">Website</label>
-                                    <input type="url" class="form-control form-control-solid" name="website" 
-                                           placeholder="https://"
-                                           value="{{ $configuracoes['website'] ?? '' }}" />
-                                </div>
-                                <!--end::Input group-->
-                            </div>
-                            <!--end::Card body-->
-                        </div>
-                        <!--end::Card-->
-
-                        <!--begin::Card-->
-                        <div class="card card-flush mt-6">
-                            <!--begin::Card header-->
-                            <div class="card-header pt-5">
-                                <div class="card-title">
-                                    <h3 class="fw-bold text-gray-900">Funcionamento</h3>
-                                </div>
-                            </div>
-                            <!--end::Card header-->
-                            <!--begin::Card body-->
-                            <div class="card-body pt-0">
-                                <!--begin::Input group-->
-                                <div class="fv-row mb-7">
-                                    <label class="form-label fw-semibold fs-6 required">Horário de Funcionamento</label>
-                                    <input type="text" class="form-control form-control-solid" name="horario_funcionamento" 
-                                           value="{{ $configuracoes['horario_funcionamento'] ?? '' }}" required />
-                                    <div class="form-text">Ex: Segunda a Sexta, 8h às 17h</div>
-                                </div>
-                                <!--end::Input group-->
-
-                                <!--begin::Input group-->
-                                <div class="fv-row mb-7">
-                                    <label class="form-label fw-semibold fs-6 required">Horário de Atendimento ao Público</label>
-                                    <input type="text" class="form-control form-control-solid" name="horario_atendimento" 
-                                           value="{{ $configuracoes['horario_atendimento'] ?? '' }}" required />
-                                    <div class="form-text">Ex: Segunda a Sexta, 8h às 16h</div>
-                                </div>
-                                <!--end::Input group-->
-                            </div>
-                            <!--end::Card body-->
-                        </div>
-                        <!--end::Card-->
-
-                        <!--begin::Card-->
-                        <div class="card card-flush mt-6">
-                            <!--begin::Card header-->
-                            <div class="card-header pt-5">
-                                <div class="card-title">
-                                    <h3 class="fw-bold text-gray-900">Gestão Atual</h3>
-                                </div>
-                            </div>
-                            <!--end::Card header-->
-                            <!--begin::Card body-->
-                            <div class="card-body pt-0">
-                                <!--begin::Input group-->
-                                <div class="row">
-                                    <div class="col-md-8">
-                                        <div class="fv-row mb-7">
-                                            <label class="form-label fw-semibold fs-6 required">Presidente da Câmara</label>
+                                            <label class="form-label fw-semibold fs-6 required">Nome da Câmara</label>
                                             <div class="position-relative">
-                                                <input type="text" class="form-control form-control-solid" 
-                                                       id="presidente_nome_input"
-                                                       name="presidente_nome" 
-                                                       value="{{ $configuracoes['presidente_nome'] ?? '' }}" 
-                                                       placeholder="Digite o nome do presidente para buscar..."
+                                                <input type="text" class="form-control form-control-solid" name="nome_camara" 
+                                                       id="nome_camara_input"
+                                                       value="{{ $configuracoes['nome_camara'] ?? '' }}" 
+                                                       placeholder="Ex: Câmara Municipal de São Paulo ou digite apenas: São Paulo"
                                                        autocomplete="off"
                                                        required />
-                                                <input type="hidden" name="presidente_id" id="presidente_id" />
-                                                
+                                                <div id="busca_loading" class="position-absolute top-50 end-0 translate-middle-y me-3" style="display: none;">
+                                                    <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                                        <span class="visually-hidden">Buscando...</span>
+                                                    </div>
+                                                </div>
                                                 <!-- Dropdown de sugestões -->
-                                                <div id="presidente_suggestions" class="position-absolute w-100 bg-white border rounded shadow-sm" 
-                                                     style="display: none; z-index: 1000; max-height: 300px; overflow-y: auto; top: 100%;">
+                                                <div id="camara_suggestions" class="position-absolute w-100 bg-white border rounded shadow-sm" 
+                                                     style="display: none; z-index: 1000; max-height: 300px; overflow-y: auto;">
+                                                </div>
+                                            </div>
+                                            <div class="form-text">
+                                                <i class="ki-duotone ki-information fs-6 text-warning me-1">
+                                                    <span class="path1"></span>
+                                                    <span class="path2"></span>
+                                                    <span class="path3"></span>
+                                                </i>
+                                                Digite a cidade para preenchimento automático (dados são modelos genéricos - sempre verificar antes de salvar)
+                                            </div>
+                                            <!-- Alert de busca -->
+                                            <div id="busca_alert" class="alert alert-info d-none mt-3" role="alert">
+                                                <i class="ki-duotone ki-information-4 fs-2 text-info me-3">
+                                                    <span class="path1"></span>
+                                                    <span class="path2"></span>
+                                                    <span class="path3"></span>
+                                                </i>
+                                                <div class="d-flex flex-column">
+                                                    <h5 class="mb-1">Dados encontrados!</h5>
+                                                    <span id="busca_message">Os campos serão preenchidos automaticamente</span>
                                                 </div>
                                             </div>
                                         </div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <div class="fv-row mb-7">
-                                            <label class="form-label fw-semibold fs-6 required">Partido</label>
-                                            <input type="text" class="form-control form-control-solid" 
-                                                   id="presidente_partido_input"
-                                                   name="presidente_partido" 
-                                                   value="{{ $configuracoes['presidente_partido'] ?? '' }}" 
-                                                   placeholder="Partido será preenchido automaticamente"
-                                                   required />
-                                        </div>
-                                    </div>
-                                </div>
-                                <!--end::Input group-->
+                                        <!--end::Input group-->
 
-                                <!--begin::Input group-->
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="fv-row mb-7">
-                                            <label class="form-label fw-semibold fs-6 required">Legislatura Atual</label>
-                                            <input type="text" class="form-control form-control-solid" name="legislatura_atual" 
-                                                   placeholder="2021-2024"
-                                                   value="{{ $configuracoes['legislatura_atual'] ?? '' }}" required />
+                                        <!--begin::Input group-->
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="fv-row mb-7">
+                                                    <label class="form-label fw-semibold fs-6 required">Sigla</label>
+                                                    <input type="text" class="form-control form-control-solid" name="sigla_camara" 
+                                                           value="{{ $configuracoes['sigla_camara'] ?? '' }}" maxlength="20" required />
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="fv-row mb-7">
+                                                    <label class="form-label fw-semibold fs-6 required">CNPJ</label>
+                                                    <input type="text" class="form-control form-control-solid" name="cnpj" 
+                                                           data-mask="00.000.000/0000-00"
+                                                           value="{{ $configuracoes['cnpj'] ?? '' }}" required />
+                                                </div>
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="fv-row mb-7">
-                                            <label class="form-label fw-semibold fs-6 required">Número de Vereadores</label>
-                                            <input type="number" class="form-control form-control-solid" name="numero_vereadores" 
-                                                   min="5" max="55"
-                                                   value="{{ $configuracoes['numero_vereadores'] ?? '' }}" required />
-                                        </div>
+                                        <!--end::Input group-->
                                     </div>
                                 </div>
-                                <!--end::Input group-->
                             </div>
-                            <!--end::Card body-->
-                        </div>
-                        <!--end::Card-->
-                    </div>
-                    <!--end::Col-->
-                </div>
+                            <!--end::Tab pane - Identificação-->
+                            
+                            <!--begin::Tab pane - Endereço-->
+                            <div class="tab-pane fade" id="kt_tab_endereco" role="tabpanel">
+                                <div class="row g-6">
+                                    <div class="col-12">
+                                        <!--begin::Input group-->
+                                        <div class="row">
+                                            <div class="col-md-8">
+                                                <div class="fv-row mb-7">
+                                                    <label class="form-label fw-semibold fs-6 required">Endereço</label>
+                                                    <input type="text" class="form-control form-control-solid" name="endereco" 
+                                                           value="{{ $configuracoes['endereco'] ?? '' }}" required />
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="fv-row mb-7">
+                                                    <label class="form-label fw-semibold fs-6">Número</label>
+                                                    <input type="text" class="form-control form-control-solid" name="numero" 
+                                                           value="{{ $configuracoes['numero'] ?? '' }}" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <!--end::Input group-->
 
-                <!--begin::Actions-->
-                <div class="card mt-6">
-                    <div class="card-body">
-                        <div class="text-center">
-                            <button type="reset" class="btn btn-light me-3">Cancelar</button>
-                            <button type="submit" class="btn btn-primary">
-                                <span class="indicator-label">Salvar Configurações</span>
-                                <span class="indicator-progress">Salvando...
-                                    <span class="spinner-border spinner-border-sm align-middle ms-2"></span>
-                                </span>
-                            </button>
+                                        <!--begin::Input group-->
+                                        <div class="fv-row mb-7">
+                                            <label class="form-label fw-semibold fs-6">Complemento</label>
+                                            <input type="text" class="form-control form-control-solid" name="complemento" 
+                                                   value="{{ $configuracoes['complemento'] ?? '' }}" />
+                                        </div>
+                                        <!--end::Input group-->
+
+                                        <!--begin::Input group-->
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="fv-row mb-7">
+                                                    <label class="form-label fw-semibold fs-6 required">Bairro</label>
+                                                    <input type="text" class="form-control form-control-solid" name="bairro" 
+                                                           value="{{ $configuracoes['bairro'] ?? '' }}" required />
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="fv-row mb-7">
+                                                    <label class="form-label fw-semibold fs-6 required">CEP</label>
+                                                    <input type="text" class="form-control form-control-solid" name="cep" 
+                                                           data-mask="00000-000"
+                                                           value="{{ $configuracoes['cep'] ?? '' }}" required />
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <!--end::Input group-->
+
+                                        <!--begin::Input group-->
+                                        <div class="row">
+                                            <div class="col-md-8">
+                                                <div class="fv-row mb-7">
+                                                    <label class="form-label fw-semibold fs-6 required">Cidade</label>
+                                                    <input type="text" class="form-control form-control-solid" name="cidade" 
+                                                           value="{{ $configuracoes['cidade'] ?? '' }}" required />
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="fv-row mb-7">
+                                                    <label class="form-label fw-semibold fs-6 required">Estado</label>
+                                                    <select class="form-select form-select-solid" name="estado" required>
+                                                        <option value="">Selecione</option>
+                                                        @foreach(['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'] as $uf)
+                                                            <option value="{{ $uf }}" {{ ($configuracoes['estado'] ?? '') == $uf ? 'selected' : '' }}>{{ $uf }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <!--end::Input group-->
+                                    </div>
+                                </div>
+                            </div>
+                            <!--end::Tab pane - Endereço-->
+                            
+                            <!--begin::Tab pane - Contatos-->
+                            <div class="tab-pane fade" id="kt_tab_contatos" role="tabpanel">
+                                <div class="row g-6">
+                                    <div class="col-12">
+                                        <!--begin::Input group-->
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="fv-row mb-7">
+                                                    <label class="form-label fw-semibold fs-6 required">Telefone Principal</label>
+                                                    <input type="text" class="form-control form-control-solid" name="telefone" 
+                                                           data-mask="(00) 0000-0000"
+                                                           value="{{ $configuracoes['telefone'] ?? '' }}" required />
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="fv-row mb-7">
+                                                    <label class="form-label fw-semibold fs-6">Telefone Secundário</label>
+                                                    <input type="text" class="form-control form-control-solid" name="telefone_secundario" 
+                                                           data-mask="(00) 0000-0000"
+                                                           value="{{ $configuracoes['telefone_secundario'] ?? '' }}" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <!--end::Input group-->
+
+                                        <!--begin::Input group-->
+                                        <div class="fv-row mb-7">
+                                            <label class="form-label fw-semibold fs-6 required">E-mail Institucional</label>
+                                            <input type="email" class="form-control form-control-solid" name="email_institucional" 
+                                                   value="{{ $configuracoes['email_institucional'] ?? '' }}" required />
+                                            <div class="form-text">E-mail principal da instituição</div>
+                                        </div>
+                                        <!--end::Input group-->
+
+                                        <!--begin::Input group-->
+                                        <div class="fv-row mb-7">
+                                            <label class="form-label fw-semibold fs-6">E-mail de Contato</label>
+                                            <input type="email" class="form-control form-control-solid" name="email_contato" 
+                                                   value="{{ $configuracoes['email_contato'] ?? '' }}" />
+                                            <div class="form-text">E-mail para atendimento ao público</div>
+                                        </div>
+                                        <!--end::Input group-->
+
+                                        <!--begin::Input group-->
+                                        <div class="fv-row mb-7">
+                                            <label class="form-label fw-semibold fs-6">Website</label>
+                                            <input type="url" class="form-control form-control-solid" name="website" 
+                                                   placeholder="https://"
+                                                   value="{{ $configuracoes['website'] ?? '' }}" />
+                                        </div>
+                                        <!--end::Input group-->
+                                    </div>
+                                </div>
+                            </div>
+                            <!--end::Tab pane - Contatos-->
+                            
+                            <!--begin::Tab pane - Funcionamento-->
+                            <div class="tab-pane fade" id="kt_tab_funcionamento" role="tabpanel">
+                                <div class="row g-6">
+                                    <div class="col-12">
+                                        <!--begin::Input group-->
+                                        <div class="fv-row mb-7">
+                                            <label class="form-label fw-semibold fs-6 required">Horário de Funcionamento</label>
+                                            <input type="text" class="form-control form-control-solid" name="horario_funcionamento" 
+                                                   value="{{ $configuracoes['horario_funcionamento'] ?? '' }}" required />
+                                            <div class="form-text">Ex: Segunda a Sexta, 8h às 17h</div>
+                                        </div>
+                                        <!--end::Input group-->
+
+                                        <!--begin::Input group-->
+                                        <div class="fv-row mb-7">
+                                            <label class="form-label fw-semibold fs-6 required">Horário de Atendimento ao Público</label>
+                                            <input type="text" class="form-control form-control-solid" name="horario_atendimento" 
+                                                   value="{{ $configuracoes['horario_atendimento'] ?? '' }}" required />
+                                            <div class="form-text">Ex: Segunda a Sexta, 8h às 16h</div>
+                                        </div>
+                                        <!--end::Input group-->
+                                    </div>
+                                </div>
+                            </div>
+                            <!--end::Tab pane - Funcionamento-->
+                            
+                            <!--begin::Tab pane - Gestão Atual-->
+                            <div class="tab-pane fade" id="kt_tab_gestao" role="tabpanel">
+                                <div class="row g-6">
+                                    <div class="col-12">
+                                        <!--begin::Input group-->
+                                        <div class="row">
+                                            <div class="col-md-8">
+                                                <div class="fv-row mb-7">
+                                                    <label class="form-label fw-semibold fs-6 required">Presidente da Câmara</label>
+                                                    <div class="position-relative">
+                                                        <input type="text" class="form-control form-control-solid" 
+                                                               id="presidente_nome_input"
+                                                               name="presidente_nome" 
+                                                               value="{{ $configuracoes['presidente_nome'] ?? '' }}" 
+                                                               placeholder="Digite o nome do presidente para buscar..."
+                                                               autocomplete="off"
+                                                               required />
+                                                        <input type="hidden" name="presidente_id" id="presidente_id" />
+                                                        
+                                                        <!-- Dropdown de sugestões -->
+                                                        <div id="presidente_suggestions" class="position-absolute w-100 bg-white border rounded shadow-sm" 
+                                                             style="display: none; z-index: 1000; max-height: 300px; overflow-y: auto; top: 100%;">
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="fv-row mb-7">
+                                                    <label class="form-label fw-semibold fs-6 required">Partido</label>
+                                                    <input type="text" class="form-control form-control-solid" 
+                                                           id="presidente_partido_input"
+                                                           name="presidente_partido" 
+                                                           value="{{ $configuracoes['presidente_partido'] ?? '' }}" 
+                                                           placeholder="Partido será preenchido automaticamente"
+                                                           required />
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <!--end::Input group-->
+
+                                        <!--begin::Input group-->
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="fv-row mb-7">
+                                                    <label class="form-label fw-semibold fs-6 required">Legislatura Atual</label>
+                                                    <input type="text" class="form-control form-control-solid" name="legislatura_atual" 
+                                                           placeholder="2021-2024"
+                                                           value="{{ $configuracoes['legislatura_atual'] ?? '' }}" required />
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="fv-row mb-7">
+                                                    <label class="form-label fw-semibold fs-6 required">Número de Vereadores</label>
+                                                    <input type="number" class="form-control form-control-solid" name="numero_vereadores" 
+                                                           min="5" max="55"
+                                                           value="{{ $configuracoes['numero_vereadores'] ?? '' }}" required />
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <!--end::Input group-->
+                                    </div>
+                                </div>
+                            </div>
+                            <!--end::Tab pane - Gestão Atual-->
                         </div>
+                        <!--end::Tab content-->
                     </div>
+                    <!--end::Card body-->
+                    
+                    <!--begin::Card footer-->
+                    <div class="card-footer d-flex justify-content-end py-6 px-9">
+                        <button type="reset" class="btn btn-light btn-active-light-primary me-2">Cancelar</button>
+                        <button type="submit" class="btn btn-primary" id="kt_account_profile_details_submit">
+                            <span class="indicator-label">Salvar Configurações</span>
+                            <span class="indicator-progress">Salvando...
+                                <span class="spinner-border spinner-border-sm align-middle ms-2"></span>
+                            </span>
+                        </button>
+                    </div>
+                    <!--end::Card footer-->
                 </div>
-                <!--end::Actions-->
+                <!--end::Card with tabs-->
             </form>
             <!--end::Form-->
         </div>
@@ -465,6 +489,9 @@
 @push('scripts')
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.mask/1.14.16/jquery.mask.min.js"></script>
     <script>
+        // Debug dos valores carregados
+        console.log('🔍 Configurações carregadas pelo controller:', @json($configuracoes));
+        
         document.addEventListener('DOMContentLoaded', function() {
             console.log('📋 Dados Gerais da Câmara carregado');
             

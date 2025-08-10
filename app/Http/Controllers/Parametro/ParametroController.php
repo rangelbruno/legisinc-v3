@@ -31,7 +31,14 @@ class ParametroController extends Controller
      */
     public function index(Request $request): View
     {
-        $modulos = $this->parametroService->obterModulos();
+        // BYPASS TEMPORÁRIO - usar dados diretos do banco
+        $modulos = \App\Models\Parametro\ParametroModulo::ativos()->ordenados()->get();
+        
+        // Log para debug
+        \Log::info('DEBUG Parametros Index - BYPASS TEMPORÁRIO', [
+            'count' => $modulos->count(),
+            'modulos' => $modulos->pluck('nome', 'id')->toArray()
+        ]);
         
         // Carregar submódulos para cada módulo
         $modulos->load('submodulosAtivos');
@@ -40,6 +47,12 @@ class ParametroController extends Controller
         $modulosUnicos = $modulos->groupBy('nome')->map(function ($grupo) {
             return $grupo->sortByDesc('id')->first(); // Pega o mais recente (ID maior)
         })->values();
+        
+        // Log após processamento
+        \Log::info('DEBUG Parametros Index - Módulos únicos processados', [
+            'count' => $modulosUnicos->count(),
+            'modulos' => $modulosUnicos->pluck('nome', 'id')->toArray()
+        ]);
         
         // Adicionar contagem de submódulos
         $modulosUnicos->transform(function ($modulo) {
@@ -283,7 +296,7 @@ class ParametroController extends Controller
     /**
      * Salva configurações de um submódulo
      */
-    public function salvarConfiguracoes(Request $request, int $submoduloId): RedirectResponse
+    public function salvarConfiguracoes(Request $request, int $submoduloId)
     {
         try {
             $valores = $request->except(['_token', '_method']);
@@ -292,12 +305,34 @@ class ParametroController extends Controller
             $sucesso = $this->parametroService->salvarValores($submoduloId, $valores, $userId);
             
             if ($sucesso) {
+                // Check if request is AJAX
+                if ($request->wantsJson() || $request->ajax()) {
+                    return response()->json([
+                        'success' => true,
+                        'message' => 'Configurações salvas com sucesso!'
+                    ]);
+                }
+                
                 return back()->with('success', 'Configurações salvas com sucesso!');
             } else {
+                if ($request->wantsJson() || $request->ajax()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Erro ao salvar configurações'
+                    ], 400);
+                }
+                
                 return back()->withError('Erro ao salvar configurações');
             }
             
         } catch (\Exception $e) {
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Erro ao salvar configurações: ' . $e->getMessage()
+                ], 500);
+            }
+            
             return back()
                 ->withError('Erro ao salvar configurações: ' . $e->getMessage())
                 ->withInput();

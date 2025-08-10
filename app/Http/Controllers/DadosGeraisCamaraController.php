@@ -37,22 +37,23 @@ class DadosGeraisCamaraController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
+        
         $request->validate([
             'nome_camara' => 'required|string|max:255',
             'sigla_camara' => 'required|string|max:20',
-            'cnpj' => 'required|string|size:18',
+            'cnpj' => 'nullable|string|max:20',
             'endereco' => 'required|string|max:255',
             'numero' => 'nullable|string|max:20',
             'complemento' => 'nullable|string|max:100',
             'bairro' => 'required|string|max:100',
             'cidade' => 'required|string|max:100',
-            'estado' => 'required|string|size:2',
-            'cep' => 'required|string|size:9',
-            'telefone' => 'required|string|max:15',
-            'telefone_secundario' => 'nullable|string|max:15',
+            'estado' => 'required|string|max:3',
+            'cep' => 'required|string|max:12',
+            'telefone' => 'required|string|max:20',
+            'telefone_secundario' => 'nullable|string|max:20',
             'email_institucional' => 'required|email|max:255',
             'email_contato' => 'nullable|email|max:255',
-            'website' => 'nullable|url|max:255',
+            'website' => 'nullable|string|max:255',
             'horario_funcionamento' => 'required|string|max:100',
             'horario_atendimento' => 'required|string|max:100',
             'presidente_nome' => 'required|string|max:255',
@@ -117,7 +118,7 @@ class DadosGeraisCamaraController extends Controller
     private function obterConfiguracoes(): array
     {
         try {
-            return [
+            $configuracoes = [
                 // Identificação
                 'nome_camara' => $this->parametroService->obterValor('Dados Gerais', 'Identificação', 'nome_camara') ?: 'Câmara Municipal',
                 'sigla_camara' => $this->parametroService->obterValor('Dados Gerais', 'Identificação', 'sigla_camara') ?: 'CM',
@@ -149,6 +150,8 @@ class DadosGeraisCamaraController extends Controller
                 'legislatura_atual' => $this->parametroService->obterValor('Dados Gerais', 'Gestão', 'legislatura_atual') ?: '2021-2024',
                 'numero_vereadores' => $this->parametroService->obterValor('Dados Gerais', 'Gestão', 'numero_vereadores') ?: 9
             ];
+            
+            return $configuracoes;
         } catch (\Exception $e) {
             \Log::warning('Erro ao obter dados gerais da câmara, usando padrões', [
                 'error' => $e->getMessage()

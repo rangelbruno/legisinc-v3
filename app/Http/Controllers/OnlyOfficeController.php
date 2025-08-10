@@ -105,8 +105,8 @@ class OnlyOfficeController extends Controller
             } elseif (str_ends_with(strtolower($proposicao->arquivo_path), '.doc')) {
                 $fileType = 'doc';
             }
-        } elseif ($proposicao->template && $proposicao->template->arquivo_path) {
-            // Se não tem arquivo próprio, verificar template
+        } elseif ($proposicao->template_id && is_numeric($proposicao->template_id) && $proposicao->template && $proposicao->template->arquivo_path) {
+            // Se não tem arquivo próprio, verificar template (só se template_id for numérico e válido)
             if (str_ends_with(strtolower($proposicao->template->arquivo_path), '.rtf')) {
                 $fileType = 'rtf';
             }
@@ -116,7 +116,8 @@ class OnlyOfficeController extends Controller
             'proposicao_id' => $proposicao->id,
             'detected_file_type' => $fileType,
             'arquivo_path' => $proposicao->arquivo_path,
-            'template_path' => $proposicao->template->arquivo_path ?? null,
+            'template_id' => $proposicao->template_id,
+            'template_path' => ($proposicao->template_id && is_numeric($proposicao->template_id) && $proposicao->template) ? $proposicao->template->arquivo_path : null,
             'has_ai_content' => !empty($proposicao->conteudo)
         ]);
 
@@ -298,10 +299,21 @@ class OnlyOfficeController extends Controller
         Log::info('OnlyOffice Editor Access - Parlamentar', [
             'user_id' => Auth::id(),
             'proposicao_id' => $proposicao->id,
-            'ai_content' => $request->has('ai_content')
+            'ai_content' => $request->has('ai_content'),
+            'manual_content' => $request->has('manual_content')
         ]);
         
         $user = Auth::user();
+        
+        // Limpar template_id inválido se existir
+        if ($proposicao->template_id && !is_numeric($proposicao->template_id)) {
+            \Log::info('Limpando template_id inválido', [
+                'proposicao_id' => $proposicao->id,
+                'template_id_invalido' => $proposicao->template_id
+            ]);
+            
+            $proposicao->update(['template_id' => null]);
+        }
         
         // Verificar se o usuário é o autor da proposição
         if ($proposicao->autor_id !== $user->id) {
@@ -318,17 +330,18 @@ class OnlyOfficeController extends Controller
         // Carregar relacionamentos necessários
         $proposicao->load('autor');
         
-        // Se há conteúdo de IA, forçar regeneração do documento
-        if ($request->has('ai_content') || (!empty($proposicao->conteudo) && $proposicao->template_id === null)) {
-            // Limpar arquivo_path para forçar regeneração com conteúdo IA
+        // Se há conteúdo de IA ou texto manual, forçar regeneração do documento
+        if ($request->has('ai_content') || $request->has('manual_content') || (!empty($proposicao->conteudo) && $proposicao->template_id === null)) {
+            // Limpar arquivo_path para forçar regeneração com conteúdo personalizado
             $proposicao->update([
                 'status' => 'em_edicao',
                 'arquivo_path' => null
             ]);
             
-            Log::info('Forçando regeneração para conteúdo IA', [
+            Log::info('Forçando regeneração para conteúdo personalizado', [
                 'proposicao_id' => $proposicao->id,
                 'ai_content_param' => $request->has('ai_content'),
+                'manual_content_param' => $request->has('manual_content'),
                 'has_conteudo' => !empty($proposicao->conteudo),
                 'template_id' => $proposicao->template_id
             ]);

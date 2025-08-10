@@ -675,10 +675,13 @@ class TemplateVariablesService
         
         // Mapear nome da variável para chave do parâmetro
         $mapeamento = [
-            'cabecalho_nome_camara' => 'Cabeçalho.cabecalho_nome_camara',
-            'cabecalho_endereco' => 'Cabeçalho.cabecalho_endereco',
-            'cabecalho_telefone' => 'Cabeçalho.cabecalho_telefone',
-            'cabecalho_website' => 'Cabeçalho.cabecalho_website',
+            'cabecalho_nome_camara' => 'Dados Gerais da Câmara.nome_camara_oficial',
+            'nome_camara' => 'Dados Gerais da Câmara.nome_camara_oficial',
+            'cabecalho_endereco' => 'Dados Gerais da Câmara.endereco_logradouro',
+            'endereco_camara' => 'Dados Gerais da Câmara.endereco_logradouro',
+            'cabecalho_telefone' => 'Dados Gerais da Câmara.telefone_principal',
+            'cabecalho_website' => 'Dados Gerais da Câmara.website',
+            'municipio' => 'Dados Gerais da Câmara.municipio_nome',
             'rodape_texto' => 'Rodapé.rodape_texto',
             'assinatura_padrao' => 'Variáveis Dinâmicas.var_assinatura_padrao',
             'imagem_cabecalho' => 'Cabeçalho.cabecalho_imagem'

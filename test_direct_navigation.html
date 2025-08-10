@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Teste Navegação Direta</title>
+</head>
+<body>
+    <h3>Teste de Navegação Direta</h3>
+    
+    <p>Clique nos botões abaixo para testar diferentes formas de navegação:</p>
+    
+    <button onclick="testDirectLink()">1. Link HTML direto</button><br><br>
+    
+    <button onclick="testWindowLocation()">2. window.location.href</button><br><br>
+    
+    <button onclick="testWindowOpen()">3. window.open (nova aba)</button><br><br>
+    
+    <div id="results"></div>
+    
+    <script>
+        function testDirectLink() {
+            document.getElementById('results').innerHTML = '<p>Testando link HTML direto...</p>';
+            window.location.href = 'http://localhost:8001/parametros-dados-gerais-camara';
+        }
+        
+        function testWindowLocation() {
+            document.getElementById('results').innerHTML = '<p>Testando window.location.href...</p>';
+            window.location.href = '/parametros-dados-gerais-camara';
+        }
+        
+        function testWindowOpen() {
+            document.getElementById('results').innerHTML = '<p>Abrindo em nova aba...</p>';
+            window.open('/parametros-dados-gerais-camara', '_blank');
+        }
+    </script>
+</body>
+</html>

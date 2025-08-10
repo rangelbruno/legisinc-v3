@@ -242,7 +242,14 @@ class AITextGenerationService
 - Considere impactos em diferentes grupos sociais
 - Garanta clareza para cidadãos comuns
 
-IMPORTANTE: O texto deve estar pronto para ser inserido no template ABNT padronizado, seguindo as melhores práticas de redação legislativa e normas técnicas brasileiras.";
+IMPORTANTE: 
+- O texto deve estar pronto para ser inserido no template ABNT padronizado
+- Gere APENAS o texto da proposição em linguagem natural
+- NÃO inclua código LaTeX, HTML ou qualquer marcação técnica
+- NÃO inclua comandos como \\documentclass, \\usepackage, \\begin, \\end, etc.
+- O texto deve ser puro e limpo, sem formatação especial
+- As diretrizes de formatação acima são para orientar a estrutura, mas o resultado deve ser texto simples
+- Siga as melhores práticas de redação legislativa e normas técnicas brasileiras.";
     }
 
     /**

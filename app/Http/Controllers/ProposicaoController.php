@@ -65,8 +65,10 @@ class ProposicaoController extends Controller
         $request->validate([
             'tipo' => 'required|in:' . implode(',', $tiposValidos),
             'ementa' => 'required|string|max:1000',
+            'opcao_preenchimento' => 'nullable|in:modelo,manual,ia',
             'usar_ia' => 'nullable|in:true,false,1,0',
-            'texto_ia' => 'nullable|string'
+            'texto_ia' => 'nullable|string',
+            'texto_manual' => 'nullable|string'
         ]);
 
         // Preparar dados para criação
@@ -78,10 +80,22 @@ class ProposicaoController extends Controller
             'ano' => date('Y'),
         ];
 
-        // Se foi usado IA e há texto, armazenar no campo conteudo
-        $usarIA = in_array($request->usar_ia, [true, 'true', 1, '1']);
-        if ($usarIA && $request->texto_ia) {
-            $dadosProposicao['conteudo'] = $request->texto_ia;
+        // Armazenar conteúdo baseado na opção escolhida
+        $opcaoPreenchimento = $request->opcao_preenchimento ?? 'modelo';
+        
+        switch ($opcaoPreenchimento) {
+            case 'ia':
+                $usarIA = in_array($request->usar_ia, [true, 'true', 1, '1']);
+                if ($usarIA && $request->texto_ia) {
+                    $dadosProposicao['conteudo'] = $this->limparCodigoLatex($request->texto_ia);
+                }
+                break;
+            case 'manual':
+                if ($request->texto_manual) {
+                    $dadosProposicao['conteudo'] = $request->texto_manual;
+                }
+                break;
+            // Para 'modelo', o conteúdo será definido na próxima etapa
         }
 
         // Criar proposição no banco de dados
@@ -292,12 +306,13 @@ class ProposicaoController extends Controller
     /**
      * Tela de preenchimento do modelo selecionado
      */
-    public function preencherModelo($proposicaoId, $modeloId)
+    public function preencherModelo($proposicaoId, $modeloId, Request $request)
     {
         \Log::info('preencherModelo called', [
             'proposicao_id' => $proposicaoId,
             'modelo_id' => $modeloId,
-            'user_id' => Auth::id()
+            'user_id' => Auth::id(),
+            'texto_preenchido' => $request->has('texto_preenchido')
         ]);
         
         // TODO: Implement proper authorization
@@ -386,7 +401,7 @@ class ProposicaoController extends Controller
         }
         
         if ($template) {
-            $templateVariablesService = new TemplateVariablesService();
+            $templateVariablesService = app(\App\Services\TemplateVariablesService::class);
             $templateVariables = $templateVariablesService->extractVariablesFromTemplate($template);
             $userInputVariables = $templateVariablesService->getRequiredUserInputVariables($templateVariables);
             $templateVariablesGrouped = $templateVariablesService->groupVariablesByCategory($userInputVariables);
@@ -416,12 +431,24 @@ class ProposicaoController extends Controller
         
         // Definir categoryLabels mesmo quando não há template
         if (!isset($categoryLabels)) {
-            $templateVariablesService = new TemplateVariablesService();
+            $templateVariablesService = app(\App\Services\TemplateVariablesService::class);
             $categoryLabels = $templateVariablesService->getCategoryLabels();
         }
         
         // Carregar valores existentes de diferentes fontes para pré-preencher os campos
         $valoresExistentes = $this->carregarValoresExistentes($proposicao);
+        
+        // Verificar se o texto foi pré-preenchido (manual ou IA)
+        $textoPreenchido = $request->has('texto_preenchido');
+        $temTextoPreenchido = $textoPreenchido && !empty($valoresExistentes['texto']);
+        
+        if ($temTextoPreenchido) {
+            \Log::info('Texto pré-preenchido detectado', [
+                'proposicao_id' => $proposicaoId,
+                'texto_length' => strlen($valoresExistentes['texto']),
+                'texto_preview' => substr($valoresExistentes['texto'], 0, 100) . '...'
+            ]);
+        }
         
         return view('proposicoes.preencher-modelo', compact(
             'proposicao', 
@@ -429,8 +456,149 @@ class ProposicaoController extends Controller
             'templateVariables',
             'templateVariablesGrouped',
             'categoryLabels',
-            'valoresExistentes'
+            'valoresExistentes',
+            'temTextoPreenchido'
         ));
+    }
+
+    /**
+     * Processar texto (manual ou IA) aplicando ao template e redirecionar para visualização
+     */
+    public function processarTextoERedirecionar($proposicaoId, $modeloId, Request $request)
+    {
+        \Log::info('processarTextoERedirecionar called', [
+            'proposicao_id' => $proposicaoId,
+            'modelo_id' => $modeloId,
+            'tipo' => $request->get('tipo'),
+            'user_id' => Auth::id()
+        ]);
+
+        $proposicao = Proposicao::findOrFail($proposicaoId);
+
+        // Verificar se o usuário é o autor
+        if ($proposicao->autor_id !== Auth::id()) {
+            abort(403, 'Você não tem permissão para editar esta proposição.');
+        }
+
+        try {
+            // Aplicar o texto ao template automaticamente
+            $templateVariablesService = app(\App\Services\TemplateVariablesService::class);
+            
+            // Obter dados do usuário
+            $user = Auth::user();
+            $now = now();
+            
+            // Limpar código LaTeX do conteúdo se necessário
+            $conteudoLimpo = $this->limparCodigoLatex($proposicao->conteudo);
+            if ($conteudoLimpo !== $proposicao->conteudo) {
+                $proposicao->update(['conteudo' => $conteudoLimpo]);
+            }
+            
+            // Criar array completo de variáveis incluindo sistema e proposição
+            $templateVariables = [
+                // Dados da proposição
+                'ementa' => $proposicao->ementa,
+                'texto' => $conteudoLimpo, // Texto limpo sem código LaTeX
+                'conteudo' => $conteudoLimpo,
+                'finalidade' => $proposicao->ementa,
+                
+                // Dados do sistema
+                'numero_proposicao' => $proposicao->id,
+                'ano' => date('Y'),
+                'data_atual' => $now->format('d/m/Y'),
+                'data_extenso' => $now->locale('pt_BR')->translatedFormat('j \\d\\e F \\d\\e Y'),
+                'dia_atual' => $now->format('d'),
+                'mes_atual' => $now->format('m'),
+                'ano_atual' => $now->format('Y'),
+                'tipo_proposicao' => $proposicao->tipo_formatado ?? 'Proposição',
+                'status_proposicao' => ucfirst($proposicao->status ?? 'rascunho'),
+                
+                // Dados do parlamentar/autor
+                'nome_parlamentar' => $user->name ?? '[NOME DO PARLAMENTAR]',
+                'autor_nome' => $user->name ?? '[NOME DO AUTOR]',
+                'cargo_parlamentar' => 'Vereador(a)',
+                'email_parlamentar' => $user->email ?? '',
+                'partido_parlamentar' => '', // Pode ser obtido de relacionamento se existir
+                
+                // Dados da cidade/câmara (podem vir de configuração)
+                'nome_cidade' => 'São Paulo',
+                'nome_estado' => 'São Paulo',
+                'nome_camara' => 'Câmara Municipal de São Paulo',
+                'endereco_camara' => 'Viaduto Jacareí, 100 - Bela Vista - São Paulo/SP',
+                'legislatura' => '2021-2024',
+                'sessao' => '2025'
+            ];
+
+            // Para texto manual ou IA, não definir template_id específico
+            // O sistema usará o template padrão ABNT automaticamente
+            
+            // Salvar apenas o status na proposição (sem template_id para evitar conflitos)
+            $proposicao->update([
+                'status' => 'em_edicao'
+            ]);
+            
+            \Log::info('Processando texto personalizado sem template específico', [
+                'proposicao_id' => $proposicaoId,
+                'template_original' => $modeloId,
+                'usa_template_padrao' => true
+            ]);
+
+            // Salvar variáveis na sessão para o processamento do template
+            $sessionKey = 'proposicao_' . $proposicaoId . '_variaveis_template';
+            session([$sessionKey => $templateVariables]);
+            
+            // Tentar processar o template imediatamente para gerar o documento
+            $this->processarTemplateAutomaticamente($proposicao, $templateVariables);
+
+            \Log::info('Texto processado automaticamente', [
+                'proposicao_id' => $proposicaoId,
+                'template_id' => $proposicao->template_id,
+                'variaveis_salvas' => array_keys($templateVariables)
+            ]);
+
+            // Redirecionar direto para a visualização da proposição
+            return redirect()->route('proposicoes.show', $proposicaoId)
+                ->with('success', 'Proposição criada com sucesso! Texto aplicado automaticamente ao modelo.');
+
+        } catch (\Exception $e) {
+            \Log::error('Erro ao processar texto automaticamente', [
+                'proposicao_id' => $proposicaoId,
+                'modelo_id' => $modeloId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            // Em caso de erro, redirecionar para preenchimento manual
+            return redirect()->route('proposicoes.preencher-modelo', [$proposicaoId, $modeloId])
+                ->with('warning', 'Houve um problema no processamento automático. Complete os campos manualmente.');
+        }
+    }
+
+    /**
+     * Processar template automaticamente com as variáveis fornecidas
+     */
+    private function processarTemplateAutomaticamente($proposicao, $templateVariables)
+    {
+        try {
+            // Simular um request com as variáveis
+            $request = new \Illuminate\Http\Request();
+            $request->merge(['template_variables' => $templateVariables]);
+            
+            // Chamar o método gerarTexto para processar o template
+            $this->gerarTexto($request, $proposicao->id);
+            
+            \Log::info('Template processado automaticamente com sucesso', [
+                'proposicao_id' => $proposicao->id,
+                'variaveis_processadas' => count($templateVariables)
+            ]);
+            
+        } catch (\Exception $e) {
+            \Log::warning('Não foi possível processar template automaticamente', [
+                'proposicao_id' => $proposicao->id,
+                'error' => $e->getMessage()
+            ]);
+            // Não interrompe o fluxo, apenas registra o aviso
+        }
     }
 
     /**
@@ -518,7 +686,7 @@ class ProposicaoController extends Controller
             }
 
             // Processar variáveis do template usando o novo sistema
-            $templateVariablesService = new TemplateVariablesService();
+            $templateVariablesService = app(\App\Services\TemplateVariablesService::class);
             
             if ($template) {
                 // Extrair variáveis definidas no template
@@ -4896,5 +5064,60 @@ ${texto}
         ]);
         
         return $valoresExistentes;
+    }
+
+    /**
+     * Remove código LaTeX e outros códigos técnicos do texto
+     */
+    private function limparCodigoLatex($texto)
+    {
+        if (empty($texto)) {
+            return $texto;
+        }
+
+        // Remover comandos LaTeX comuns
+        $patterns = [
+            '/\\\\documentclass\{[^}]*\}/',
+            '/\\\\usepackage(\[[^\]]*\])?\{[^}]*\}/',
+            '/\\\\begin\{document\}/',
+            '/\\\\end\{document\}/',
+            '/\\\\textbf\{([^}]*)\}/',
+            '/\\\\vspace\{[^}]*\}/',
+            '/\\\\onehalfspacing/',
+            '/\\\\spacing/',
+            // Comandos de formatação
+            '/\\\\[a-zA-Z]+(\{[^}]*\})*/',
+            // Linhas que começam com \
+            '/^\\\\.*$/m',
+        ];
+
+        $replacements = [
+            '', // remove documentclass
+            '', // remove usepackage
+            '', // remove begin{document}
+            '', // remove end{document}
+            '$1', // mantém apenas o conteúdo do textbf
+            '', // remove vspace
+            '', // remove onehalfspacing
+            '', // remove spacing
+            '', // remove outros comandos LaTeX
+            '', // remove linhas que começam com \
+        ];
+
+        $textoLimpo = preg_replace($patterns, $replacements, $texto);
+        
+        // Limpar linhas vazias excessivas
+        $textoLimpo = preg_replace('/\n\s*\n\s*\n/', "\n\n", $textoLimpo);
+        
+        // Remover espaços em branco no início e fim
+        $textoLimpo = trim($textoLimpo);
+
+        \Log::info('Código LaTeX removido do texto', [
+            'texto_original_length' => strlen($texto),
+            'texto_limpo_length' => strlen($textoLimpo),
+            'removeu_latex' => $texto !== $textoLimpo
+        ]);
+
+        return $textoLimpo;
     }
 }

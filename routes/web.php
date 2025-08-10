@@ -649,8 +649,17 @@ Route::post('/parametros-templates-rodape', function() {
 
 // Rotas para Dados Gerais da Câmara
 Route::get('/parametros-dados-gerais-camara', function() {
+    \Log::info('🚀 ROTA DADOS GERAIS DA CÂMARA ACESSADA', [
+        'timestamp' => now(),
+        'user_id' => Auth::id(),
+        'user_email' => Auth::user()->email ?? 'não logado',
+        'url' => request()->fullUrl(),
+        'ip' => request()->ip()
+    ]);
+    
     // Auto-login se não estiver logado
     if (!Auth::check()) {
+        \Log::info('🔐 Fazendo auto-login para usuário bruno@sistema.gov.br');
         $user = new \App\Models\User();
         $user->id = 6;
         $user->name = 'Bruno Administrador';
@@ -659,7 +668,16 @@ Route::get('/parametros-dados-gerais-camara', function() {
         Auth::login($user);
     }
     
-    return app(App\Http\Controllers\DadosGeraisCamaraController::class)->index();
+    try {
+        \Log::info('📋 Chamando DadosGeraisCamaraController::index');
+        return app(App\Http\Controllers\DadosGeraisCamaraController::class)->index();
+    } catch (\Exception $e) {
+        \Log::error('❌ Erro na rota dados-gerais-camara', [
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+        throw $e;
+    }
 })->name('parametros.dados-gerais-camara');
 
 Route::post('/parametros-dados-gerais-camara', function() {
@@ -758,6 +776,7 @@ Route::prefix('proposicoes')->name('proposicoes.')->middleware(['auth', 'check.s
     Route::post('/gerar-texto-ia', [App\Http\Controllers\ProposicaoController::class, 'gerarTextoIA'])->name('gerar-texto-ia')->middleware('check.parlamentar.access');
     Route::get('/modelos/{tipo}', [App\Http\Controllers\ProposicaoController::class, 'buscarModelos'])->name('buscar-modelos')->middleware('check.parlamentar.access');
     Route::get('/{proposicao}/preencher-modelo/{modeloId}', [App\Http\Controllers\ProposicaoController::class, 'preencherModelo'])->name('preencher-modelo')->middleware('check.parlamentar.access');
+    Route::get('/{proposicao}/processar-texto-e-redirecionar/{modeloId}', [App\Http\Controllers\ProposicaoController::class, 'processarTextoERedirecionar'])->name('processar-texto-e-redirecionar')->middleware('check.parlamentar.access');
     
     // Validação ABNT para proposições
     Route::prefix('abnt')->name('abnt.')->group(function () {

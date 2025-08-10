@@ -196,50 +196,136 @@
                         @forelse($submodulos as $submodulo)
                             <!--begin::Col-->
                             <div class="col-md-6 col-lg-4">
-                                <!--begin::Card-->
-                                <div class="card card-flush h-xl-100">
-                                    <!--begin::Card header-->
-                                    <div class="card-header pt-5">
-                                        <!--begin::Card title-->
-                                        <div class="card-title d-flex flex-column">
-                                            <h3 class="fs-5 fw-bold text-gray-900 mb-1">{{ $submodulo->nome }}</h3>
-                                            <span class="text-gray-500 fs-7">
-                                                Tipo: {{ ucfirst($submodulo->tipo) }}
-                                            </span>
+                                @if($submodulo->nome === 'Dados Gerais da Câmara')
+                                    <!--begin::Card - Dados Gerais da Câmara (Design Especial)-->
+                                    <div class="card card-flush h-xl-100">
+                                        <!--begin::Card header-->
+                                        <div class="card-header pt-5">
+                                            <!--begin::Card title-->
+                                            <div class="card-title d-flex flex-column">
+                                                <!--begin::Icon-->
+                                                <div class="d-flex align-items-center mb-3">
+                                                    <i class="ki-duotone ki-setting-2 fs-2x text-primary me-3">
+                                                        <span class="path1"></span>
+                                                        <span class="path2"></span>
+                                                    </i>
+                                                    <div class="d-flex flex-column">
+                                                        <h3 class="fs-5 fw-bold text-gray-900 mb-0">Dados Gerais da Câmara</h3>
+                                                        <span class="text-gray-500 fs-7">Submódulo de Templates</span>
+                                                    </div>
+                                                </div>
+                                                <!--end::Icon-->
+                                            </div>
+                                            <!--end::Card title-->
+                                            <!--begin::Card toolbar-->
+                                            <div class="card-toolbar">
+                                                <!--begin::Menu-->
+                                                <button type="button" class="btn btn-sm btn-icon btn-color-primary btn-active-light-primary" data-kt-menu-trigger="click" data-kt-menu-placement="bottom-end">
+                                                    <i class="ki-duotone ki-dots-horizontal fs-2">
+                                                        <span class="path1"></span>
+                                                        <span class="path2"></span>
+                                                        <span class="path3"></span>
+                                                    </i>
+                                                </button>
+                                                <!--begin::Menu 3-->
+                                                <div class="menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-gray-800 menu-state-bg-light-primary fw-semibold w-200px py-3" data-kt-menu="true">
+                                                    <!--begin::Menu item-->
+                                                    <div class="menu-item px-3">
+                                                        <!-- DEBUG MENU: URL gerada = {{ route('parametros.dados-gerais-camara') }} -->
+                                                        <!-- TESTE MENU: URL absoluta = {{ url('/parametros-dados-gerais-camara') }} -->
+                                                        <a href="{{ url('/parametros-dados-gerais-camara') }}" 
+                                                           class="menu-link px-3"
+                                                           onclick="console.log('Clique menu interceptado! URL absoluta:', this.href); return true;">
+                                                            <i class="ki-duotone ki-setting-3 fs-6 me-2"></i>
+                                                            Configurar
+                                                        </a>
+                                                    </div>
+                                                    <!--end::Menu item-->
+                                                </div>
+                                                <!--end::Menu 3-->
+                                                <!--end::Menu-->
+                                            </div>
+                                            <!--end::Card toolbar-->
                                         </div>
-                                        <!--end::Card title-->
-                                        <!--begin::Card toolbar-->
-                                        <div class="card-toolbar">
-                                            <span class="badge badge-light-{{ $submodulo->ativo ? 'success' : 'danger' }}">
-                                                {{ $submodulo->ativo ? 'Ativo' : 'Inativo' }}
-                                            </span>
+                                        <!--end::Card header-->
+                                        <!--begin::Card body-->
+                                        <div class="card-body d-flex flex-column">
+                                            <!--begin::Description-->
+                                            <div class="flex-grow-1 mb-5">
+                                                <p class="text-gray-700 fs-6 mb-0">
+                                                    Informações institucionais da Câmara Municipal
+                                                </p>
+                                            </div>
+                                            <!--end::Description-->
+                                            <!--begin::Progress-->
+                                            <div class="d-flex flex-stack">
+                                                <div class="d-flex align-items-center">
+                                                    <span class="badge badge-light-success">
+                                                        Ativo
+                                                    </span>
+                                                </div>
+                                                <div class="d-flex gap-2">
+                                                    <!-- DEBUG: URL gerada = {{ route('parametros.dados-gerais-camara') }} -->
+                                                    <!-- TESTE: URL absoluta = {{ url('/parametros-dados-gerais-camara') }} -->
+                                                    <a href="{{ url('/parametros-dados-gerais-camara') }}" 
+                                                       class="btn btn-sm btn-primary" 
+                                                       onclick="console.log('Clique interceptado! URL absoluta:', this.href); return true;">
+                                                        <i class="ki-duotone ki-setting-3 fs-6 me-1"></i>
+                                                        Configurar
+                                                    </a>
+                                                </div>
+                                            </div>
+                                            <!--end::Progress-->
                                         </div>
-                                        <!--end::Card toolbar-->
+                                        <!--end::Card body-->
                                     </div>
-                                    <!--end::Card header-->
-                                    <!--begin::Card body-->
-                                    <div class="card-body d-flex flex-column">
-                                        <!--begin::Description-->
-                                        <div class="flex-grow-1 mb-5">
-                                            <p class="text-gray-700 fs-6 mb-0">
-                                                {{ $submodulo->descricao ?: 'Sem descrição disponível' }}
-                                            </p>
+                                    <!--end::Card - Dados Gerais da Câmara-->
+                                @else
+                                    <!--begin::Card - Outros Submódulos-->
+                                    <div class="card card-flush h-xl-100">
+                                        <!--begin::Card header-->
+                                        <div class="card-header pt-5">
+                                            <!--begin::Card title-->
+                                            <div class="card-title d-flex flex-column">
+                                                <h3 class="fs-5 fw-bold text-gray-900 mb-1">{{ $submodulo->nome }}</h3>
+                                                <span class="text-gray-500 fs-7">
+                                                    Tipo: {{ ucfirst($submodulo->tipo) }}
+                                                </span>
+                                            </div>
+                                            <!--end::Card title-->
+                                            <!--begin::Card toolbar-->
+                                            <div class="card-toolbar">
+                                                <span class="badge badge-light-{{ $submodulo->ativo ? 'success' : 'danger' }}">
+                                                    {{ $submodulo->ativo ? 'Ativo' : 'Inativo' }}
+                                                </span>
+                                            </div>
+                                            <!--end::Card toolbar-->
                                         </div>
-                                        <!--end::Description-->
-                                        <!--begin::Actions-->
-                                        <div class="d-flex justify-content-end">
-                                            <a href="#" class="btn btn-sm btn-light me-2">
-                                                Editar
-                                            </a>
-                                            <a href="#" class="btn btn-sm btn-primary">
-                                                Configurar
-                                            </a>
+                                        <!--end::Card header-->
+                                        <!--begin::Card body-->
+                                        <div class="card-body d-flex flex-column">
+                                            <!--begin::Description-->
+                                            <div class="flex-grow-1 mb-5">
+                                                <p class="text-gray-700 fs-6 mb-0">
+                                                    {{ $submodulo->descricao ?: 'Sem descrição disponível' }}
+                                                </p>
+                                            </div>
+                                            <!--end::Description-->
+                                            <!--begin::Actions-->
+                                            <div class="d-flex justify-content-end">
+                                                <a href="#" class="btn btn-sm btn-light me-2">
+                                                    Editar
+                                                </a>
+                                                <a href="#" class="btn btn-sm btn-primary">
+                                                    Configurar
+                                                </a>
+                                            </div>
+                                            <!--end::Actions-->
                                         </div>
-                                        <!--end::Actions-->
+                                        <!--end::Card body-->
                                     </div>
-                                    <!--end::Card body-->
-                                </div>
-                                <!--end::Card-->
+                                    <!--end::Card - Outros Submódulos-->
+                                @endif
                             </div>
                             <!--end::Col-->
                         @empty

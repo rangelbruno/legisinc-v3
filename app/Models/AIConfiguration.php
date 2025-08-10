@@ -81,7 +81,7 @@ class AIConfiguration extends Model
     {
         return $query->where(function ($q) {
             $q->whereNull('daily_token_limit')
-              ->orWhere('daily_tokens_used', '<', 'daily_token_limit')
+              ->orWhereRaw('daily_tokens_used < daily_token_limit')
               ->orWhere('last_reset_date', '<', now()->toDateString());
         });
     }

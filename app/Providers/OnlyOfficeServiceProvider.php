@@ -4,13 +4,14 @@ namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use App\Services\OnlyOffice\OnlyOfficeService;
+use App\Services\Template\TemplateParametrosService;
 
 class OnlyOfficeServiceProvider extends ServiceProvider
 {
     public function register()
     {
         $this->app->singleton(OnlyOfficeService::class, function ($app) {
-            return new OnlyOfficeService();
+            return new OnlyOfficeService($app->make(TemplateParametrosService::class));
         });
     }
 
