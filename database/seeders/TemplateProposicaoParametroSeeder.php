@@ -422,24 +422,38 @@ class TemplateProposicaoParametroSeeder extends Seeder
             $this->parametroService->criarCampo($campoData);
         }
 
-        // Criar submódulo "Dados Gerais da Câmara"
+        // Verificar se o módulo "Dados Gerais" já existe
+        $moduloDadosGerais = \App\Models\Parametro\ParametroModulo::where('nome', 'Dados Gerais')->first();
+        if (!$moduloDadosGerais) {
+            // Criar módulo "Dados Gerais" se não existir
+            $moduloDadosGeraisData = [
+                'nome' => 'Dados Gerais',
+                'descricao' => 'Configurações gerais da Câmara Municipal',
+                'icon' => 'ki-office-bag',
+                'ordem' => 1,
+                'ativo' => true
+            ];
+            $moduloDadosGerais = $this->parametroService->criarModulo($moduloDadosGeraisData);
+        }
+
+        // Criar submódulo "Dados da Câmara" no módulo Dados Gerais
         $submoduloDadosCamara = [
-            'modulo_id' => $modulo->id,
-            'nome' => 'Dados Gerais da Câmara',
-            'descricao' => 'Informações institucionais da Câmara Municipal',
+            'modulo_id' => $moduloDadosGerais->id,
+            'nome' => 'Dados da Câmara',
+            'descricao' => 'Informações institucionais da Câmara Municipal para uso em templates',
             'tipo' => 'form',
-            'ordem' => 5,
+            'ordem' => 1,
             'ativo' => true
         ];
 
         $submodulo5 = $this->parametroService->criarSubmodulo($submoduloDadosCamara);
 
-        // Criar campos do submódulo Dados Gerais da Câmara
+        // Criar campos do submódulo Dados da Câmara
         $camposDadosCamara = [
             [
-                'nome' => 'nome_camara_oficial',
-                'label' => 'Nome Oficial da Câmara',
-                'descricao' => 'Nome oficial completo da Câmara Municipal',
+                'nome' => 'nome_camara',
+                'label' => 'Nome da Câmara',
+                'descricao' => 'Nome oficial da Câmara Municipal (variável: ${nome_camara})',
                 'tipo_campo' => 'text',
                 'valor_padrao' => 'CÂMARA MUNICIPAL DE SÃO PAULO',
                 'obrigatorio' => true,
@@ -447,216 +461,45 @@ class TemplateProposicaoParametroSeeder extends Seeder
                 'placeholder' => 'Ex: CÂMARA MUNICIPAL DE SÃO PAULO'
             ],
             [
-                'nome' => 'nome_camara_abreviado',
-                'label' => 'Nome Abreviado',
-                'descricao' => 'Sigla ou nome abreviado da Câmara',
-                'tipo_campo' => 'text',
-                'valor_padrao' => 'CMSP',
+                'nome' => 'endereco_completo',
+                'label' => 'Endereço Completo',
+                'descricao' => 'Endereço completo da Câmara Municipal (variável: ${endereco_completo})',
+                'tipo_campo' => 'textarea',
+                'valor_padrao' => 'Viaduto Jacareí, 100, Bela Vista - CEP: 01319-900\nSão Paulo/SP',
                 'obrigatorio' => true,
                 'ordem' => 2,
-                'placeholder' => 'Ex: CMSP'
-            ],
-            [
-                'nome' => 'cnpj',
-                'label' => 'CNPJ',
-                'descricao' => 'CNPJ da Câmara Municipal',
-                'tipo_campo' => 'text',
-                'valor_padrao' => '',
-                'obrigatorio' => false,
-                'ordem' => 3,
-                'placeholder' => '00.000.000/0001-00',
-                'validacao' => [
-                    'pattern' => '\d{2}\.\d{3}\.\d{3}/\d{4}-\d{2}'
-                ]
-            ],
-            [
-                'nome' => 'municipio_nome',
-                'label' => 'Nome do Município',
-                'descricao' => 'Nome do município onde a Câmara está localizada',
-                'tipo_campo' => 'text',
-                'valor_padrao' => 'São Paulo',
-                'obrigatorio' => true,
-                'ordem' => 4,
-                'placeholder' => 'Ex: São Paulo'
-            ],
-            [
-                'nome' => 'municipio_uf',
-                'label' => 'UF',
-                'descricao' => 'Unidade Federativa (Estado)',
-                'tipo_campo' => 'select',
-                'valor_padrao' => 'SP',
-                'obrigatorio' => true,
-                'ordem' => 5,
-                'placeholder' => 'Selecione o estado',
-                'opcoes' => [
-                    'AC' => 'Acre',
-                    'AL' => 'Alagoas',
-                    'AP' => 'Amapá',
-                    'AM' => 'Amazonas',
-                    'BA' => 'Bahia',
-                    'CE' => 'Ceará',
-                    'DF' => 'Distrito Federal',
-                    'ES' => 'Espírito Santo',
-                    'GO' => 'Goiás',
-                    'MA' => 'Maranhão',
-                    'MT' => 'Mato Grosso',
-                    'MS' => 'Mato Grosso do Sul',
-                    'MG' => 'Minas Gerais',
-                    'PA' => 'Pará',
-                    'PB' => 'Paraíba',
-                    'PR' => 'Paraná',
-                    'PE' => 'Pernambuco',
-                    'PI' => 'Piauí',
-                    'RJ' => 'Rio de Janeiro',
-                    'RN' => 'Rio Grande do Norte',
-                    'RS' => 'Rio Grande do Sul',
-                    'RO' => 'Rondônia',
-                    'RR' => 'Roraima',
-                    'SC' => 'Santa Catarina',
-                    'SP' => 'São Paulo',
-                    'SE' => 'Sergipe',
-                    'TO' => 'Tocantins'
-                ]
-            ],
-            [
-                'nome' => 'endereco_logradouro',
-                'label' => 'Logradouro',
-                'descricao' => 'Endereço completo da Câmara (rua, número)',
-                'tipo_campo' => 'text',
-                'valor_padrao' => 'Viaduto Jacareí, 100',
-                'obrigatorio' => true,
-                'ordem' => 6,
-                'placeholder' => 'Ex: Rua das Flores, 123'
-            ],
-            [
-                'nome' => 'endereco_bairro',
-                'label' => 'Bairro',
-                'descricao' => 'Bairro onde a Câmara está localizada',
-                'tipo_campo' => 'text',
-                'valor_padrao' => 'Bela Vista',
-                'obrigatorio' => true,
-                'ordem' => 7,
-                'placeholder' => 'Ex: Centro'
+                'placeholder' => 'Endereço completo com CEP e cidade'
             ],
             [
                 'nome' => 'endereco_cep',
                 'label' => 'CEP',
-                'descricao' => 'Código de Endereçamento Postal',
+                'descricao' => 'CEP da Câmara Municipal (variável: ${endereco_cep})',
                 'tipo_campo' => 'text',
                 'valor_padrao' => '01319-900',
                 'obrigatorio' => true,
-                'ordem' => 8,
-                'placeholder' => '00000-000',
-                'validacao' => [
-                    'pattern' => '\d{5}-\d{3}'
-                ]
+                'ordem' => 3,
+                'placeholder' => '00000-000'
             ],
             [
-                'nome' => 'telefone_principal',
-                'label' => 'Telefone Principal',
-                'descricao' => 'Telefone principal da Câmara',
+                'nome' => 'telefone_camara',
+                'label' => 'Telefone da Câmara',
+                'descricao' => 'Telefone principal da Câmara (variável: ${telefone_camara})',
                 'tipo_campo' => 'text',
                 'valor_padrao' => '(11) 3396-4000',
                 'obrigatorio' => true,
-                'ordem' => 9,
+                'ordem' => 4,
                 'placeholder' => '(11) 0000-0000'
             ],
             [
-                'nome' => 'telefone_protocolo',
-                'label' => 'Telefone do Protocolo',
-                'descricao' => 'Telefone específico do protocolo/atendimento',
+                'nome' => 'website_camara',
+                'label' => 'Website da Câmara',
+                'descricao' => 'Website oficial da Câmara (variável: ${website_camara})',
                 'tipo_campo' => 'text',
-                'valor_padrao' => '(11) 3396-4100',
+                'valor_padrao' => 'www.camara.sp.gov.br',
                 'obrigatorio' => false,
-                'ordem' => 10,
-                'placeholder' => '(11) 0000-0000'
-            ],
-            [
-                'nome' => 'email_oficial',
-                'label' => 'E-mail Oficial',
-                'descricao' => 'E-mail oficial da Câmara',
-                'tipo_campo' => 'email',
-                'valor_padrao' => 'contato@saopaulo.sp.leg.br',
-                'obrigatorio' => true,
-                'ordem' => 11,
-                'placeholder' => 'contato@camara.gov.br'
-            ],
-            [
-                'nome' => 'website',
-                'label' => 'Website',
-                'descricao' => 'Site oficial da Câmara',
-                'tipo_campo' => 'text',
-                'valor_padrao' => 'www.saopaulo.sp.leg.br',
-                'obrigatorio' => false,
-                'ordem' => 12,
+                'ordem' => 5,
                 'placeholder' => 'www.camara.gov.br'
             ],
-            [
-                'nome' => 'presidente_nome',
-                'label' => 'Nome do Presidente',
-                'descricao' => 'Nome do atual presidente da Câmara',
-                'tipo_campo' => 'text',
-                'valor_padrao' => '',
-                'obrigatorio' => false,
-                'ordem' => 13,
-                'placeholder' => 'Nome do Presidente'
-            ],
-            [
-                'nome' => 'presidente_tratamento',
-                'label' => 'Tratamento do Presidente',
-                'descricao' => 'Forma de tratamento para o presidente',
-                'tipo_campo' => 'select',
-                'valor_padrao' => 'Excelentíssimo Senhor',
-                'obrigatorio' => false,
-                'ordem' => 14,
-                'placeholder' => 'Selecione o tratamento',
-                'opcoes' => [
-                    'Excelentíssimo Senhor' => 'Excelentíssimo Senhor',
-                    'Excelentíssima Senhora' => 'Excelentíssima Senhora',
-                    'Senhor' => 'Senhor',
-                    'Senhora' => 'Senhora'
-                ]
-            ],
-            [
-                'nome' => 'horario_funcionamento',
-                'label' => 'Horário de Funcionamento',
-                'descricao' => 'Horário de funcionamento geral da Câmara',
-                'tipo_campo' => 'text',
-                'valor_padrao' => 'Segunda a Sexta: 8h às 17h',
-                'obrigatorio' => false,
-                'ordem' => 15,
-                'placeholder' => 'Ex: Segunda a Sexta: 8h às 17h'
-            ],
-            [
-                'nome' => 'horario_protocolo',
-                'label' => 'Horário do Protocolo',
-                'descricao' => 'Horário de funcionamento específico do protocolo',
-                'tipo_campo' => 'text',
-                'valor_padrao' => 'Segunda a Sexta: 9h às 16h',
-                'obrigatorio' => false,
-                'ordem' => 16,
-                'placeholder' => 'Ex: Segunda a Sexta: 9h às 16h'
-            ],
-            [
-                'nome' => 'legislatura_atual',
-                'label' => 'Legislatura Atual',
-                'descricao' => 'Período da legislatura atual',
-                'tipo_campo' => 'text',
-                'valor_padrao' => '2021-2024',
-                'obrigatorio' => false,
-                'ordem' => 17,
-                'placeholder' => 'Ex: 2021-2024'
-            ],
-            [
-                'nome' => 'sessao_atual',
-                'label' => 'Sessão Atual',
-                'descricao' => 'Ano da sessão legislativa atual',
-                'tipo_campo' => 'text',
-                'valor_padrao' => '2025',
-                'obrigatorio' => false,
-                'ordem' => 18,
-                'placeholder' => 'Ex: 2025'
-            ]
         ];
 
         foreach ($camposDadosCamara as $campoData) {

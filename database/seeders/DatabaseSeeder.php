@@ -13,8 +13,9 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // Primeiro criar roles e permissões básicos
+        // Primeiro criar tabelas OnlyOffice e roles/permissões básicos
         $this->call([
+            OnlyOfficeTablesSeeder::class,
             RolesAndPermissionsSeeder::class,
         ]);
 
@@ -61,6 +62,7 @@ class DatabaseSeeder extends Seeder
 
         $this->command->info('');
         $this->command->info('✅ Database seeded successfully!');
+        $this->command->info('📄 OnlyOffice DocumentServer: Tabelas inicializadas');
         $this->command->info('');
         $this->command->info('👥 Usuários Disponíveis:');
         $this->command->info('🔧 Admin: bruno@sistema.gov.br / admin@sistema.gov.br - Senha: 123456/admin123');

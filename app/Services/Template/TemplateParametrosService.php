@@ -11,33 +11,48 @@ use Illuminate\Support\Facades\Cache;
 class TemplateParametrosService
 {
     /**
-     * Obter todos os parâmetros do módulo Templates
+     * Obter todos os parâmetros dos módulos Templates e Dados Gerais
      */
     public function obterParametrosTemplates(): array
     {
         // Desabilitar cache temporariamente para debug
         // return Cache::remember('parametros.templates', 3600, function () {
         {
-            $modulo = ParametroModulo::where('nome', 'Templates')
+            $parametros = [];
+            
+            // Obter parâmetros do módulo Templates
+            $moduloTemplates = ParametroModulo::where('nome', 'Templates')
                 ->with(['submodulos.campos.valores'])
                 ->first();
             
-            if (!$modulo) {
-                return $this->getParametrosPadrao();
+            if ($moduloTemplates) {
+                foreach ($moduloTemplates->submodulos as $submodulo) {
+                    foreach ($submodulo->campos as $campo) {
+                        $chave = $submodulo->nome . '.' . $campo->nome;
+                        // Usar o valor mais recente válido
+                        $valorAtual = $campo->valores()->whereNull('valido_ate')->orWhere('valido_ate', '>', now())->latest()->first();
+                        $parametros[$chave] = $valorAtual ? $valorAtual->valor_formatado : $campo->valor_padrao;
+                    }
+                }
             }
-
-            $parametros = [];
             
-            foreach ($modulo->submodulos as $submodulo) {
-                foreach ($submodulo->campos as $campo) {
-                    $chave = $submodulo->nome . '.' . $campo->nome;
-                    // Usar o valor mais recente válido
-                    $valorAtual = $campo->valores()->whereNull('valido_ate')->orWhere('valido_ate', '>', now())->latest()->first();
-                    $parametros[$chave] = $valorAtual ? $valorAtual->valor_formatado : $campo->valor_padrao;
+            // Obter parâmetros do módulo Dados Gerais
+            $moduloDadosGerais = ParametroModulo::where('nome', 'Dados Gerais')
+                ->with(['submodulos.campos.valores'])
+                ->first();
+            
+            if ($moduloDadosGerais) {
+                foreach ($moduloDadosGerais->submodulos as $submodulo) {
+                    foreach ($submodulo->campos as $campo) {
+                        $chave = $submodulo->nome . '.' . $campo->nome;
+                        // Usar o valor mais recente válido
+                        $valorAtual = $campo->valores()->whereNull('valido_ate')->orWhere('valido_ate', '>', now())->latest()->first();
+                        $parametros[$chave] = $valorAtual ? $valorAtual->valor_formatado : $campo->valor_padrao;
+                    }
                 }
             }
 
-            return $parametros;
+            return count($parametros) > 0 ? $parametros : $this->getParametrosPadrao();
         }
     }
 
@@ -109,7 +124,9 @@ class TemplateParametrosService
         
         // Realizar substituições
         foreach ($variaveis as $chave => $valor) {
-            $conteudo = str_replace($chave, $valor, $conteudo);
+            // Converter sequências de escape como \n em quebras de linha reais
+            $valorProcessado = str_replace(['\\n', '\\r\\n', '\\t'], ["\n", "\r\n", "\t"], $valor);
+            $conteudo = str_replace($chave, $valorProcessado, $conteudo);
         }
         
         return $conteudo;
@@ -152,30 +169,53 @@ class TemplateParametrosService
         $variaveis['${ano_atual}'] = $dataAtual->format('Y');
         $variaveis['${mes_extenso}'] = $this->mesExtenso($dataAtual->format('n'));
         
-        // Dados da Câmara (dos novos parâmetros dinâmicos)
-        $variaveis['${nome_camara}'] = $parametros['Dados Gerais da Câmara.nome_camara_oficial'] ?? 
-                                      $parametros['Cabeçalho.cabecalho_nome_camara'] ?? 'CÂMARA MUNICIPAL';
-        $variaveis['${nome_camara_abreviado}'] = $parametros['Dados Gerais da Câmara.nome_camara_abreviado'] ?? 'CMSP';
-        $variaveis['${municipio}'] = $parametros['Dados Gerais da Câmara.municipio_nome'] ?? 
+        // Dados da Câmara (buscar em múltiplas fontes)
+        $variaveis['${nome_camara}'] = $parametros['Dados da Câmara.nome_camara'] ?? 
+                                      $parametros['Dados Gerais da Câmara.nome_camara_oficial'] ?? 
+                                      $parametros['Identificação.nome_camara'] ?? 
+                                      $parametros['Cabeçalho.cabecalho_nome_camara'] ?? 'CÂMARA MUNICIPAL DE SÃO PAULO';
+        
+        $variaveis['${nome_camara_abreviado}'] = $parametros['Dados Gerais da Câmara.nome_camara_abreviado'] ?? 
+                                                $parametros['Identificação.sigla_camara'] ?? 'CMSP';
+        
+        $variaveis['${municipio}'] = $parametros['Endereço.cidade'] ?? 
+                                    $parametros['Dados Gerais da Câmara.municipio_nome'] ?? 
                                     $this->extrairMunicipio($parametros['Cabeçalho.cabecalho_nome_camara'] ?? '');
-        $variaveis['${municipio_uf}'] = $parametros['Dados Gerais da Câmara.municipio_uf'] ?? 'SP';
+        
+        $variaveis['${municipio_uf}'] = $parametros['Endereço.estado'] ?? 
+                                       $parametros['Dados Gerais da Câmara.municipio_uf'] ?? 'SP';
         
         // Endereço completo e componentes
-        $logradouro = $parametros['Dados Gerais da Câmara.endereco_logradouro'] ?? '';
-        $bairro = $parametros['Dados Gerais da Câmara.endereco_bairro'] ?? '';
-        $cep = $parametros['Dados Gerais da Câmara.endereco_cep'] ?? '';
-        $variaveis['${endereco_camara}'] = $parametros['Dados Gerais da Câmara.endereco_logradouro'] ?? 
-                                          $parametros['Cabeçalho.cabecalho_endereco'] ?? '';
-        $variaveis['${endereco_completo}'] = trim($logradouro . ($bairro ? ", {$bairro}" : '') . ($cep ? " - CEP: {$cep}" : ''));
+        $logradouro = $parametros['Dados da Câmara.endereco_completo'] ?? 
+                     $parametros['Endereço.endereco'] ?? 
+                     $parametros['Dados Gerais da Câmara.endereco_logradouro'] ?? '';
+        $bairro = $parametros['Endereço.bairro'] ?? 
+                 $parametros['Dados Gerais da Câmara.endereco_bairro'] ?? '';
+        $cep = $parametros['Dados da Câmara.endereco_cep'] ?? 
+              $parametros['Endereço.cep'] ?? 
+              $parametros['Dados Gerais da Câmara.endereco_cep'] ?? '';
+        
+        $variaveis['${endereco_camara}'] = $logradouro ?: ($parametros['Cabeçalho.cabecalho_endereco'] ?? '');
+        $variaveis['${endereco_completo}'] = $parametros['Dados da Câmara.endereco_completo'] ?? 
+                                            trim($logradouro . ($bairro ? ", {$bairro}" : '') . ($cep ? " - CEP: {$cep}" : ''));
         $variaveis['${endereco_bairro}'] = $bairro;
         $variaveis['${endereco_cep}'] = $cep;
         
         // Contatos
-        $variaveis['${telefone_camara}'] = $parametros['Dados Gerais da Câmara.telefone_principal'] ?? 
+        $variaveis['${telefone_camara}'] = $parametros['Dados da Câmara.telefone_camara'] ?? 
+                                          $parametros['Contatos.telefone'] ?? 
+                                          $parametros['Dados Gerais da Câmara.telefone_principal'] ?? 
                                           $parametros['Cabeçalho.cabecalho_telefone'] ?? '';
-        $variaveis['${telefone_protocolo}'] = $parametros['Dados Gerais da Câmara.telefone_protocolo'] ?? '';
-        $variaveis['${email_camara}'] = $parametros['Dados Gerais da Câmara.email_oficial'] ?? '';
-        $variaveis['${website_camara}'] = $parametros['Dados Gerais da Câmara.website'] ?? 
+        
+        $variaveis['${telefone_protocolo}'] = $parametros['Contatos.telefone_secundario'] ?? 
+                                             $parametros['Dados Gerais da Câmara.telefone_protocolo'] ?? '';
+        
+        $variaveis['${email_camara}'] = $parametros['Contatos.email_institucional'] ?? 
+                                       $parametros['Dados Gerais da Câmara.email_oficial'] ?? '';
+        
+        $variaveis['${website_camara}'] = $parametros['Dados da Câmara.website_camara'] ?? 
+                                         $parametros['Contatos.website'] ?? 
+                                         $parametros['Dados Gerais da Câmara.website'] ?? 
                                          $parametros['Cabeçalho.cabecalho_website'] ?? '';
         
         // Dados administrativos
