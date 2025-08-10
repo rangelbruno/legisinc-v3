@@ -34,13 +34,6 @@ class OnlyOfficeService
         // Adicionar timestamp ao document_key para forçar reload após salvar
         $documentKeyWithVersion = $template->document_key . '_v' . $template->updated_at->timestamp;
         
-        \Log::info('OnlyOffice config criada', [
-            'template_id' => $template->id,
-            'download_url' => $downloadUrl,
-            'document_key' => $documentKeyWithVersion,
-            'original_key' => $template->document_key
-        ]);
-        
         // Detectar tipo de arquivo pelo caminho
         $fileExtension = pathinfo($template->arquivo_path, PATHINFO_EXTENSION);
         
@@ -67,6 +60,13 @@ class OnlyOfficeService
                 $documentType = 'word'; // Padrão "word" para todos os documentos
                 break;
         }
+        
+        \Log::info('OnlyOffice editor configuration created', [
+            'template_id' => $template->id,
+            'document_key' => $documentKeyWithVersion,
+            'file_type' => $fileType,
+            'user_id' => auth()->id()
+        ]);
         
         $config = [
             'document' => [
@@ -193,14 +193,13 @@ class OnlyOfficeService
         $status = $data['status'] ?? 0;
         
         // Log detalhado do callback
-        \Log::info('OnlyOffice callback status', [
+        \Log::info('OnlyOffice callback received', [
             'document_key' => $documentKey,
             'status' => $status,
-            'has_url' => isset($data['url']),
-            'url' => $data['url'] ?? null,
-            'users' => $data['users'] ?? [],
-            'actions' => $data['actions'] ?? [],
-            'full_data' => $data
+            'status_description' => $this->getStatusDescription($status),
+            'has_document_url' => isset($data['url']),
+            'users_count' => count($data['users'] ?? []),
+            'actions_count' => count($data['actions'] ?? [])
         ]);
         
         // Implementar lock para evitar processamento concorrente
@@ -243,10 +242,10 @@ class OnlyOfficeService
             // Status 1 = Documento sendo editado
             // Status 4 = Documento fechado sem mudanças
             if (in_array($status, [1, 4])) {
-                \Log::info('Status de edição recebido', [
+                \Log::debug('OnlyOffice editing status update', [
                     'document_key' => $documentKey,
                     'status' => $status,
-                    'description' => $status === 1 ? 'Documento sendo editado' : 'Documento fechado sem mudanças'
+                    'description' => $status === 1 ? 'Document being edited' : 'Document closed without changes'
                 ]);
             }
             
@@ -284,10 +283,10 @@ class OnlyOfficeService
                 $urlCorrigida = str_replace('http://localhost:8080', 'http://legisinc-onlyoffice', $urlCorrigida);
             }
             
-            \Log::info('Baixando conteúdo do OnlyOffice para salvar no banco', [
+            \Log::info('OnlyOffice document save: Downloading content', [
                 'template_id' => $template->id,
-                'url_original' => $url,
-                'url_corrigida' => $urlCorrigida
+                'document_key' => $template->document_key,
+                'url_corrected' => $url !== $urlCorrigida
             ]);
             
             // Download do conteúdo com timeout aumentado
@@ -315,11 +314,11 @@ class OnlyOfficeService
             }
             
             if (!$response || !$response->successful()) {
-                \Log::error('OnlyOffice callback - falha no download', [
+                \Log::error('OnlyOffice document save failed: Download error', [
                     'template_id' => $template->id,
-                    'url' => $url,
-                    'response_status' => $response ? $response->status() : 'null_response',
-                    'response_body_preview' => $response ? substr($response->body(), 0, 200) : 'null_response'
+                    'document_key' => $template->document_key,
+                    'http_status' => $response ? $response->status() : 'null_response',
+                    'error_type' => 'download_failed'
                 ]);
                 return;
             }
@@ -329,11 +328,11 @@ class OnlyOfficeService
             
             // Validar conteúdo
             if (empty($conteudo) || strlen($conteudo) < 50) {
-                \Log::error('OnlyOffice callback - conteúdo inválido ou vazio', [
+                \Log::error('OnlyOffice document save failed: Invalid content', [
                     'template_id' => $template->id,
-                    'url' => $url,
-                    'content_length' => strlen($conteudo),
-                    'content_preview' => substr($conteudo, 0, 100)
+                    'document_key' => $template->document_key,
+                    'content_size_bytes' => strlen($conteudo),
+                    'error_type' => 'invalid_content'
                 ]);
                 return;
             }
@@ -348,11 +347,10 @@ class OnlyOfficeService
                 $formato = 'html';
             }
             
-            \Log::info('Formato detectado do conteúdo OnlyOffice', [
+            \Log::debug('OnlyOffice content format detected', [
                 'template_id' => $template->id,
-                'formato' => $formato,
-                'content_start' => substr($conteudo, 0, 50),
-                'content_length' => strlen($conteudo)
+                'detected_format' => $formato,
+                'content_size_bytes' => strlen($conteudo)
             ]);
             
             // Processar conteúdo se necessário
@@ -2905,5 +2903,22 @@ Status: " . ucfirst(str_replace('_', ' ', $proposicao->status)) . "\par
             
             throw $e;
         }
+    }
+
+    /**
+     * Get human-readable description for OnlyOffice callback status codes
+     */
+    private function getStatusDescription(int $status): string
+    {
+        return match($status) {
+            0 => 'Not found',
+            1 => 'Document being edited',
+            2 => 'Document ready for saving',
+            3 => 'Document saving error',
+            4 => 'Document closed without changes',
+            6 => 'Document being edited (force save)',
+            7 => 'Document save/conversion error',
+            default => "Unknown status: {$status}"
+        };
     }
 }

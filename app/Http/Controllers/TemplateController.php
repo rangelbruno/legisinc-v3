@@ -121,15 +121,17 @@ class TemplateController extends Controller
             
             $novoDocumentKey = 'template_' . $tipo->id . '_' . time() . '_' . uniqid();
             
-            \Log::info('Gerando novo document_key para template', [
+            \Log::info('Template editor: Generating new document key', [
                 'template_id' => $template->id,
                 'tipo_id' => $tipo->id,
                 'old_key' => $template->document_key,
                 'new_key' => $novoDocumentKey,
-                'tempo_desde_modificacao' => $tempoDesdeUltimaModificacao,
-                'callback_em_processamento' => $callbackEmProcessamento,
-                'nova_sessao' => $novaSessao,
-                'session_id' => session()->getId()
+                'reason' => [
+                    'minutes_since_update' => $tempoDesdeUltimaModificacao,
+                    'callback_processing' => $callbackEmProcessamento,
+                    'new_session' => $novaSessao
+                ],
+                'user_id' => auth()->id()
             ]);
             
             $template->update([
@@ -145,12 +147,11 @@ class TemplateController extends Controller
             // Registrar nova sessão para evitar conflitos futuros
             \Cache::put($sessionKey, session()->getId(), 3600); // Cache por 1 hora
         } else {
-            \Log::info('Mantendo document_key existente', [
+            \Log::debug('Template editor: Reusing existing document key', [
                 'template_id' => $template->id,
                 'document_key' => $template->document_key,
-                'tempo_desde_modificacao' => $tempoDesdeUltimaModificacao,
-                'callback_em_processamento' => $callbackEmProcessamento,
-                'nova_sessao' => $novaSessao
+                'minutes_since_update' => $tempoDesdeUltimaModificacao,
+                'user_id' => auth()->id()
             ]);
             
             // Ainda assim, registrar sessão atual para tracking
@@ -191,12 +192,12 @@ class TemplateController extends Controller
         // Forçar refresh do modelo para pegar dados mais recentes
         $template->refresh();
         
-        \Log::info('Template download requested', [
+        \Log::info('Template download initiated', [
             'template_id' => $template->id,
-            'ativo' => $template->ativo,
-            'has_content' => !empty($template->conteudo),
-            'formato' => $template->formato ?? 'rtf',
-            'content_length' => $template->conteudo ? strlen($template->conteudo) : 0
+            'active' => $template->ativo,
+            'format' => $template->formato ?? 'rtf',
+            'content_size_bytes' => $template->conteudo ? strlen($template->conteudo) : 0,
+            'user_agent' => request()->header('User-Agent') ? 'onlyoffice' : 'browser'
         ]);
 
         if (!$template->ativo) {
@@ -210,22 +211,24 @@ class TemplateController extends Controller
         if (!empty($template->conteudo)) {
             // Usar conteúdo do banco de dados (abordagem principal)
             $conteudoArquivo = $template->conteudo;
-            \Log::info('Usando conteúdo do banco de dados', [
+            \Log::debug('Template download: Using database content', [
                 'template_id' => $template->id,
-                'content_length' => strlen($conteudoArquivo)
+                'size_bytes' => strlen($conteudoArquivo)
             ]);
         } elseif ($template->arquivo_path && Storage::exists($template->arquivo_path)) {
             // Fallback para arquivo (compatibilidade)
             $conteudoArquivo = Storage::get($template->arquivo_path);
-            \Log::info('Usando arquivo como fallback', [
+            \Log::warning('Template download: Fallback to file storage', [
                 'template_id' => $template->id,
-                'arquivo_path' => $template->arquivo_path
+                'file_path' => $template->arquivo_path,
+                'reason' => 'No content in database'
             ]);
         } else {
-            \Log::error('Template sem conteúdo nem arquivo', [
+            \Log::error('Template download failed: No content available', [
                 'template_id' => $template->id,
-                'has_content' => !empty($template->conteudo),
-                'has_file' => $template->arquivo_path ? Storage::exists($template->arquivo_path) : false
+                'has_db_content' => !empty($template->conteudo),
+                'file_path' => $template->arquivo_path,
+                'file_exists' => $template->arquivo_path ? Storage::exists($template->arquivo_path) : false
             ]);
             abort(404, 'Template não possui conteúdo');
         }
@@ -247,15 +250,15 @@ class TemplateController extends Controller
         if (!$isOnlyOfficeRequest && pathinfo($template->arquivo_path, PATHINFO_EXTENSION) === 'rtf') {
             $conteudoArquivo = $this->processarVariaveisTemplate($conteudoArquivo);
             
-            \Log::info('Variáveis do template processadas para download final', [
+            \Log::debug('Template variables processed for download', [
                 'template_id' => $template->id,
-                'arquivo_path' => $template->arquivo_path,
-                'tamanho_processado' => strlen($conteudoArquivo)
+                'processed_size_bytes' => strlen($conteudoArquivo),
+                'variables_applied' => true
             ]);
         } elseif ($isOnlyOfficeRequest) {
-            \Log::info('Servindo template original para OnlyOffice (sem processar variáveis)', [
+            \Log::debug('Template served to OnlyOffice without variable processing', [
                 'template_id' => $template->id,
-                'user_agent' => request()->header('User-Agent')
+                'client' => 'onlyoffice'
             ]);
         }
         

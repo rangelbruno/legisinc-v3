@@ -391,7 +391,7 @@
     @endif
 
     <!-- OnlyOffice API -->
-    <script src="{{ $serverUrl }}/web-apps/apps/api/documents/api.js" onload="console.log('OnlyOffice API carregada com sucesso')" onerror="console.error('Erro ao carregar OnlyOffice API de: {{ $serverUrl }}')"></script>
+    <script src="{{ $serverUrl }}/web-apps/apps/api/documents/api.js" onload="console.info('🟢 OnlyOffice: API loaded successfully')" onerror="console.error('🔴 OnlyOffice: Failed to load API from {{ $serverUrl }}')"></script>
     
     <!-- Component Script -->
     <script>
@@ -451,7 +451,7 @@
                     },
                     "events": {
                         "onDocumentReady": function() {
-                            console.log('OnlyOffice document ready');
+                            console.info('🟢 OnlyOffice: Document ready for editing');
                             self.onDocumentReady();
                         },
                         "onDocumentStateChange": function(event) {
@@ -468,17 +468,19 @@
                 
                 // Inicializar editor
                 try {
-                    console.log('Inicializando OnlyOffice com config:', this.config);
-                    console.log('Document URL:', this.config.document.url);
-                    console.log('Callback URL:', this.config.editorConfig.callbackUrl);
-                    console.log('Editor ID:', this.editorId);
+                    console.group('🔵 OnlyOffice: Editor initialization');
+                    console.info('Document URL:', this.config.document.url);
+                    console.info('Callback URL:', this.config.editorConfig.callbackUrl);
+                    console.info('Editor ID:', this.editorId);
+                    console.info('File type:', this.config.document.fileType);
+                    console.groupEnd();
                     
                     // Verificar se o elemento existe
                     const editorElement = document.getElementById(this.editorId);
                     const loadingElement = document.getElementById('loading-' + this.editorId);
                     
                     if (!editorElement) {
-                        console.error('Elemento do editor não encontrado:', this.editorId);
+                        console.error('🔴 OnlyOffice: Editor element not found:', this.editorId);
                         return;
                     }
                     
@@ -493,7 +495,7 @@
                     this.docEditor = new DocsAPI.DocEditor(this.editorId, this.config);
                     
                 } catch (error) {
-                    console.error('Erro ao inicializar OnlyOffice:', error);
+                    console.error('🔴 OnlyOffice: Initialization failed:', error);
                     this.showToast('Falha ao carregar o editor', 'error', 6000);
                 }
             },
@@ -514,7 +516,7 @@
             },
             
             onDocumentStateChange: function(event) {
-                console.log('Document state changed:', event);
+                console.debug('🔵 OnlyOffice: Document state changed:', event.data);
                 if (event && event.data) {
                     this.documentModified = true;
                     this.updateStatusBadge('modified');
@@ -522,11 +524,10 @@
             },
             
             onError: function(event) {
-                console.error('Erro OnlyOffice:', event);
-                console.log('Detalhes do erro:', {
-                    data: event?.data,
-                    target: event?.target,
-                    type: event?.type,
+                console.error('🔴 OnlyOffice: Editor error:', {
+                    error_code: event?.data?.errorCode,
+                    error_description: event?.data?.errorDescription,
+                    event_type: event?.type,
                     message: event?.message
                 });
                 
@@ -547,12 +548,12 @@
             },
             
             onRequestSave: function() {
-                console.log('Salvamento requisitado');
+                console.info('🔵 OnlyOffice: Save requested by editor');
                 this.updateStatusBadge('saving');
             },
             
             forceSave: function() {
-                console.log('Force save triggered');
+                console.info('🔵 OnlyOffice: Force save initiated');
                 this.updateStatusBadge('saving');
                 this.showToast('Salvando documento...', 'info', 2000);
                 
@@ -561,7 +562,7 @@
                         // Método correto do OnlyOffice para forçar salvamento
                         // Este método deve gerar um callback com status 6 (force save)
                         this.docEditor.serviceCommand("forcesave", null);
-                        console.log('serviceCommand forcesave executado');
+                        console.info('🟢 OnlyOffice: serviceCommand forcesave executed successfully');
                         
                         // Aguardar resposta do callback
                         setTimeout(() => {
@@ -571,7 +572,7 @@
                         }, 3000);
                         
                     } catch (error) {
-                        console.error('Erro no serviceCommand forcesave:', error);
+                        console.error('🔴 OnlyOffice: serviceCommand forcesave failed:', error);
                         this.updateStatusBadge('error');
                         this.showToast('Erro ao salvar. Tente usar Ctrl+S', 'error', 5000);
                     }
@@ -611,7 +612,7 @@
             showToast: function(message, type = 'info', duration = 4000) {
                 const container = document.getElementById('toastContainer');
                 if (!container) {
-                    console.warn('Toast container not found');
+                    console.warn('🟡 OnlyOffice: Toast container element not found');
                     return;
                 }
                 
@@ -676,7 +677,7 @@
             },
             
             inserirVariavel: function(variavel) {
-                console.log('Inserindo variável:', variavel);
+                console.debug('🔵 OnlyOffice: Variable insertion:', variavel);
                 
                 if (navigator.clipboard && navigator.clipboard.writeText) {
                     navigator.clipboard.writeText(variavel).then(() => {
@@ -686,7 +687,7 @@
             },
             
             forceResize: function() {
-                console.log('Forçando redimensionamento do editor...');
+                console.debug('🔵 OnlyOffice: Forcing editor resize');
                 
                 const editorElement = document.getElementById(this.editorId);
                 if (editorElement) {
@@ -705,9 +706,9 @@
                     if (this.docEditor && typeof this.docEditor.resize === 'function') {
                         try {
                             this.docEditor.resize();
-                            console.log('Redimensionamento via OnlyOffice API executado');
+                            console.debug('🟢 OnlyOffice: Resize via API executed successfully');
                         } catch (e) {
-                            console.log('Método resize não disponível nesta versão do OnlyOffice');
+                            console.debug('🟡 OnlyOffice: Resize method not available in this version');
                         }
                     }
                 }
@@ -718,7 +719,7 @@
         document.addEventListener('DOMContentLoaded', function() {
             // Verificar se o DocsAPI foi carregado
             if (typeof DocsAPI === 'undefined') {
-                console.error('OnlyOffice API não foi carregada!');
+                console.error('🔴 OnlyOffice: API failed to load - DocsAPI is undefined');
                 const loadingElement = document.getElementById('loading-' + onlyofficeEditor.editorId);
                 if (loadingElement) {
                     loadingElement.innerHTML = '<div class="text-danger">Erro ao carregar OnlyOffice API. Verifique se o servidor está rodando.</div>';
@@ -728,7 +729,7 @@
             
             // Aguardar um pouco para garantir que todos os elementos foram criados
             setTimeout(function() {
-                console.log('Iniciando OnlyOffice Editor...');
+                console.info('🚀 OnlyOffice: Starting editor initialization...');
                 onlyofficeEditor.init();
             }, 100);
         });
@@ -747,7 +748,7 @@
                 e.preventDefault(); // Impedir o save padrão do browser
                 if (onlyofficeEditor && typeof onlyofficeEditor.forceSave === 'function') {
                     onlyofficeEditor.forceSave();
-                    console.log('Ctrl+S interceptado, chamando forceSave()');
+                    console.debug('🔵 OnlyOffice: Ctrl+S intercepted, calling forceSave()');
                 }
             }
         });
