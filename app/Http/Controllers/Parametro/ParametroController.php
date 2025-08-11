@@ -134,8 +134,13 @@ class ParametroController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(string|int $id): View
+    public function show(string|int $id): View|RedirectResponse
     {
+        // Se for ID 2 (IA), redirecionar imediatamente para interface customizada
+        if ($id == 2 || $id === '2') {
+            return redirect()->route('parametros.ia.config');
+        }
+        
         // Tentar buscar por ID primeiro, depois por nome
         if (is_numeric($id)) {
             $modulo = $this->parametroService->obterModulos()->find((int)$id);
@@ -166,6 +171,11 @@ class ParametroController extends Controller
             })->sortBy('ordem');
             
             return view('modules.parametros.templates.index', compact('modulo', 'cards'));
+        }
+
+        // Se for IA, redirecionar para interface customizada de IA
+        if ($modulo->nome === 'IA') {
+            return redirect()->route('parametros.ia.config');
         }
 
         return view('modules.parametros.show', compact('modulo', 'submodulos'));
@@ -282,6 +292,11 @@ class ParametroController extends Controller
             })->sortBy('ordem');
             
             return view('modules.parametros.templates.index', compact('modulo', 'cards'));
+        }
+
+        // Se for IA, redirecionar para interface customizada de IA
+        if ($nomeModulo === 'IA') {
+            return redirect()->route('parametros.ia.config');
         }
         
         // Para submódulos normais, buscar os campos e valores atuais

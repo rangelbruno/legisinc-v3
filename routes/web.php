@@ -320,6 +320,18 @@ Route::prefix('admin/parametros')->name('parametros.')->middleware(['auth', 'che
     Route::get('/configurar/{nomeModulo}', [App\Http\Controllers\Parametro\ParametroController::class, 'configurar'])->name('configurar')->middleware('check.permission:parametros.view');
     
     Route::post('/salvar-configuracoes/{submoduloId}', [App\Http\Controllers\Parametro\ParametroController::class, 'salvarConfiguracoes'])->name('salvar-configuracoes')->middleware('check.permission:parametros.edit');
+
+    // Rotas específicas para configurações de IA
+    Route::prefix('ia')->name('ia.')->group(function () {
+        Route::get('/config', [App\Http\Controllers\AI\AIConfigController::class, 'index'])->name('config')->middleware('check.permission:parametros.view');
+        Route::post('/providers/{providerId}/config', [App\Http\Controllers\AI\AIConfigController::class, 'saveProviderConfig'])->name('providers.config')->middleware('check.permission:parametros.edit');
+        Route::post('/providers/{providerId}/activate', [App\Http\Controllers\AI\AIConfigController::class, 'activateProvider'])->name('providers.activate')->middleware('check.permission:parametros.edit');
+        Route::get('/providers/{providerId}/config', [App\Http\Controllers\AI\AIConfigController::class, 'getProviderConfig'])->name('providers.get-config')->middleware('check.permission:parametros.view');
+        Route::post('/providers/{providerId}/test', [App\Http\Controllers\AI\AIConfigController::class, 'testProviderConnection'])->name('providers.test')->middleware('check.permission:parametros.view');
+        Route::post('/providers/{providerId}/generate-sample', [App\Http\Controllers\AI\AIConfigController::class, 'generateSampleData'])->name('providers.generate-sample')->middleware('check.permission:parametros.edit');
+        Route::post('/usage', [App\Http\Controllers\AI\AIConfigController::class, 'recordTokenUsage'])->name('usage')->middleware('check.permission:parametros.edit');
+    });
+
     
         // Rota específica para configurar Dados Gerais
     Route::get('/dados-gerais', function() {

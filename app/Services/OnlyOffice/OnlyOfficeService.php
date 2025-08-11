@@ -596,12 +596,7 @@ class OnlyOfficeService
         // Gerar conteúdo do template baseado no tipo
         $template_content = $this->obterTemplateBase($tipo);
         
-        // Aplicar parâmetros de cabeçalho usando variáveis dinâmicas
-        // Substituir placeholders estáticos por variáveis dinâmicas
-        $template_content = str_replace('{{NOME_CAMARA}}', '${cabecalho_nome_camara}', $template_content);
-        $template_content = str_replace('{{ENDERECO_CAMARA}}', '${cabecalho_endereco}', $template_content);
-        $template_content = str_replace('{{TELEFONE_CAMARA}}', '${cabecalho_telefone}', $template_content);
-        $template_content = str_replace('{{WEBSITE_CAMARA}}', '${cabecalho_website}', $template_content);
+        // Os templates já vêm com as variáveis corretas, não precisa substituir placeholders
         
         // Verificar se deve usar imagem no cabeçalho
         $usarImagem = !empty($parametros['Cabeçalho.cabecalho_imagem']);
@@ -648,9 +643,9 @@ class OnlyOfficeService
 
     private function getTemplateProjeto(string $tipoNome): string
     {
-        return '{{NOME_CAMARA}}
-{{ENDERECO_CAMARA}}
-{{TELEFONE_CAMARA}}
+        return '${cabecalho_nome_camara}
+${cabecalho_endereco}
+${cabecalho_telefone}
 
 ' . strtoupper($tipoNome) . ' Nº ${numero_proposicao}
 
@@ -662,15 +657,18 @@ Art. 2º Esta Lei entra em vigor na data de sua publicação.
 
 ${municipio}, ${data_atual}.
 
-${assinatura_padrao}
+${var_assinatura_padrao}
+
+
+${rodape_texto}
 ';
     }
 
     private function getTemplateIndicacao(): string
     {
-        return '{{NOME_CAMARA}}
-{{ENDERECO_CAMARA}}
-{{TELEFONE_CAMARA}}
+        return '${cabecalho_nome_camara}
+${cabecalho_endereco}
+${cabecalho_telefone}
 
 INDICAÇÃO Nº ${numero_proposicao}
 
@@ -686,15 +684,18 @@ Sendo o que se apresenta para a elevada apreciação desta Casa Legislativa.
 
 ${municipio}, ${data_atual}.
 
-${assinatura_padrao}
+${var_assinatura_padrao}
+
+
+${rodape_texto}
 ';
     }
 
     private function getTemplateMocao(): string
     {
-        return '{{NOME_CAMARA}}
-{{ENDERECO_CAMARA}}
-{{TELEFONE_CAMARA}}
+        return '${cabecalho_nome_camara}
+${cabecalho_endereco}
+${cabecalho_telefone}
 
 MOÇÃO Nº ${numero_proposicao}
 
@@ -710,15 +711,18 @@ ${texto}
 
 ${municipio}, ${data_atual}.
 
-${assinatura_padrao}
+${var_assinatura_padrao}
+
+
+${rodape_texto}
 ';
     }
 
     private function getTemplateRequerimento(): string
     {
-        return '{{NOME_CAMARA}}
-{{ENDERECO_CAMARA}}
-{{TELEFONE_CAMARA}}
+        return '${cabecalho_nome_camara}
+${cabecalho_endereco}
+${cabecalho_telefone}
 
 REQUERIMENTO Nº ${numero_proposicao}
 
@@ -734,15 +738,18 @@ Termos em que peço deferimento.
 
 ${municipio}, ${data_atual}.
 
-${assinatura_padrao}
+${var_assinatura_padrao}
+
+
+${rodape_texto}
 ';
     }
 
     private function getTemplateGenerico(string $tipoNome): string
     {
-        return '{{NOME_CAMARA}}
-{{ENDERECO_CAMARA}}
-{{TELEFONE_CAMARA}}
+        return '${cabecalho_nome_camara}
+${cabecalho_endereco}
+${cabecalho_telefone}
 
 ' . strtoupper($tipoNome) . ' Nº ${numero_proposicao}
 
@@ -752,7 +759,10 @@ ${texto}
 
 ${municipio}, ${data_atual}.
 
-${assinatura_padrao}
+${var_assinatura_padrao}
+
+
+${rodape_texto}
 ';
     }
 
@@ -787,7 +797,7 @@ ${assinatura_padrao}
         // Encontrar e preservar variáveis ${...}
         $texto = preg_replace_callback('/\$\{([^}]+)\}/', function($matches) use (&$variaveisTemplate, &$placeholderCounter) {
             $placeholder = '___TEMPLATE_VAR_' . $placeholderCounter . '___';
-            $variaveisTemplate[$placeholder] = '$\\{' . $matches[1] . '\\}';
+            $variaveisTemplate[$placeholder] = '${' . $matches[1] . '}';  // NÃO escapar as chaves das variáveis
             $placeholderCounter++;
             return $placeholder;
         }, $texto);
@@ -814,7 +824,7 @@ ${assinatura_padrao}
             }
         }
         
-        // Restaurar variáveis de template
+        // Restaurar variáveis de template sem escape das chaves
         foreach ($variaveisTemplate as $placeholder => $variavel) {
             $textoProcessado = str_replace($placeholder, $variavel, $textoProcessado);
         }

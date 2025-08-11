@@ -141,7 +141,7 @@
             </div>
             <div class="card-toolbar">
                 <div class="d-flex justify-content-end" data-kt-templates-table-toolbar="base">
-                    <a href="/admin/parametros/6" class="btn btn-light-success me-3">
+                    <a href="/admin/parametros/1" class="btn btn-light-success me-3">
                         <i class="ki-duotone ki-setting-2 fs-2">
                             <span class="path1"></span>
                             <span class="path2"></span>

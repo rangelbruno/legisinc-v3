@@ -243,22 +243,21 @@ class TemplateController extends Controller
         
         $nomeArquivo = \Illuminate\Support\Str::slug($template->tipoProposicao->nome) . '.' . $extensao;
         
-        // Processar variáveis do template apenas se NÃO for requisição do OnlyOffice
+        // NÃO processar variáveis - os templates devem manter as variáveis ${} intactas
+        // As variáveis só devem ser substituídas quando um documento real é criado a partir do template
         $isOnlyOfficeRequest = request()->hasHeader('User-Agent') && 
                               str_contains(request()->header('User-Agent'), 'ONLYOFFICE');
         
-        if (!$isOnlyOfficeRequest && pathinfo($template->arquivo_path, PATHINFO_EXTENSION) === 'rtf') {
-            $conteudoArquivo = $this->processarVariaveisTemplate($conteudoArquivo);
-            
-            \Log::debug('Template variables processed for download', [
-                'template_id' => $template->id,
-                'processed_size_bytes' => strlen($conteudoArquivo),
-                'variables_applied' => true
-            ]);
-        } elseif ($isOnlyOfficeRequest) {
-            \Log::debug('Template served to OnlyOffice without variable processing', [
+        if ($isOnlyOfficeRequest) {
+            \Log::debug('Template served to OnlyOffice with variables intact', [
                 'template_id' => $template->id,
                 'client' => 'onlyoffice'
+            ]);
+        } else {
+            \Log::debug('Template download with variables intact', [
+                'template_id' => $template->id,
+                'processed_size_bytes' => strlen($conteudoArquivo),
+                'variables_preserved' => true
             ]);
         }
         

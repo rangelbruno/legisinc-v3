@@ -16,38 +16,49 @@ class TemplateProposicaoParametroSeeder extends Seeder
 
     public function run(): void
     {
-        // Criar módulo "Templates"
-        $moduloData = [
-            'nome' => 'Templates',
-            'descricao' => 'Configurações de templates para proposições legislativas',
-            'icon' => 'ki-document',
-            'ordem' => 5,
-            'ativo' => true
-        ];
+        // Verificar se o módulo Templates já existe
+        $modulo = \App\Models\Parametro\ParametroModulo::where('nome', 'Templates')->first();
+        
+        if (!$modulo) {
+            // Criar módulo "Templates" se não existir
+            $moduloData = [
+                'nome' => 'Templates',
+                'descricao' => 'Configurações e parâmetros para templates de documentos',
+                'icon' => 'ki-document',
+                'ordem' => 6,
+                'ativo' => true
+            ];
 
-        $modulo = $this->parametroService->criarModulo($moduloData);
+            $modulo = $this->parametroService->criarModulo($moduloData);
+        }
 
-        // Criar submódulo "Cabeçalho"
-        $submoduloData = [
-            'modulo_id' => $modulo->id,
-            'nome' => 'Cabeçalho',
-            'descricao' => 'Configurações do cabeçalho padrão das proposições',
-            'tipo' => 'form',
-            'ordem' => 1,
-            'ativo' => true
-        ];
+        // Verificar ou criar submódulo "Cabeçalho"
+        $submodulo = \App\Models\Parametro\ParametroSubmodulo::where('modulo_id', $modulo->id)
+            ->where('nome', 'Cabeçalho')
+            ->first();
+            
+        if (!$submodulo) {
+            $submoduloData = [
+                'modulo_id' => $modulo->id,
+                'nome' => 'Cabeçalho',
+                'descricao' => 'Configurações do cabeçalho dos templates',
+                'tipo' => 'form',
+                'ordem' => 1,
+                'ativo' => true
+            ];
+            $submodulo = $this->parametroService->criarSubmodulo($submoduloData);
+        }
 
-        $submodulo = $this->parametroService->criarSubmodulo($submoduloData);
-
-        // Criar campos do submódulo
+        // Criar ou atualizar campos do submódulo Cabeçalho
+        // Sincronizado com os parâmetros existentes
         $campos = [
             [
                 'nome' => 'cabecalho_imagem',
-                'label' => 'Imagem do Cabeçalho',
-                'descricao' => 'Imagem utilizada no cabeçalho das proposições',
+                'label' => 'Logo/Brasão da Câmara',
+                'descricao' => 'Imagem do brasão ou logo da câmara para o cabeçalho (variável: ${cabecalho_imagem})',
                 'tipo_campo' => 'file',
-                'valor_padrao' => 'template/cabecalho.png',
-                'obrigatorio' => true,
+                'valor_padrao' => '',
+                'obrigatorio' => false,
                 'ordem' => 1,
                 'placeholder' => 'Selecione uma imagem PNG ou JPG',
                 'validacao' => [
@@ -60,451 +71,268 @@ class TemplateProposicaoParametroSeeder extends Seeder
                 ]
             ],
             [
-                'nome' => 'usar_cabecalho_padrao',
-                'label' => 'Usar Cabeçalho Padrão',
-                'descricao' => 'Aplicar automaticamente o cabeçalho padrão em todas as proposições',
-                'tipo_campo' => 'checkbox',
-                'valor_padrao' => '1',
-                'obrigatorio' => false,
+                'nome' => 'cabecalho_nome_camara',
+                'label' => 'Nome da Câmara',
+                'descricao' => 'Nome completo da câmara municipal (variável: ${cabecalho_nome_camara})',
+                'tipo_campo' => 'text',
+                'valor_padrao' => 'CÂMARA MUNICIPAL',
+                'obrigatorio' => true,
                 'ordem' => 2,
-                'placeholder' => 'Ativar cabeçalho automático'
+                'placeholder' => 'Ex: CÂMARA MUNICIPAL DE SÃO PAULO'
             ],
             [
-                'nome' => 'cabecalho_altura',
-                'label' => 'Altura do Cabeçalho',
-                'descricao' => 'Altura do cabeçalho em pixels',
-                'tipo_campo' => 'number',
-                'valor_padrao' => '150',
-                'obrigatorio' => true,
+                'nome' => 'cabecalho_endereco',
+                'label' => 'Endereço',
+                'descricao' => 'Endereço completo da câmara (variável: ${cabecalho_endereco})',
+                'tipo_campo' => 'textarea',
+                'valor_padrao' => '',
+                'obrigatorio' => false,
                 'ordem' => 3,
-                'placeholder' => 'Altura em pixels (ex: 150)',
-                'validacao' => [
-                    'min' => 50,
-                    'max' => 300
-                ]
+                'placeholder' => 'Endereço completo com CEP'
             ],
             [
-                'nome' => 'cabecalho_posicao',
-                'label' => 'Posição do Cabeçalho',
-                'descricao' => 'Posição do cabeçalho no documento',
-                'tipo_campo' => 'select',
-                'valor_padrao' => 'topo',
-                'obrigatorio' => true,
+                'nome' => 'cabecalho_telefone',
+                'label' => 'Telefone',
+                'descricao' => 'Telefone de contato (variável: ${cabecalho_telefone})',
+                'tipo_campo' => 'text',
+                'valor_padrao' => '',
+                'obrigatorio' => false,
                 'ordem' => 4,
-                'placeholder' => 'Selecione a posição',
-                'opcoes' => [
-                    'topo' => 'Topo do documento',
-                    'header' => 'Cabeçalho da página',
-                    'marca_dagua' => 'Marca d\'água'
-                ]
+                'placeholder' => '(00) 0000-0000'
+            ],
+            [
+                'nome' => 'cabecalho_website',
+                'label' => 'Website',
+                'descricao' => 'Site da câmara (variável: ${cabecalho_website})',
+                'tipo_campo' => 'text',
+                'valor_padrao' => '',
+                'obrigatorio' => false,
+                'ordem' => 5,
+                'placeholder' => 'www.camara.gov.br'
             ]
         ];
 
         foreach ($campos as $campoData) {
-            $campoData['submodulo_id'] = $submodulo->id;
-            $this->parametroService->criarCampo($campoData);
+            $campo = \App\Models\Parametro\ParametroCampo::where('submodulo_id', $submodulo->id)
+                ->where('nome', $campoData['nome'])
+                ->first();
+                
+            if (!$campo) {
+                $campoData['submodulo_id'] = $submodulo->id;
+                $this->parametroService->criarCampo($campoData);
+            }
         }
 
-        // Criar submódulo "Marca D'água"
-        $submoduloMarcaDagua = [
-            'modulo_id' => $modulo->id,
-            'nome' => 'Marca D\'água',
-            'descricao' => 'Configurações da marca d\'água dos documentos',
-            'tipo' => 'form',
-            'ordem' => 2,
-            'ativo' => true
-        ];
+        // Removido submódulos "Marca D'água" e "Texto Padrão" pois não existem nos parâmetros atuais
 
-        $submodulo2 = $this->parametroService->criarSubmodulo($submoduloMarcaDagua);
-
-        // Criar campos do submódulo Marca D'água
-        $camposMarcaDagua = [
-            [
-                'nome' => 'usar_marca_dagua',
-                'label' => 'Usar Marca D\'água',
-                'descricao' => 'Aplicar marca d\'água nos documentos',
-                'tipo_campo' => 'checkbox',
-                'valor_padrao' => '0',
-                'obrigatorio' => false,
-                'ordem' => 1,
-                'placeholder' => 'Ativar marca d\'água'
-            ],
-            [
-                'nome' => 'marca_dagua_tipo',
-                'label' => 'Tipo de Marca D\'água',
-                'descricao' => 'Tipo da marca d\'água: imagem ou texto',
-                'tipo_campo' => 'select',
-                'valor_padrao' => 'imagem',
-                'obrigatorio' => true,
+        // Verificar ou criar submódulo "Rodapé"
+        $submodulo4 = \App\Models\Parametro\ParametroSubmodulo::where('modulo_id', $modulo->id)
+            ->where('nome', 'Rodapé')
+            ->first();
+            
+        if (!$submodulo4) {
+            $submoduloRodape = [
+                'modulo_id' => $modulo->id,
+                'nome' => 'Rodapé',
+                'descricao' => 'Configurações do rodapé dos templates',
+                'tipo' => 'form',
                 'ordem' => 2,
-                'placeholder' => 'Selecione o tipo',
-                'opcoes' => [
-                    'imagem' => 'Imagem',
-                    'texto' => 'Texto'
-                ]
-            ],
-            [
-                'nome' => 'marca_dagua_texto',
-                'label' => 'Texto da Marca D\'água',
-                'descricao' => 'Texto usado como marca d\'água',
-                'tipo_campo' => 'text',
-                'valor_padrao' => 'CONFIDENCIAL',
-                'obrigatorio' => false,
-                'ordem' => 3,
-                'placeholder' => 'Ex: CONFIDENCIAL'
-            ],
-            [
-                'nome' => 'marca_dagua_opacidade',
-                'label' => 'Opacidade',
-                'descricao' => 'Opacidade da marca d\'água (10-100%)',
-                'tipo_campo' => 'number',
-                'valor_padrao' => '30',
-                'obrigatorio' => true,
-                'ordem' => 4,
-                'placeholder' => '30',
-                'validacao' => [
-                    'min' => 10,
-                    'max' => 100
-                ]
-            ],
-            [
-                'nome' => 'marca_dagua_posicao',
-                'label' => 'Posição',
-                'descricao' => 'Posição da marca d\'água no documento',
-                'tipo_campo' => 'select',
-                'valor_padrao' => 'centro',
-                'obrigatorio' => true,
-                'ordem' => 5,
-                'placeholder' => 'Selecione a posição',
-                'opcoes' => [
-                    'centro' => 'Centro',
-                    'superior_direita' => 'Superior Direita',
-                    'superior_esquerda' => 'Superior Esquerda',
-                    'inferior_direita' => 'Inferior Direita',
-                    'inferior_esquerda' => 'Inferior Esquerda'
-                ]
-            ],
-            [
-                'nome' => 'marca_dagua_tamanho',
-                'label' => 'Tamanho',
-                'descricao' => 'Tamanho da marca d\'água em pixels',
-                'tipo_campo' => 'number',
-                'valor_padrao' => '100',
-                'obrigatorio' => true,
-                'ordem' => 6,
-                'placeholder' => '100',
-                'validacao' => [
-                    'min' => 50,
-                    'max' => 300
-                ]
-            ]
-        ];
-
-        foreach ($camposMarcaDagua as $campoData) {
-            $campoData['submodulo_id'] = $submodulo2->id;
-            $this->parametroService->criarCampo($campoData);
+                'ativo' => true
+            ];
+            $submodulo4 = $this->parametroService->criarSubmodulo($submoduloRodape);
         }
 
-        // Criar submódulo "Texto Padrão"
-        $submoduloTextoPadrao = [
-            'modulo_id' => $modulo->id,
-            'nome' => 'Texto Padrão',
-            'descricao' => 'Configurações de texto padrão dos documentos',
-            'tipo' => 'form',
-            'ordem' => 3,
-            'ativo' => true
-        ];
-
-        $submodulo3 = $this->parametroService->criarSubmodulo($submoduloTextoPadrao);
-
-        // Criar campos do submódulo Texto Padrão
-        $camposTextoPadrao = [
-            [
-                'nome' => 'usar_texto_padrao',
-                'label' => 'Usar Texto Padrão',
-                'descricao' => 'Aplicar textos padrão nos documentos',
-                'tipo_campo' => 'checkbox',
-                'valor_padrao' => '0',
-                'obrigatorio' => false,
-                'ordem' => 1,
-                'placeholder' => 'Ativar texto padrão'
-            ],
-            [
-                'nome' => 'texto_introducao',
-                'label' => 'Texto de Introdução',
-                'descricao' => 'Texto padrão para introdução dos documentos',
-                'tipo_campo' => 'textarea',
-                'valor_padrao' => 'Este documento apresenta proposta de lei que visa...',
-                'obrigatorio' => false,
-                'ordem' => 2,
-                'placeholder' => 'Texto de introdução',
-                'validacao' => [
-                    'max_length' => 1000
-                ]
-            ],
-            [
-                'nome' => 'texto_justificativa',
-                'label' => 'Texto de Justificativa',
-                'descricao' => 'Texto padrão para justificativa dos documentos',
-                'tipo_campo' => 'textarea',
-                'valor_padrao' => 'A presente proposição justifica-se pela necessidade de...',
-                'obrigatorio' => false,
-                'ordem' => 3,
-                'placeholder' => 'Texto de justificativa',
-                'validacao' => [
-                    'max_length' => 2000
-                ]
-            ],
-            [
-                'nome' => 'texto_conclusao',
-                'label' => 'Texto de Conclusão',
-                'descricao' => 'Texto padrão para conclusão dos documentos',
-                'tipo_campo' => 'textarea',
-                'valor_padrao' => 'Diante do exposto, submetemos esta proposição à apreciação dos nobres pares desta Casa.',
-                'obrigatorio' => false,
-                'ordem' => 4,
-                'placeholder' => 'Texto de conclusão',
-                'validacao' => [
-                    'max_length' => 1000
-                ]
-            ],
-            [
-                'nome' => 'assinatura_cargo',
-                'label' => 'Cargo para Assinatura',
-                'descricao' => 'Cargo padrão para assinatura dos documentos',
-                'tipo_campo' => 'text',
-                'valor_padrao' => 'Vereador(a)',
-                'obrigatorio' => false,
-                'ordem' => 5,
-                'placeholder' => 'Ex: Vereador(a)'
-            ],
-            [
-                'nome' => 'assinatura_nome',
-                'label' => 'Nome para Assinatura',
-                'descricao' => 'Nome padrão para assinatura dos documentos',
-                'tipo_campo' => 'text',
-                'valor_padrao' => '',
-                'obrigatorio' => false,
-                'ordem' => 6,
-                'placeholder' => 'Nome do responsável'
-            ],
-            [
-                'nome' => 'assinatura_departamento',
-                'label' => 'Departamento',
-                'descricao' => 'Departamento ou órgão responsável',
-                'tipo_campo' => 'text',
-                'valor_padrao' => 'Câmara Municipal',
-                'obrigatorio' => false,
-                'ordem' => 7,
-                'placeholder' => 'Ex: Câmara Municipal'
-            ]
-        ];
-
-        foreach ($camposTextoPadrao as $campoData) {
-            $campoData['submodulo_id'] = $submodulo3->id;
-            $this->parametroService->criarCampo($campoData);
-        }
-
-        // Criar submódulo "Rodapé"
-        $submoduloRodape = [
-            'modulo_id' => $modulo->id,
-            'nome' => 'Rodapé',
-            'descricao' => 'Configurações do rodapé dos documentos',
-            'tipo' => 'form',
-            'ordem' => 4,
-            'ativo' => true
-        ];
-
-        $submodulo4 = $this->parametroService->criarSubmodulo($submoduloRodape);
-
-        // Criar campos do submódulo Rodapé
+        // Criar ou atualizar campos do submódulo Rodapé
+        // Sincronizado com os parâmetros existentes
         $camposRodape = [
-            [
-                'nome' => 'usar_rodape',
-                'label' => 'Usar Rodapé',
-                'descricao' => 'Aplicar rodapé padrão nos documentos',
-                'tipo_campo' => 'checkbox',
-                'valor_padrao' => '1',
-                'obrigatorio' => false,
-                'ordem' => 1,
-                'placeholder' => 'Ativar rodapé automático'
-            ],
-            [
-                'nome' => 'rodape_tipo',
-                'label' => 'Tipo de Rodapé',
-                'descricao' => 'Tipo do rodapé: texto ou imagem',
-                'tipo_campo' => 'select',
-                'valor_padrao' => 'texto',
-                'obrigatorio' => true,
-                'ordem' => 2,
-                'placeholder' => 'Selecione o tipo',
-                'opcoes' => [
-                    'texto' => 'Texto',
-                    'imagem' => 'Imagem',
-                    'misto' => 'Texto + Imagem'
-                ]
-            ],
             [
                 'nome' => 'rodape_texto',
                 'label' => 'Texto do Rodapé',
-                'descricao' => 'Texto padrão do rodapé dos documentos',
+                'descricao' => 'Texto que aparece no rodapé dos documentos (variável: ${rodape_texto})',
                 'tipo_campo' => 'textarea',
-                'valor_padrao' => 'Este documento foi gerado automaticamente pelo Sistema Legislativo.',
+                'valor_padrao' => '',
                 'obrigatorio' => false,
-                'ordem' => 3,
-                'placeholder' => 'Texto do rodapé',
-                'validacao' => [
-                    'max_length' => 500
-                ]
-            ],
-            [
-                'nome' => 'rodape_imagem',
-                'label' => 'Imagem do Rodapé',
-                'descricao' => 'Imagem utilizada no rodapé dos documentos',
-                'tipo_campo' => 'file',
-                'valor_padrao' => 'template/rodape.png',
-                'obrigatorio' => false,
-                'ordem' => 4,
-                'placeholder' => 'Selecione uma imagem PNG ou JPG',
-                'validacao' => [
-                    'accepted_types' => ['image/png', 'image/jpeg', 'image/jpg'],
-                    'max_size' => 2048 // 2MB
-                ],
-                'opcoes' => [
-                    'storage_path' => 'public/template',
-                    'default_file' => 'template/rodape.png'
-                ]
-            ],
-            [
-                'nome' => 'rodape_posicao',
-                'label' => 'Posição do Rodapé',
-                'descricao' => 'Posição do rodapé no documento',
-                'tipo_campo' => 'select',
-                'valor_padrao' => 'rodape',
-                'obrigatorio' => true,
-                'ordem' => 5,
-                'placeholder' => 'Selecione a posição',
-                'opcoes' => [
-                    'rodape' => 'Rodapé da página',
-                    'final' => 'Final do documento',
-                    'todas_paginas' => 'Todas as páginas'
-                ]
-            ],
-            [
-                'nome' => 'rodape_alinhamento',
-                'label' => 'Alinhamento',
-                'descricao' => 'Alinhamento do conteúdo do rodapé',
-                'tipo_campo' => 'select',
-                'valor_padrao' => 'centro',
-                'obrigatorio' => true,
-                'ordem' => 6,
-                'placeholder' => 'Selecione o alinhamento',
-                'opcoes' => [
-                    'esquerda' => 'Esquerda',
-                    'centro' => 'Centro',
-                    'direita' => 'Direita'
-                ]
+                'ordem' => 1,
+                'placeholder' => 'Texto do rodapé'
             ],
             [
                 'nome' => 'rodape_numeracao',
-                'label' => 'Incluir Numeração',
-                'descricao' => 'Incluir numeração de páginas no rodapé',
+                'label' => 'Exibir Numeração de Página',
+                'descricao' => 'Mostrar número da página no rodapé (variável: ${rodape_numeracao})',
                 'tipo_campo' => 'checkbox',
                 'valor_padrao' => '1',
                 'obrigatorio' => false,
-                'ordem' => 7,
+                'ordem' => 2,
                 'placeholder' => 'Ativar numeração de páginas'
             ]
         ];
 
         foreach ($camposRodape as $campoData) {
-            $campoData['submodulo_id'] = $submodulo4->id;
-            $this->parametroService->criarCampo($campoData);
+            $campo = \App\Models\Parametro\ParametroCampo::where('submodulo_id', $submodulo4->id)
+                ->where('nome', $campoData['nome'])
+                ->first();
+                
+            if (!$campo) {
+                $campoData['submodulo_id'] = $submodulo4->id;
+                $this->parametroService->criarCampo($campoData);
+            }
         }
 
-        // Verificar se o módulo "Dados Gerais" já existe
-        $moduloDadosGerais = \App\Models\Parametro\ParametroModulo::where('nome', 'Dados Gerais')->first();
-        if (!$moduloDadosGerais) {
-            // Criar módulo "Dados Gerais" se não existir
-            $moduloDadosGeraisData = [
-                'nome' => 'Dados Gerais',
-                'descricao' => 'Configurações gerais da Câmara Municipal',
-                'icon' => 'ki-office-bag',
-                'ordem' => 1,
+        // Verificar ou criar submódulo "Variáveis Dinâmicas"
+        $submodulo5 = \App\Models\Parametro\ParametroSubmodulo::where('modulo_id', $modulo->id)
+            ->where('nome', 'Variáveis Dinâmicas')
+            ->first();
+            
+        if (!$submodulo5) {
+            $submoduloVariaveis = [
+                'modulo_id' => $modulo->id,
+                'nome' => 'Variáveis Dinâmicas',
+                'descricao' => 'Variáveis que podem ser usadas nos templates',
+                'tipo' => 'form',
+                'ordem' => 3,
                 'ativo' => true
             ];
-            $moduloDadosGerais = $this->parametroService->criarModulo($moduloDadosGeraisData);
+            $submodulo5 = $this->parametroService->criarSubmodulo($submoduloVariaveis);
         }
 
-        // Criar submódulo "Dados da Câmara" no módulo Dados Gerais
-        $submoduloDadosCamara = [
-            'modulo_id' => $moduloDadosGerais->id,
-            'nome' => 'Dados da Câmara',
-            'descricao' => 'Informações institucionais da Câmara Municipal para uso em templates',
-            'tipo' => 'form',
-            'ordem' => 1,
-            'ativo' => true
-        ];
-
-        $submodulo5 = $this->parametroService->criarSubmodulo($submoduloDadosCamara);
-
-        // Criar campos do submódulo Dados da Câmara
-        $camposDadosCamara = [
+        // Criar ou atualizar campos do submódulo Variáveis Dinâmicas
+        $camposVariaveis = [
             [
-                'nome' => 'nome_camara',
-                'label' => 'Nome da Câmara',
-                'descricao' => 'Nome oficial da Câmara Municipal (variável: ${nome_camara})',
+                'nome' => 'var_prefixo_numeracao',
+                'label' => 'Prefixo de Numeração',
+                'descricao' => 'Prefixo usado na numeração das proposições (variável: ${var_prefixo_numeracao})',
                 'tipo_campo' => 'text',
-                'valor_padrao' => 'CÂMARA MUNICIPAL DE SÃO PAULO',
-                'obrigatorio' => true,
+                'valor_padrao' => 'PROP',
+                'obrigatorio' => false,
                 'ordem' => 1,
-                'placeholder' => 'Ex: CÂMARA MUNICIPAL DE SÃO PAULO'
+                'placeholder' => 'Ex: PROP, PL, PLC'
             ],
             [
-                'nome' => 'endereco_completo',
-                'label' => 'Endereço Completo',
-                'descricao' => 'Endereço completo da Câmara Municipal (variável: ${endereco_completo})',
-                'tipo_campo' => 'textarea',
-                'valor_padrao' => 'Viaduto Jacareí, 100, Bela Vista - CEP: 01319-900\nSão Paulo/SP',
+                'nome' => 'var_formato_data',
+                'label' => 'Formato de Data',
+                'descricao' => 'Formato usado para exibir datas (variável: ${var_formato_data})',
+                'tipo_campo' => 'select',
+                'valor_padrao' => 'd/m/Y',
                 'obrigatorio' => true,
                 'ordem' => 2,
-                'placeholder' => 'Endereço completo com CEP e cidade'
+                'placeholder' => 'Selecione o formato',
+                'opcoes' => [
+                    'd/m/Y' => 'DD/MM/AAAA',
+                    'd-m-Y' => 'DD-MM-AAAA',
+                    'Y-m-d' => 'AAAA-MM-DD',
+                    'd \\d\\e F \\d\\e Y' => 'DD de Mês de AAAA'
+                ]
             ],
             [
-                'nome' => 'endereco_cep',
-                'label' => 'CEP',
-                'descricao' => 'CEP da Câmara Municipal (variável: ${endereco_cep})',
-                'tipo_campo' => 'text',
-                'valor_padrao' => '01319-900',
-                'obrigatorio' => true,
-                'ordem' => 3,
-                'placeholder' => '00000-000'
-            ],
-            [
-                'nome' => 'telefone_camara',
-                'label' => 'Telefone da Câmara',
-                'descricao' => 'Telefone principal da Câmara (variável: ${telefone_camara})',
-                'tipo_campo' => 'text',
-                'valor_padrao' => '(11) 3396-4000',
-                'obrigatorio' => true,
-                'ordem' => 4,
-                'placeholder' => '(11) 0000-0000'
-            ],
-            [
-                'nome' => 'website_camara',
-                'label' => 'Website da Câmara',
-                'descricao' => 'Website oficial da Câmara (variável: ${website_camara})',
-                'tipo_campo' => 'text',
-                'valor_padrao' => 'www.camara.sp.gov.br',
+                'nome' => 'var_assinatura_padrao',
+                'label' => 'Texto de Assinatura Padrão',
+                'descricao' => 'Texto padrão para área de assinatura (variável: ${var_assinatura_padrao})',
+                'tipo_campo' => 'textarea',
+                'valor_padrao' => "Sala das Sessões, em _____ de _____________ de _______.\n\n\n_________________________________\nVereador(a)",
                 'obrigatorio' => false,
-                'ordem' => 5,
-                'placeholder' => 'www.camara.gov.br'
-            ],
+                'ordem' => 3,
+                'placeholder' => 'Texto padrão de assinatura'
+            ]
         ];
 
-        foreach ($camposDadosCamara as $campoData) {
-            $campoData['submodulo_id'] = $submodulo5->id;
-            $this->parametroService->criarCampo($campoData);
+        foreach ($camposVariaveis as $campoData) {
+            $campo = \App\Models\Parametro\ParametroCampo::where('submodulo_id', $submodulo5->id)
+                ->where('nome', $campoData['nome'])
+                ->first();
+                
+            if (!$campo) {
+                $campoData['submodulo_id'] = $submodulo5->id;
+                $this->parametroService->criarCampo($campoData);
+            }
+        }
+
+        // Verificar ou criar submódulo "Formatação"
+        $submodulo6 = \App\Models\Parametro\ParametroSubmodulo::where('modulo_id', $modulo->id)
+            ->where('nome', 'Formatação')
+            ->first();
+            
+        if (!$submodulo6) {
+            $submoduloFormatacao = [
+                'modulo_id' => $modulo->id,
+                'nome' => 'Formatação',
+                'descricao' => 'Configurações de formatação dos documentos',
+                'tipo' => 'form',
+                'ordem' => 4,
+                'ativo' => true
+            ];
+            $submodulo6 = $this->parametroService->criarSubmodulo($submoduloFormatacao);
+        }
+
+        // Criar ou atualizar campos do submódulo Formatação
+        $camposFormatacao = [
+            [
+                'nome' => 'format_fonte',
+                'label' => 'Fonte Padrão',
+                'descricao' => 'Fonte padrão dos documentos (variável: ${format_fonte})',
+                'tipo_campo' => 'select',
+                'valor_padrao' => 'Arial',
+                'obrigatorio' => true,
+                'ordem' => 1,
+                'placeholder' => 'Selecione a fonte',
+                'opcoes' => [
+                    'Arial' => 'Arial',
+                    'Times New Roman' => 'Times New Roman',
+                    'Calibri' => 'Calibri',
+                    'Verdana' => 'Verdana',
+                    'Helvetica' => 'Helvetica'
+                ]
+            ],
+            [
+                'nome' => 'format_tamanho_fonte',
+                'label' => 'Tamanho da Fonte',
+                'descricao' => 'Tamanho padrão da fonte em pt (variável: ${format_tamanho_fonte})',
+                'tipo_campo' => 'number',
+                'valor_padrao' => '12',
+                'obrigatorio' => true,
+                'ordem' => 2,
+                'placeholder' => '12',
+                'validacao' => [
+                    'min' => 8,
+                    'max' => 24
+                ]
+            ],
+            [
+                'nome' => 'format_espacamento',
+                'label' => 'Espaçamento entre Linhas',
+                'descricao' => 'Espaçamento entre linhas do texto (variável: ${format_espacamento})',
+                'tipo_campo' => 'select',
+                'valor_padrao' => '1.5',
+                'obrigatorio' => true,
+                'ordem' => 3,
+                'placeholder' => 'Selecione o espaçamento',
+                'opcoes' => [
+                    '1' => 'Simples',
+                    '1.5' => '1,5 linhas',
+                    '2' => 'Duplo',
+                    '2.5' => '2,5 linhas'
+                ]
+            ],
+            [
+                'nome' => 'format_margens',
+                'label' => 'Margens (cm)',
+                'descricao' => 'Margens do documento (Superior, Inferior, Esquerda, Direita) (variável: ${format_margens})',
+                'tipo_campo' => 'text',
+                'valor_padrao' => '2.5, 2.5, 3, 2',
+                'obrigatorio' => true,
+                'ordem' => 4,
+                'placeholder' => 'Superior, Inferior, Esquerda, Direita'
+            ]
+        ];
+
+        foreach ($camposFormatacao as $campoData) {
+            $campo = \App\Models\Parametro\ParametroCampo::where('submodulo_id', $submodulo6->id)
+                ->where('nome', $campoData['nome'])
+                ->first();
+                
+            if (!$campo) {
+                $campoData['submodulo_id'] = $submodulo6->id;
+                $this->parametroService->criarCampo($campoData);
+            }
         }
 
         $this->command->info('Módulo de Templates com todos os submódulos criado com sucesso!');

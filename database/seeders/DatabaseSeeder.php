@@ -55,6 +55,11 @@ class DatabaseSeeder extends Seeder
             UserTypeScreenPermissionsSeeder::class,
         ]);
 
+        // Seeder de configurações de IA
+        $this->call([
+            AIProvidersSeeder::class,
+        ]);
+
         // Seeder de menus otimizados (deve ser executado por último para limpar e otimizar)
         $this->call([
             OptimizedMenuPermissionsSeeder::class,
