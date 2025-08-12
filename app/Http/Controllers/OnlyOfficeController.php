@@ -296,21 +296,24 @@ class OnlyOfficeController extends Controller
     public function editorParlamentar(Proposicao $proposicao, Request $request)
     {
         // Log do acesso
-        // Log::info('OnlyOffice Editor Access - Parlamentar', [
-            //     'user_id' => Auth::id(),
-            //     'proposicao_id' => $proposicao->id,
-            //     'ai_content' => $request->has('ai_content'),
-            //     'manual_content' => $request->has('manual_content')
-        // ]);
+        Log::info('OnlyOffice Editor Access - Parlamentar', [
+            'user_id' => Auth::id(),
+            'proposicao_id' => $proposicao->id,
+            'ai_content' => $request->has('ai_content'),
+            'manual_content' => $request->has('manual_content'),
+            'proposicao_status' => $proposicao->status,
+            'proposicao_conteudo_length' => strlen($proposicao->conteudo ?? ''),
+            'proposicao_conteudo_preview' => $proposicao->conteudo ? substr($proposicao->conteudo, 0, 100) : 'VAZIO'
+        ]);
         
         $user = Auth::user();
         
         // Limpar template_id inválido se existir
         if ($proposicao->template_id && !is_numeric($proposicao->template_id)) {
-            // Log::info('Limpando template_id inválido', [
-                //     'proposicao_id' => $proposicao->id,
-                //     'template_id_invalido' => $proposicao->template_id
-            // ]);
+            Log::info('Limpando template_id inválido', [
+                'proposicao_id' => $proposicao->id,
+                'template_id_invalido' => $proposicao->template_id
+            ]);
             
             $proposicao->update(['template_id' => null]);
         }
@@ -331,20 +334,33 @@ class OnlyOfficeController extends Controller
         $proposicao->load('autor');
         
         // Se há conteúdo de IA ou texto manual, forçar regeneração do documento
-        if ($request->has('ai_content') || $request->has('manual_content') || (!empty($proposicao->conteudo) && $proposicao->template_id === null)) {
+        $temConteudoValido = !empty($proposicao->conteudo) && 
+                           $proposicao->conteudo !== 'Conteúdo a ser definido' && 
+                           $proposicao->template_id === null;
+                           
+        if ($request->has('ai_content') || $request->has('manual_content') || $temConteudoValido) {
             // Limpar arquivo_path para forçar regeneração com conteúdo personalizado
             $proposicao->update([
                 'status' => 'em_edicao',
                 'arquivo_path' => null
             ]);
             
-            // Log::info('Forçando regeneração para conteúdo personalizado', [
-                //     'proposicao_id' => $proposicao->id,
-                //     'ai_content_param' => $request->has('ai_content'),
-                //     'manual_content_param' => $request->has('manual_content'),
-                //     'has_conteudo' => !empty($proposicao->conteudo),
-                //     'template_id' => $proposicao->template_id
-            // ]);
+            Log::info('Forçando regeneração para conteúdo personalizado', [
+                'proposicao_id' => $proposicao->id,
+                'ai_content_param' => $request->has('ai_content'),
+                'manual_content_param' => $request->has('manual_content'),
+                'tem_conteudo_valido' => $temConteudoValido,
+                'template_id' => $proposicao->template_id,
+                'arquivo_path_anterior' => $proposicao->arquivo_path
+            ]);
+        } else {
+            Log::info('Não forçando regeneração - conteúdo é placeholder ou tem template', [
+                'proposicao_id' => $proposicao->id,
+                'conteudo_atual' => $proposicao->conteudo,
+                'eh_placeholder' => $proposicao->conteudo === 'Conteúdo a ser definido',
+                'template_id' => $proposicao->template_id,
+                'arquivo_path_existente' => $proposicao->arquivo_path
+            ]);
         }
         
         // Gerar configurações do OnlyOffice

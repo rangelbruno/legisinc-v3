@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Services\Template\TemplateParametrosService;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class OnlyOfficeService
 {
@@ -1549,37 +1550,56 @@ ${texto}
                 return $this->gerarDocumentoRTFProposicao($proposicao);
             }
             
-            // Verificar diretamente se o arquivo existe
-            $caminhoCompleto = storage_path('app/' . $template->arquivo_path);
-            if (!file_exists($caminhoCompleto)) {
-                // Log::warning('Arquivo de template não encontrado', [
-                    //     'proposicao_id' => $proposicao->id,
-                    //     'template_id' => $template->id,
-                    //     'caminho' => $caminhoCompleto
-                // ]);
+            // Verificar se o arquivo existe usando Storage
+            if (!Storage::exists($template->arquivo_path)) {
+                Log::warning('Arquivo de template não encontrado no storage', [
+                    'proposicao_id' => $proposicao->id,
+                    'template_id' => $template->id,
+                    'arquivo_path' => $template->arquivo_path
+                ]);
                 return $this->gerarDocumentoRTFProposicao($proposicao);
             }
 
-            // Carregar o conteúdo do template diretamente
-            $conteudoTemplate = file_get_contents($caminhoCompleto);
+            // Carregar o conteúdo do template usando Storage
+            $conteudoTemplate = Storage::get($template->arquivo_path);
             
             // Log::info('Template carregado', [
                 //     'template_id' => $template->id,
                 //     'tamanho' => strlen($conteudoTemplate),
-                //     'preview' => substr($conteudoTemplate, 0, 100)
+                //     'preview' => substr($conteudoTemplate, 0, 200)
             // ]);
             
-            // Preparar dados para substituição - sem processar caracteres especiais por enquanto
+            // Obter dados da câmara através do serviço
+            $dadosCamara = $this->obterDadosCamara();
+            
+            // Preparar dados para substituição
             $dados = [
-                'numero_proposicao' => $proposicao->numero_protocolo ?: sprintf('%04d/%d', $proposicao->id, $proposicao->ano ?? date('Y')),
+                // Dados básicos da proposição
+                'numero_proposicao' => $proposicao->numero_protocolo ?: sprintf('%04d', $proposicao->id),
                 'ementa' => $proposicao->ementa ?? '',
                 'texto' => $proposicao->conteudo ?? '',
                 'autor_nome' => $proposicao->autor->name ?? '',
                 'autor_cargo' => $proposicao->autor->cargo ?? 'Vereador',
                 'data_atual' => now()->format('d/m/Y'),
                 'ano_atual' => now()->year,
-                'municipio' => config('app.municipio', 'São Paulo'),
-                'camara_nome' => config('app.camara_nome', 'Câmara Municipal'),
+                'municipio' => $dadosCamara['municipio'] ?? 'São Paulo',
+                'camara_nome' => $dadosCamara['nome_oficial'] ?? 'Câmara Municipal',
+                
+                // Dados do cabeçalho
+                'imagem_cabecalho' => '', // Vazio por enquanto, pode ser implementado depois
+                'cabecalho_nome_camara' => $dadosCamara['nome_oficial'] ?? 'Câmara Municipal',
+                'cabecalho_endereco' => $dadosCamara['endereco_linha'] ?? '',
+                'cabecalho_telefone' => $dadosCamara['telefone'] ?? '',
+                'cabecalho_website' => $dadosCamara['website'] ?? '',
+                
+                // Dados de data
+                'dia' => now()->format('d'),
+                'mes_extenso' => $this->obterMesPortugues(now()->month),
+                
+                // Dados adicionais
+                'justificativa' => '', // Normalmente vazio no template base
+                'assinatura_padrao' => '__________________________________',
+                'rodape_texto' => ''
             ];
 
             // Reativar o código original com melhorias
@@ -1589,34 +1609,38 @@ ${texto}
             // Log::info('Antes da substituição', [
                 //     'template_id' => $template->id,
                 //     'dados' => $dados,
-                //     'preview_antes' => substr($conteudoProcessado, 0, 500)
+                //     'preview_antes' => substr($conteudoProcessado, 0, 300)
             // ]);
             
             foreach ($dados as $variavel => $valor) {
-                $variavelCompleta = '${' . $variavel . '}';
-                $antes = substr_count($conteudoProcessado, $variavelCompleta);
-                
                 // Escapar caracteres especiais do RTF para valores de texto
                 $valorEscapado = $this->escapeRtf($valor);
                 
-                // Usar as variáveis no formato ${variavel}
-                $conteudoProcessado = str_replace($variavelCompleta, $valorEscapado, $conteudoProcessado);
+                // Formatos de variáveis para substituir:
+                $formatos = [
+                    '$\\{' . $variavel . '\\}',  // Formato RTF com escape: $\{variavel\}
+                    '${' . $variavel . '}',      // Formato simples: ${variavel}
+                    '$' . $variavel               // Formato direto: $variavel
+                ];
                 
-                $depois = substr_count($conteudoProcessado, $variavelCompleta);
-                
-                // Log::info('Substituição de variável', [
-                    //     'variavel' => $variavelCompleta,
-                    //     'valor_original' => $valor,
-                    //     'valor_escapado' => $valorEscapado,
-                    //     'ocorrencias_antes' => $antes,
-                    //     'ocorrencias_depois' => $depois,
-                    //     'substituido' => $antes - $depois
-                // ]);
+                foreach ($formatos as $formato) {
+                    $antes = substr_count($conteudoProcessado, $formato);
+                    if ($antes > 0) {
+                        $conteudoProcessado = str_replace($formato, $valorEscapado, $conteudoProcessado);
+                        
+                        // Log::info('Substituição de variável', [
+                            //     'variavel' => $formato,
+                            //     'valor_original' => $valor,
+                            //     'valor_escapado' => $valorEscapado,
+                            //     'ocorrencias' => $antes
+                        // ]);
+                    }
+                }
             }
             
             // Log::info('Após substituição', [
                 //     'template_id' => $template->id,
-                //     'preview_depois' => substr($conteudoProcessado, 0, 500)
+                //     'preview_depois' => substr($conteudoProcessado, 0, 300)
             // ]);
 
             // Verificar a extensão do arquivo do template
@@ -1705,80 +1729,88 @@ ${texto}
             //     'autor_nome' => $proposicao->autor->name ?? 'SEM AUTOR'
         // ]);
 
-        // FORÇAR uso do template ABNT se há conteúdo de IA ou se está em edição
+        // Verificar se tem conteúdo de IA que precisa de template específico
         $temConteudoIA = !empty($proposicao->conteudo) && 
+                        $proposicao->conteudo !== 'Conteúdo a ser definido' &&
                         (str_contains($proposicao->conteudo, 'PODER LEGISLATIVO') || 
                          str_contains($proposicao->conteudo, 'CÂMARA MUNICIPAL') ||
                          str_contains($proposicao->conteudo, 'Art.') ||
                          strlen($proposicao->conteudo) > 200);
+
+        // PRIMEIRO: Se não tem conteúdo de IA, verificar arquivo salvo
+        $arquivoSalvo = null;
+        if (!$temConteudoIA) {
+            // Verificar se tem arquivo_path definido
+            if ($proposicao->arquivo_path && Storage::exists($proposicao->arquivo_path)) {
+                $arquivoSalvo = $proposicao->arquivo_path;
+            }
+            
+            // Se não tem arquivo_path, procurar por qualquer arquivo salvo desta proposição
+            if (!$arquivoSalvo) {
+                // Buscar todos os arquivos desta proposição e pegar o mais recente
+                $pattern = "proposicoes/proposicao_{$proposicao->id}_template_*.rtf";
+                $arquivosEncontrados = glob(Storage::disk('public')->path('') . $pattern);
+                
+                if ($arquivosEncontrados) {
+                    // Ordenar por data de modificação (mais recente primeiro)
+                    usort($arquivosEncontrados, function($a, $b) {
+                        return filemtime($b) - filemtime($a);
+                    });
+                    
+                    // Pegar o mais recente e converter para path relativo
+                    $arquivoMaisRecente = basename($arquivosEncontrados[0]);
+                    $nomeArquivoPadrao = "proposicoes/" . $arquivoMaisRecente;
+                    
+                    if (Storage::disk('public')->exists($nomeArquivoPadrao)) {
+                        $arquivoSalvo = $nomeArquivoPadrao;
+                        $this->atualizarArquivoPathProposicao($proposicao, $nomeArquivoPadrao);
+                    }
+                }
+            }
+            
+            if ($arquivoSalvo) {
+                Log::info('Usando arquivo salvo da proposição (sem conteúdo IA)', [
+                    'proposicao_id' => $proposicao->id,
+                    'arquivo_path' => $arquivoSalvo
+                ]);
+                
+                // Determinar o caminho completo baseado no storage usado
+                $caminhoCompleto = $arquivoSalvo;
+                if (strpos($arquivoSalvo, 'proposicoes/') === 0) {
+                    // Arquivo está no storage public
+                    $caminhoCompleto = storage_path('app/public/' . $arquivoSalvo);
+                } else {
+                    // Arquivo está no storage padrão
+                    $caminhoCompleto = storage_path('app/' . $arquivoSalvo);
+                }
+                
+                if (file_exists($caminhoCompleto)) {
+                    $extensao = pathinfo($arquivoSalvo, PATHINFO_EXTENSION);
+                    $nomeArquivo = "proposicao_{$proposicao->id}.{$extensao}";
+                    
+                    return response()->download($caminhoCompleto, $nomeArquivo, [
+                        'Content-Type' => $this->getMimeType($extensao)
+                    ]);
+                }
+            }
+        } else {
+            Log::info('Ignorando arquivo salvo para regenerar com template específico', [
+                'proposicao_id' => $proposicao->id,
+                'tem_conteudo_ia' => true,
+                'arquivo_existente' => $proposicao->arquivo_path
+            ]);
+        }
         
-        if ($temConteudoIA || $proposicao->status === 'em_edicao') {
-            // Log::info('FORÇANDO uso do Template ABNT', [
-                //     'proposicao_id' => $proposicao->id,
-                //     'motivo' => $temConteudoIA ? 'conteudo_ia_detectado' : 'status_em_edicao',
-                //     'conteudo_length' => strlen($proposicao->conteudo ?? ''),
-                //     'status' => $proposicao->status
-            // ]);
+        // FORÇAR uso do template ABNT apenas se está em edição e não tem conteúdo de IA
+        if (!$temConteudoIA && $proposicao->status === 'em_edicao') {
+            Log::info('FORÇANDO uso do Template ABNT (status em edição, sem conteúdo IA)', [
+                'proposicao_id' => $proposicao->id,
+                'status' => $proposicao->status,
+                'conteudo_eh_placeholder' => $proposicao->conteudo === 'Conteúdo a ser definido'
+            ]);
             
             // Ir direto para o método ABNT - DOCX para melhor compatibilidade
             return $this->gerarDocumentoDOCXProposicao($proposicao);
-        }
-        
-        // PRIMEIRO: Verificar se a proposição já tem um arquivo salvo (documento editado anteriormente)
-        $arquivoSalvo = null;
-        
-        // Verificar se tem arquivo_path definido
-        if ($proposicao->arquivo_path && Storage::exists($proposicao->arquivo_path)) {
-            $arquivoSalvo = $proposicao->arquivo_path;
-        }
-        
-        // Se não tem arquivo_path, procurar por qualquer arquivo salvo desta proposição
-        if (!$arquivoSalvo) {
-            // Buscar todos os arquivos desta proposição e pegar o mais recente
-            $pattern = "proposicoes/proposicao_{$proposicao->id}_template_*.rtf";
-            $arquivosEncontrados = glob(Storage::disk('public')->path('') . $pattern);
-            
-            if ($arquivosEncontrados) {
-                // Ordenar por data de modificação (mais recente primeiro)
-                usort($arquivosEncontrados, function($a, $b) {
-                    return filemtime($b) - filemtime($a);
-                });
-                
-                // Pegar o mais recente e converter para path relativo
-                $arquivoMaisRecente = basename($arquivosEncontrados[0]);
-                $nomeArquivoPadrao = "proposicoes/" . $arquivoMaisRecente;
-                
-                if (Storage::disk('public')->exists($nomeArquivoPadrao)) {
-                    $arquivoSalvo = $nomeArquivoPadrao;
-                    $this->atualizarArquivoPathProposicao($proposicao, $nomeArquivoPadrao);
-                }
-            }
-        }
-        
-        if ($arquivoSalvo) {
-            // Log::info('Usando arquivo salvo da proposição', [
-                //     'proposicao_id' => $proposicao->id,
-                //     'arquivo_path' => $arquivoSalvo
-            // ]);
-            
-            // Determinar o caminho completo baseado no storage usado
-            $caminhoCompleto = $arquivoSalvo;
-            if (strpos($arquivoSalvo, 'proposicoes/') === 0) {
-                // Arquivo está no storage public
-                $caminhoCompleto = storage_path('app/public/' . $arquivoSalvo);
-            } else {
-                // Arquivo está no storage padrão
-                $caminhoCompleto = storage_path('app/' . $arquivoSalvo);
-            }
-            
-            if (file_exists($caminhoCompleto)) {
-                $extensao = pathinfo($arquivoSalvo, PATHINFO_EXTENSION);
-                $nomeArquivo = "proposicao_{$proposicao->id}.{$extensao}";
-                
-                return response()->download($caminhoCompleto, $nomeArquivo, [
-                    'Content-Type' => $this->getMimeType($extensao)
-                ]);
-            }
         }
         
         // Verificar se existe PHPWord
@@ -1817,10 +1849,10 @@ ${texto}
             if ($tipoProposicao->templates()->exists()) {
                 $template = $tipoProposicao->templates()->where('ativo', true)->first();
                 if ($template) {
-                    // Log::info('Template encontrado para o tipo', [
-                        //     'template_id' => $template->id,
-                        //     'arquivo_path' => $template->arquivo_path
-                    // ]);
+                    Log::info('Template encontrado para o tipo', [
+                        'template_id' => $template->id,
+                        'arquivo_path' => $template->arquivo_path
+                    ]);
                     $proposicao->template = $template; // Associar temporariamente para uso
                     return $this->gerarDocumentoComTemplate($proposicao);
                 } else {
@@ -1872,7 +1904,7 @@ ${texto}
         $section->addTextBreak(2);
         
         // Adicionar conteúdo da proposição
-        if (!empty($proposicao->conteudo)) {
+        if (!empty($proposicao->conteudo) && $proposicao->conteudo !== 'Conteúdo a ser definido') {
             $section->addText('CONTEÚDO DA PROPOSIÇÃO', ['bold' => true, 'size' => 14]);
             
             // Verificar se o conteúdo contém HTML
@@ -1965,11 +1997,12 @@ ${texto}
     private function gerarDocumentoDOCXProposicao(\App\Models\Proposicao $proposicao)
     {
         try {
-            // Log::info('Gerando documento DOCX com template ABNT', [
-                //     'proposicao_id' => $proposicao->id,
-                //     'conteudo_length' => strlen($proposicao->conteudo ?? ''),
-                //     'ementa' => $proposicao->ementa
-            // ]);
+            Log::info('Gerando documento DOCX com template ABNT', [
+                'proposicao_id' => $proposicao->id,
+                'conteudo_length' => strlen($proposicao->conteudo ?? ''),
+                'ementa' => $proposicao->ementa,
+                'conteudo_preview' => $proposicao->conteudo ? substr($proposicao->conteudo, 0, 100) : 'VAZIO'
+            ]);
             
             if (!class_exists('\PhpOffice\PhpWord\PhpWord')) {
                 // Fallback para RTF se PhpWord não disponível
@@ -2017,9 +2050,19 @@ ${texto}
             $section->addTextBreak(1);
             
             // Processar conteúdo da IA
-            if (!empty($proposicao->conteudo)) {
+            if (!empty($proposicao->conteudo) && $proposicao->conteudo !== 'Conteúdo a ser definido') {
+                Log::info('Processando conteúdo da IA no DOCX', [
+                    'proposicao_id' => $proposicao->id,
+                    'conteudo_length' => strlen($proposicao->conteudo),
+                    'conteudo_preview' => substr($proposicao->conteudo, 0, 200)
+                ]);
                 $this->processarConteudoDOCX($proposicao->conteudo, $section, $phpWord);
             } else {
+                Log::info('Usando conteúdo padrão (sem conteúdo IA)', [
+                    'proposicao_id' => $proposicao->id,
+                    'conteudo_atual' => $proposicao->conteudo,
+                    'eh_placeholder' => $proposicao->conteudo === 'Conteúdo a ser definido'
+                ]);
                 $section->addText('Art. 1º [INSERIR TEXTO DA PROPOSIÇÃO]', 'abntNormal', 'justified');
                 $section->addTextBreak(1);
                 $section->addText('Art. 2º Esta proposição entra em vigor na data de sua aprovação.', 'abntNormal', 'justified');
@@ -2157,7 +2200,7 @@ ${texto}
 ";
 
         // Conteúdo da IA processado
-        if (!empty($proposicao->conteudo)) {
+        if (!empty($proposicao->conteudo) && $proposicao->conteudo !== 'Conteúdo a ser definido') {
             $rtf .= $this->processarConteudoIA($proposicao->conteudo);
         } else {
             $rtf .= "{\b Art. 1º} [INSERIR TEXTO DA PROPOSIÇÃO]\par\par
@@ -2773,15 +2816,16 @@ Status: " . ucfirst(str_replace('_', ' ', $proposicao->status)) . "\par
                 
                 Storage::put($nomeArquivo, $response->body());
                 
-                // Extrair conteúdo do documento
-                $conteudo = $this->extrairConteudoDocumento($response->body());
-                
-                // Atualizar proposição
+                // Atualizar proposição - preservar conteúdo original, salvar apenas arquivo editado
                 $proposicao->update([
-                    'conteudo' => $conteudo,
                     'arquivo_path' => $nomeArquivo,
                     'ultima_modificacao' => now(),
                     'modificado_por' => auth()->id()
+                ]);
+                
+                Log::info('Arquivo atualizado sem modificar conteúdo original', [
+                    'proposicao_id' => $proposicao->id,
+                    'arquivo_salvo' => $nomeArquivo
                 ]);
                 
                 // Log::info('Proposição atualizada com sucesso via OnlyOffice', [
