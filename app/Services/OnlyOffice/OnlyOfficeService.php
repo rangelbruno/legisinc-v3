@@ -1801,17 +1801,14 @@ ${texto}
             ]);
         }
         
-        // FORÇAR uso do template ABNT apenas se está em edição e não tem conteúdo de IA
-        if (!$temConteudoIA && $proposicao->status === 'em_edicao') {
-            Log::info('FORÇANDO uso do Template ABNT (status em edição, sem conteúdo IA)', [
-                'proposicao_id' => $proposicao->id,
-                'status' => $proposicao->status,
-                'conteudo_eh_placeholder' => $proposicao->conteudo === 'Conteúdo a ser definido'
-            ]);
-            
-            // Ir direto para o método ABNT - DOCX para melhor compatibilidade
-            return $this->gerarDocumentoDOCXProposicao($proposicao);
-        }
+        // PULAR a lógica de forçar ABNT - sempre tentar usar template primeiro
+        // O template do administrador deve ter precedência
+        Log::info('Tentando usar template do tipo da proposição primeiro', [
+            'proposicao_id' => $proposicao->id,
+            'status' => $proposicao->status,
+            'tem_conteudo_ia' => $temConteudoIA,
+            'tipo_proposicao' => $proposicao->tipo
+        ]);
         
         // Verificar se existe PHPWord
         if (!class_exists('\PhpOffice\PhpWord\PhpWord')) {
