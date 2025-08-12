@@ -94,8 +94,7 @@ RUN chown -R laravel:laravel /var/www/html && \
 # Executar otimizações do Laravel
 USER laravel
 RUN php artisan config:cache && \
-    php artisan route:cache && \
-    php artisan view:cache
+    php artisan route:cache || true
 
 USER root
 

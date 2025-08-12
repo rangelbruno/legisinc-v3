@@ -1,42 +1,5 @@
 services:
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        USER_ID: ${USER_ID:-1000}
-        GROUP_ID: ${GROUP_ID:-1000}
-    container_name: legisinc-app
-    restart: unless-stopped
-    working_dir: /var/www/html
-    volumes:
-      - ./:/var/www/html
-      - ./docker/php/php.ini:/usr/local/etc/php/php.ini
-    ports:
-      - "8001:80"
-      - "8444:443"
-    depends_on:
-      - db
-      - redis
-    environment:
-      - APP_ENV=local
-      - APP_DEBUG=true
-      - APP_URL=http://localhost:8001
-      - DB_CONNECTION=pgsql
-      - DB_HOST=db
-      - DB_PORT=5432
-      - DB_DATABASE=legisinc
-      - DB_USERNAME=postgres
-      - DB_PASSWORD=123456
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - REDIS_PASSWORD=null
-      - CACHE_DRIVER=redis
-      - SESSION_DRIVER=redis
-      - QUEUE_CONNECTION=redis
-    networks:
-      - legisinc_network
-
+  # 1. Banco de Dados PostgreSQL (base da hierarquia)
   db:
     image: postgres:15-alpine
     container_name: legisinc-postgres
@@ -51,7 +14,13 @@ services:
       - "5432:5432"
     networks:
       - legisinc_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
+  # 2. Cache Redis (depende do banco)
   redis:
     image: redis:7-alpine
     container_name: legisinc-redis
@@ -63,7 +32,16 @@ services:
       - "6379:6379"
     networks:
       - legisinc_network
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
+  # 3. OnlyOffice Document Server (depende do banco e redis)
   onlyoffice-documentserver:
     image: onlyoffice/documentserver:8.0
     container_name: legisinc-onlyoffice
@@ -105,8 +83,58 @@ services:
     networks:
       - legisinc_network
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/healthcheck"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # 4. Aplicação Laravel (depende de todos os anteriores)
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        USER_ID: ${USER_ID:-1000}
+        GROUP_ID: ${GROUP_ID:-1000}
+    container_name: legisinc-app
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - ./:/var/www/html
+      - ./docker/php/php.ini:/usr/local/etc/php/php.ini
+    ports:
+      - "8001:80"
+      - "8444:443"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      onlyoffice-documentserver:
+        condition: service_healthy
+    environment:
+      - APP_ENV=local
+      - APP_DEBUG=true
+      - APP_URL=http://localhost:8001
+      - DB_CONNECTION=pgsql
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_DATABASE=legisinc
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=123456
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=null
+      - CACHE_DRIVER=redis
+      - SESSION_DRIVER=redis
+      - QUEUE_CONNECTION=redis
+    networks:
+      - legisinc_network
 
 volumes:
   postgres_data:
