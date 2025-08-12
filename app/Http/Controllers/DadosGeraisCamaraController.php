@@ -219,7 +219,7 @@ class DadosGeraisCamaraController extends Controller
     {
         $tabMapping = [
             'identificacao' => [
-                'submodule' => 'Identificação',
+                'submodule' => 'Informações da Câmara',
                 'fields' => ['nome_camara', 'sigla_camara', 'cnpj']
             ],
             'endereco' => [
@@ -231,11 +231,11 @@ class DadosGeraisCamaraController extends Controller
                 'fields' => ['telefone', 'telefone_secundario', 'email_institucional', 'email_contato', 'website']
             ],
             'funcionamento' => [
-                'submodule' => 'Funcionamento',
+                'submodule' => 'Contatos',
                 'fields' => ['horario_funcionamento', 'horario_atendimento']
             ],
             'gestao' => [
-                'submodule' => 'Gestão',
+                'submodule' => 'Gestão Atual',
                 'fields' => ['presidente_nome', 'presidente_partido', 'legislatura_atual', 'numero_vereadores']
             ]
         ];

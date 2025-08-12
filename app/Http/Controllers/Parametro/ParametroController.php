@@ -136,8 +136,8 @@ class ParametroController extends Controller
      */
     public function show(string|int $id): View|RedirectResponse
     {
-        // Se for ID 2 (IA), redirecionar imediatamente para interface customizada
-        if ($id == 2 || $id === '2') {
+        // Se for ID 3 (IA), redirecionar imediatamente para interface customizada
+        if ($id == 3 || $id === '3') {
             return redirect()->route('parametros.ia.config');
         }
         

@@ -26,6 +26,7 @@ class DatabaseSeeder extends Seeder
 
         // Seeders do sistema de parâmetros
         $this->call([
+            ParametrosModulosFixedSeeder::class, // Criar módulos com IDs fixos
             TipoParametroSeeder::class,
             GrupoParametroSeeder::class,
             ParametroSeeder::class,
@@ -33,6 +34,7 @@ class DatabaseSeeder extends Seeder
             ParametroExemploSeeder::class,
             DadosGeraisParametrosSeeder::class,
             DadosGeraisValoresSeeder::class,
+            FixDadosGeraisCamposSeeder::class, // CRÍTICO: Criar campos necessários para Dados Gerais
         ]);
 
         // Seeder de permissões de menu

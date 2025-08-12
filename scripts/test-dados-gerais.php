@@ -1,6 +1,5 @@
 <?php
 
-// Script para testar salvamento dos Dados Gerais da Câmara
 require_once __DIR__ . '/../vendor/autoload.php';
 
 $app = require_once __DIR__ . '/../bootstrap/app.php';
@@ -12,17 +11,14 @@ use App\Services\Parametro\ParametroService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
-// Simular auto-login como admin
 Auth::loginUsingId(1);
 
 echo "=== TESTE DE SALVAMENTO - DADOS GERAIS DA CÂMARA ===\n\n";
 
-// Criar uma instância do controller
 $parametroService = app(ParametroService::class);
 $controller = new DadosGeraisCamaraController($parametroService);
 
-// Simular dados de teste para a aba identificação
-echo "1. Testando salvamento da aba IDENTIFICAÇÃO...\n";
+echo "1. Testando salvamento da aba IDENTIFICACAO...\n";
 
 $request = new Request();
 $request->merge([
@@ -70,17 +66,4 @@ try {
     echo "  ❌ Erro ao consultar banco: " . $e->getMessage() . "\n";
 }
 
-echo "\n3. Testando carregamento das configurações...\n";
-
-try {
-    $configuracoes = $controller->index()->getData()['configuracoes'];
-    echo "  📄 Configurações carregadas:\n";
-    echo "    - Nome da Câmara: '" . $configuracoes['nome_camara'] . "'\n";
-    echo "    - Sigla: '" . $configuracoes['sigla_camara'] . "'\n";
-    echo "    - CNPJ: '" . $configuracoes['cnpj'] . "'\n";
-} catch (Exception $e) {
-    echo "  ❌ Erro ao carregar configurações: " . $e->getMessage() . "\n";
-}
-
 echo "\n=== TESTE CONCLUÍDO ===\n";
-EOF < /dev/null

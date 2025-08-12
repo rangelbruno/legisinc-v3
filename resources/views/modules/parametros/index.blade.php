@@ -221,14 +221,7 @@
                                     
                                     <!--begin::Action-->
                                     <div class="d-flex gap-2">
-                                        @php
-                                            $iaModulo = $modulos->where('nome', 'IA')->first();
-                                        @endphp
-                                        @if($iaModulo)
-                                            <a href="{{ route('parametros.show', $iaModulo->id) }}" class="btn btn-sm btn-info">
-                                        @else
-                                            <a href="{{ route('parametros.configurar', 'IA') }}" class="btn btn-sm btn-info">
-                                        @endif
+                                        <a href="{{ route('parametros.ia.config') }}" class="btn btn-sm btn-info">
                                             <i class="ki-duotone ki-setting-3 fs-6 me-1">
                                                 <span class="path1"></span>
                                                 <span class="path2"></span>
