@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Models\Parlamentar;
+use App\Factories\NavigationControlFactory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -17,6 +18,11 @@ class AuthController extends Controller
      */
     public function showLoginForm()
     {
+        // Verifica se usuário já está autenticado
+        if (!NavigationControlFactory::canAccessLoginPage()) {
+            return redirect(NavigationControlFactory::getRedirectRoute());
+        }
+        
         return view('auth.login');
     }
 
@@ -25,6 +31,11 @@ class AuthController extends Controller
      */
     public function showRegisterForm()
     {
+        // Verifica se usuário já está autenticado
+        if (!NavigationControlFactory::canAccessLoginPage()) {
+            return redirect(NavigationControlFactory::getRedirectRoute());
+        }
+        
         return view('auth.register');
     }
 
@@ -48,10 +59,19 @@ class AuthController extends Controller
                 $user->ultimo_acesso = now();
                 $user->save();
                 
-                $request->session()->regenerate();
+                // Configura sessão pós-login
+                $redirectTo = NavigationControlFactory::setupPostLoginSession($request);
+                
+                // Obtém rota apropriada baseada no perfil
+                $redirectTo = NavigationControlFactory::getRedirectRoute($user);
 
-                return redirect()->intended(route('dashboard'))
-                    ->with('success', 'Login realizado com sucesso!');
+                return redirect($redirectTo)
+                    ->with('success', 'Login realizado com sucesso!')
+                    ->withHeaders([
+                        'Cache-Control' => 'no-cache, no-store, max-age=0, must-revalidate',
+                        'Pragma' => 'no-cache',
+                        'Expires' => 'Sat, 01 Jan 2000 00:00:00 GMT'
+                    ]);
             }
         } catch (\Exception $e) {
             // Database not available, use mock authentication
@@ -60,9 +80,20 @@ class AuthController extends Controller
 
         // Mock authentication for demo purposes
         if ($this->attemptMockLogin($credentials)) {
-            $request->session()->regenerate();
-            return redirect()->intended(route('dashboard'))
-                ->with('success', 'Login realizado com sucesso (modo demo)!');
+            // Configura sessão pós-login
+            $redirectTo = NavigationControlFactory::setupPostLoginSession($request);
+            
+            // Obtém rota apropriada baseada no perfil
+            $user = Auth::user();
+            $redirectTo = NavigationControlFactory::getRedirectRoute($user);
+            
+            return redirect($redirectTo)
+                ->with('success', 'Login realizado com sucesso (modo demo)!')
+                ->withHeaders([
+                    'Cache-Control' => 'no-cache, no-store, max-age=0, must-revalidate',
+                    'Pragma' => 'no-cache',
+                    'Expires' => 'Sat, 01 Jan 2000 00:00:00 GMT'
+                ]);
         }
 
         return back()->withErrors([
@@ -160,11 +191,16 @@ class AuthController extends Controller
     {
         Auth::logout();
         
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
+        // Limpa sessão usando a factory
+        NavigationControlFactory::clearSession($request);
         
         return redirect()->route('login')
-            ->with('success', 'Logout realizado com sucesso!');
+            ->with('success', 'Logout realizado com sucesso!')
+            ->withHeaders([
+                'Cache-Control' => 'no-cache, no-store, max-age=0, must-revalidate',
+                'Pragma' => 'no-cache',
+                'Expires' => 'Sat, 01 Jan 2000 00:00:00 GMT'
+            ]);
     }
 
     /**

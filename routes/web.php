@@ -18,12 +18,16 @@ Route::get('/', function () {
     return redirect()->route('login');
 });
 
-// Authentication routes
-Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
-Route::post('/login', [AuthController::class, 'login']);
-Route::get('/register', [AuthController::class, 'showRegisterForm'])->name('auth.register');
-Route::post('/register', [AuthController::class, 'register'])->name('register');
-Route::post('/logout', [AuthController::class, 'logout'])->name('auth.logout');
+// Authentication routes - com middleware guest para prevenir acesso quando autenticado
+Route::middleware('guest')->group(function () {
+    Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
+    Route::post('/login', [AuthController::class, 'login']);
+    Route::get('/register', [AuthController::class, 'showRegisterForm'])->name('auth.register');
+    Route::post('/register', [AuthController::class, 'register'])->name('register');
+});
+
+// Logout route - apenas para usuários autenticados
+Route::post('/logout', [AuthController::class, 'logout'])->name('auth.logout')->middleware('auth');
 
 // Progress route (public)
 Route::get('/progress', [ProgressController::class, 'index'])->name('progress.index');

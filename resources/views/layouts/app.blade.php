@@ -2639,6 +2639,65 @@
     });
     </script>
     <!--end::Notifications System-->
+    
+    <!--begin::Prevent Back Navigation Script-->
+    @auth
+    <script>
+        (function() {
+            // Previne navegação com botão voltar após login
+            if (window.history && window.history.pushState) {
+                window.history.pushState('forward', null, window.location.href);
+                window.onpopstate = function() {
+                    window.history.pushState('forward', null, window.location.href);
+                };
+            }
+            
+            // Desabilita cache do navegador
+            window.onpageshow = function(event) {
+                if (event.persisted) {
+                    window.location.reload();
+                }
+            };
+            
+            // Adiciona controle de sessão inativa
+            let lastActivity = new Date().getTime();
+            const maxInactiveTime = 30 * 60 * 1000; // 30 minutos
+            
+            // Atualiza última atividade em qualquer interação
+            document.addEventListener('click', updateActivity);
+            document.addEventListener('keypress', updateActivity);
+            document.addEventListener('scroll', updateActivity);
+            document.addEventListener('mousemove', updateActivity);
+            
+            function updateActivity() {
+                lastActivity = new Date().getTime();
+            }
+            
+            // Verifica inatividade a cada minuto
+            setInterval(function() {
+                const currentTime = new Date().getTime();
+                const timeDiff = currentTime - lastActivity;
+                
+                if (timeDiff > maxInactiveTime) {
+                    // Sessão expirou por inatividade
+                    Swal.fire({
+                        title: 'Sessão Expirada',
+                        text: 'Sua sessão expirou por inatividade. Por favor, faça login novamente.',
+                        icon: 'warning',
+                        confirmButtonText: 'OK',
+                        allowOutsideClick: false,
+                        allowEscapeKey: false
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            window.location.href = '{{ route("auth.logout") }}';
+                        }
+                    });
+                }
+            }, 60000); // Verifica a cada minuto
+        })();
+    </script>
+    @endauth
+    <!--end::Prevent Back Navigation Script-->
 
 </body>
 <!--end::Body-->

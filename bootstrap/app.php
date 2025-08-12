@@ -22,6 +22,13 @@ return Application::configure(basePath: dirname(__DIR__))
             'check.proposicao.permission' => \App\Http\Middleware\CheckProposicaoPermission::class,
             'check.parlamentar.access' => \App\Http\Middleware\CheckParlamentarAccess::class,
             'block.protocolo.access' => \App\Http\Middleware\BlockProtocoloAccess::class,
+            'guest' => \App\Http\Middleware\RedirectIfAuthenticated::class,
+            'prevent.back.history' => \App\Http\Middleware\PreventBackHistory::class,
+        ]);
+        
+        // Aplica middleware para prevenir navegação com botão voltar em todas as rotas autenticadas
+        $middleware->web([
+            \App\Http\Middleware\PreventBackHistory::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
