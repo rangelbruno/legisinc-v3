@@ -27,7 +27,7 @@
                         <span class="bullet bg-gray-500 w-5px h-2px"></span>
                     </li>
                     <li class="breadcrumb-item text-muted">
-                        <a href="{{ route('parametros.show', 6) }}" class="text-muted text-hover-primary">Templates</a>
+                        <a href="{{ route('parametros.show', $moduloId) }}" class="text-muted text-hover-primary">Templates</a>
                     </li>
                     <li class="breadcrumb-item">
                         <span class="bullet bg-gray-500 w-5px h-2px"></span>
@@ -40,7 +40,7 @@
             <!--begin::Actions-->
             <div class="d-flex align-items-center gap-2 gap-lg-3">
                 <!--begin::Secondary button-->
-                <a href="{{ route('parametros.show', 6) }}" class="btn btn-sm btn-flex btn-secondary">
+                <a href="{{ route('parametros.show', $moduloId) }}" class="btn btn-sm btn-flex btn-secondary">
                     <i class="ki-duotone ki-arrow-left fs-3"></i>
                     Voltar
                 </a>

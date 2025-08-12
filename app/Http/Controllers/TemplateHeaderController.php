@@ -30,7 +30,11 @@ class TemplateHeaderController extends Controller
         // Obter configurações atuais
         $configuracoes = $this->obterConfiguracoes();
         
-        return view('modules.parametros.templates.cabecalho', compact('configuracoes'));
+        // Obter o ID do módulo Templates dinamicamente
+        $moduloTemplates = \App\Models\Parametro\ParametroModulo::where('nome', 'Templates')->first();
+        $moduloId = $moduloTemplates ? $moduloTemplates->id : 6; // Fallback para 6 se não encontrar
+        
+        return view('modules.parametros.templates.cabecalho', compact('configuracoes', 'moduloId'));
     }
 
     /**
