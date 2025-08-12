@@ -183,11 +183,11 @@ class ParametrosTemplatesSeeder extends Seeder
             ]
         );
 
-        // Definir valores padrão
-        $this->definirValor($campoNomeCamara, 'CÂMARA MUNICIPAL DE SÃO PAULO');
-        $this->definirValor($campoEndereco, "Viaduto Jacareí, 100\nBela Vista - São Paulo/SP\nCEP: 01319-900");
-        $this->definirValor($campoTelefone, '(11) 3396-4000');
-        $this->definirValor($campoWebsite, 'www.saopaulo.sp.leg.br');
+        // Definir valores padrão usando dados de Caraguatatuba
+        $this->definirValor($campoNomeCamara, 'CÂMARA MUNICIPAL DE CARAGUATATUBA');
+        $this->definirValor($campoEndereco, "Praça da República, 40\nCentro - Caraguatatuba/SP\nCEP: 11660-020");
+        $this->definirValor($campoTelefone, '(12) 3882-5588');
+        $this->definirValor($campoWebsite, 'www.camaracaraguatatuba.sp.gov.br');
     }
 
     private function criarCamposRodape($submodulo)

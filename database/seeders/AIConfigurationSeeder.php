@@ -19,13 +19,13 @@ class AIConfigurationSeeder extends Seeder
             [
                 'provider' => 'google',
                 'api_key' => 'AIzaSyBY7tkQhWWQHERr0XG6sbTvoJoTzPPftFk',
-                'model' => 'gemini-pro',
+                'model' => 'gemini-1.5-flash',
                 'max_tokens' => 4000,
-                'temperature' => 0.7,
+                'temperature' => 0.70,
                 'priority' => 1,
                 'is_active' => true, // Ativa com API key válida
                 'daily_token_limit' => 100000,
-                'cost_per_1k_tokens' => 0.0005,
+                'cost_per_1k_tokens' => 0.000500,
                 'custom_prompt' => null, // Usar padrão
             ]
         );

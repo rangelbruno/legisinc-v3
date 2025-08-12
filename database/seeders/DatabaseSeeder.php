@@ -60,6 +60,7 @@ class DatabaseSeeder extends Seeder
         // Seeder de configurações de IA
         $this->call([
             AIProvidersSeeder::class,
+            AIConfigurationSeeder::class,
         ]);
 
         // Seeder de menus otimizados (deve ser executado por último para limpar e otimizar)

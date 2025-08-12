@@ -17,7 +17,10 @@ Módulo
 
 ### 1. Módulos (`parametros_modulos`)
 - **Propósito**: Agrupa configurações relacionadas de alto nível
-- **Exemplo**: Templates, Sistema, Segurança
+- **Módulos Ativos**:
+  1. **Dados Gerais** (`id: 7`) - Dados gerais da câmara municipal (ícone: ki-bank)
+  2. **IA** (`id: 2`) - Configurações de Inteligência Artificial (ícone: ki-brain) 
+  3. **Templates** (`id: 1`) - Configurações e parâmetros para templates de documentos (ícone: ki-document)
 - **Campos principais**:
   - `nome`: Nome do módulo
   - `descricao`: Descrição detalhada
@@ -27,7 +30,23 @@ Módulo
 
 ### 2. Submódulos (`parametros_submodulos`)
 - **Propósito**: Subdivide módulos em categorias específicas
-- **Exemplo**: No módulo Templates: Cabeçalho, Rodapé, Marca D'água
+- **Submódulos por Módulo**:
+  
+  **Dados Gerais (7 submódulos)**:
+  1. **Identificação** - Dados de identificação da câmara
+  2. **Endereço** - Endereço completo da câmara
+  3. **Contatos** - Informações de contato
+  4. **Funcionamento** - Horários de funcionamento
+  5. **Gestão** - Informações da gestão atual
+  
+  **Templates (4 submódulos)**:
+  1. **Cabeçalho** - Configurações do cabeçalho dos templates
+  2. **Rodapé** - Configurações do rodapé dos templates
+  3. **Variáveis Dinâmicas** - Variáveis que podem ser usadas nos templates
+  4. **Formatação** - Configurações de formatação dos documentos
+  
+  **IA (sem submódulos)** - Configurado diretamente via tabela `ai_configurations`
+
 - **Campos principais**:
   - `modulo_id`: Referência ao módulo pai
   - `nome`: Nome do submódulo
@@ -64,31 +83,101 @@ Módulo
   - `valido_ate`: Data de fim da validade (null = ativo)
   - `user_id`: Usuário que definiu o valor
 
+## Detalhamento dos Módulos Implementados
+
+### Módulo 1: Dados Gerais da Câmara (ID: 7)
+
+Responsável por armazenar as informações institucionais da câmara municipal.
+
+#### Submódulo: Identificação
+- `nome_camara` (text, obrigatório) - Nome da Câmara
+- `sigla_camara` (text, obrigatório) - Sigla
+- `cnpj` (text, opcional) - CNPJ
+
+#### Submódulo: Endereço
+- `endereco` (text, obrigatório) - Endereço
+- `numero` (text, opcional) - Número
+- `complemento` (text, opcional) - Complemento
+- `bairro` (text, obrigatório) - Bairro
+- `cidade` (text, obrigatório) - Cidade
+- `estado` (text, obrigatório) - Estado
+- `cep` (text, obrigatório) - CEP
+
+#### Submódulo: Contatos
+- `telefone` (text, obrigatório) - Telefone Principal
+- `telefone_secundario` (text, opcional) - Telefone Secundário
+- `email_institucional` (email, obrigatório) - E-mail Institucional
+- `email_contato` (email, opcional) - E-mail de Contato
+- `website` (text, opcional) - Website
+
+#### Submódulo: Funcionamento
+- `horario_funcionamento` (text, obrigatório) - Horário de Funcionamento
+- `horario_atendimento` (text, obrigatório) - Horário de Atendimento
+
+#### Submódulo: Gestão
+- `presidente_nome` (text, obrigatório) - Nome do Presidente
+- `presidente_partido` (text, obrigatório) - Partido do Presidente
+- `legislatura_atual` (text, obrigatório) - Legislatura Atual
+- `numero_vereadores` (number, obrigatório) - Número de Vereadores
+
+### Módulo 2: Configurações da IA (ID: 2)
+
+Gerencia as configurações de Inteligência Artificial através da tabela `ai_configurations`.
+
+#### Configurações Disponíveis:
+- `name` - Nome da configuração
+- `provider` - Provedor (google, openai, etc.)
+- `api_key` - Chave da API (criptografada)
+- `model` - Modelo específico (ex: gemini-1.5-flash)
+- `base_url` - URL base do serviço
+- `max_tokens` - Limite máximo de tokens
+- `temperature` - Criatividade das respostas (0.0 - 1.0)
+- `daily_token_limit` - Limite diário de tokens
+- `cost_per_1k_tokens` - Custo por mil tokens
+
+**Configuração Atual:**
+- Google Gemini Pro (gemini-1.5-flash)
+- Limite: 100.000 tokens/dia
+- Temperatura: 0.70
+- Custo: $0.0005 por 1k tokens
+
+### Módulo 3: Templates (ID: 1)
+
+Configurações para geração de documentos.
+
+#### Submódulo: Cabeçalho
+- `cabecalho_imagem` (file, opcional) - Logo/Brasão da Câmara
+- `cabecalho_nome_camara` (text, obrigatório) - Nome da Câmara (padrão: "CÂMARA MUNICIPAL")
+- `cabecalho_endereco` (textarea, opcional) - Endereço
+- `cabecalho_telefone` (text, opcional) - Telefone
+- `cabecalho_website` (text, opcional) - Website
+
+#### Submódulo: Rodapé
+- `rodape_texto` (textarea, opcional) - Texto do Rodapé
+- `rodape_numeracao` (checkbox, opcional) - Exibir Numeração de Página (padrão: sim)
+
+#### Submódulo: Variáveis Dinâmicas
+- `var_prefixo_numeracao` (text, opcional) - Prefixo de Numeração (padrão: "PROP")
+- `var_formato_data` (select, obrigatório) - Formato de Data (padrão: "d/m/Y")
+- `var_assinatura_padrao` (textarea, opcional) - Texto de Assinatura Padrão
+
+#### Submódulo: Formatação
+- `format_fonte` (select, obrigatório) - Fonte Padrão (padrão: "Arial")
+- `format_tamanho_fonte` (number, obrigatório) - Tamanho da Fonte (padrão: 12)
+- `format_espacamento` (select, obrigatório) - Espaçamento entre Linhas (padrão: 1.5)
+- `format_margens` (text, obrigatório) - Margens em cm (padrão: "2.5, 2.5, 3, 2")
+
 ## Exemplo Prático: Módulo Templates
 
-O módulo Templates (ID: 6) é um exemplo completo de implementação:
+O módulo Templates (ID: 1) é um exemplo completo de implementação:
 
 ### Estrutura do Módulo Templates
 
-```
-Templates (Módulo)
-├── Cabeçalho (Submódulo)
-│   ├── cabecalho_imagem (Campo: file)
-│   ├── cabecalho_altura (Campo: number)
-│   └── cabecalho_alinhamento (Campo: select)
-├── Rodapé (Submódulo)
-│   ├── rodape_texto (Campo: text)
-│   ├── rodape_altura (Campo: number)
-│   └── rodape_fonte_tamanho (Campo: number)
-├── Marca D'água (Submódulo)
-│   ├── marca_dagua_texto (Campo: text)
-│   ├── marca_dagua_opacidade (Campo: number)
-│   └── marca_dagua_posicao (Campo: select)
-└── Texto Padrão (Submódulo)
-    ├── texto_fonte_familia (Campo: select)
-    ├── texto_fonte_tamanho (Campo: number)
-    └── texto_espacamento_linha (Campo: number)
-```
+Conforme detalhado na seção anterior, o módulo Templates possui 4 submódulos:
+- **Cabeçalho**: Logo, nome, endereço e contatos
+- **Rodapé**: Texto e numeração de páginas
+- **Variáveis Dinâmicas**: Prefixos, formatos e assinaturas
+- **Formatação**: Fontes, tamanhos, espaçamento e margens
 
 ## Fluxo de Funcionamento
 
@@ -190,28 +279,57 @@ $parametroService->salvarValores($submoduloId, $valores, auth()->id());
 // Listagem de módulos
 GET /admin/parametros
 
-// Visualizar módulo específico (ex: Templates)
-GET /admin/parametros/6
+// Módulo Dados Gerais (ID: 7)
+GET /admin/parametros/7
+GET /admin/parametros/dados-gerais/identificacao
+GET /admin/parametros/dados-gerais/endereco
+GET /admin/parametros/dados-gerais/contatos
+GET /admin/parametros/dados-gerais/funcionamento
+GET /admin/parametros/dados-gerais/gestao
 
-// Configurar submódulo
+// Módulo IA (ID: 2)
+GET /admin/ai-configurations
+POST /admin/ai-configurations
+
+// Módulo Templates (ID: 1)
+GET /admin/parametros/1
 GET /admin/parametros/templates/cabecalho
-POST /admin/parametros/templates/cabecalho/salvar
+GET /admin/parametros/templates/rodape
+GET /admin/parametros/templates/variaveis-dinamicas
+GET /admin/parametros/templates/formatacao
 
-// APIs
+// APIs gerais
 GET /api/parametros/{modulo}/{submodulo}
 POST /api/parametros/{modulo}/{submodulo}/salvar
 ```
 
-## Exemplo de Uso: Configurando Cabeçalho de Templates
+## Exemplos de Uso dos Módulos
 
-1. **Acesso**: Navegue para `/admin/parametros/6`
-2. **Seleção**: Clique no card "Cabeçalho"
-3. **Configuração**: 
-   - Upload da imagem do cabeçalho
-   - Definir altura (em pixels)
-   - Escolher alinhamento (esquerda, centro, direita)
-4. **Salvamento**: Clique em "Salvar Configurações"
-5. **Aplicação**: Os templates gerados utilizarão automaticamente essas configurações
+### Configurando Dados Gerais da Câmara
+
+1. **Acesso**: Navegue para `/admin/parametros/7`
+2. **Identificação**: Preencha nome, sigla e CNPJ da câmara
+3. **Endereço**: Complete o endereço completo
+4. **Contatos**: Configure telefones, e-mails e website
+5. **Funcionamento**: Defina horários de funcionamento e atendimento
+6. **Gestão**: Informe dados do presidente e legislatura atual
+
+### Configurando IA
+
+1. **Acesso**: Navegue para `/admin/ai-configurations`
+2. **Provedor**: Selecione o provedor de IA (Google, OpenAI, etc.)
+3. **API Key**: Configure a chave de acesso
+4. **Modelo**: Escolha o modelo específico
+5. **Limites**: Defina limites de tokens e custos
+6. **Teste**: Valide a configuração
+
+### Configurando Templates
+
+1. **Acesso**: Navegue para `/admin/parametros/1`
+2. **Cabeçalho**: Upload do logo, nome da câmara, endereço e contatos
+3. **Rodapé**: Texto do rodapé e configuração de numeração
+4. **Variáveis Dinâmicas**: Prefixos, formatos de data e assinaturas padrão
+5. **Formatação**: Fonte, tamanho, espaçamento e margens dos documentos
 
 ## Parametrização Dinâmica
 
@@ -256,6 +374,21 @@ Essas variáveis são substituídas automaticamente quando o parâmetro é utili
 - Verifique permissões do usuário
 - Confirme ordenação dos elementos
 
+## Resumo dos Módulos Implementados
+
+| Módulo | ID | Submódulos | Campos | Funcionalidade |
+|--------|----|-----------:|-------:|----------------|
+| **Dados Gerais** | 7 | 5 | 21 | Informações institucionais da câmara |
+| **IA** | 2 | 0 | - | Configurações de Inteligência Artificial |
+| **Templates** | 1 | 4 | 14 | Configurações para geração de documentos |
+| **Total** | - | **9** | **35** | - |
+
+### Estatísticas:
+- **3 módulos ativos** com configurações específicas
+- **35 campos de parâmetros** distribuídos em 9 submódulos
+- **1 configuração de IA** ativa (Google Gemini Pro)
+- **Sistema completo** de versionamento, cache e auditoria
+
 ## Conclusão
 
-O sistema de parâmetros do LegisInc oferece uma solução robusta e flexível para gerenciar configurações dinâmicas. Sua arquitetura modular permite fácil extensão e manutenção, enquanto recursos como versionamento, cache e auditoria garantem confiabilidade e performance.
+O sistema de parâmetros do LegisInc oferece uma solução robusta e flexível para gerenciar configurações dinâmicas. Com 3 módulos principais cobrindo desde dados institucionais até configurações de IA e templates, o sistema permite total personalização da aplicação sem necessidade de alterações no código. Sua arquitetura modular facilita extensão e manutenção, enquanto recursos como versionamento, cache e auditoria garantem confiabilidade e performance.

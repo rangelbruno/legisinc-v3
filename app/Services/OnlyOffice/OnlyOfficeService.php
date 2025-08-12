@@ -30,14 +30,42 @@ class OnlyOfficeService
     {
         $parametros = $this->templateParametrosService->obterParametrosTemplates();
         
+        $endereco = $parametros['Endereço.endereco'] ?? '';
+        $numero = $parametros['Endereço.numero'] ?? '';
+        $complemento = $parametros['Endereço.complemento'] ?? '';
+        $bairro = $parametros['Endereço.bairro'] ?? '';
+        $municipio = $parametros['Endereço.cidade'] ?? '';
+        $uf = $parametros['Endereço.estado'] ?? '';
+        $cep = $parametros['Endereço.cep'] ?? '';
+        
+        // Montar endereço completo
+        $enderecoCompleto = $endereco;
+        if ($numero) $enderecoCompleto .= ", {$numero}";
+        if ($complemento) $enderecoCompleto .= ", {$complemento}";
+        
         return [
-            'nome_oficial' => $parametros['Dados Gerais da Câmara.nome_camara_oficial'] ?? 'CÂMARA MUNICIPAL DE SÃO PAULO',
-            'endereco' => $parametros['Dados Gerais da Câmara.endereco_logradouro'] ?? 'Viaduto Jacareí, 100',
-            'bairro' => $parametros['Dados Gerais da Câmara.endereco_bairro'] ?? 'Bela Vista',
-            'municipio' => $parametros['Dados Gerais da Câmara.municipio_nome'] ?? 'São Paulo',
-            'uf' => $parametros['Dados Gerais da Câmara.municipio_uf'] ?? 'SP',
-            'legislatura' => $parametros['Dados Gerais da Câmara.legislatura_atual'] ?? '2021-2024',
-            'sessao' => $parametros['Dados Gerais da Câmara.sessao_atual'] ?? '2025'
+            'nome_oficial' => $parametros['Identificação.nome_camara'] ?? 
+                            $parametros['Cabeçalho.cabecalho_nome_camara'] ?? 'CÂMARA MUNICIPAL',
+            'endereco' => $endereco,
+            'numero' => $numero,
+            'complemento' => $complemento,
+            'bairro' => $bairro,
+            'municipio' => $municipio,
+            'uf' => $uf,
+            'cep' => $cep,
+            'endereco_completo' => $enderecoCompleto,
+            'endereco_linha' => $enderecoCompleto . ($bairro ? " - {$bairro}" : '') . ($municipio && $uf ? " - {$municipio}/{$uf}" : ''),
+            'legislatura' => $parametros['Gestão.legislatura_atual'] ?? '',
+            'presidente_nome' => $parametros['Gestão.presidente_nome'] ?? '',
+            'presidente_partido' => $parametros['Gestão.presidente_partido'] ?? '',
+            'numero_vereadores' => $parametros['Gestão.numero_vereadores'] ?? '',
+            'telefone' => $parametros['Contatos.telefone'] ?? '',
+            'email' => $parametros['Contatos.email_institucional'] ?? '',
+            'website' => $parametros['Contatos.website'] ?? '',
+            'cnpj' => $parametros['Identificação.cnpj'] ?? '',
+            'horario_funcionamento' => $parametros['Funcionamento.horario_funcionamento'] ?? '',
+            'horario_atendimento' => $parametros['Funcionamento.horario_atendimento'] ?? '',
+            'sessao' => date('Y') // Usar ano atual como sessão
         ];
     }
 
@@ -1969,7 +1997,7 @@ ${texto}
             // Cabeçalho institucional
             $dadosCamara = $this->obterDadosCamara();
             $section->addText($dadosCamara['nome_oficial'], 'abntTitle', 'center');
-            $section->addText($dadosCamara['endereco'] . ' - ' . $dadosCamara['bairro'] . ' - ' . $dadosCamara['municipio'] . '/' . $dadosCamara['uf'], 'abntNormal', 'center');
+            $section->addText($dadosCamara['endereco_linha'], 'abntNormal', 'center');
             $section->addText('Legislatura: ' . $dadosCamara['legislatura'] . ' - Sessão: ' . $dadosCamara['sessao'], 'abntNormal', 'center');
             $section->addTextBreak(2);
             
@@ -2000,7 +2028,8 @@ ${texto}
             $section->addTextBreak(2);
             
             // Data e assinatura
-            $section->addText('São Paulo, ' . date('d') . ' de ' . $this->obterMesPortugues(date('n')) . ' de ' . date('Y') . '.', 'abntNormal', 'right');
+            $municipio = $dadosCamara['municipio'] ?: 'São Paulo';
+            $section->addText($municipio . ', ' . date('d') . ' de ' . $this->obterMesPortugues(date('n')) . ' de ' . date('Y') . '.', 'abntNormal', 'right');
             $section->addTextBreak(2);
             
             $section->addText('__________________________________', 'abntNormal', 'center');
@@ -2098,11 +2127,10 @@ ${texto}
 
         // Cabeçalho institucional
         $dadosCamara = $this->obterDadosCamara();
-        $enderecoCompleto = $dadosCamara['endereco'] . ' - ' . $dadosCamara['bairro'] . ' - ' . $dadosCamara['municipio'] . '/' . $dadosCamara['uf'];
         $legislaturaCompleta = 'Legislatura: ' . $dadosCamara['legislatura'] . ' - Sessão: ' . $dadosCamara['sessao'];
         
         $rtf .= "{\qc\b\fs28 {$dadosCamara['nome_oficial']}\par}
-{\qc {$enderecoCompleto}\par}
+{\qc {$dadosCamara['endereco_linha']}\par}
 {\qc {$legislaturaCompleta}\par}
 \par
 \par
@@ -2138,7 +2166,8 @@ ${texto}
         }
 
         // Data e local
-        $rtf .= "{\qr São Paulo, " . date('d') . " de " . $this->obterMesPortugues(date('n')) . " de " . date('Y') . ".\par}
+        $municipio = $dadosCamara['municipio'] ?: 'São Paulo';
+        $rtf .= "{\qr {$municipio}, " . date('d') . " de " . $this->obterMesPortugues(date('n')) . " de " . date('Y') . ".\par}
 \par\par
 
 ";
@@ -2162,7 +2191,7 @@ ${texto}
 " . $this->escaparRTF($justificativa) . "\par
 \par\par
 
-{\qr São Paulo, " . date('d') . " de " . $this->obterMesPortugues(date('n')) . " de " . date('Y') . ".\par}
+{\qr {$municipio}, " . date('d') . " de " . $this->obterMesPortugues(date('n')) . " de " . date('Y') . ".\par}
 \par\par
 
 {\qc __________________________________\par}
@@ -2337,7 +2366,8 @@ Status: " . ucfirst(str_replace('_', ' ', $proposicao->status)) . "\par
             $justificativa = $this->extrairJustificativa($proposicao->conteudo);
             $assinatura = $proposicao->autor->name ?? '';
             $cargo = 'Vereador(a)';
-            $dataLocal = 'São Paulo, ' . date('d') . ' de ' . $this->obterMesPortugues(date('n')) . ' de ' . date('Y') . '.';
+            $municipio = $dadosCamara['municipio'] ?: 'São Paulo';
+            $dataLocal = $municipio . ', ' . date('d') . ' de ' . $this->obterMesPortugues(date('n')) . ' de ' . date('Y') . '.';
             
             // Log do processamento para debug
             // Log::info('Processamento conteúdo IA para RTF', [

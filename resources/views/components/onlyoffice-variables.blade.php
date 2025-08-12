@@ -135,7 +135,7 @@
             </button>
             <button type="button" onclick="onlyofficeEditor.inserirVariavel('${nome_camara_abreviado}')" class="btn variable-btn">
                 <span class="var-name">${nome_camara_abreviado}</span>
-                <span class="var-desc">Nome abreviado</span>
+                <span class="var-desc">Sigla da Câmara</span>
             </button>
             <button type="button" onclick="onlyofficeEditor.inserirVariavel('${municipio}')" class="btn variable-btn">
                 <span class="var-name">${municipio}</span>
@@ -143,7 +143,7 @@
             </button>
             <button type="button" onclick="onlyofficeEditor.inserirVariavel('${municipio_uf}')" class="btn variable-btn">
                 <span class="var-name">${municipio_uf}</span>
-                <span class="var-desc">UF do município</span>
+                <span class="var-desc">Estado (UF)</span>
             </button>
             <button type="button" onclick="onlyofficeEditor.inserirVariavel('${endereco_camara}')" class="btn variable-btn">
                 <span class="var-name">${endereco_camara}</span>
@@ -151,7 +151,7 @@
             </button>
             <button type="button" onclick="onlyofficeEditor.inserirVariavel('${endereco_completo}')" class="btn variable-btn">
                 <span class="var-name">${endereco_completo}</span>
-                <span class="var-desc">Endereço completo</span>
+                <span class="var-desc">Endereço completo com número, complemento, bairro e CEP</span>
             </button>
             <button type="button" onclick="onlyofficeEditor.inserirVariavel('${endereco_bairro}')" class="btn variable-btn">
                 <span class="var-name">${endereco_bairro}</span>
@@ -167,11 +167,11 @@
             </button>
             <button type="button" onclick="onlyofficeEditor.inserirVariavel('${telefone_protocolo}')" class="btn variable-btn">
                 <span class="var-name">${telefone_protocolo}</span>
-                <span class="var-desc">Telefone do protocolo</span>
+                <span class="var-desc">Telefone secundário</span>
             </button>
             <button type="button" onclick="onlyofficeEditor.inserirVariavel('${email_camara}')" class="btn variable-btn">
                 <span class="var-name">${email_camara}</span>
-                <span class="var-desc">E-mail oficial</span>
+                <span class="var-desc">E-mail institucional</span>
             </button>
             <button type="button" onclick="onlyofficeEditor.inserirVariavel('${website_camara}')" class="btn variable-btn">
                 <span class="var-name">${website_camara}</span>
@@ -185,6 +185,18 @@
                 <span class="var-name">${presidente_nome}</span>
                 <span class="var-desc">Nome do Presidente</span>
             </button>
+            <button type="button" onclick="onlyofficeEditor.inserirVariavel('${presidente_partido}')" class="btn variable-btn">
+                <span class="var-name">${presidente_partido}</span>
+                <span class="var-desc">Partido do Presidente</span>
+            </button>
+            <button type="button" onclick="onlyofficeEditor.inserirVariavel('${legislatura_atual}')" class="btn variable-btn">
+                <span class="var-name">${legislatura_atual}</span>
+                <span class="var-desc">Legislatura atual</span>
+            </button>
+            <button type="button" onclick="onlyofficeEditor.inserirVariavel('${numero_vereadores}')" class="btn variable-btn">
+                <span class="var-name">${numero_vereadores}</span>
+                <span class="var-desc">Número de vereadores</span>
+            </button>
             <button type="button" onclick="onlyofficeEditor.inserirVariavel('${presidente_tratamento}')" class="btn variable-btn">
                 <span class="var-name">${presidente_tratamento}</span>
                 <span class="var-desc">Tratamento do Presidente</span>
@@ -193,9 +205,13 @@
                 <span class="var-name">${horario_funcionamento}</span>
                 <span class="var-desc">Horário de funcionamento</span>
             </button>
+            <button type="button" onclick="onlyofficeEditor.inserirVariavel('${horario_atendimento}')" class="btn variable-btn">
+                <span class="var-name">${horario_atendimento}</span>
+                <span class="var-desc">Horário de atendimento</span>
+            </button>
             <button type="button" onclick="onlyofficeEditor.inserirVariavel('${horario_protocolo}')" class="btn variable-btn">
                 <span class="var-name">${horario_protocolo}</span>
-                <span class="var-desc">Horário do protocolo</span>
+                <span class="var-desc">Horário de atendimento ao público</span>
             </button>
         </div>
     </div>
@@ -228,8 +244,8 @@
                 <span class="var-name">${cabecalho_website}</span>
                 <span class="var-desc">Website no cabeçalho</span>
             </button>
-            <button type="button" onclick="onlyofficeEditor.inserirVariavel('${cabecalho_imagem}')" class="btn variable-btn bg-light-primary">
-                <span class="var-name">${cabecalho_imagem}</span>
+            <button type="button" onclick="onlyofficeEditor.inserirVariavel('${imagem_cabecalho}')" class="btn variable-btn bg-light-primary">
+                <span class="var-name">${imagem_cabecalho}</span>
                 <span class="var-desc">Imagem do cabeçalho</span>
             </button>
             <button type="button" onclick="onlyofficeEditor.inserirVariavel('${rodape_texto}')" class="btn variable-btn">
@@ -253,21 +269,50 @@
             VARIÁVEIS DINÂMICAS
         </div>
         <div class="variable-items">
-            <button type="button" onclick="onlyofficeEditor.inserirVariavel('${var_prefixo_numeracao}')" class="btn variable-btn">
-                <span class="var-name">${var_prefixo_numeracao}</span>
-                <span class="var-desc">Prefixo de numeração</span>
+            <button type="button" onclick="onlyofficeEditor.inserirVariavel('${prefixo_numeracao}')" class="btn variable-btn">
+                <span class="var-name">${prefixo_numeracao}</span>
+                <span class="var-desc">Prefixo para numeração</span>
             </button>
-            <button type="button" onclick="onlyofficeEditor.inserirVariavel('${var_formato_data}')" class="btn variable-btn">
-                <span class="var-name">${var_formato_data}</span>
-                <span class="var-desc">Formato de data</span>
+            <button type="button" onclick="onlyofficeEditor.inserirVariavel('${formato_data}')" class="btn variable-btn">
+                <span class="var-name">${formato_data}</span>
+                <span class="var-desc">Formato de exibição de datas</span>
             </button>
             <button type="button" onclick="onlyofficeEditor.inserirVariavel('${var_assinatura_padrao}')" class="btn variable-btn">
                 <span class="var-name">${var_assinatura_padrao}</span>
-                <span class="var-desc">Assinatura padrão</span>
+                <span class="var-desc">Assinatura padrão configurada</span>
             </button>
             <button type="button" onclick="onlyofficeEditor.inserirVariavel('${assinatura_padrao}')" class="btn variable-btn">
                 <span class="var-name">${assinatura_padrao}</span>
                 <span class="var-desc">Área de assinatura</span>
+            </button>
+        </div>
+    </div>
+    
+    {{-- FORMATAÇÃO --}}
+    <div class="variable-category">
+        <div class="variable-category-title">
+            <i class="ki-duotone ki-text-resize fs-5">
+                <span class="path1"></span>
+                <span class="path2"></span>
+            </i>
+            FORMATAÇÃO
+        </div>
+        <div class="variable-items">
+            <button type="button" onclick="onlyofficeEditor.inserirVariavel('${formato_fonte}')" class="btn variable-btn">
+                <span class="var-name">${formato_fonte}</span>
+                <span class="var-desc">Fonte padrão dos documentos</span>
+            </button>
+            <button type="button" onclick="onlyofficeEditor.inserirVariavel('${tamanho_fonte}')" class="btn variable-btn">
+                <span class="var-name">${tamanho_fonte}</span>
+                <span class="var-desc">Tamanho da fonte</span>
+            </button>
+            <button type="button" onclick="onlyofficeEditor.inserirVariavel('${espacamento_linhas}')" class="btn variable-btn">
+                <span class="var-name">${espacamento_linhas}</span>
+                <span class="var-desc">Espaçamento entre linhas</span>
+            </button>
+            <button type="button" onclick="onlyofficeEditor.inserirVariavel('${margens}')" class="btn variable-btn">
+                <span class="var-name">${margens}</span>
+                <span class="var-desc">Margens do documento</span>
             </button>
         </div>
     </div>
@@ -391,14 +436,14 @@ document.addEventListener('DOMContentLoaded', function() {
 // Adicionar função de template exemplo ao onlyofficeEditor
 if (window.onlyofficeEditor) {
     onlyofficeEditor.inserirTemplateExemplo = function() {
-        const templateExemplo = `\${cabecalho_imagem}
+        const templateExemplo = `\${imagem_cabecalho}
 
 \${cabecalho_nome_camara}
 \${cabecalho_endereco}
 Tel: \${cabecalho_telefone} - \${cabecalho_website}
 ================================================================================
 
-\${tipo_proposicao} Nº \${numero_proposicao}/\${ano}
+\${tipo_proposicao} Nº \${prefixo_numeracao}\${numero_proposicao}/\${ano}
 
 EMENTA: \${ementa}
 
@@ -411,17 +456,20 @@ Partido: \${autor_partido}
 JUSTIFICATIVA:
 \${justificativa}
 
-\${var_assinatura_padrao}
+\${assinatura_padrao}
 
 --------------------------------------------------------------------------------
 \${rodape_texto}
-\${nome_camara}
+\${nome_camara} - \${nome_camara_abreviado}
 \${endereco_completo}
 \${municipio}/\${municipio_uf}
-Tel: \${telefone_camara} | Protocolo: \${telefone_protocolo}
+Tel: \${telefone_camara} | Tel. Secundário: \${telefone_protocolo}
 E-mail: \${email_camara} | \${website_camara}
+CNPJ: \${cnpj_camara}
+Presidente: \${presidente_nome} (\${presidente_partido})
+Legislatura: \${legislatura_atual} | Vereadores: \${numero_vereadores}
 Horário de Funcionamento: \${horario_funcionamento}
-Horário do Protocolo: \${horario_protocolo}`;
+Horário de Atendimento: \${horario_atendimento}`;
         
         if (navigator.clipboard && navigator.clipboard.writeText) {
             navigator.clipboard.writeText(templateExemplo).then(() => {
