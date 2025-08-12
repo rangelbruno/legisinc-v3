@@ -55,7 +55,7 @@ class AuthController extends Controller
             }
         } catch (\Exception $e) {
             // Database not available, use mock authentication
-            Log::info('Database not available, using mock authentication');
+            // Log::info('Database not available, using mock authentication');
         }
 
         // Mock authentication for demo purposes
@@ -124,28 +124,28 @@ class AuthController extends Controller
                     'status' => 'ativo',
                 ]);
                 
-                Log::info('Registro de parlamentar criado automaticamente', [
-                    'usuario_id' => $user->id,
-                    'nome' => $user->name
-                ]);
+                // Log::info('Registro de parlamentar criado automaticamente', [
+                    //     'usuario_id' => $user->id,
+                    //     'nome' => $user->name
+                // ]);
             }
             
-            Log::info('Usuário registrado com sucesso', [
-                'usuario_id' => $user->id,
-                'nome' => $user->name,
-                'email' => $user->email,
-                'tipo_usuario' => $tipoUsuario
-            ]);
+            // Log::info('Usuário registrado com sucesso', [
+                //     'usuario_id' => $user->id,
+                //     'nome' => $user->name,
+                //     'email' => $user->email,
+                //     'tipo_usuario' => $tipoUsuario
+            // ]);
 
             return redirect()->route('auth.register')
                 ->with('success', 'Usuário registrado com sucesso! Você pode fazer login agora.');
 
         } catch (\Exception $e) {
-            Log::error('Erro inesperado durante registro', [
-                'error' => $e->getMessage(),
-                'email' => $request->input('email'),
-                'tipo_usuario' => $request->input('tipo_usuario')
-            ]);
+            // Log::error('Erro inesperado durante registro', [
+                //     'error' => $e->getMessage(),
+                //     'email' => $request->input('email'),
+                //     'tipo_usuario' => $request->input('tipo_usuario')
+            // ]);
 
             return back()
                 ->with('error', 'Erro inesperado. Tente novamente.')

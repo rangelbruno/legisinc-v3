@@ -113,10 +113,10 @@ class TemplateDocumentService
             return array_unique($variaveisEncontradas);
             
         } catch (Exception $e) {
-            \Log::warning('Erro ao extrair variáveis do template', [
-                'arquivo' => $arquivoPath,
-                'erro' => $e->getMessage()
-            ]);
+            // Log::warning('Erro ao extrair variáveis do template', [
+            //     'arquivo' => $arquivoPath,
+            //     'erro' => $e->getMessage()
+            // ]);
             
             // Retorna variáveis padrão em caso de erro
             return ['ementa', 'texto', 'nome_parlamentar', 'data'];
@@ -259,10 +259,10 @@ class TemplateDocumentService
             
         } catch (Exception $e) {
             DB::rollback();
-            \Log::error('Erro ao excluir template', [
-                'template_id' => $template->id,
-                'erro' => $e->getMessage()
-            ]);
+            // Log::error('Erro ao excluir template', [
+            //     'template_id' => $template->id,
+            //     'erro' => $e->getMessage()
+            // ]);
             return false;
         }
     }

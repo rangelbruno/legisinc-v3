@@ -144,11 +144,11 @@ class ParametroCampo extends Model
             return $valor ? $valor->valor_formatado : $this->valor_padrao;
             
         } catch (\Exception $e) {
-            \Log::warning('Erro ao acessar valor atual do campo', [
-                'campo_id' => $this->id,
-                'campo_nome' => $this->nome,
-                'error' => $e->getMessage()
-            ]);
+            // Log::warning('Erro ao acessar valor atual do campo', [
+                //     'campo_id' => $this->id,
+                //     'campo_nome' => $this->nome,
+                //     'error' => $e->getMessage()
+            // ]);
             return $this->valor_padrao;
         }
     }
@@ -225,7 +225,7 @@ class ParametroCampo extends Model
                 }
             } catch (\Exception $e) {
                 // Em caso de erro, ignorar validações personalizadas
-                \Log::warning("Erro ao processar validações personalizadas para campo {$this->nome}: " . $e->getMessage());
+                // Log::warning("Erro ao processar validações personalizadas para campo {$this->nome}: " . $e->getMessage());
             }
         }
 

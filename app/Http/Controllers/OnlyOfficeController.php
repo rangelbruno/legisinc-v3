@@ -20,10 +20,10 @@ class OnlyOfficeController extends Controller
     public function editorLegislativo(Proposicao $proposicao)
     {
         // Log simplificado
-        Log::info('OnlyOffice Editor Access', [
-            'user_id' => Auth::id(),
-            'proposicao_id' => $proposicao->id
-        ]);
+        // Log::info('OnlyOffice Editor Access', [
+            //     'user_id' => Auth::id(),
+            //     'proposicao_id' => $proposicao->id
+        // ]);
         
         // Verificar permissões
         $user = Auth::user();
@@ -112,14 +112,14 @@ class OnlyOfficeController extends Controller
             }
         }
         
-        Log::info('OnlyOffice file type detection', [
-            'proposicao_id' => $proposicao->id,
-            'detected_file_type' => $fileType,
-            'arquivo_path' => $proposicao->arquivo_path,
-            'template_id' => $proposicao->template_id,
-            'template_path' => ($proposicao->template_id && is_numeric($proposicao->template_id) && $proposicao->template) ? $proposicao->template->arquivo_path : null,
-            'has_ai_content' => !empty($proposicao->conteudo)
-        ]);
+        // Log::info('OnlyOffice file type detection', [
+            //     'proposicao_id' => $proposicao->id,
+            //     'detected_file_type' => $fileType,
+            //     'arquivo_path' => $proposicao->arquivo_path,
+            //     'template_id' => $proposicao->template_id,
+            //     'template_path' => ($proposicao->template_id && is_numeric($proposicao->template_id) && $proposicao->template) ? $proposicao->template->arquivo_path : null,
+            //     'has_ai_content' => !empty($proposicao->conteudo)
+        // ]);
 
         $config = [
             'type' => 'desktop',
@@ -168,12 +168,12 @@ class OnlyOfficeController extends Controller
         ];
         
         // Log da configuração para debug
-        Log::info('OnlyOffice Config Generated', [
-            'proposicao_id' => $proposicao->id,
-            'document_key' => $documentKey,
-            'document_url' => $documentUrl,
-            'callback_url' => $callbackUrl
-        ]);
+        // Log::info('OnlyOffice Config Generated', [
+            //     'proposicao_id' => $proposicao->id,
+            //     'document_key' => $documentKey,
+            //     'document_url' => $documentUrl,
+            //     'callback_url' => $callbackUrl
+        // ]);
 
         return $config;
     }
@@ -184,13 +184,13 @@ class OnlyOfficeController extends Controller
     public function download(Request $request, Proposicao $proposicao)
     {
         // Log para debug
-        Log::info('OnlyOffice Download Request', [
-            'proposicao_id' => $proposicao->id,
-            'user_agent' => $request->header('User-Agent'),
-            'ip' => $request->ip(),
-            'has_token' => $request->has('token'),
-            'authenticated' => Auth::check() ? Auth::id() : 'not_authenticated'
-        ]);
+        // Log::info('OnlyOffice Download Request', [
+            //     'proposicao_id' => $proposicao->id,
+            //     'user_agent' => $request->header('User-Agent'),
+            //     'ip' => $request->ip(),
+            //     'has_token' => $request->has('token'),
+            //     'authenticated' => Auth::check() ? Auth::id() : 'not_authenticated'
+        // ]);
         
         // Verificar token para acesso sem autenticação (OnlyOffice)
         $hasValidToken = $request->has('token');
@@ -222,12 +222,12 @@ class OnlyOfficeController extends Controller
     {
         $data = $request->all();
         
-        Log::info('OnlyOffice callback received', [
-            'proposicao_id' => $proposicao->id,
-            'document_key' => $documentKey,
-            'status' => $data['status'] ?? null,
-            'timestamp' => now()->format('Y-m-d H:i:s.u')
-        ]);
+        // Log::info('OnlyOffice callback received', [
+            //     'proposicao_id' => $proposicao->id,
+            //     'document_key' => $documentKey,
+            //     'status' => $data['status'] ?? null,
+            //     'timestamp' => now()->format('Y-m-d H:i:s.u')
+        // ]);
 
         try {
             // Status 2 = documento salvo e pronto para download
@@ -236,22 +236,22 @@ class OnlyOfficeController extends Controller
                 $resultado = $this->onlyOfficeService->processarCallbackProposicao($proposicao, $documentKey, $data);
                 $callbackTime = microtime(true) - $callbackStart;
                 
-                Log::info('OnlyOffice callback processamento concluído', [
-                    'proposicao_id' => $proposicao->id,
-                    'callback_time_seconds' => round($callbackTime, 2),
-                    'success' => !isset($resultado['error']) || $resultado['error'] == 0
-                ]);
+                // Log::info('OnlyOffice callback processamento concluído', [
+                    //     'proposicao_id' => $proposicao->id,
+                    //     'callback_time_seconds' => round($callbackTime, 2),
+                    //     'success' => !isset($resultado['error']) || $resultado['error'] == 0
+                // ]);
             } else {
                 $resultado = ['error' => 0];
             }
             
             return response()->json($resultado);
         } catch (\Exception $e) {
-            Log::error('OnlyOffice callback error', [
-                'proposicao_id' => $proposicao->id,
-                'document_key' => $documentKey,
-                'error' => $e->getMessage()
-            ]);
+            // Log::error('OnlyOffice callback error', [
+                //     'proposicao_id' => $proposicao->id,
+                //     'document_key' => $documentKey,
+                //     'error' => $e->getMessage()
+            // ]);
             
             return response()->json(['error' => 1]);
         }
@@ -264,10 +264,10 @@ class OnlyOfficeController extends Controller
     {
         try {
             // Log da tentativa de force save
-            Log::info('Force save solicitado', [
-                'proposicao_id' => $proposicao->id,
-                'document_key' => $request->input('document_key')
-            ]);
+            // Log::info('Force save solicitado', [
+                //     'proposicao_id' => $proposicao->id,
+                //     'document_key' => $request->input('document_key')
+            // ]);
             
             // Marcar a proposição como salva recentemente
             $proposicao->touch(); // Atualiza updated_at
@@ -278,10 +278,10 @@ class OnlyOfficeController extends Controller
                 'proposicao_id' => $proposicao->id
             ]);
         } catch (\Exception $e) {
-            Log::error('Erro no force save', [
-                'proposicao_id' => $proposicao->id,
-                'error' => $e->getMessage()
-            ]);
+            // Log::error('Erro no force save', [
+                //     'proposicao_id' => $proposicao->id,
+                //     'error' => $e->getMessage()
+            // ]);
             
             return response()->json([
                 'success' => false,
@@ -296,21 +296,21 @@ class OnlyOfficeController extends Controller
     public function editorParlamentar(Proposicao $proposicao, Request $request)
     {
         // Log do acesso
-        Log::info('OnlyOffice Editor Access - Parlamentar', [
-            'user_id' => Auth::id(),
-            'proposicao_id' => $proposicao->id,
-            'ai_content' => $request->has('ai_content'),
-            'manual_content' => $request->has('manual_content')
-        ]);
+        // Log::info('OnlyOffice Editor Access - Parlamentar', [
+            //     'user_id' => Auth::id(),
+            //     'proposicao_id' => $proposicao->id,
+            //     'ai_content' => $request->has('ai_content'),
+            //     'manual_content' => $request->has('manual_content')
+        // ]);
         
         $user = Auth::user();
         
         // Limpar template_id inválido se existir
         if ($proposicao->template_id && !is_numeric($proposicao->template_id)) {
-            \Log::info('Limpando template_id inválido', [
-                'proposicao_id' => $proposicao->id,
-                'template_id_invalido' => $proposicao->template_id
-            ]);
+            // Log::info('Limpando template_id inválido', [
+                //     'proposicao_id' => $proposicao->id,
+                //     'template_id_invalido' => $proposicao->template_id
+            // ]);
             
             $proposicao->update(['template_id' => null]);
         }
@@ -338,13 +338,13 @@ class OnlyOfficeController extends Controller
                 'arquivo_path' => null
             ]);
             
-            Log::info('Forçando regeneração para conteúdo personalizado', [
-                'proposicao_id' => $proposicao->id,
-                'ai_content_param' => $request->has('ai_content'),
-                'manual_content_param' => $request->has('manual_content'),
-                'has_conteudo' => !empty($proposicao->conteudo),
-                'template_id' => $proposicao->template_id
-            ]);
+            // Log::info('Forçando regeneração para conteúdo personalizado', [
+                //     'proposicao_id' => $proposicao->id,
+                //     'ai_content_param' => $request->has('ai_content'),
+                //     'manual_content_param' => $request->has('manual_content'),
+                //     'has_conteudo' => !empty($proposicao->conteudo),
+                //     'template_id' => $proposicao->template_id
+            // ]);
         }
         
         // Gerar configurações do OnlyOffice

@@ -73,11 +73,11 @@ class ParametroProtocoloController extends Controller
                 
                 Parametro::where('codigo', $codigo)->update(['valor' => $valor]);
                 
-                Log::info('Parâmetro atualizado', [
-                    'codigo' => $codigo,
-                    'valor' => $valor,
-                    'usuario_id' => auth()->id()
-                ]);
+                // Log::info('Parâmetro atualizado', [
+                    //     'codigo' => $codigo,
+                    //     'valor' => $valor,
+                    //     'usuario_id' => auth()->id()
+                // ]);
             }
             
             DB::commit();
@@ -88,10 +88,10 @@ class ParametroProtocoloController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             
-            Log::error('Erro ao atualizar parâmetros de protocolo', [
-                'error' => $e->getMessage(),
-                'usuario_id' => auth()->id()
-            ]);
+            // Log::error('Erro ao atualizar parâmetros de protocolo', [
+                //     'error' => $e->getMessage(),
+                //     'usuario_id' => auth()->id()
+            // ]);
             
             return redirect()->route('admin.parametros.protocolo')
                 ->with('error', 'Erro ao atualizar parâmetros: ' . $e->getMessage());
@@ -159,9 +159,9 @@ class ParametroProtocoloController extends Controller
             
             DB::commit();
             
-            Log::info('Parâmetros de protocolo restaurados para valores padrão', [
-                'usuario_id' => auth()->id()
-            ]);
+            // Log::info('Parâmetros de protocolo restaurados para valores padrão', [
+                //     'usuario_id' => auth()->id()
+            // ]);
             
             return redirect()->route('admin.parametros.protocolo')
                 ->with('success', 'Parâmetros restaurados para valores padrão!');

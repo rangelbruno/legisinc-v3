@@ -43,10 +43,10 @@ class SessionService
             ];
             
         } catch (Exception $e) {
-            Log::error('Erro ao listar sessões', [
-                'erro' => $e->getMessage(),
-                'filtros' => $filtros
-            ]);
+            // Log::error('Erro ao listar sessões', [
+                //     'erro' => $e->getMessage(),
+                //     'filtros' => $filtros
+            // ]);
             throw new Exception('Erro ao buscar sessões: ' . $e->getMessage());
         }
     }
@@ -71,10 +71,10 @@ class SessionService
             ];
             
         } catch (Exception $e) {
-            Log::error('Erro ao buscar sessão', [
-                'erro' => $e->getMessage(),
-                'id' => $id
-            ]);
+            // Log::error('Erro ao buscar sessão', [
+                //     'erro' => $e->getMessage(),
+                //     'id' => $id
+            // ]);
             throw $e;
         }
     }
@@ -117,10 +117,10 @@ class SessionService
             ];
             
         } catch (Exception $e) {
-            Log::error('Erro ao criar sessão', [
-                'erro' => $e->getMessage(),
-                'dados' => $dados
-            ]);
+            // Log::error('Erro ao criar sessão', [
+                //     'erro' => $e->getMessage(),
+                //     'dados' => $dados
+            // ]);
             throw new Exception('Erro ao criar sessão: ' . $e->getMessage());
         }
     }
@@ -144,11 +144,11 @@ class SessionService
             ];
             
         } catch (Exception $e) {
-            Log::error('Erro ao atualizar sessão', [
-                'erro' => $e->getMessage(),
-                'id' => $id,
-                'dados' => $dados
-            ]);
+            // Log::error('Erro ao atualizar sessão', [
+                //     'erro' => $e->getMessage(),
+                //     'id' => $id,
+                //     'dados' => $dados
+            // ]);
             throw new Exception('Erro ao atualizar sessão: ' . $e->getMessage());
         }
     }
@@ -167,10 +167,10 @@ class SessionService
             ];
             
         } catch (Exception $e) {
-            Log::error('Erro ao deletar sessão', [
-                'erro' => $e->getMessage(),
-                'id' => $id
-            ]);
+            // Log::error('Erro ao deletar sessão', [
+                //     'erro' => $e->getMessage(),
+                //     'id' => $id
+            // ]);
             throw new Exception('Erro ao deletar sessão: ' . $e->getMessage());
         }
     }
@@ -192,10 +192,10 @@ class SessionService
             ];
             
         } catch (Exception $e) {
-            Log::error('Erro ao buscar matérias da sessão', [
-                'erro' => $e->getMessage(),
-                'sessionId' => $sessionId
-            ]);
+            // Log::error('Erro ao buscar matérias da sessão', [
+                //     'erro' => $e->getMessage(),
+                //     'sessionId' => $sessionId
+            // ]);
             throw new Exception('Erro ao buscar matérias da sessão: ' . $e->getMessage());
         }
     }
@@ -231,11 +231,11 @@ class SessionService
             ];
             
         } catch (Exception $e) {
-            Log::error('Erro ao adicionar matéria à sessão', [
-                'erro' => $e->getMessage(),
-                'sessionId' => $sessionId,
-                'materia' => $materia
-            ]);
+            // Log::error('Erro ao adicionar matéria à sessão', [
+                //     'erro' => $e->getMessage(),
+                //     'sessionId' => $sessionId,
+                //     'materia' => $materia
+            // ]);
             throw new Exception('Erro ao adicionar matéria à sessão: ' . $e->getMessage());
         }
     }
@@ -262,10 +262,10 @@ class SessionService
             ];
             
         } catch (Exception $e) {
-            Log::error('Erro ao gerar XML da sessão', [
-                'erro' => $e->getMessage(),
-                'sessionId' => $sessionId
-            ]);
+            // Log::error('Erro ao gerar XML da sessão', [
+                //     'erro' => $e->getMessage(),
+                //     'sessionId' => $sessionId
+            // ]);
             throw new Exception('Erro ao gerar XML da sessão: ' . $e->getMessage());
         }
     }
@@ -308,9 +308,9 @@ class SessionService
             ];
             
         } catch (Exception $e) {
-            Log::error('Erro ao obter estatísticas das sessões', [
-                'erro' => $e->getMessage()
-            ]);
+            // Log::error('Erro ao obter estatísticas das sessões', [
+                //     'erro' => $e->getMessage()
+            // ]);
             throw new Exception('Erro ao obter estatísticas: ' . $e->getMessage());
         }
     }

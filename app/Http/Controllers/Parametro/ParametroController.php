@@ -35,10 +35,10 @@ class ParametroController extends Controller
         $modulos = \App\Models\Parametro\ParametroModulo::ativos()->ordenados()->get();
         
         // Log para debug
-        \Log::info('DEBUG Parametros Index - BYPASS TEMPORÁRIO', [
-            'count' => $modulos->count(),
-            'modulos' => $modulos->pluck('nome', 'id')->toArray()
-        ]);
+        // // Log::info('DEBUG Parametros Index - BYPASS TEMPORÁRIO', [
+        //     'count' => $modulos->count(),
+        //     'modulos' => $modulos->pluck('nome', 'id')->toArray()
+        // ]);
         
         // Carregar submódulos para cada módulo
         $modulos->load('submodulosAtivos');
@@ -49,10 +49,10 @@ class ParametroController extends Controller
         })->values();
         
         // Log após processamento
-        \Log::info('DEBUG Parametros Index - Módulos únicos processados', [
-            'count' => $modulosUnicos->count(),
-            'modulos' => $modulosUnicos->pluck('nome', 'id')->toArray()
-        ]);
+        // // Log::info('DEBUG Parametros Index - Módulos únicos processados', [
+        //     'count' => $modulosUnicos->count(),
+        //     'modulos' => $modulosUnicos->pluck('nome', 'id')->toArray()
+        // ]);
         
         // Adicionar contagem de submódulos
         $modulosUnicos->transform(function ($modulo) {

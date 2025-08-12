@@ -88,20 +88,20 @@ class UserService
 
             DB::commit();
 
-            Log::info('Usuário criado com sucesso', [
-                'usuario_id' => $usuario->id,
-                'nome' => $usuario->name,
-                'email' => $usuario->email
-            ]);
+            // Log::info('Usuário criado com sucesso', [
+                //     'usuario_id' => $usuario->id,
+                //     'nome' => $usuario->name,
+                //     'email' => $usuario->email
+            // ]);
 
             return $usuario;
 
         } catch (Exception $e) {
             DB::rollBack();
-            Log::error('Erro ao criar usuário', [
-                'erro' => $e->getMessage(),
-                'dados' => $dados
-            ]);
+            // Log::error('Erro ao criar usuário', [
+                //     'erro' => $e->getMessage(),
+                //     'dados' => $dados
+            // ]);
             throw $e;
         }
     }
@@ -139,19 +139,19 @@ class UserService
 
             DB::commit();
 
-            Log::info('Usuário atualizado com sucesso', [
-                'usuario_id' => $usuario->id,
-                'nome' => $usuario->name
-            ]);
+            // Log::info('Usuário atualizado com sucesso', [
+                //     'usuario_id' => $usuario->id,
+                //     'nome' => $usuario->name
+            // ]);
 
             return $usuario->fresh();
 
         } catch (Exception $e) {
             DB::rollBack();
-            Log::error('Erro ao atualizar usuário', [
-                'usuario_id' => $id,
-                'erro' => $e->getMessage()
-            ]);
+            // Log::error('Erro ao atualizar usuário', [
+                //     'usuario_id' => $id,
+                //     'erro' => $e->getMessage()
+            // ]);
             throw $e;
         }
     }
@@ -179,19 +179,19 @@ class UserService
 
             DB::commit();
 
-            Log::info('Usuário excluído com sucesso', [
-                'usuario_id' => $id,
-                'nome' => $usuario->name
-            ]);
+            // Log::info('Usuário excluído com sucesso', [
+                //     'usuario_id' => $id,
+                //     'nome' => $usuario->name
+            // ]);
 
             return true;
 
         } catch (Exception $e) {
             DB::rollBack();
-            Log::error('Erro ao excluir usuário', [
-                'usuario_id' => $id,
-                'erro' => $e->getMessage()
-            ]);
+            // Log::error('Erro ao excluir usuário', [
+                //     'usuario_id' => $id,
+                //     'erro' => $e->getMessage()
+            // ]);
             throw $e;
         }
     }
@@ -211,19 +211,19 @@ class UserService
 
             $usuario->update(['ativo' => $ativo]);
 
-            Log::info('Status do usuário alterado', [
-                'usuario_id' => $id,
-                'nome' => $usuario->name,
-                'ativo' => $ativo
-            ]);
+            // Log::info('Status do usuário alterado', [
+                //     'usuario_id' => $id,
+                //     'nome' => $usuario->name,
+                //     'ativo' => $ativo
+            // ]);
 
             return $usuario->fresh();
 
         } catch (Exception $e) {
-            Log::error('Erro ao alterar status do usuário', [
-                'usuario_id' => $id,
-                'erro' => $e->getMessage()
-            ]);
+            // Log::error('Erro ao alterar status do usuário', [
+                //     'usuario_id' => $id,
+                //     'erro' => $e->getMessage()
+            // ]);
             throw $e;
         }
     }
@@ -240,18 +240,18 @@ class UserService
             $novaSenha = Str::random(8);
             $usuario->update(['password' => Hash::make($novaSenha)]);
 
-            Log::info('Senha resetada com sucesso', [
-                'usuario_id' => $id,
-                'nome' => $usuario->name
-            ]);
+            // Log::info('Senha resetada com sucesso', [
+                //     'usuario_id' => $id,
+                //     'nome' => $usuario->name
+            // ]);
 
             return $novaSenha;
 
         } catch (Exception $e) {
-            Log::error('Erro ao resetar senha', [
-                'usuario_id' => $id,
-                'erro' => $e->getMessage()
-            ]);
+            // Log::error('Erro ao resetar senha', [
+                //     'usuario_id' => $id,
+                //     'erro' => $e->getMessage()
+            // ]);
             throw $e;
         }
     }

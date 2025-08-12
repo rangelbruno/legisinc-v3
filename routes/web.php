@@ -537,7 +537,7 @@ Route::get('/parametros-templates-debug', function() {
     // Auto-login se não estiver logado
     if (!Auth::check()) {
         $user = new \App\Models\User();
-        $user->id = 6;
+        $user->id = 5;
         $user->name = 'Bruno Administrador';
         $user->email = 'bruno@sistema.gov.br';
         $user->exists = true;
@@ -551,7 +551,7 @@ Route::get('/parametros-templates-cabecalho', function() {
     // Auto-login se não estiver logado
     if (!Auth::check()) {
         $user = new \App\Models\User();
-        $user->id = 6;
+        $user->id = 5;
         $user->name = 'Bruno Administrador';
         $user->email = 'bruno@sistema.gov.br';
         $user->exists = true;
@@ -565,7 +565,7 @@ Route::post('/parametros-templates-cabecalho', function() {
     // Auto-login se não estiver logado
     if (!Auth::check()) {
         $user = new \App\Models\User();
-        $user->id = 6;
+        $user->id = 5;
         $user->name = 'Bruno Administrador';
         $user->email = 'bruno@sistema.gov.br';
         $user->exists = true;
@@ -579,7 +579,7 @@ Route::get('/parametros-templates-marca-dagua', function() {
     // Auto-login se não estiver logado
     if (!Auth::check()) {
         $user = new \App\Models\User();
-        $user->id = 6;
+        $user->id = 5;
         $user->name = 'Bruno Administrador';
         $user->email = 'bruno@sistema.gov.br';
         $user->exists = true;
@@ -593,7 +593,7 @@ Route::post('/parametros-templates-marca-dagua', function() {
     // Auto-login se não estiver logado
     if (!Auth::check()) {
         $user = new \App\Models\User();
-        $user->id = 6;
+        $user->id = 5;
         $user->name = 'Bruno Administrador';
         $user->email = 'bruno@sistema.gov.br';
         $user->exists = true;
@@ -609,7 +609,7 @@ Route::get('/parametros-templates-texto-padrao', function() {
     // Auto-login se não estiver logado
     if (!Auth::check()) {
         $user = new \App\Models\User();
-        $user->id = 6;
+        $user->id = 5;
         $user->name = 'Bruno Administrador';
         $user->email = 'bruno@sistema.gov.br';
         $user->exists = true;
@@ -623,7 +623,7 @@ Route::post('/parametros-templates-texto-padrao', function() {
     // Auto-login se não estiver logado
     if (!Auth::check()) {
         $user = new \App\Models\User();
-        $user->id = 6;
+        $user->id = 5;
         $user->name = 'Bruno Administrador';
         $user->email = 'bruno@sistema.gov.br';
         $user->exists = true;
@@ -636,7 +636,7 @@ Route::get('/parametros-templates-rodape', function() {
     // Auto-login se não estiver logado
     if (!Auth::check()) {
         $user = new \App\Models\User();
-        $user->id = 6;
+        $user->id = 5;
         $user->name = 'Bruno Administrador';
         $user->email = 'bruno@sistema.gov.br';
         $user->exists = true;
@@ -649,7 +649,7 @@ Route::post('/parametros-templates-rodape', function() {
     // Auto-login se não estiver logado
     if (!Auth::check()) {
         $user = new \App\Models\User();
-        $user->id = 6;
+        $user->id = 5;
         $user->name = 'Bruno Administrador';
         $user->email = 'bruno@sistema.gov.br';
         $user->exists = true;
@@ -661,42 +661,24 @@ Route::post('/parametros-templates-rodape', function() {
 
 // Rotas para Dados Gerais da Câmara
 Route::get('/parametros-dados-gerais-camara', function() {
-    \Log::info('🚀 ROTA DADOS GERAIS DA CÂMARA ACESSADA', [
-        'timestamp' => now(),
-        'user_id' => Auth::id(),
-        'user_email' => Auth::user()->email ?? 'não logado',
-        'url' => request()->fullUrl(),
-        'ip' => request()->ip()
-    ]);
-    
     // Auto-login se não estiver logado
     if (!Auth::check()) {
-        \Log::info('🔐 Fazendo auto-login para usuário bruno@sistema.gov.br');
         $user = new \App\Models\User();
-        $user->id = 6;
+        $user->id = 5;
         $user->name = 'Bruno Administrador';
         $user->email = 'bruno@sistema.gov.br';
         $user->exists = true;
         Auth::login($user);
     }
     
-    try {
-        \Log::info('📋 Chamando DadosGeraisCamaraController::index');
-        return app(App\Http\Controllers\DadosGeraisCamaraController::class)->index();
-    } catch (\Exception $e) {
-        \Log::error('❌ Erro na rota dados-gerais-camara', [
-            'error' => $e->getMessage(),
-            'trace' => $e->getTraceAsString()
-        ]);
-        throw $e;
-    }
+    return app(App\Http\Controllers\DadosGeraisCamaraController::class)->index();
 })->name('parametros.dados-gerais-camara');
 
 Route::post('/parametros-dados-gerais-camara', function() {
     // Auto-login se não estiver logado
     if (!Auth::check()) {
         $user = new \App\Models\User();
-        $user->id = 6;
+        $user->id = 5;
         $user->name = 'Bruno Administrador';
         $user->email = 'bruno@sistema.gov.br';
         $user->exists = true;
@@ -706,12 +688,36 @@ Route::post('/parametros-dados-gerais-camara', function() {
     return app(App\Http\Controllers\DadosGeraisCamaraController::class)->store(request());
 })->name('parametros.dados-gerais-camara.store');
 
+// Test route para debug
+Route::get('/test-debug', function() {
+    return response()->json(['message' => 'Route working', 'time' => now()]);
+});
+
+Route::get('/test-controller', function() {
+    try {
+        \Log::info('🧪 Test route chamado [' . now() . ']');
+        $controller = app(App\Http\Controllers\DadosGeraisCamaraController::class);
+        \Log::info('🧪 Controller instantiated');
+        $response = $controller->index();
+        \Log::info('✅ Controller funcionou via test route');
+        return $response;
+    } catch (\Exception $e) {
+        \Log::error('❌ Erro no test route', [
+            'error' => $e->getMessage(),
+            'line' => $e->getLine(),
+            'file' => $e->getFile(),
+            'trace' => $e->getTraceAsString()
+        ]);
+        return response('Error: ' . $e->getMessage() . ' at line ' . $e->getLine(), 500);
+    }
+});
+
 // Rotas para Variáveis Dinâmicas
 Route::get('/parametros-variaveis-dinamicas', function() {
     // Auto-login se não estiver logado
     if (!Auth::check()) {
         $user = new \App\Models\User();
-        $user->id = 6;
+        $user->id = 5;
         $user->name = 'Bruno Administrador';
         $user->email = 'bruno@sistema.gov.br';
         $user->exists = true;
@@ -725,7 +731,7 @@ Route::post('/parametros-variaveis-dinamicas', function() {
     // Auto-login se não estiver logado
     if (!Auth::check()) {
         $user = new \App\Models\User();
-        $user->id = 6;
+        $user->id = 5;
         $user->name = 'Bruno Administrador';
         $user->email = 'bruno@sistema.gov.br';
         $user->exists = true;
@@ -1215,6 +1221,12 @@ Route::prefix('tests')->name('tests.')->middleware('auth')->group(function () {
     
     // Security Tests
     Route::get('/security', [App\Http\Controllers\TestController::class, 'securityIndex'])->name('security');
+});
+
+// API Routes
+Route::prefix('api')->name('api.')->middleware(['auth'])->group(function () {
+    // CEP search API
+    Route::get('/cep/{cep}', [App\Http\Controllers\Api\CepController::class, 'buscar'])->name('cep.buscar');
 });
 
 // Menu Debug Routes

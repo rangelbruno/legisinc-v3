@@ -39,10 +39,10 @@ class ParametroController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            Log::error('Erro ao listar parâmetros via API', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
+            // Log::error('Erro ao listar parâmetros via API', [
+                //     'error' => $e->getMessage(),
+                //     'trace' => $e->getTraceAsString()
+            // ]);
 
             return response()->json([
                 'success' => false,
@@ -73,11 +73,11 @@ class ParametroController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            Log::error('Erro ao obter parâmetro via API', [
-                'codigo' => $codigo,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
+            // Log::error('Erro ao obter parâmetro via API', [
+                //     'codigo' => $codigo,
+                //     'error' => $e->getMessage(),
+                //     'trace' => $e->getTraceAsString()
+            // ]);
 
             return response()->json([
                 'success' => false,
@@ -114,11 +114,11 @@ class ParametroController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            Log::error('Erro ao obter parâmetros por grupo via API', [
-                'codigo_grupo' => $codigoGrupo,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
+            // Log::error('Erro ao obter parâmetros por grupo via API', [
+                //     'codigo_grupo' => $codigoGrupo,
+                //     'error' => $e->getMessage(),
+                //     'trace' => $e->getTraceAsString()
+            // ]);
 
             return response()->json([
                 'success' => false,
@@ -153,12 +153,12 @@ class ParametroController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            Log::error('Erro ao atualizar parâmetros por grupo via API', [
-                'codigo_grupo' => $codigoGrupo,
-                'parametros' => $request->get('parametros'),
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
+            // Log::error('Erro ao atualizar parâmetros por grupo via API', [
+                //     'codigo_grupo' => $codigoGrupo,
+                //     'parametros' => $request->get('parametros'),
+                //     'error' => $e->getMessage(),
+                //     'trace' => $e->getTraceAsString()
+            // ]);
 
             return response()->json([
                 'success' => false,
@@ -195,12 +195,12 @@ class ParametroController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            Log::error('Erro ao atualizar valor do parâmetro via API', [
-                'codigo' => $codigo,
-                'valor' => $request->get('valor'),
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
+            // Log::error('Erro ao atualizar valor do parâmetro via API', [
+                //     'codigo' => $codigo,
+                //     'valor' => $request->get('valor'),
+                //     'error' => $e->getMessage(),
+                //     'trace' => $e->getTraceAsString()
+            // ]);
 
             return response()->json([
                 'success' => false,
@@ -237,10 +237,10 @@ class ParametroController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            Log::error('Erro ao listar grupos via API', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
+            // Log::error('Erro ao listar grupos via API', [
+                //     'error' => $e->getMessage(),
+                //     'trace' => $e->getTraceAsString()
+            // ]);
 
             return response()->json([
                 'success' => false,
@@ -277,12 +277,12 @@ class ParametroController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            Log::error('Erro ao validar valor via API', [
-                'codigo' => $request->get('codigo'),
-                'valor' => $request->get('valor'),
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
+            // Log::error('Erro ao validar valor via API', [
+                //     'codigo' => $request->get('codigo'),
+                //     'valor' => $request->get('valor'),
+                //     'error' => $e->getMessage(),
+                //     'trace' => $e->getTraceAsString()
+            // ]);
 
             return response()->json([
                 'success' => false,
@@ -305,10 +305,10 @@ class ParametroController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            Log::error('Erro ao obter estatísticas via API', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
+            // Log::error('Erro ao obter estatísticas via API', [
+                //     'error' => $e->getMessage(),
+                //     'trace' => $e->getTraceAsString()
+            // ]);
 
             return response()->json([
                 'success' => false,
@@ -333,11 +333,11 @@ class ParametroController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            Log::error('Erro ao exportar parâmetros via API', [
-                'grupo_id' => $request->get('grupo_id'),
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
+            // Log::error('Erro ao exportar parâmetros via API', [
+                //     'grupo_id' => $request->get('grupo_id'),
+                //     'error' => $e->getMessage(),
+                //     'trace' => $e->getTraceAsString()
+            // ]);
 
             return response()->json([
                 'success' => false,
@@ -366,11 +366,11 @@ class ParametroController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            Log::error('Erro ao importar parâmetros via API', [
-                'backup_data' => $request->get('backup_data'),
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
+            // Log::error('Erro ao importar parâmetros via API', [
+                //     'backup_data' => $request->get('backup_data'),
+                //     'error' => $e->getMessage(),
+                //     'trace' => $e->getTraceAsString()
+            // ]);
 
             return response()->json([
                 'success' => false,

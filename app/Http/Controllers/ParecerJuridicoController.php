@@ -60,7 +60,7 @@ class ParecerJuridicoController extends Controller
             return view('modules.parecer-juridico.index', compact('proposicoes', 'tipos'));
 
         } catch (\Exception $e) {
-            Log::error('Erro ao listar proposições para parecer jurídico: ' . $e->getMessage());
+            // Log::error('Erro ao listar proposições para parecer jurídico: ' . $e->getMessage());
             return back()->with('error', 'Erro ao carregar proposições.');
         }
     }
@@ -80,7 +80,7 @@ class ParecerJuridicoController extends Controller
             return view('modules.parecer-juridico.create', compact('proposicao'));
 
         } catch (\Exception $e) {
-            Log::error('Erro ao exibir formulário de parecer: ' . $e->getMessage());
+            // Log::error('Erro ao exibir formulário de parecer: ' . $e->getMessage());
             return back()->with('error', 'Erro ao carregar formulário.');
         }
     }
@@ -152,7 +152,7 @@ class ParecerJuridicoController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Erro ao salvar parecer jurídico: ' . $e->getMessage());
+            // Log::error('Erro ao salvar parecer jurídico: ' . $e->getMessage());
             return back()->with('error', 'Erro ao salvar parecer jurídico.')->withInput();
         }
     }
@@ -168,7 +168,7 @@ class ParecerJuridicoController extends Controller
             return view('modules.parecer-juridico.show', compact('parecerJuridico'));
 
         } catch (\Exception $e) {
-            Log::error('Erro ao exibir parecer jurídico: ' . $e->getMessage());
+            // Log::error('Erro ao exibir parecer jurídico: ' . $e->getMessage());
             return back()->with('error', 'Erro ao carregar parecer.');
         }
     }
@@ -189,7 +189,7 @@ class ParecerJuridicoController extends Controller
             return view('modules.parecer-juridico.edit', compact('parecerJuridico'));
 
         } catch (\Exception $e) {
-            Log::error('Erro ao exibir formulário de edição: ' . $e->getMessage());
+            // Log::error('Erro ao exibir formulário de edição: ' . $e->getMessage());
             return back()->with('error', 'Erro ao carregar formulário.');
         }
     }
@@ -251,7 +251,7 @@ class ParecerJuridicoController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Erro ao atualizar parecer jurídico: ' . $e->getMessage());
+            // Log::error('Erro ao atualizar parecer jurídico: ' . $e->getMessage());
             return back()->with('error', 'Erro ao atualizar parecer jurídico.')->withInput();
         }
     }
@@ -266,7 +266,7 @@ class ParecerJuridicoController extends Controller
             return back()->with('info', 'Funcionalidade de PDF em desenvolvimento.');
 
         } catch (\Exception $e) {
-            Log::error('Erro ao gerar PDF do parecer: ' . $e->getMessage());
+            // Log::error('Erro ao gerar PDF do parecer: ' . $e->getMessage());
             return back()->with('error', 'Erro ao gerar PDF.');
         }
     }
@@ -300,7 +300,7 @@ class ParecerJuridicoController extends Controller
             return view('modules.parecer-juridico.meus-pareceres', compact('pareceres'));
 
         } catch (\Exception $e) {
-            Log::error('Erro ao listar meus pareceres: ' . $e->getMessage());
+            // Log::error('Erro ao listar meus pareceres: ' . $e->getMessage());
             return back()->with('error', 'Erro ao carregar pareceres.');
         }
     }

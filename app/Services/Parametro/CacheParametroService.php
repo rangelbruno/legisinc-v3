@@ -4,7 +4,7 @@ namespace App\Services\Parametro;
 
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Redis;
-use Illuminate\Support\Facades\Log;
+// use Illuminate\Support\Facades\Log;
 
 class CacheParametroService
 {
@@ -151,7 +151,7 @@ class CacheParametroService
             }
             $this->logCacheOperation('invalidate', 'modulos');
         } catch (\Exception $e) {
-            Log::error("Erro ao invalidar cache de módulos: {$e->getMessage()}");
+            // Silently ignore cache errors
         }
     }
 
@@ -173,7 +173,7 @@ class CacheParametroService
             }
             $this->logCacheOperation('invalidate', 'submodulos', $moduloId);
         } catch (\Exception $e) {
-            Log::error("Erro ao invalidar cache de submódulos: {$e->getMessage()}");
+            // Silently ignore cache errors
         }
     }
 
@@ -192,7 +192,7 @@ class CacheParametroService
             }
             $this->logCacheOperation('invalidate', 'campos', $submoduloId);
         } catch (\Exception $e) {
-            Log::error("Erro ao invalidar cache de campos: {$e->getMessage()}");
+            // Silently ignore cache errors
         }
     }
 
@@ -211,7 +211,7 @@ class CacheParametroService
             }
             $this->logCacheOperation('invalidate', 'configuracoes', $modulo, $submodulo);
         } catch (\Exception $e) {
-            Log::error("Erro ao invalidar cache de configurações: {$e->getMessage()}");
+            // Silently ignore cache errors
         }
     }
 
@@ -230,7 +230,7 @@ class CacheParametroService
             }
             $this->logCacheOperation('invalidate', 'valores', $modulo, $submodulo, $campo);
         } catch (\Exception $e) {
-            Log::error("Erro ao invalidar cache de valores: {$e->getMessage()}");
+            // Silently ignore cache errors
         }
     }
 
@@ -248,9 +248,13 @@ class CacheParametroService
                 // Para cache sem tagging, limpar apenas chaves conhecidas
                 Cache::forget($this->generateKey('modulos'));
             }
+            
+            // Also clear Laravel's default cache for parameters
+            Cache::flush();
+            
             $this->logCacheOperation('invalidate_all');
         } catch (\Exception $e) {
-            Log::error("Erro ao invalidar todo cache: {$e->getMessage()}");
+            // Silently ignore cache errors
         }
     }
 
@@ -284,7 +288,7 @@ class CacheParametroService
 
             return $stats;
         } catch (\Exception $e) {
-            Log::error("Erro ao obter estatísticas do cache: {$e->getMessage()}");
+            // Silently ignore cache errors
             return [];
         }
     }
@@ -303,7 +307,7 @@ class CacheParametroService
             
             $this->logCacheOperation('warmup_completed');
         } catch (\Exception $e) {
-            Log::error("Erro no warm-up do cache: {$e->getMessage()}");
+            // Silently ignore cache errors
         }
     }
 
@@ -321,11 +325,11 @@ class CacheParametroService
      */
     private function logCacheOperation(string $operation, ...$params): void
     {
-        Log::info("Cache operation: {$operation}", [
-            'params' => $params,
-            'timestamp' => now(),
-            'user_id' => auth()->id()
-        ]);
+        // // Log::info("Cache operation: {$operation}", [
+        //     'params' => $params,
+        //     'timestamp' => now(),
+        //     'user_id' => auth()->id()
+        // ]);
     }
 
     /**

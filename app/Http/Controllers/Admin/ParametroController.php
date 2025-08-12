@@ -63,10 +63,10 @@ class ParametroController extends Controller
             ));
 
         } catch (\Exception $e) {
-            Log::error('Erro ao carregar parâmetros', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
+            // Log::error('Erro ao carregar parâmetros', [
+                //     'error' => $e->getMessage(),
+                //     'trace' => $e->getTraceAsString()
+            // ]);
 
             if ($request->ajax()) {
                 return response()->json([
@@ -126,11 +126,11 @@ class ParametroController extends Controller
                 ->with('success', 'Parâmetro criado com sucesso!');
 
         } catch (\Exception $e) {
-            Log::error('Erro ao criar parâmetro', [
-                'dados' => $request->all(),
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
+            // Log::error('Erro ao criar parâmetro', [
+                //     'dados' => $request->all(),
+                //     'error' => $e->getMessage(),
+                //     'trace' => $e->getTraceAsString()
+            // ]);
 
             return redirect()->back()
                 ->withInput()
@@ -150,11 +150,11 @@ class ParametroController extends Controller
             return view('admin.parametros.show', compact('parametro', 'historico'));
 
         } catch (\Exception $e) {
-            Log::error('Erro ao carregar parâmetro', [
-                'id' => $id,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
+            // Log::error('Erro ao carregar parâmetro', [
+                //     'id' => $id,
+                //     'error' => $e->getMessage(),
+                //     'trace' => $e->getTraceAsString()
+            // ]);
 
             return redirect()->route('admin.parametros.index')
                 ->with('error', 'Parâmetro não encontrado.');
@@ -174,11 +174,11 @@ class ParametroController extends Controller
             return view('admin.parametros.edit', compact('parametro', 'grupos', 'tipos'));
 
         } catch (\Exception $e) {
-            Log::error('Erro ao carregar parâmetro para edição', [
-                'id' => $id,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
+            // Log::error('Erro ao carregar parâmetro para edição', [
+                //     'id' => $id,
+                //     'error' => $e->getMessage(),
+                //     'trace' => $e->getTraceAsString()
+            // ]);
 
             return redirect()->route('admin.parametros.index')
                 ->with('error', 'Parâmetro não encontrado.');
@@ -221,12 +221,12 @@ class ParametroController extends Controller
                 ->with('success', 'Parâmetro atualizado com sucesso!');
 
         } catch (\Exception $e) {
-            Log::error('Erro ao atualizar parâmetro', [
-                'id' => $id,
-                'dados' => $request->all(),
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
+            // Log::error('Erro ao atualizar parâmetro', [
+                //     'id' => $id,
+                //     'dados' => $request->all(),
+                //     'error' => $e->getMessage(),
+                //     'trace' => $e->getTraceAsString()
+            // ]);
 
             return redirect()->back()
                 ->withInput()
@@ -248,11 +248,11 @@ class ParametroController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            Log::error('Erro ao excluir parâmetro', [
-                'id' => $id,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
+            // Log::error('Erro ao excluir parâmetro', [
+                //     'id' => $id,
+                //     'error' => $e->getMessage(),
+                //     'trace' => $e->getTraceAsString()
+            // ]);
 
             return response()->json([
                 'success' => false,
@@ -275,11 +275,11 @@ class ParametroController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            Log::error('Erro ao obter parâmetros por grupo', [
-                'grupo_id' => $grupoId,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
+            // Log::error('Erro ao obter parâmetros por grupo', [
+                //     'grupo_id' => $grupoId,
+                //     'error' => $e->getMessage(),
+                //     'trace' => $e->getTraceAsString()
+            // ]);
 
             return response()->json([
                 'success' => false,
@@ -310,11 +310,11 @@ class ParametroController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            Log::error('Erro ao atualizar múltiplos parâmetros', [
-                'parametros' => $request->get('parametros'),
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
+            // Log::error('Erro ao atualizar múltiplos parâmetros', [
+                //     'parametros' => $request->get('parametros'),
+                //     'error' => $e->getMessage(),
+                //     'trace' => $e->getTraceAsString()
+            // ]);
 
             return response()->json([
                 'success' => false,
@@ -338,11 +338,11 @@ class ParametroController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            Log::error('Erro ao duplicar parâmetro', [
-                'id' => $id,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
+            // Log::error('Erro ao duplicar parâmetro', [
+                //     'id' => $id,
+                //     'error' => $e->getMessage(),
+                //     'trace' => $e->getTraceAsString()
+            // ]);
 
             return response()->json([
                 'success' => false,
@@ -366,11 +366,11 @@ class ParametroController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            Log::error('Erro ao resetar parâmetro', [
-                'id' => $id,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
+            // Log::error('Erro ao resetar parâmetro', [
+                //     'id' => $id,
+                //     'error' => $e->getMessage(),
+                //     'trace' => $e->getTraceAsString()
+            // ]);
 
             return response()->json([
                 'success' => false,
@@ -394,11 +394,11 @@ class ParametroController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            Log::error('Erro ao alterar status do parâmetro', [
-                'id' => $id,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
+            // Log::error('Erro ao alterar status do parâmetro', [
+                //     'id' => $id,
+                //     'error' => $e->getMessage(),
+                //     'trace' => $e->getTraceAsString()
+            // ]);
 
             return response()->json([
                 'success' => false,
@@ -427,11 +427,11 @@ class ParametroController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            Log::error('Erro ao reordenar parâmetros', [
-                'parametros' => $request->get('parametros'),
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
+            // Log::error('Erro ao reordenar parâmetros', [
+                //     'parametros' => $request->get('parametros'),
+                //     'error' => $e->getMessage(),
+                //     'trace' => $e->getTraceAsString()
+            // ]);
 
             return response()->json([
                 'success' => false,

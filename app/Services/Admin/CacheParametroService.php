@@ -29,11 +29,11 @@ class CacheParametroService
                 return $resultado;
             });
         } catch (\Exception $e) {
-            Log::error('Erro ao obter parâmetro do cache', [
-                'codigo' => $codigo,
-                'cache_key' => $cacheKey,
-                'error' => $e->getMessage()
-            ]);
+            // Log::error('Erro ao obter parâmetro do cache', [
+                //     'codigo' => $codigo,
+                //     'cache_key' => $cacheKey,
+                //     'error' => $e->getMessage()
+            // ]);
 
             // Fallback para execução direta
             return $callback();
@@ -54,11 +54,11 @@ class CacheParametroService
                 return $resultado;
             });
         } catch (\Exception $e) {
-            Log::error('Erro ao obter grupo do cache', [
-                'codigo_grupo' => $codigoGrupo,
-                'cache_key' => $cacheKey,
-                'error' => $e->getMessage()
-            ]);
+            // Log::error('Erro ao obter grupo do cache', [
+                //     'codigo_grupo' => $codigoGrupo,
+                //     'cache_key' => $cacheKey,
+                //     'error' => $e->getMessage()
+            // ]);
 
             // Fallback para execução direta
             return $callback();
@@ -76,16 +76,16 @@ class CacheParametroService
             Cache::forget($cacheKey);
             $this->removerChaveDoRegistro($cacheKey, self::CACHE_KEYS_LIST);
 
-            Log::info('Cache do parâmetro limpo', [
-                'codigo' => $codigo,
-                'cache_key' => $cacheKey
-            ]);
+            // Log::info('Cache do parâmetro limpo', [
+                //     'codigo' => $codigo,
+                //     'cache_key' => $cacheKey
+            // ]);
         } catch (\Exception $e) {
-            Log::error('Erro ao limpar cache do parâmetro', [
-                'codigo' => $codigo,
-                'cache_key' => $cacheKey,
-                'error' => $e->getMessage()
-            ]);
+            // Log::error('Erro ao limpar cache do parâmetro', [
+                //     'codigo' => $codigo,
+                //     'cache_key' => $cacheKey,
+                //     'error' => $e->getMessage()
+            // ]);
         }
     }
 
@@ -103,16 +103,16 @@ class CacheParametroService
             // Limpar também cache dos parâmetros deste grupo
             $this->limparCacheParametrosDoGrupo($codigoGrupo);
 
-            Log::info('Cache do grupo limpo', [
-                'codigo_grupo' => $codigoGrupo,
-                'cache_key' => $cacheKey
-            ]);
+            // Log::info('Cache do grupo limpo', [
+                //     'codigo_grupo' => $codigoGrupo,
+                //     'cache_key' => $cacheKey
+            // ]);
         } catch (\Exception $e) {
-            Log::error('Erro ao limpar cache do grupo', [
-                'codigo_grupo' => $codigoGrupo,
-                'cache_key' => $cacheKey,
-                'error' => $e->getMessage()
-            ]);
+            // Log::error('Erro ao limpar cache do grupo', [
+                //     'codigo_grupo' => $codigoGrupo,
+                //     'cache_key' => $cacheKey,
+                //     'error' => $e->getMessage()
+            // ]);
         }
     }
 
@@ -135,15 +135,15 @@ class CacheParametroService
                 $this->limparCacheParametro($codigoParametro);
             }
 
-            Log::info('Cache dos parâmetros do grupo limpo', [
-                'codigo_grupo' => $codigoGrupo,
-                'total_parametros' => $parametros->count()
-            ]);
+            // Log::info('Cache dos parâmetros do grupo limpo', [
+                //     'codigo_grupo' => $codigoGrupo,
+                //     'total_parametros' => $parametros->count()
+            // ]);
         } catch (\Exception $e) {
-            Log::error('Erro ao limpar cache dos parâmetros do grupo', [
-                'codigo_grupo' => $codigoGrupo,
-                'error' => $e->getMessage()
-            ]);
+            // Log::error('Erro ao limpar cache dos parâmetros do grupo', [
+                //     'codigo_grupo' => $codigoGrupo,
+                //     'error' => $e->getMessage()
+            // ]);
         }
     }
 
@@ -172,14 +172,14 @@ class CacheParametroService
             // Limpar cache de estatísticas
             Cache::forget('parametros_estatisticas');
 
-            Log::info('Todo cache de parâmetros limpo', [
-                'parametros_limpos' => count($chavesParametros),
-                'grupos_limpos' => count($chavesGrupos)
-            ]);
+            // Log::info('Todo cache de parâmetros limpo', [
+                //     'parametros_limpos' => count($chavesParametros),
+                //     'grupos_limpos' => count($chavesGrupos)
+            // ]);
         } catch (\Exception $e) {
-            Log::error('Erro ao limpar todo cache', [
-                'error' => $e->getMessage()
-            ]);
+            // Log::error('Erro ao limpar todo cache', [
+                //     'error' => $e->getMessage()
+            // ]);
         }
     }
 
@@ -230,14 +230,14 @@ class CacheParametroService
             Cache::put('parametros_preaquecido', true, self::CACHE_TTL);
             Cache::put('parametros_last_update', now()->toISOString(), self::CACHE_TTL);
 
-            Log::info('Cache pré-aquecido com sucesso', [
-                'parametros_aquecidos' => $aquecidos,
-                'grupos_aquecidos' => $gruposAtivos->count()
-            ]);
+            // Log::info('Cache pré-aquecido com sucesso', [
+                //     'parametros_aquecidos' => $aquecidos,
+                //     'grupos_aquecidos' => $gruposAtivos->count()
+            // ]);
         } catch (\Exception $e) {
-            Log::error('Erro ao pré-aquecer cache', [
-                'error' => $e->getMessage()
-            ]);
+            // Log::error('Erro ao pré-aquecer cache', [
+                //     'error' => $e->getMessage()
+            // ]);
         }
     }
 
@@ -285,9 +285,9 @@ class CacheParametroService
                 'ttl' => self::CACHE_TTL
             ];
         } catch (\Exception $e) {
-            Log::error('Erro ao obter estatísticas do cache', [
-                'error' => $e->getMessage()
-            ]);
+            // Log::error('Erro ao obter estatísticas do cache', [
+                //     'error' => $e->getMessage()
+            // ]);
 
             return [
                 'hits' => 0,
@@ -336,14 +336,14 @@ class CacheParametroService
                 }
             }
 
-            Log::info('Validação de integridade do cache concluída', [
-                'problemas_encontrados' => count($problemas)
-            ]);
+            // Log::info('Validação de integridade do cache concluída', [
+                //     'problemas_encontrados' => count($problemas)
+            // ]);
 
         } catch (\Exception $e) {
-            Log::error('Erro ao validar integridade do cache', [
-                'error' => $e->getMessage()
-            ]);
+            // Log::error('Erro ao validar integridade do cache', [
+                //     'error' => $e->getMessage()
+            // ]);
 
             $problemas[] = "Erro na validação: {$e->getMessage()}";
         }
@@ -385,14 +385,14 @@ class CacheParametroService
             Cache::put(self::CACHE_KEYS_LIST, $chavesParametrosLimpas, self::CACHE_TTL);
             Cache::put(self::CACHE_KEYS_GRUPOS, $chavesGruposLimpas, self::CACHE_TTL);
 
-            Log::info('Reparação de integridade do cache concluída', [
-                'reparos_realizados' => count($reparos)
-            ]);
+            // Log::info('Reparação de integridade do cache concluída', [
+                //     'reparos_realizados' => count($reparos)
+            // ]);
 
         } catch (\Exception $e) {
-            Log::error('Erro ao reparar integridade do cache', [
-                'error' => $e->getMessage()
-            ]);
+            // Log::error('Erro ao reparar integridade do cache', [
+                //     'error' => $e->getMessage()
+            // ]);
 
             $reparos[] = "Erro na reparação: {$e->getMessage()}";
         }

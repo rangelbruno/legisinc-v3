@@ -51,13 +51,13 @@ class ValidacaoParametroService
         // Verificar integridade de segurança
         $verificacaoSeguranca = $this->segurancaService->verificarIntegridade($valores);
         if (!$verificacaoSeguranca['integro']) {
-            Log::warning('Problemas de segurança detectados na validação de parâmetros', [
-                'modulo' => $nomeModulo,
-                'submodulo' => $nomeSubmodulo,
-                'problemas' => $verificacaoSeguranca['problemas'],
-                'user_id' => auth()->id(),
-                'ip' => request()->ip()
-            ]);
+            // // // Log::warning('Problemas de segurança detectados na validação de parâmetros', [
+            //     'modulo' => $nomeModulo,
+            //     'submodulo' => $nomeSubmodulo,
+            //     'problemas' => $verificacaoSeguranca['problemas'],
+            //     'user_id' => auth()->id(),
+            //     'ip' => request()->ip()
+            // ]);
             
             $erros['_security'] = $verificacaoSeguranca['problemas'];
         }
@@ -532,10 +532,10 @@ class ValidacaoParametroService
                 try {
                     $valor = $this->segurancaService->descriptografarValor($valor);
                 } catch (\Exception $e) {
-                    Log::error('Erro ao descriptografar campo sensível', [
-                        'campo' => $nomeCampo,
-                        'error' => $e->getMessage()
-                    ]);
+                    // // // Log::error('Erro ao descriptografar campo sensível', [
+//                         'campo' => $nomeCampo,
+//                         'error' => $e->getMessage()
+//                     ]);
                     $valor = '[ERRO NA DESCRIPTOGRAFIA]';
                 }
             }

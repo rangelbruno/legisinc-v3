@@ -523,15 +523,15 @@ class ConfiguracaoParametroService
      */
     public function migrarParametrosExistentes(): void
     {
-        Log::info('Iniciando migração de parâmetros existentes');
+        // // Log::info('Iniciando migração de parâmetros existentes');
 
         try {
             // Aqui você pode implementar a lógica de migração dos parâmetros antigos
             // para o novo sistema, baseado na estrutura atual
             
-            Log::info('Migração de parâmetros concluída com sucesso');
+            // // Log::info('Migração de parâmetros concluída com sucesso');
         } catch (\Exception $e) {
-            Log::error('Erro na migração de parâmetros: ' . $e->getMessage());
+            // // Log::error('Erro na migração de parâmetros: ' . $e->getMessage());
             throw $e;
         }
     }

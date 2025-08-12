@@ -82,7 +82,7 @@ class DocumentoInstanciaController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('Erro ao fazer upload de versão: ' . $e->getMessage());
+            // Log::error('Erro ao fazer upload de versão: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'message' => 'Erro interno do servidor'
@@ -102,7 +102,7 @@ class DocumentoInstanciaController extends Controller
             return response()->download($caminhoArquivo, $versao->arquivo_nome);
             
         } catch (\Exception $e) {
-            \Log::error('Erro ao baixar versão: ' . $e->getMessage());
+            // Log::error('Erro ao baixar versão: ' . $e->getMessage());
             return back()->withErrors(['Erro ao baixar arquivo.']);
         }
     }
@@ -123,7 +123,7 @@ class DocumentoInstanciaController extends Controller
             return response()->download($caminhoArquivo, $instancia->arquivo_nome);
             
         } catch (\Exception $e) {
-            \Log::error('Erro ao baixar instância: ' . $e->getMessage());
+            // Log::error('Erro ao baixar instância: ' . $e->getMessage());
             return back()->withErrors(['Erro ao baixar arquivo.']);
         }
     }
@@ -138,7 +138,7 @@ class DocumentoInstanciaController extends Controller
             return response()->download($caminhoPdf);
             
         } catch (\Exception $e) {
-            \Log::error('Erro ao gerar PDF: ' . $e->getMessage());
+            // Log::error('Erro ao gerar PDF: ' . $e->getMessage());
             return back()->withErrors(['Erro ao gerar PDF: ' . $e->getMessage()]);
         }
     }
@@ -161,7 +161,7 @@ class DocumentoInstanciaController extends Controller
             }
             
         } catch (\Exception $e) {
-            \Log::error('Erro ao finalizar documento: ' . $e->getMessage());
+            // Log::error('Erro ao finalizar documento: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'message' => 'Erro interno do servidor'
@@ -190,7 +190,7 @@ class DocumentoInstanciaController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('Erro ao alterar status: ' . $e->getMessage());
+            // Log::error('Erro ao alterar status: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'message' => 'Erro interno do servidor'
@@ -211,7 +211,7 @@ class DocumentoInstanciaController extends Controller
             }
             
         } catch (\Exception $e) {
-            \Log::error('Erro ao excluir instância: ' . $e->getMessage());
+            // Log::error('Erro ao excluir instância: ' . $e->getMessage());
             return back()->withErrors(['Erro interno do servidor.']);
         }
     }

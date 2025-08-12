@@ -32,9 +32,9 @@ class ProposicaoController extends Controller
             // Buscar tipos ativos do banco de dados
             $tipos = TipoProposicao::getParaDropdown();
         } catch (\Exception $e) {
-            \Log::error('Erro ao buscar tipos de proposição', [
-                'error' => $e->getMessage()
-            ]);
+            // Log::error('Erro ao buscar tipos de proposição', [
+                //     'error' => $e->getMessage()
+            // ]);
             
             // Fallback com tipos padrão
             $tipos = [
@@ -138,11 +138,11 @@ class ProposicaoController extends Controller
             }
 
         } catch (\Exception $e) {
-            \Log::error('Erro ao gerar texto via IA', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-                'request_data' => $request->all()
-            ]);
+            // Log::error('Erro ao gerar texto via IA', [
+                //     'error' => $e->getMessage(),
+                //     'trace' => $e->getTraceAsString(),
+                //     'request_data' => $request->all()
+            // ]);
 
             return response()->json([
                 'success' => false,
@@ -156,25 +156,25 @@ class ProposicaoController extends Controller
      */
     public function buscarModelos($tipo)
     {
-        \Log::info('Buscando modelos para tipo: ' . $tipo);
+        // Log::info('Buscando modelos para tipo: ' . $tipo);
         
         try {
             // Verificar se o tipo existe
             $tipoProposicao = TipoProposicao::buscarPorCodigo($tipo);
             
             if (!$tipoProposicao || !$tipoProposicao->ativo) {
-                \Log::warning('Tipo de proposição não encontrado ou inativo: ' . $tipo);
+                // Log::warning('Tipo de proposição não encontrado ou inativo: ' . $tipo);
                 return response()->json([], 404);
             }
             
-            \Log::info('Tipo encontrado, buscando modelos para ID: ' . $tipoProposicao->id);
+            // Log::info('Tipo encontrado, buscando modelos para ID: ' . $tipoProposicao->id);
             
             // Buscar templates específicos para este tipo de proposição
             $templates = \App\Models\TipoProposicaoTemplate::where('tipo_proposicao_id', $tipoProposicao->id)
                 ->where('ativo', true)
                 ->get();
             
-            \Log::info('Templates específicos encontrados: ' . $templates->count());
+            // Log::info('Templates específicos encontrados: ' . $templates->count());
             
             // Converter templates específicos para formato esperado pelo frontend
             $modelosArray = [];
@@ -202,7 +202,7 @@ class ProposicaoController extends Controller
             
             // Se não há templates específicos, adicionar opção em branco
             if (count($modelosArray) === 1) { // Só tem o template ABNT
-                \Log::info('Nenhum template específico encontrado, adicionando opção em branco');
+                // Log::info('Nenhum template específico encontrado, adicionando opção em branco');
                 $modelosArray[] = [
                     'id' => 'template_blank',
                     'nome' => 'Documento em Branco',
@@ -212,22 +212,22 @@ class ProposicaoController extends Controller
                 ];
             }
 
-            \Log::info('Modelos formatados para retorno:', [
-                'count' => count($modelosArray),
-                'data' => $modelosArray
-            ]);
+            // Log::info('Modelos formatados para retorno:', [
+                //     'count' => count($modelosArray),
+                //     'data' => $modelosArray
+            // ]);
 
             return response()->json($modelosArray);
             
         } catch (\Exception $e) {
-            \Log::error('Erro ao buscar modelos para tipo: ' . $tipo, [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
+            // Log::error('Erro ao buscar modelos para tipo: ' . $tipo, [
+                //     'error' => $e->getMessage(),
+                //     'trace' => $e->getTraceAsString()
+            // ]);
             
             // Fallback com modelos mock quando há erro de conexão
             $modelosMock = $this->getModelosMockPorTipo($tipo);
-            \Log::info('Usando fallback com ' . count($modelosMock) . ' modelos mock para tipo: ' . $tipo);
+            // Log::info('Usando fallback com ' . count($modelosMock) . ' modelos mock para tipo: ' . $tipo);
             return response()->json($modelosMock);
         }
     }
@@ -308,12 +308,12 @@ class ProposicaoController extends Controller
      */
     public function preencherModelo($proposicaoId, $modeloId, Request $request)
     {
-        \Log::info('preencherModelo called', [
-            'proposicao_id' => $proposicaoId,
-            'modelo_id' => $modeloId,
-            'user_id' => Auth::id(),
-            'texto_preenchido' => $request->has('texto_preenchido')
-        ]);
+        // Log::info('preencherModelo called', [
+            //     'proposicao_id' => $proposicaoId,
+            //     'modelo_id' => $modeloId,
+            //     'user_id' => Auth::id(),
+            //     'texto_preenchido' => $request->has('texto_preenchido')
+        // ]);
         
         // TODO: Implement proper authorization
         // $this->authorize('update', $proposicao);
@@ -331,7 +331,7 @@ class ProposicaoController extends Controller
         $modelo = null;
         
         // Log para debug
-        \Log::info('Buscando template com modeloId', ['modeloId' => $modeloId, 'type' => gettype($modeloId)]);
+        // Log::info('Buscando template com modeloId', ['modeloId' => $modeloId, 'type' => gettype($modeloId)]);
         
         // Tentar encontrar o template ou DocumentoModelo
         $template = null;
@@ -413,20 +413,20 @@ class ProposicaoController extends Controller
                 'template' => $template
             ];
             
-            \Log::info('Template encontrado e variáveis extraídas', [
-                'proposicao_id' => $proposicaoId,
-                'template_id' => $template->id,
-                'total_variaveis' => count($templateVariables),
-                'variaveis_usuario' => count($userInputVariables),
-                'grupos' => array_keys($templateVariablesGrouped)
-            ]);
+            // Log::info('Template encontrado e variáveis extraídas', [
+                //     'proposicao_id' => $proposicaoId,
+                //     'template_id' => $template->id,
+                //     'total_variaveis' => count($templateVariables),
+                //     'variaveis_usuario' => count($userInputVariables),
+                //     'grupos' => array_keys($templateVariablesGrouped)
+            // ]);
         } else {
             $modelo = (object) ['id' => $modeloId, 'nome' => 'Template não encontrado'];
             
-            \Log::warning('Template não encontrado', [
-                'proposicao_id' => $proposicaoId,
-                'modelo_id_tentativa' => $modeloId
-            ]);
+            // Log::warning('Template não encontrado', [
+                //     'proposicao_id' => $proposicaoId,
+                //     'modelo_id_tentativa' => $modeloId
+            // ]);
         }
         
         // Definir categoryLabels mesmo quando não há template
@@ -443,11 +443,11 @@ class ProposicaoController extends Controller
         $temTextoPreenchido = $textoPreenchido && !empty($valoresExistentes['texto']);
         
         if ($temTextoPreenchido) {
-            \Log::info('Texto pré-preenchido detectado', [
-                'proposicao_id' => $proposicaoId,
-                'texto_length' => strlen($valoresExistentes['texto']),
-                'texto_preview' => substr($valoresExistentes['texto'], 0, 100) . '...'
-            ]);
+            // Log::info('Texto pré-preenchido detectado', [
+                //     'proposicao_id' => $proposicaoId,
+                //     'texto_length' => strlen($valoresExistentes['texto']),
+                //     'texto_preview' => substr($valoresExistentes['texto'], 0, 100) . '...'
+            // ]);
         }
         
         return view('proposicoes.preencher-modelo', compact(
@@ -466,12 +466,12 @@ class ProposicaoController extends Controller
      */
     public function processarTextoERedirecionar($proposicaoId, $modeloId, Request $request)
     {
-        \Log::info('processarTextoERedirecionar called', [
-            'proposicao_id' => $proposicaoId,
-            'modelo_id' => $modeloId,
-            'tipo' => $request->get('tipo'),
-            'user_id' => Auth::id()
-        ]);
+        // Log::info('processarTextoERedirecionar called', [
+            //     'proposicao_id' => $proposicaoId,
+            //     'modelo_id' => $modeloId,
+            //     'tipo' => $request->get('tipo'),
+            //     'user_id' => Auth::id()
+        // ]);
 
         $proposicao = Proposicao::findOrFail($proposicaoId);
 
@@ -537,11 +537,11 @@ class ProposicaoController extends Controller
                 'status' => 'em_edicao'
             ]);
             
-            \Log::info('Processando texto personalizado sem template específico', [
-                'proposicao_id' => $proposicaoId,
-                'template_original' => $modeloId,
-                'usa_template_padrao' => true
-            ]);
+            // Log::info('Processando texto personalizado sem template específico', [
+                //     'proposicao_id' => $proposicaoId,
+                //     'template_original' => $modeloId,
+                //     'usa_template_padrao' => true
+            // ]);
 
             // Salvar variáveis na sessão para o processamento do template
             $sessionKey = 'proposicao_' . $proposicaoId . '_variaveis_template';
@@ -550,23 +550,23 @@ class ProposicaoController extends Controller
             // Tentar processar o template imediatamente para gerar o documento
             $this->processarTemplateAutomaticamente($proposicao, $templateVariables);
 
-            \Log::info('Texto processado automaticamente', [
-                'proposicao_id' => $proposicaoId,
-                'template_id' => $proposicao->template_id,
-                'variaveis_salvas' => array_keys($templateVariables)
-            ]);
+            // Log::info('Texto processado automaticamente', [
+                //     'proposicao_id' => $proposicaoId,
+                //     'template_id' => $proposicao->template_id,
+                //     'variaveis_salvas' => array_keys($templateVariables)
+            // ]);
 
             // Redirecionar direto para a visualização da proposição
             return redirect()->route('proposicoes.show', $proposicaoId)
                 ->with('success', 'Proposição criada com sucesso! Texto aplicado automaticamente ao modelo.');
 
         } catch (\Exception $e) {
-            \Log::error('Erro ao processar texto automaticamente', [
-                'proposicao_id' => $proposicaoId,
-                'modelo_id' => $modeloId,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
+            // Log::error('Erro ao processar texto automaticamente', [
+                //     'proposicao_id' => $proposicaoId,
+                //     'modelo_id' => $modeloId,
+                //     'error' => $e->getMessage(),
+                //     'trace' => $e->getTraceAsString()
+            // ]);
 
             // Em caso de erro, redirecionar para preenchimento manual
             return redirect()->route('proposicoes.preencher-modelo', [$proposicaoId, $modeloId])
@@ -587,16 +587,16 @@ class ProposicaoController extends Controller
             // Chamar o método gerarTexto para processar o template
             $this->gerarTexto($request, $proposicao->id);
             
-            \Log::info('Template processado automaticamente com sucesso', [
-                'proposicao_id' => $proposicao->id,
-                'variaveis_processadas' => count($templateVariables)
-            ]);
+            // Log::info('Template processado automaticamente com sucesso', [
+                //     'proposicao_id' => $proposicao->id,
+                //     'variaveis_processadas' => count($templateVariables)
+            // ]);
             
         } catch (\Exception $e) {
-            \Log::warning('Não foi possível processar template automaticamente', [
-                'proposicao_id' => $proposicao->id,
-                'error' => $e->getMessage()
-            ]);
+            // Log::warning('Não foi possível processar template automaticamente', [
+                //     'proposicao_id' => $proposicao->id,
+                //     'error' => $e->getMessage()
+            // ]);
             // Não interrompe o fluxo, apenas registra o aviso
         }
     }
@@ -672,11 +672,11 @@ class ProposicaoController extends Controller
                 }
                 
                 if (!$template) {
-                    \Log::warning('Template não encontrado no gerarTexto', [
-                        'templateId' => $templateId,
-                        'modeloId' => $modeloId,
-                        'documentoModelo_found' => $documentoModelo ? 'yes' : 'no'
-                    ]);
+                    // Log::warning('Template não encontrado no gerarTexto', [
+                        //     'templateId' => $templateId,
+                        //     'modeloId' => $modeloId,
+                        //     'documentoModelo_found' => $documentoModelo ? 'yes' : 'no'
+                    // ]);
                     
                     return response()->json([
                         'success' => false,
@@ -742,12 +742,12 @@ class ProposicaoController extends Controller
             'proposicao_' . $proposicaoId . '_texto_gerado' => $textoGerado ?? ''
         ]);
 
-        \Log::info('Texto gerado para proposição', [
-            'proposicao_id' => $proposicaoId,
-            'modelo_id' => $modeloId,
-            'is_template' => $isTemplate,
-            'user_id' => Auth::id()
-        ]);
+        // Log::info('Texto gerado para proposição', [
+            //     'proposicao_id' => $proposicaoId,
+            //     'modelo_id' => $modeloId,
+            //     'is_template' => $isTemplate,
+            //     'user_id' => Auth::id()
+        // ]);
 
         return response()->json([
             'success' => true,
@@ -824,11 +824,11 @@ class ProposicaoController extends Controller
                                                                   ->where('ativo', true)
                                                                   ->first();
                     
-                    \Log::info('Buscando template do admin pelo ID', [
-                        'proposicao_id' => $proposicaoId,
-                        'template_id' => $templateId,
-                        'template_encontrado' => $template ? $template->id : 'nenhum'
-                    ]);
+                    // Log::info('Buscando template do admin pelo ID', [
+                        //     'proposicao_id' => $proposicaoId,
+                        //     'template_id' => $templateId,
+                        //     'template_encontrado' => $template ? $template->id : 'nenhum'
+                    // ]);
                 } else {
                     // Fallback: buscar pelo tipo de proposição
                     $tipoProposicao = \App\Models\TipoProposicao::buscarPorCodigo($proposicao->tipo);
@@ -839,16 +839,16 @@ class ProposicaoController extends Controller
                                                                       ->where('ativo', true)
                                                                       ->first();
                         
-                        \Log::info('Buscando template do admin por tipo', [
-                            'proposicao_id' => $proposicaoId,
-                            'tipo_proposicao' => $proposicao->tipo,
-                            'tipo_proposicao_id' => $tipoProposicao->id,
-                            'template_encontrado' => $template ? $template->id : 'nenhum'
-                        ]);
+                        // Log::info('Buscando template do admin por tipo', [
+                            //     'proposicao_id' => $proposicaoId,
+                            //     'tipo_proposicao' => $proposicao->tipo,
+                            //     'tipo_proposicao_id' => $tipoProposicao->id,
+                            //     'template_encontrado' => $template ? $template->id : 'nenhum'
+                        // ]);
                     } else {
-                        \Log::warning('Tipo de proposição não encontrado', [
-                            'tipo' => $proposicao->tipo
-                        ]);
+                        // Log::warning('Tipo de proposição não encontrado', [
+                            //     'tipo' => $proposicao->tipo
+                        // ]);
                     }
                 }
             }
@@ -860,10 +860,10 @@ class ProposicaoController extends Controller
             // Verificar se a proposição já tem um arquivo salvo no banco de dados
             if ($proposicao->arquivo_path && \Storage::disk('public')->exists($proposicao->arquivo_path)) {
                 $arquivoProposicaoPath = $proposicao->arquivo_path;
-                \Log::info('Usando arquivo existente da proposição do banco de dados', [
-                    'proposicao_id' => $proposicaoId,
-                    'arquivo_path' => $arquivoProposicaoPath
-                ]);
+                // Log::info('Usando arquivo existente da proposição do banco de dados', [
+                    //     'proposicao_id' => $proposicaoId,
+                    //     'arquivo_path' => $arquivoProposicaoPath
+                // ]);
             } else {
                 // Criar arquivo da proposição (com ou sem template específico)
                 $arquivoProposicaoPath = $this->criarArquivoProposicao($proposicaoId, $template);
@@ -871,21 +871,21 @@ class ProposicaoController extends Controller
             
             $arquivoProposicao = basename($arquivoProposicaoPath); // Apenas o nome do arquivo
             
-            \Log::info('Abrindo proposição no OnlyOffice', [
-                'proposicao_id' => $proposicaoId,
-                'template_id' => $templateId,
-                'document_key' => $documentKey,
-                'arquivo' => $arquivoProposicao
-            ]);
+            // Log::info('Abrindo proposição no OnlyOffice', [
+                //     'proposicao_id' => $proposicaoId,
+                //     'template_id' => $templateId,
+                //     'document_key' => $documentKey,
+                //     'arquivo' => $arquivoProposicao
+            // ]);
             
             return view('proposicoes.editar-onlyoffice', compact('proposicao', 'template', 'documentKey', 'arquivoProposicao'));
             
         } catch (\Exception $e) {
-            \Log::error('Erro ao abrir OnlyOffice para proposição', [
-                'proposicao_id' => $proposicaoId,
-                'template_id' => $templateId,
-                'error' => $e->getMessage()
-            ]);
+            // Log::error('Erro ao abrir OnlyOffice para proposição', [
+                //     'proposicao_id' => $proposicaoId,
+                //     'template_id' => $templateId,
+                //     'error' => $e->getMessage()
+            // ]);
             
             return redirect()->route('proposicoes.editar-texto', $proposicaoId)
                             ->with('error', 'Erro ao abrir editor. Usando editor de texto.');
@@ -918,15 +918,15 @@ class ProposicaoController extends Controller
      */
     public function enviarLegislativo(Proposicao $proposicao)
     {
-        \Log::info('Método enviarLegislativo chamado', [
-            'proposicao_id' => $proposicao->id,
-            'proposicao_status' => $proposicao->status,
-            'proposicao_ementa' => $proposicao->ementa ? 'presente' : 'ausente',
-            'proposicao_conteudo' => $proposicao->conteudo ? 'presente' : 'ausente',
-            'proposicao_arquivo' => $proposicao->arquivo_path ? 'presente' : 'ausente',
-            'user_id' => auth()->id(),
-            'is_author' => $proposicao->autor_id === auth()->id()
-        ]);
+        // Log::info('Método enviarLegislativo chamado', [
+            //     'proposicao_id' => $proposicao->id,
+            //     'proposicao_status' => $proposicao->status,
+            //     'proposicao_ementa' => $proposicao->ementa ? 'presente' : 'ausente',
+            //     'proposicao_conteudo' => $proposicao->conteudo ? 'presente' : 'ausente',
+            //     'proposicao_arquivo' => $proposicao->arquivo_path ? 'presente' : 'ausente',
+            //     'user_id' => auth()->id(),
+            //     'is_author' => $proposicao->autor_id === auth()->id()
+        // ]);
         
         try {
             // Verificar se o usuário é o autor da proposição
@@ -958,10 +958,10 @@ class ProposicaoController extends Controller
                 // Se encontrou ementa nas variáveis, atualizar a proposição
                 if (!empty($ementa)) {
                     $proposicao->update(['ementa' => $ementa]);
-                    \Log::info('Ementa extraída das variáveis do template', [
-                        'proposicao_id' => $proposicao->id,
-                        'ementa' => substr($ementa, 0, 100)
-                    ]);
+                    // Log::info('Ementa extraída das variáveis do template', [
+                        //     'proposicao_id' => $proposicao->id,
+                        //     'ementa' => substr($ementa, 0, 100)
+                    // ]);
                 }
             }
             
@@ -977,11 +977,11 @@ class ProposicaoController extends Controller
                 'status' => 'enviado_legislativo'
             ]);
 
-            \Log::info('Proposição enviada para legislativo', [
-                'proposicao_id' => $proposicao->id,
-                'user_id' => auth()->id(),
-                'status_anterior' => $proposicao->getOriginal('status')
-            ]);
+            // Log::info('Proposição enviada para legislativo', [
+                //     'proposicao_id' => $proposicao->id,
+                //     'user_id' => auth()->id(),
+                //     'status_anterior' => $proposicao->getOriginal('status')
+            // ]);
 
             return response()->json([
                 'success' => true,
@@ -989,11 +989,11 @@ class ProposicaoController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('Erro ao enviar proposição para legislativo', [
-                'proposicao_id' => $proposicao->id,
-                'user_id' => auth()->id(),
-                'error' => $e->getMessage()
-            ]);
+            // Log::error('Erro ao enviar proposição para legislativo', [
+                //     'proposicao_id' => $proposicao->id,
+                //     'user_id' => auth()->id(),
+                //     'error' => $e->getMessage()
+            // ]);
 
             return response()->json([
                 'success' => false,
@@ -1057,18 +1057,18 @@ class ProposicaoController extends Controller
                     if ($template) {
                         $templateVariablesService = app(\App\Services\TemplateVariablesService::class);
                         $variaveisTemplate = $templateVariablesService->extractVariablesFromTemplate($template);
-                        \Log::info('Variáveis extraídas do template para proposição sem ementa', [
-                            'proposicao_id' => $proposicao->id,
-                            'template_id' => $proposicao->template_id,
-                            'variaveis_encontradas' => array_keys($variaveisTemplate)
-                        ]);
+                        // Log::info('Variáveis extraídas do template para proposição sem ementa', [
+                            //     'proposicao_id' => $proposicao->id,
+                            //     'template_id' => $proposicao->template_id,
+                            //     'variaveis_encontradas' => array_keys($variaveisTemplate)
+                        // ]);
                     }
                 } catch (\Exception $e) {
-                    \Log::warning('Erro ao extrair variáveis do template', [
-                        'proposicao_id' => $proposicao->id,
-                        'template_id' => $proposicao->template_id,
-                        'erro' => $e->getMessage()
-                    ]);
+                    // Log::warning('Erro ao extrair variáveis do template', [
+                        //     'proposicao_id' => $proposicao->id,
+                        //     'template_id' => $proposicao->template_id,
+                        //     'erro' => $e->getMessage()
+                    // ]);
                 }
             }
             
@@ -1079,10 +1079,10 @@ class ProposicaoController extends Controller
                 $proposicao->ementa = $ementaGerada;
                 // Salvar no banco também
                 $proposicao->save();
-                \Log::info('Ementa gerada automaticamente', [
-                    'proposicao_id' => $proposicao->id,
-                    'ementa' => $ementaGerada
-                ]);
+                // Log::info('Ementa gerada automaticamente', [
+                    //     'proposicao_id' => $proposicao->id,
+                    //     'ementa' => $ementaGerada
+                // ]);
             }
         }
         
@@ -1157,10 +1157,10 @@ class ProposicaoController extends Controller
             ]);
             
         } catch (\Exception $e) {
-            \Log::error('Erro ao obter status da proposição', [
-                'proposicao_id' => $proposicao->id,
-                'error' => $e->getMessage()
-            ]);
+            // Log::error('Erro ao obter status da proposição', [
+                //     'proposicao_id' => $proposicao->id,
+                //     'error' => $e->getMessage()
+            // ]);
             
             return response()->json([
                 'success' => false,
@@ -1276,10 +1276,10 @@ class ProposicaoController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('Erro ao buscar notificações', [
-                'user_id' => \Auth::id(),
-                'error' => $e->getMessage()
-            ]);
+            // Log::error('Erro ao buscar notificações', [
+                //     'user_id' => \Auth::id(),
+                //     'error' => $e->getMessage()
+            // ]);
 
             return response()->json([
                 'success' => false,
@@ -1454,11 +1454,11 @@ class ProposicaoController extends Controller
             // IMPORTANTE: Verificar se já existe um arquivo salvo para esta proposição
             // Se existir, usar o arquivo existente ao invés de criar um novo
             if (\Storage::disk('public')->exists($pathDestino)) {
-                \Log::info('Arquivo da proposição já existe, usando arquivo salvo', [
-                    'proposicao_id' => $proposicaoId,
-                    'arquivo_existente' => $pathDestino,
-                    'tamanho' => \Storage::disk('public')->size($pathDestino)
-                ]);
+                // Log::info('Arquivo da proposição já existe, usando arquivo salvo', [
+                    //     'proposicao_id' => $proposicaoId,
+                    //     'arquivo_existente' => $pathDestino,
+                    //     'tamanho' => \Storage::disk('public')->size($pathDestino)
+                // ]);
                 return $pathDestino;
             }
             
@@ -1469,12 +1469,12 @@ class ProposicaoController extends Controller
             }
             
             // Se o template tem um arquivo, copiar como base
-            \Log::info('Criando novo arquivo para proposição', [
-                'proposicao_id' => $proposicaoId,
-                'template_exists' => $template ? 'sim' : 'não',
-                'template_id' => $template ? $template->id : null,
-                'arquivo_path' => $template ? $template->arquivo_path : null
-            ]);
+            // Log::info('Criando novo arquivo para proposição', [
+                //     'proposicao_id' => $proposicaoId,
+                //     'template_exists' => $template ? 'sim' : 'não',
+                //     'template_id' => $template ? $template->id : null,
+                //     'arquivo_path' => $template ? $template->arquivo_path : null
+            // ]);
             
             if ($template && $template->arquivo_path) {
                 // Processar template com variáveis substituídas
@@ -1510,23 +1510,23 @@ class ProposicaoController extends Controller
                 }
                 
                 file_put_contents($pathCompleto, $conteudoDocx);
-                \Log::info('Arquivo DOCX criado a partir do texto gerado', [
-                    'proposicao_path' => $pathDestino,
-                    'tamanho_arquivo' => strlen($conteudoDocx),
-                    'arquivo_existe_apos_criacao' => file_exists($pathCompleto),
-                    'ementa' => $ementa,
-                    'tipo' => $tipo
-                ]);
+                // Log::info('Arquivo DOCX criado a partir do texto gerado', [
+                    //     'proposicao_path' => $pathDestino,
+                    //     'tamanho_arquivo' => strlen($conteudoDocx),
+                    //     'arquivo_existe_apos_criacao' => file_exists($pathCompleto),
+                    //     'ementa' => $ementa,
+                    //     'tipo' => $tipo
+                // ]);
             }
             
             return $pathDestino;
             
         } catch (\Exception $e) {
-            \Log::error('Erro ao criar arquivo da proposição', [
-                'proposicao_id' => $proposicaoId,
-                'template_id' => $template->id,
-                'error' => $e->getMessage()
-            ]);
+            // Log::error('Erro ao criar arquivo da proposição', [
+                //     'proposicao_id' => $proposicaoId,
+                //     'template_id' => $template->id,
+                //     'error' => $e->getMessage()
+            // ]);
             
             throw $e;
         }
@@ -1556,22 +1556,22 @@ class ProposicaoController extends Controller
                 $variaveisPreenchidas = $variaveisProposicao;
             }
             
-            \Log::info('Processando template com variáveis', [
-                'proposicao_id' => $proposicaoId,
-                'template_id' => $template->id,
-                'variaveis_preenchidas' => $variaveisPreenchidas,
-                'variaveis_proposicao' => $variaveisProposicao,
-                'session_key' => 'proposicao_' . $proposicaoId . '_variaveis_template'
-            ]);
+            // Log::info('Processando template com variáveis', [
+                //     'proposicao_id' => $proposicaoId,
+                //     'template_id' => $template->id,
+                //     'variaveis_preenchidas' => $variaveisPreenchidas,
+                //     'variaveis_proposicao' => $variaveisProposicao,
+                //     'session_key' => 'proposicao_' . $proposicaoId . '_variaveis_template'
+            // ]);
             
             // Verificar se existe arquivo físico do template com sistema de fallback
             $conteudoTemplate = $this->carregarTemplateComFallback($template);
             
             if ($conteudoTemplate) {
-                \Log::info('Template carregado com sucesso', [
-                    'tamanho_arquivo' => strlen($conteudoTemplate),
-                    'contem_variaveis' => strpos($conteudoTemplate, '${') !== false
-                ]);
+                // Log::info('Template carregado com sucesso', [
+                    //     'tamanho_arquivo' => strlen($conteudoTemplate),
+                    //     'contem_variaveis' => strpos($conteudoTemplate, '${') !== false
+                // ]);
                 
                 // Verificar se o template tem variáveis válidas
                 $this->validarEBackupTemplate($template, $conteudoTemplate);
@@ -1588,11 +1588,11 @@ class ProposicaoController extends Controller
                 );
                 
                 // DEBUG: Verificar se o conteúdo foi processado
-                \Log::info('DEBUG: Antes de salvar arquivo processado', [
-                    'pathDestino' => $pathDestino,
-                    'tamanho_conteudo_processado' => strlen($conteudoProcessado),
-                    'primeiros_100_chars' => substr($conteudoProcessado, 0, 100)
-                ]);
+                // Log::info('DEBUG: Antes de salvar arquivo processado', [
+                    //     'pathDestino' => $pathDestino,
+                    //     'tamanho_conteudo_processado' => strlen($conteudoProcessado),
+                    //     'primeiros_100_chars' => substr($conteudoProcessado, 0, 100)
+                // ]);
                 
                 // Salvar arquivo processado - usando file_put_contents diretamente
                 $pathCompleto = storage_path('app/public/' . $pathDestino);
@@ -1607,38 +1607,38 @@ class ProposicaoController extends Controller
                 
                 $resultadoSave = file_put_contents($pathCompleto, $conteudoProcessado) !== false;
                 
-                \Log::info('DEBUG: Resultado do salvamento direto', [
-                    'resultado_save' => $resultadoSave,
-                    'path_completo' => $pathCompleto,
-                    'arquivo_existe' => file_exists($pathCompleto),
-                    'tamanho_arquivo' => file_exists($pathCompleto) ? filesize($pathCompleto) : 'N/A'
-                ]);
+                // Log::info('DEBUG: Resultado do salvamento direto', [
+                    //     'resultado_save' => $resultadoSave,
+                    //     'path_completo' => $pathCompleto,
+                    //     'arquivo_existe' => file_exists($pathCompleto),
+                    //     'tamanho_arquivo' => file_exists($pathCompleto) ? filesize($pathCompleto) : 'N/A'
+                // ]);
                 
                 // MANTER COMO RTF para preservar formatação - OnlyOffice trabalha bem com RTF
                 // A conversão para DOCX estava removendo toda formatação
                 // $this->converterRTFParaDOCX($pathCompleto); // Comentado para preservar formatação
                 
-                \Log::info('Template processado com variáveis substituídas', [
-                    'template_path' => $template->arquivo_path,
-                    'proposicao_path' => $pathDestino,
-                    'tamanho_original' => strlen($conteudoTemplate),
-                    'tamanho_processado' => strlen($conteudoProcessado),
-                    'arquivo_existe_apos_processamento' => \Storage::disk('public')->exists($pathDestino)
-                ]);
+                // Log::info('Template processado com variáveis substituídas', [
+                    //     'template_path' => $template->arquivo_path,
+                    //     'proposicao_path' => $pathDestino,
+                    //     'tamanho_original' => strlen($conteudoTemplate),
+                    //     'tamanho_processado' => strlen($conteudoProcessado),
+                    //     'arquivo_existe_apos_processamento' => \Storage::disk('public')->exists($pathDestino)
+                // ]);
             } else {
-                \Log::warning('Arquivo do template não encontrado para processamento', [
-                    'template_path' => $template->arquivo_path,
-                    'existe_local' => \Storage::disk('local')->exists($template->arquivo_path),
-                    'existe_public' => \Storage::disk('public')->exists($template->arquivo_path)
-                ]);
+                // Log::warning('Arquivo do template não encontrado para processamento', [
+                    //     'template_path' => $template->arquivo_path,
+                    //     'existe_local' => \Storage::disk('local')->exists($template->arquivo_path),
+                    //     'existe_public' => \Storage::disk('public')->exists($template->arquivo_path)
+                // ]);
             }
             
         } catch (\Exception $e) {
-            \Log::error('Erro ao processar template com variáveis', [
-                'proposicao_id' => $proposicaoId,
-                'template_id' => $template->id,
-                'error' => $e->getMessage()
-            ]);
+            // Log::error('Erro ao processar template com variáveis', [
+                //     'proposicao_id' => $proposicaoId,
+                //     'template_id' => $template->id,
+                //     'error' => $e->getMessage()
+            // ]);
             throw $e;
         }
     }
@@ -1672,19 +1672,19 @@ class ProposicaoController extends Controller
         }
         
         // Template principal está corrompido ou não contém variáveis, tentar fallbacks
-        \Log::warning('Template principal corrompido, tentando fallbacks', [
-            'template_id' => $template->id,
-            'arquivo_path' => $template->arquivo_path,
-            'conteudo_existe' => $conteudoTemplate !== null,
-            'tamanho_conteudo' => $conteudoTemplate ? strlen($conteudoTemplate) : 0
-        ]);
+        // Log::warning('Template principal corrompido, tentando fallbacks', [
+            //     'template_id' => $template->id,
+            //     'arquivo_path' => $template->arquivo_path,
+            //     'conteudo_existe' => $conteudoTemplate !== null,
+            //     'tamanho_conteudo' => $conteudoTemplate ? strlen($conteudoTemplate) : 0
+        // ]);
         
         // Fallback 1: Tentar backup mais recente
         $conteudoBackup = $this->carregarBackupMaisRecente($template);
         if ($conteudoBackup && $this->validarConteudoTemplateBasico($conteudoBackup)) {
-            \Log::info('Template restaurado do backup', [
-                'template_id' => $template->id
-            ]);
+            // Log::info('Template restaurado do backup', [
+                //     'template_id' => $template->id
+            // ]);
             
             // Restaurar o template principal com o backup
             if ($template->arquivo_path) {
@@ -1697,10 +1697,10 @@ class ProposicaoController extends Controller
         // Fallback 2: Usar template padrão baseado no tipo de proposição
         $templatePadrao = $this->obterTemplatePadrao($template->tipoProposicao->nome ?? 'mocao');
         if ($templatePadrao) {
-            \Log::info('Usando template padrão como fallback', [
-                'template_id' => $template->id,
-                'tipo_proposicao' => $template->tipoProposicao->nome ?? 'mocao'
-            ]);
+            // Log::info('Usando template padrão como fallback', [
+                //     'template_id' => $template->id,
+                //     'tipo_proposicao' => $template->tipoProposicao->nome ?? 'mocao'
+            // ]);
             
             // Salvar template padrão como novo template
             if ($template->arquivo_path) {
@@ -1711,9 +1711,9 @@ class ProposicaoController extends Controller
         }
         
         // Fallback 3: Template mínimo de emergência
-        \Log::error('Usando template de emergência', [
-            'template_id' => $template->id
-        ]);
+        // Log::error('Usando template de emergência', [
+            //     'template_id' => $template->id
+        // ]);
         
         return $this->obterTemplateEmergencia();
     }
@@ -1735,9 +1735,9 @@ class ProposicaoController extends Controller
         if (!$temVariavel) {
             // Arquivo grande pode conter imagens e ainda ser válido
             if (strlen($conteudo) > 100000) {
-                \Log::info('Template sem variáveis mas com conteúdo significativo aceito no fallback', [
-                    'tamanho_conteudo' => strlen($conteudo)
-                ]);
+                // Log::info('Template sem variáveis mas com conteúdo significativo aceito no fallback', [
+                    //     'tamanho_conteudo' => strlen($conteudo)
+                // ]);
                 return true;
             }
             return false;
@@ -1777,10 +1777,10 @@ class ProposicaoController extends Controller
             return \Storage::disk('local')->get($backupsDoTemplate[0]);
             
         } catch (\Exception $e) {
-            \Log::error('Erro ao carregar backup', [
-                'template_id' => $template->id,
-                'error' => $e->getMessage()
-            ]);
+            // Log::error('Erro ao carregar backup', [
+                //     'template_id' => $template->id,
+                //     'error' => $e->getMessage()
+            // ]);
             return null;
         }
     }
@@ -1893,26 +1893,26 @@ ${texto}
                 // Salvar backup
                 \Storage::disk('local')->put($backupPath, $conteudoTemplate);
                 
-                \Log::info('Backup do template criado', [
-                    'template_id' => $template->id,
-                    'backup_path' => $backupPath,
-                    'variaveis_encontradas' => $this->extrairVariaveisTemplate($conteudoTemplate)
-                ]);
+                // Log::info('Backup do template criado', [
+                    //     'template_id' => $template->id,
+                    //     'backup_path' => $backupPath,
+                    //     'variaveis_encontradas' => $this->extrairVariaveisTemplate($conteudoTemplate)
+                // ]);
             } else {
-                \Log::warning('Template não contém variáveis essenciais', [
-                    'template_id' => $template->id,
-                    'variaveis_faltando' => ['${ementa}', '${texto}', '${numero_proposicao}']
-                ]);
+                // Log::warning('Template não contém variáveis essenciais', [
+                    //     'template_id' => $template->id,
+                    //     'variaveis_faltando' => ['${ementa}', '${texto}', '${numero_proposicao}']
+                // ]);
                 
                 // Tentar restaurar do backup mais recente
                 $this->tentarRestaurarTemplate($template);
             }
             
         } catch (\Exception $e) {
-            \Log::error('Erro ao validar template', [
-                'template_id' => $template->id,
-                'error' => $e->getMessage()
-            ]);
+            // Log::error('Erro ao validar template', [
+                //     'template_id' => $template->id,
+                //     'error' => $e->getMessage()
+            // ]);
         }
     }
     
@@ -1945,10 +1945,10 @@ ${texto}
             }
             
         } catch (\Exception $e) {
-            \Log::error('Erro ao limpar backups antigos', [
-                'template_id' => $template->id,
-                'error' => $e->getMessage()
-            ]);
+            // Log::error('Erro ao limpar backups antigos', [
+                //     'template_id' => $template->id,
+                //     'error' => $e->getMessage()
+            // ]);
         }
     }
     
@@ -1979,20 +1979,20 @@ ${texto}
                 // Restaurar o template
                 \Storage::disk('local')->put($template->arquivo_path, $conteudoBackup);
                 
-                \Log::info('Template restaurado do backup', [
-                    'template_id' => $template->id,
-                    'backup_usado' => $backupMaisRecente,
-                    'data_backup' => \Storage::disk('local')->lastModified($backupMaisRecente)
-                ]);
+                // Log::info('Template restaurado do backup', [
+                    //     'template_id' => $template->id,
+                    //     'backup_usado' => $backupMaisRecente,
+                    //     'data_backup' => \Storage::disk('local')->lastModified($backupMaisRecente)
+                // ]);
                 
                 return true;
             }
             
         } catch (\Exception $e) {
-            \Log::error('Erro ao restaurar template do backup', [
-                'template_id' => $template->id,
-                'error' => $e->getMessage()
-            ]);
+            // Log::error('Erro ao restaurar template do backup', [
+                //     'template_id' => $template->id,
+                //     'error' => $e->getMessage()
+            // ]);
         }
         
         return false;
@@ -2089,24 +2089,24 @@ ${texto}
         // Padrão: sequências que começam com \u36* ($ em Unicode) seguidas de \u123* ({ em Unicode)
         // Exemplo: \u36*\u123*\u116*\u105*\u112*\u111*... = ${tipo_...
         if (preg_match_all('/\\\\u36\*\\\\u123\*(?:\\\\u\d+\*)+\\\\u125\*/', $conteudoRTF, $unicodeMatches)) {
-            \Log::info('Variáveis Unicode encontradas', [
-                'quantidade' => count($unicodeMatches[0]),
-                'sequencias' => array_slice($unicodeMatches[0], 0, 3) // Log primeiras 3
-            ]);
+            // Log::info('Variáveis Unicode encontradas', [
+                //     'quantidade' => count($unicodeMatches[0]),
+                //     'sequencias' => array_slice($unicodeMatches[0], 0, 3) // Log primeiras 3
+            // ]);
             
             foreach ($unicodeMatches[0] as $unicodeSequence) {
                 // Decodificar sequência Unicode completa para texto
                 $decoded = $this->decodificarUnicodeRTF($unicodeSequence);
-                \Log::info('Decodificação Unicode', [
-                    'sequencia' => substr($unicodeSequence, 0, 100) . '...',
-                    'decodificado' => $decoded
-                ]);
+                // Log::info('Decodificação Unicode', [
+                    //     'sequencia' => substr($unicodeSequence, 0, 100) . '...',
+                    //     'decodificado' => $decoded
+                // ]);
                 
                 if ($decoded && strpos($decoded, '${') === 0 && substr($decoded, -1) === '}') {
                     // Extrair nome da variável (remover ${ e })
                     $nomeVariavel = substr($decoded, 2, -1);
                     if ($nomeVariavel && !in_array($nomeVariavel, $variaveisNormaisEncontradas)) {
-                        \Log::info('Variável Unicode adicionada', ['variavel' => $nomeVariavel]);
+                        // Log::info('Variável Unicode adicionada', ['variavel' => $nomeVariavel]);
                         $variaveisNoTemplate[] = $nomeVariavel;
                     }
                 }
@@ -2116,15 +2116,15 @@ ${texto}
         // Remover duplicatas
         $variaveisNoTemplate = array_unique($variaveisNoTemplate);
         
-        \Log::info('DEBUG: Análise de variáveis no template', [
-            'variaveis_no_template' => $variaveisNoTemplate,
-            'variaveis_disponiveis' => array_keys($todasVariaveis),
-            'template_preview' => substr($conteudoRTF, 0, 500) . '...',
-            'template_contém_dollar' => strpos($conteudoRTF, '$') !== false,
-            'template_contém_chaves' => strpos($conteudoRTF, '{') !== false,
-            'template_busca_manual_ementa' => strpos($conteudoRTF, '${ementa}') !== false,
-            'template_busca_manual_texto' => strpos($conteudoRTF, '${texto}') !== false
-        ]);
+        // Log::info('DEBUG: Análise de variáveis no template', [
+            //     'variaveis_no_template' => $variaveisNoTemplate,
+            //     'variaveis_disponiveis' => array_keys($todasVariaveis),
+            //     'template_preview' => substr($conteudoRTF, 0, 500) . '...',
+            //     'template_contém_dollar' => strpos($conteudoRTF, '$') !== false,
+            //     'template_contém_chaves' => strpos($conteudoRTF, '{') !== false,
+            //     'template_busca_manual_ementa' => strpos($conteudoRTF, '${ementa}') !== false,
+            //     'template_busca_manual_texto' => strpos($conteudoRTF, '${texto}') !== false
+        // ]);
         
         // Sempre tentar substituir variáveis primeiro
         $conteudoProcessado = $conteudoRTF;
@@ -2199,30 +2199,30 @@ ${texto}
             }
         }
         
-        \Log::info('DEBUG: Detalhes das substituições', [
-            'detalhes' => $detalhesSubstituicoes,
-            'total_substituicoes' => $substituicoes
-        ]);
+        // Log::info('DEBUG: Detalhes das substituições', [
+            //     'detalhes' => $detalhesSubstituicoes,
+            //     'total_substituicoes' => $substituicoes
+        // ]);
         
-        \Log::info('Substituições realizadas', [
-            'total_substituicoes' => $substituicoes,
-            'tinha_variaveis_antes' => strpos($conteudoRTF, '${') !== false,
-            'tem_variaveis_depois' => strpos($conteudoProcessado, '${') !== false
-        ]);
+        // Log::info('Substituições realizadas', [
+            //     'total_substituicoes' => $substituicoes,
+            //     'tinha_variaveis_antes' => strpos($conteudoRTF, '${') !== false,
+            //     'tem_variaveis_depois' => strpos($conteudoProcessado, '${') !== false
+        // ]);
         
         // Se não houve substituições e ainda não há conteúdo significativo, adicionar ao final
         // IMPORTANTE: Não adicionar conteúdo se o template já tem conteúdo significativo (imagens, texto longo)
         $temConteudoSignificativo = strlen($conteudoRTF) > 100000; // Templates com imagens são grandes
         
         if ($temConteudoSignificativo && $substituicoes === 0) {
-            \Log::info('Template tem conteúdo significativo mas sem variáveis - mantendo conteúdo original sem adicionar conteúdo extra', [
-                'tamanho_template' => strlen($conteudoRTF),
-                'tem_variaveis' => strpos($conteudoRTF, '${') !== false
-            ]);
+            // Log::info('Template tem conteúdo significativo mas sem variáveis - mantendo conteúdo original sem adicionar conteúdo extra', [
+                //     'tamanho_template' => strlen($conteudoRTF),
+                //     'tem_variaveis' => strpos($conteudoRTF, '${') !== false
+            // ]);
         }
         
         if ($substituicoes === 0 && strpos($conteudoRTF, '${') === false && !$temConteudoSignificativo) {
-            \Log::info('Template não tinha variáveis nem conteúdo significativo, adicionando conteúdo estruturado ao final');
+            // Log::info('Template não tinha variáveis nem conteúdo significativo, adicionando conteúdo estruturado ao final');
             
             // Encontrar a posição antes do fechamento do RTF
             $posicaoFinal = strrpos($conteudoProcessado, '}');
@@ -2252,16 +2252,16 @@ ${texto}
             }
         }
         
-        \Log::info('Variáveis processadas no RTF', [
-            'tem_variaveis_predefinidas' => strpos($conteudoRTF, '${') !== false,
-            'variaveis_disponiveis' => array_keys($todasVariaveis),
-            'valores_exemplo' => [
-                'ementa' => substr($variaveisPreenchidas['ementa'] ?? '[não definida]', 0, 50) . '...',
-                'texto' => substr($variaveisPreenchidas['texto'] ?? '[não definido]', 0, 50) . '...',
-                'autor_nome' => $variaveisSystem['autor_nome'],
-                'data_atual' => $variaveisSystem['data_atual']
-            ]
-        ]);
+        // Log::info('Variáveis processadas no RTF', [
+        //     'tem_variaveis_predefinidas' => strpos($conteudoRTF, '${') !== false,
+        //     'variaveis_disponiveis' => array_keys($todasVariaveis),
+        //     'valores_exemplo' => [
+        //         'ementa' => substr($variaveisPreenchidas['ementa'] ?? '[não definida]', 0, 50) . '...',
+        //         'texto' => substr($variaveisPreenchidas['texto'] ?? '[não definido]', 0, 50) . '...',
+        //         'autor_nome' => $variaveisSystem['autor_nome'],
+        //         'data_atual' => $variaveisSystem['data_atual']
+        //     ]
+        // ]);
         
         return $conteudoProcessado;
     }
@@ -2288,10 +2288,10 @@ ${texto}
             return $texto;
             
         } catch (\Exception $e) {
-            \Log::warning('Erro ao decodificar sequência Unicode', [
-                'sequencia' => $sequenciaUnicode,
-                'error' => $e->getMessage()
-            ]);
+            // Log::warning('Erro ao decodificar sequência Unicode', [
+                //     'sequencia' => $sequenciaUnicode,
+                //     'error' => $e->getMessage()
+            // ]);
             return null;
         }
     }
@@ -2311,10 +2311,10 @@ ${texto}
             return $sequencia;
             
         } catch (\Exception $e) {
-            \Log::warning('Erro ao codificar variável para Unicode', [
-                'variavel' => $variavel,
-                'error' => $e->getMessage()
-            ]);
+            // Log::warning('Erro ao codificar variável para Unicode', [
+                //     'variavel' => $variavel,
+                //     'error' => $e->getMessage()
+            // ]);
             return null;
         }
     }
@@ -2325,10 +2325,10 @@ ${texto}
     private function codificarTextoParaUnicode($texto)
     {
         try {
-            \Log::info('Codificando texto para Unicode RTF', [
-                'texto_original' => mb_substr($texto, 0, 100),
-                'length' => mb_strlen($texto, 'UTF-8')
-            ]);
+            // Log::info('Codificando texto para Unicode RTF', [
+                //     'texto_original' => mb_substr($texto, 0, 100),
+                //     'length' => mb_strlen($texto, 'UTF-8')
+            // ]);
             
             // Para texto longo, usar formato misto: caracteres especiais em Unicode, texto normal como está
             $textoProcessado = '';
@@ -2354,18 +2354,18 @@ ${texto}
                 }
             }
             
-            \Log::info('Texto codificado para Unicode RTF', [
-                'amostra_resultado' => mb_substr($textoProcessado, 0, 200),
-                'tamanho_final' => strlen($textoProcessado)
-            ]);
+            // Log::info('Texto codificado para Unicode RTF', [
+                //     'amostra_resultado' => mb_substr($textoProcessado, 0, 200),
+                //     'tamanho_final' => strlen($textoProcessado)
+            // ]);
             
             return $textoProcessado;
             
         } catch (\Exception $e) {
-            \Log::warning('Erro ao codificar texto para Unicode RTF', [
-                'texto_inicio' => mb_substr($texto, 0, 50) . '...',
-                'error' => $e->getMessage()
-            ]);
+            // Log::warning('Erro ao codificar texto para Unicode RTF', [
+                //     'texto_inicio' => mb_substr($texto, 0, 50) . '...',
+                //     'error' => $e->getMessage()
+            // ]);
             return $texto; // Fallback para texto original
         }
     }
@@ -2553,22 +2553,22 @@ ${texto}
             $pathArquivo = "proposicoes/{$arquivo}";
             $fullPath = storage_path('app/public/' . $pathArquivo);
             
-            \Log::info('OnlyOffice serveFile chamado', [
-                'proposicao_id' => $proposicaoId,
-                'arquivo' => $arquivo,
-                'path_relativo' => $pathArquivo,
-                'path_completo' => $fullPath,
-                'arquivo_existe' => file_exists($fullPath),
-                'storage_exists' => \Storage::disk('public')->exists($pathArquivo)
-            ]);
+            // Log::info('OnlyOffice serveFile chamado', [
+                //     'proposicao_id' => $proposicaoId,
+                //     'arquivo' => $arquivo,
+                //     'path_relativo' => $pathArquivo,
+                //     'path_completo' => $fullPath,
+                //     'arquivo_existe' => file_exists($fullPath),
+                //     'storage_exists' => \Storage::disk('public')->exists($pathArquivo)
+            // ]);
             
             if (!\Storage::disk('public')->exists($pathArquivo)) {
-                \Log::error('Arquivo não encontrado para OnlyOffice', [
-                    'proposicao_id' => $proposicaoId,
-                    'arquivo' => $arquivo,
-                    'path' => $pathArquivo,
-                    'diretorio_contents' => \Storage::disk('public')->files('proposicoes')
-                ]);
+                // Log::error('Arquivo não encontrado para OnlyOffice', [
+                    //     'proposicao_id' => $proposicaoId,
+                    //     'arquivo' => $arquivo,
+                    //     'path' => $pathArquivo,
+                    //     'diretorio_contents' => \Storage::disk('public')->files('proposicoes')
+                // ]);
                 return response('File not found', 404);
             }
             
@@ -2578,11 +2578,11 @@ ${texto}
             if (strpos($conteudo, '{\rtf') !== false) {
                 $conteudo = $this->processarVariaveisTemplate($conteudo);
                 
-                \Log::info('Variáveis do template processadas', [
-                    'proposicao_id' => $proposicaoId,
-                    'arquivo' => $arquivo,
-                    'tamanho_processado' => strlen($conteudo)
-                ]);
+                // Log::info('Variáveis do template processadas', [
+                    //     'proposicao_id' => $proposicaoId,
+                    //     'arquivo' => $arquivo,
+                    //     'tamanho_processado' => strlen($conteudo)
+                // ]);
             }
             
             // Determinar MIME type baseado na extensão
@@ -2601,11 +2601,11 @@ ${texto}
                     $mimeType = 'application/octet-stream';
             }
             
-            \Log::info('Arquivo servido com sucesso', [
-                'proposicao_id' => $proposicaoId,
-                'arquivo' => $arquivo,
-                'tamanho' => strlen($conteudo)
-            ]);
+            // Log::info('Arquivo servido com sucesso', [
+                //     'proposicao_id' => $proposicaoId,
+                //     'arquivo' => $arquivo,
+                //     'tamanho' => strlen($conteudo)
+            // ]);
             
             return response($conteudo)
                 ->header('Content-Type', $mimeType)
@@ -2619,11 +2619,11 @@ ${texto}
                 ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
                 
         } catch (\Exception $e) {
-            \Log::error('Erro ao servir arquivo para OnlyOffice', [
-                'proposicao_id' => $proposicaoId,
-                'arquivo' => $arquivo,
-                'error' => $e->getMessage()
-            ]);
+            // Log::error('Erro ao servir arquivo para OnlyOffice', [
+                //     'proposicao_id' => $proposicaoId,
+                //     'arquivo' => $arquivo,
+                //     'error' => $e->getMessage()
+            // ]);
             
             return response('Internal Server Error', 500);
         }
@@ -2638,10 +2638,10 @@ ${texto}
             $input = file_get_contents('php://input');
             $data = json_decode($input, true);
             
-            \Log::info('OnlyOffice callback recebido', [
-                'proposicao_id' => $proposicaoId,
-                'callback_data' => $data
-            ]);
+            // Log::info('OnlyOffice callback recebido', [
+                //     'proposicao_id' => $proposicaoId,
+                //     'callback_data' => $data
+            // ]);
             
             if (!$data) {
                 return response()->json(['error' => 0]);
@@ -2658,11 +2658,11 @@ ${texto}
                     // Usar nome do container para comunicação entre containers
                     $url = str_replace('http://localhost:8080', 'http://legisinc-onlyoffice', $data['url']);
                     
-                    \Log::info('OnlyOffice callback - tentando baixar documento', [
-                        'proposicao_id' => $proposicaoId,
-                        'original_url' => $data['url'],
-                        'converted_url' => $url
-                    ]);
+                    // Log::info('OnlyOffice callback - tentando baixar documento', [
+                        //     'proposicao_id' => $proposicaoId,
+                        //     'original_url' => $data['url'],
+                        //     'converted_url' => $url
+                    // ]);
                     
                     // Download do arquivo atualizado usando cURL
                     $ch = curl_init();
@@ -2716,13 +2716,13 @@ ${texto}
                         
                         file_put_contents($pathCompleto, $fileContent);
                         
-                        \Log::info('Arquivo da proposição salvo via OnlyOffice', [
-                            'proposicao_id' => $proposicaoId,
-                            'arquivo' => $nomeArquivo,
-                            'size' => strlen($fileContent),
-                            'template_id' => $templateId,
-                            'path' => $pathDestino
-                        ]);
+                        // Log::info('Arquivo da proposição salvo via OnlyOffice', [
+                            //     'proposicao_id' => $proposicaoId,
+                            //     'arquivo' => $nomeArquivo,
+                            //     'size' => strlen($fileContent),
+                            //     'template_id' => $templateId,
+                            //     'path' => $pathDestino
+                        // ]);
                         
                         // Detectar formato do arquivo e extrair texto adequadamente
                         $textoExtraido = $this->extrairTextoDoArquivo($fileContent);
@@ -2743,20 +2743,20 @@ ${texto}
                                 'conteudo' => $dadosExtraidos['conteudo'] ?? $proposicao->conteudo
                             ]);
                             
-                            \Log::info('Proposição atualizada com texto extraído', [
-                                'proposicao_id' => $proposicaoId,
-                                'ementa_atualizada' => !empty($dadosExtraidos['ementa']),
-                                'conteudo_atualizado' => !empty($dadosExtraidos['conteudo'])
-                            ]);
+                            // Log::info('Proposição atualizada com texto extraído', [
+                                //     'proposicao_id' => $proposicaoId,
+                                //     'ementa_atualizada' => !empty($dadosExtraidos['ementa']),
+                                //     'conteudo_atualizado' => !empty($dadosExtraidos['conteudo'])
+                            // ]);
                         }
                     } else {
-                        \Log::error('Erro ao baixar arquivo do OnlyOffice', [
-                            'proposicao_id' => $proposicaoId,
-                            'http_code' => $httpCode,
-                            'curl_error' => $curlError,
-                            'original_url' => $data['url'],
-                            'converted_url' => $url
-                        ]);
+                        // Log::error('Erro ao baixar arquivo do OnlyOffice', [
+                            //     'proposicao_id' => $proposicaoId,
+                            //     'http_code' => $httpCode,
+                            //     'curl_error' => $curlError,
+                            //     'original_url' => $data['url'],
+                            //     'converted_url' => $url
+                        // ]);
                     }
                 }
             }
@@ -2764,11 +2764,11 @@ ${texto}
             return response()->json(['error' => 0]);
             
         } catch (\Exception $e) {
-            \Log::error('Erro no callback do OnlyOffice', [
-                'proposicao_id' => $proposicaoId,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
+            // Log::error('Erro no callback do OnlyOffice', [
+                //     'proposicao_id' => $proposicaoId,
+                //     'error' => $e->getMessage(),
+                //     'trace' => $e->getTraceAsString()
+            // ]);
             
             return response()->json(['error' => 1]);
         }
@@ -2835,11 +2835,11 @@ ${texto}
                                                               ->where('ativo', true)
                                                               ->first();
                 
-                \Log::info('Template do admin encontrado para preparar edição', [
-                    'proposicao_id' => $proposicaoId,
-                    'tipo_proposicao' => $proposicao->tipo,
-                    'template_encontrado' => $template ? $template->id : 'nenhum'
-                ]);
+                // Log::info('Template do admin encontrado para preparar edição', [
+                    //     'proposicao_id' => $proposicaoId,
+                    //     'tipo_proposicao' => $proposicao->tipo,
+                    //     'template_encontrado' => $template ? $template->id : 'nenhum'
+                // ]);
             }
         }
 
@@ -2975,10 +2975,10 @@ ${texto}
             return $pathDestino;
             
         } catch (\Exception $e) {
-            \Log::error('Erro ao criar arquivo com dados', [
-                'proposicao_id' => $proposicaoId,
-                'error' => $e->getMessage()
-            ]);
+            // Log::error('Erro ao criar arquivo com dados', [
+                //     'proposicao_id' => $proposicaoId,
+                //     'error' => $e->getMessage()
+            // ]);
             
             throw $e;
         }
@@ -3036,12 +3036,12 @@ ${texto}
         }
         
         // Log da mudança de status
-        \Log::info('Status da proposição atualizado', [
-            'proposicao_id' => $proposicaoId,
-            'novo_status' => $request->status,
-            'user_id' => Auth::id(),
-            'salvo_em' => $proposicao ? 'banco_dados' : 'sessao'
-        ]);
+        // Log::info('Status da proposição atualizado', [
+            //     'proposicao_id' => $proposicaoId,
+            //     'novo_status' => $request->status,
+            //     'user_id' => Auth::id(),
+            //     'salvo_em' => $proposicao ? 'banco_dados' : 'sessao'
+        // ]);
 
         return response()->json([
             'success' => true,
@@ -3072,10 +3072,10 @@ ${texto}
      */
     private function corrigirEncodingParaOnlyOffice(string $conteudoRTF): string
     {
-        \Log::info('Aplicando correção de encoding para OnlyOffice no serveFile', [
-            'tamanho_original' => strlen($conteudoRTF),
-            'preview' => substr($conteudoRTF, 0, 100)
-        ]);
+        // Log::info('Aplicando correção de encoding para OnlyOffice no serveFile', [
+            //     'tamanho_original' => strlen($conteudoRTF),
+            //     'preview' => substr($conteudoRTF, 0, 100)
+        // ]);
         
         $conteudoCorrigido = $conteudoRTF;
         
@@ -3115,16 +3115,16 @@ ${texto}
             if ($antes > $depois) {
                 $correcoes = $antes - $depois;
                 $totalCorrecoes += $correcoes;
-                \Log::info("Correção RTF->UTF8 aplicada: {$rtfCode} -> {$utf8Char}", [
-                    'ocorrencias' => $correcoes
-                ]);
+                // Log::info("Correção RTF->UTF8 aplicada: {$rtfCode} -> {$utf8Char}", [
+                    //     'ocorrencias' => $correcoes
+                // ]);
             }
         }
         
-        \Log::info('Correção de encoding para OnlyOffice concluída', [
-            'total_correcoes' => $totalCorrecoes,
-            'tamanho_final' => strlen($conteudoCorrigido)
-        ]);
+        // Log::info('Correção de encoding para OnlyOffice concluída', [
+            //     'total_correcoes' => $totalCorrecoes,
+            //     'tamanho_final' => strlen($conteudoCorrigido)
+        // ]);
         
         return $conteudoCorrigido;
     }
@@ -3154,10 +3154,10 @@ ${texto}
             ]
         ]);
 
-        \Log::info('Documento assinado digitalmente', [
-            'proposicao_id' => $proposicaoId,
-            'user_id' => Auth::id()
-        ]);
+        // Log::info('Documento assinado digitalmente', [
+            //     'proposicao_id' => $proposicaoId,
+            //     'user_id' => Auth::id()
+        // ]);
 
         return response()->json([
             'success' => true,
@@ -3192,11 +3192,11 @@ ${texto}
             ]
         ]);
 
-        \Log::info('Proposição protocolada', [
-            'proposicao_id' => $proposicaoId,
-            'numero_protocolo' => $numeroProtocolo,
-            'user_id' => Auth::id()
-        ]);
+        // Log::info('Proposição protocolada', [
+            //     'proposicao_id' => $proposicaoId,
+            //     'numero_protocolo' => $numeroProtocolo,
+            //     'user_id' => Auth::id()
+        // ]);
 
         return response()->json([
             'success' => true,
@@ -3255,26 +3255,26 @@ ${texto}
             
             if (strpos($fileContent, 'PK') === 0 || strpos($fileContent, '<?xml') !== false) {
                 // Arquivo DOCX (formato ZIP com XML)
-                \Log::info('Detectado arquivo DOCX, extraindo texto do XML');
+                // Log::info('Detectado arquivo DOCX, extraindo texto do XML');
                 return $this->extrairTextoDOCX($fileContent);
             } elseif (strpos($fileContent, '{\\rtf') === 0) {
                 // Arquivo RTF - usar o novo extrator
-                \Log::info('Detectado arquivo RTF, usando RTFTextExtractor');
+                // Log::info('Detectado arquivo RTF, usando RTFTextExtractor');
                 return \App\Services\RTFTextExtractor::extract($fileContent);
             } else {
                 // Tentar como texto puro primeiro
                 if (mb_check_encoding($fileContent, 'UTF-8')) {
-                    \Log::info('Tratando como texto puro UTF-8');
+                    // Log::info('Tratando como texto puro UTF-8');
                     return trim($fileContent);
                 } else {
-                    \Log::warning('Formato de arquivo não reconhecido, tentando como RTF');
+                    // Log::warning('Formato de arquivo não reconhecido, tentando como RTF');
                     return \App\Services\RTFTextExtractor::extract($fileContent);
                 }
             }
         } catch (\Exception $e) {
-            \Log::error('Erro ao extrair texto do arquivo', [
-                'erro' => $e->getMessage()
-            ]);
+            // Log::error('Erro ao extrair texto do arquivo', [
+                //     'erro' => $e->getMessage()
+            // ]);
             return 'Erro ao extrair texto do documento';
         }
     }
@@ -3285,9 +3285,9 @@ ${texto}
     private function extrairTextoDOCX($docxContent)
     {
         try {
-            \Log::info('Iniciando extração de texto DOCX', [
-                'tamanho_arquivo' => strlen($docxContent)
-            ]);
+            // Log::info('Iniciando extração de texto DOCX', [
+                //     'tamanho_arquivo' => strlen($docxContent)
+            // ]);
             
             $texto = '';
             
@@ -3301,9 +3301,9 @@ ${texto}
                     $documentXml = $zip->getFromName('word/document.xml');
                     if ($documentXml !== false) {
                         $texto = $this->extrairTextoDoXML($documentXml);
-                        \Log::info('Extração via ZipArchive bem-sucedida', [
-                            'tamanho_texto' => strlen($texto)
-                        ]);
+                        // Log::info('Extração via ZipArchive bem-sucedida', [
+                            //     'tamanho_texto' => strlen($texto)
+                        // ]);
                     }
                     $zip->close();
                 }
@@ -3312,27 +3312,27 @@ ${texto}
             
             // Método 2: Se ZipArchive não funcionou, usar stream wrapper
             if (empty($texto)) {
-                \Log::info('Tentando extração via stream wrapper');
+                // Log::info('Tentando extração via stream wrapper');
                 $texto = $this->extrairTextoDOCXStream($docxContent);
             }
             
             // Método 3: Se nada funcionou, usar extração direta
             if (empty($texto)) {
-                \Log::warning('Usando método de extração direta como fallback');
+                // Log::warning('Usando método de extração direta como fallback');
                 $texto = $this->extrairTextoDOCXDireto($docxContent);
             }
             
-            \Log::info('Texto extraído do DOCX', [
-                'tamanho_resultado' => strlen($texto),
-                'preview' => substr($texto, 0, 200)
-            ]);
+            // Log::info('Texto extraído do DOCX', [
+                //     'tamanho_resultado' => strlen($texto),
+                //     'preview' => substr($texto, 0, 200)
+            // ]);
             
             return $texto;
             
         } catch (\Exception $e) {
-            \Log::error('Erro ao extrair texto do DOCX', [
-                'erro' => $e->getMessage()
-            ]);
+            // Log::error('Erro ao extrair texto do DOCX', [
+                //     'erro' => $e->getMessage()
+            // ]);
             return 'Erro ao processar documento DOCX';
         }
     }
@@ -3351,9 +3351,9 @@ ${texto}
             $documentContent = @file_get_contents("zip://$tempFile#word/document.xml");
             
             if ($documentContent !== false) {
-                \Log::info('Stream wrapper funcionou', [
-                    'tamanho_xml' => strlen($documentContent)
-                ]);
+                // Log::info('Stream wrapper funcionou', [
+                    //     'tamanho_xml' => strlen($documentContent)
+                // ]);
                 
                 $texto = $this->extrairTextoDoXML($documentContent);
                 unlink($tempFile);
@@ -3364,9 +3364,9 @@ ${texto}
             return '';
             
         } catch (\Exception $e) {
-            \Log::error('Erro na extração via stream', [
-                'erro' => $e->getMessage()
-            ]);
+            // Log::error('Erro na extração via stream', [
+                //     'erro' => $e->getMessage()
+            // ]);
             return '';
         }
     }
@@ -3377,20 +3377,20 @@ ${texto}
     private function extrairTextoDOCXDireto($docxContent)
     {
         try {
-            \Log::info('Tentando extração direta de DOCX', [
-                'tamanho_arquivo' => strlen($docxContent)
-            ]);
+            // Log::info('Tentando extração direta de DOCX', [
+                //     'tamanho_arquivo' => strlen($docxContent)
+            // ]);
             
             // Como último recurso, se nenhum método funcionou, 
             // vamos retornar uma mensagem indicando que o documento precisa ser salvo como texto
-            \Log::warning('Extração automática falhou - documento precisa ser salvo como texto simples');
+            // Log::warning('Extração automática falhou - documento precisa ser salvo como texto simples');
             
             return 'Documento salvo no editor. Para visualizar o texto aqui, salve o documento como texto simples no editor.';
             
         } catch (\Exception $e) {
-            \Log::error('Erro na extração direta de DOCX', [
-                'erro' => $e->getMessage()
-            ]);
+            // Log::error('Erro na extração direta de DOCX', [
+                //     'erro' => $e->getMessage()
+            // ]);
             return 'Erro ao extrair texto do documento';
         }
     }
@@ -3431,9 +3431,9 @@ ${texto}
             return $texto;
             
         } catch (\Exception $e) {
-            \Log::error('Erro ao processar XML do Word', [
-                'erro' => $e->getMessage()
-            ]);
+            // Log::error('Erro ao processar XML do Word', [
+                //     'erro' => $e->getMessage()
+            // ]);
             
             // Fallback: regex simples
             if (preg_match_all('/<w:t[^>]*>([^<]+)<\/w:t>/i', $xmlContent, $matches)) {
@@ -3518,18 +3518,18 @@ ${texto}
                 $text = mb_convert_encoding($text, 'UTF-8', 'auto');
             }
             
-            \Log::info('Texto extraído do RTF', [
-                'tamanho_original' => strlen($rtfContent),
-                'tamanho_texto' => strlen($text),
-                'primeiros_200_chars' => substr($text, 0, 200)
-            ]);
+            // Log::info('Texto extraído do RTF', [
+                //     'tamanho_original' => strlen($rtfContent),
+                //     'tamanho_texto' => strlen($text),
+                //     'primeiros_200_chars' => substr($text, 0, 200)
+            // ]);
             
             return $text;
             
         } catch (\Exception $e) {
-            \Log::error('Erro ao extrair texto do RTF', [
-                'erro' => $e->getMessage()
-            ]);
+            // Log::error('Erro ao extrair texto do RTF', [
+                //     'erro' => $e->getMessage()
+            // ]);
             return '';
         }
     }
@@ -3644,12 +3644,12 @@ ${texto}
                 $ementa = substr($ementa, 0, 497) . '...';
             }
             
-            \Log::info('Ementa e conteúdo extraídos', [
-                'ementa_tamanho' => strlen($ementa),
-                'conteudo_tamanho' => strlen($conteudo),
-                'ementa_preview' => substr($ementa, 0, 100),
-                'conteudo_preview' => substr($conteudo, 0, 100)
-            ]);
+            // Log::info('Ementa e conteúdo extraídos', [
+                //     'ementa_tamanho' => strlen($ementa),
+                //     'conteudo_tamanho' => strlen($conteudo),
+                //     'ementa_preview' => substr($ementa, 0, 100),
+                //     'conteudo_preview' => substr($conteudo, 0, 100)
+            // ]);
             
             return [
                 'ementa' => $ementa ?: 'Proposição em elaboração',
@@ -3657,9 +3657,9 @@ ${texto}
             ];
             
         } catch (\Exception $e) {
-            \Log::error('Erro ao extrair ementa e conteúdo', [
-                'erro' => $e->getMessage()
-            ]);
+            // Log::error('Erro ao extrair ementa e conteúdo', [
+                //     'erro' => $e->getMessage()
+            // ]);
             return [
                 'ementa' => 'Erro ao processar ementa',
                 'conteudo' => $texto
@@ -3747,11 +3747,11 @@ ${texto}
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('Erro ao processar template da nova arquitetura', [
-                'proposicao_id' => $proposicaoId,
-                'template_id' => $templateId,
-                'erro' => $e->getMessage()
-            ]);
+            // Log::error('Erro ao processar template da nova arquitetura', [
+                //     'proposicao_id' => $proposicaoId,
+                //     'template_id' => $templateId,
+                //     'erro' => $e->getMessage()
+            // ]);
 
             return back()->withErrors('Erro ao processar template: ' . $e->getMessage());
         }
@@ -3814,10 +3814,10 @@ ${texto}
             $input = file_get_contents('php://input');
             $data = json_decode($input, true);
             
-            \Log::info('OnlyOffice callback recebido para instância', [
-                'instance_id' => $instanceId,
-                'callback_data' => $data
-            ]);
+            // Log::info('OnlyOffice callback recebido para instância', [
+                //     'instance_id' => $instanceId,
+                //     'callback_data' => $data
+            // ]);
             
             if (!$data) {
                 return response()->json(['error' => 0]);
@@ -3836,10 +3836,10 @@ ${texto}
                         // Salvar arquivo atualizado
                         \Storage::put($instance->arquivo_instance_path, $fileContent);
                         
-                        \Log::info('Arquivo da instância salvo via OnlyOffice', [
-                            'instance_id' => $instanceId,
-                            'size' => strlen($fileContent)
-                        ]);
+                        // Log::info('Arquivo da instância salvo via OnlyOffice', [
+                            //     'instance_id' => $instanceId,
+                            //     'size' => strlen($fileContent)
+                        // ]);
                         
                         // Atualizar timestamp
                         $instance->touch();
@@ -3850,10 +3850,10 @@ ${texto}
             return response()->json(['error' => 0]);
             
         } catch (\Exception $e) {
-            \Log::error('Erro no callback do OnlyOffice para instância', [
-                'instance_id' => $instanceId,
-                'error' => $e->getMessage()
-            ]);
+            // Log::error('Erro no callback do OnlyOffice para instância', [
+                //     'instance_id' => $instanceId,
+                //     'error' => $e->getMessage()
+            // ]);
             
             return response()->json(['error' => 1]);
         }
@@ -3897,26 +3897,26 @@ ${texto}
 
             // Tentar converter o documento para PDF para facilitar a assinatura
             try {
-                \Log::info('Iniciando conversão para PDF', [
-                    'proposicao_id' => $proposicao->id,
-                    'arquivo_path' => $proposicao->arquivo_path,
-                    'arquivo_existe' => $proposicao->arquivo_path ? \Storage::exists($proposicao->arquivo_path) : false,
-                    'has_content' => !empty($proposicao->conteudo)
-                ]);
+                // Log::info('Iniciando conversão para PDF', [
+                    //     'proposicao_id' => $proposicao->id,
+                    //     'arquivo_path' => $proposicao->arquivo_path,
+                    //     'arquivo_existe' => $proposicao->arquivo_path ? \Storage::exists($proposicao->arquivo_path) : false,
+                    //     'has_content' => !empty($proposicao->conteudo)
+                // ]);
                 
                 // Sempre tentar converter, seja com arquivo físico ou conteúdo do banco
                 $this->converterProposicaoParaPDF($proposicao);
                 
-                \Log::info('Conversão para PDF concluída', [
-                    'proposicao_id' => $proposicao->id,
-                    'arquivo_pdf_path' => $proposicao->arquivo_pdf_path
-                ]);
+                // Log::info('Conversão para PDF concluída', [
+                    //     'proposicao_id' => $proposicao->id,
+                    //     'arquivo_pdf_path' => $proposicao->arquivo_pdf_path
+                // ]);
             } catch (\Exception $e) {
-                \Log::error('Erro ao converter proposição para PDF', [
-                    'proposicao_id' => $proposicao->id,
-                    'error' => $e->getMessage(),
-                    'trace' => $e->getTraceAsString()
-                ]);
+                // Log::error('Erro ao converter proposição para PDF', [
+                    //     'proposicao_id' => $proposicao->id,
+                    //     'error' => $e->getMessage(),
+                    //     'trace' => $e->getTraceAsString()
+                // ]);
                 // Continua sem falhar, pois a conversão é opcional
             }
 
@@ -3924,12 +3924,12 @@ ${texto}
             $proposicao->status = 'retornado_legislativo';
             $proposicao->save();
 
-            \Log::info('Proposição devolvida para parlamentar', [
-                'proposicao_id' => $proposicao->id,
-                'user_id' => auth()->id(),
-                'status_anterior' => $proposicao->getOriginal('status'),
-                'status_novo' => $proposicao->status
-            ]);
+            // Log::info('Proposição devolvida para parlamentar', [
+                //     'proposicao_id' => $proposicao->id,
+                //     'user_id' => auth()->id(),
+                //     'status_anterior' => $proposicao->getOriginal('status'),
+                //     'status_novo' => $proposicao->status
+            // ]);
 
             return response()->json([
                 'success' => true,
@@ -3938,11 +3938,11 @@ ${texto}
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('Erro ao voltar proposição para parlamentar', [
-                'proposicao_id' => $proposicao->id,
-                'user_id' => auth()->id(),
-                'error' => $e->getMessage()
-            ]);
+            // Log::error('Erro ao voltar proposição para parlamentar', [
+                //     'proposicao_id' => $proposicao->id,
+                //     'user_id' => auth()->id(),
+                //     'error' => $e->getMessage()
+            // ]);
 
             return response()->json([
                 'success' => false,
@@ -3979,11 +3979,11 @@ ${texto}
                 'data_aprovacao_autor' => now()
             ]);
 
-            \Log::info('Edições do legislativo aprovadas pelo parlamentar', [
-                'proposicao_id' => $proposicao->id,
-                'user_id' => auth()->id(),
-                'status_anterior' => $proposicao->getOriginal('status')
-            ]);
+            // Log::info('Edições do legislativo aprovadas pelo parlamentar', [
+                //     'proposicao_id' => $proposicao->id,
+                //     'user_id' => auth()->id(),
+                //     'status_anterior' => $proposicao->getOriginal('status')
+            // ]);
 
             return response()->json([
                 'success' => true,
@@ -3992,10 +3992,10 @@ ${texto}
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('Erro ao aprovar edições do legislativo', [
-                'error' => $e->getMessage(),
-                'proposicao_id' => $proposicao->id
-            ]);
+            // Log::error('Erro ao aprovar edições do legislativo', [
+                //     'error' => $e->getMessage(),
+                //     'proposicao_id' => $proposicao->id
+            // ]);
 
             return response()->json([
                 'success' => false,
@@ -4009,19 +4009,19 @@ ${texto}
      */
     private function converterUtf8ParaRtf($texto)
     {
-        \Log::info('Convertendo UTF-8 para RTF Unicode sequences', [
-            'texto_original' => $texto,
-            'length' => strlen($texto),
-            'bytes' => bin2hex($texto)
-        ]);
+        // Log::info('Convertendo UTF-8 para RTF Unicode sequences', [
+            //     'texto_original' => $texto,
+            //     'length' => strlen($texto),
+            //     'bytes' => bin2hex($texto)
+        // ]);
 
         // Primeiro, limpar qualquer corrupção existente e normalizar para UTF-8 limpo
         $textoLimpo = $this->limparTextoCorrupto($texto);
         
-        \Log::info('Texto após limpeza', [
-            'texto_limpo' => $textoLimpo,
-            'bytes_limpos' => bin2hex($textoLimpo)
-        ]);
+        // Log::info('Texto após limpeza', [
+            //     'texto_limpo' => $textoLimpo,
+            //     'bytes_limpos' => bin2hex($textoLimpo)
+        // ]);
 
         // Converter caracteres UTF-8 para sequências Unicode RTF
         $resultado = '';
@@ -4039,10 +4039,10 @@ ${texto}
             }
         }
         
-        \Log::info('UTF-8 convertido para RTF Unicode', [
-            'texto_final' => $resultado,
-            'caracteres_convertidos' => $length - strlen(preg_replace('/[^\x00-\x7F]/', '', $textoLimpo))
-        ]);
+        // Log::info('UTF-8 convertido para RTF Unicode', [
+            //     'texto_final' => $resultado,
+            //     'caracteres_convertidos' => $length - strlen(preg_replace('/[^\x00-\x7F]/', '', $textoLimpo))
+        // ]);
 
         return $resultado;
     }
@@ -4098,11 +4098,11 @@ ${texto}
                 ];
             }
 
-            \Log::info('Processando template DOCX XML', [
-                'proposicao_id' => $proposicaoId,
-                'template_id' => $template->id,
-                'variaveis_preenchidas' => $variaveisPreenchidas
-            ]);
+            // Log::info('Processando template DOCX XML', [
+                //     'proposicao_id' => $proposicaoId,
+                //     'template_id' => $template->id,
+                //     'variaveis_preenchidas' => $variaveisPreenchidas
+            // ]);
 
             // Carregar template XML
             $templatePath = storage_path('app/private/' . $template->arquivo_path);
@@ -4140,18 +4140,18 @@ ${texto}
             // Criar estrutura DOCX
             $this->criarDOCXDeXML($xmlProcessado, storage_path('app/public/' . $pathDestino));
 
-            \Log::info('Template DOCX processado com sucesso', [
-                'template_path' => $template->arquivo_path,
-                'proposicao_path' => $pathDestino,
-                'arquivo_existe' => file_exists(storage_path('app/public/' . $pathDestino))
-            ]);
+            // Log::info('Template DOCX processado com sucesso', [
+                //     'template_path' => $template->arquivo_path,
+                //     'proposicao_path' => $pathDestino,
+                //     'arquivo_existe' => file_exists(storage_path('app/public/' . $pathDestino))
+            // ]);
 
         } catch (\Exception $e) {
-            \Log::error('Erro ao processar template DOCX', [
-                'error' => $e->getMessage(),
-                'proposicao_id' => $proposicaoId,
-                'template_id' => $template->id
-            ]);
+            // Log::error('Erro ao processar template DOCX', [
+                //     'error' => $e->getMessage(),
+                //     'proposicao_id' => $proposicaoId,
+                //     'template_id' => $template->id
+            // ]);
             throw $e;
         }
     }
@@ -4197,10 +4197,10 @@ ${texto}
             throw new \Exception("Não foi possível mover arquivo DOCX para destino");
         }
 
-        \Log::info('Arquivo DOCX criado com sucesso', [
-            'output_path' => $outputPath,
-            'file_size' => filesize($outputPath)
-        ]);
+        // Log::info('Arquivo DOCX criado com sucesso', [
+            //     'output_path' => $outputPath,
+            //     'file_size' => filesize($outputPath)
+        // ]);
     }
 
     /**
@@ -4210,11 +4210,11 @@ ${texto}
     private function converterRTFParaDOCX($rtfPath)
     {
         try {
-            \Log::info('Iniciando conversão RTF para DOCX', [
-                'rtf_path' => $rtfPath,
-                'file_exists' => file_exists($rtfPath),
-                'file_size' => file_exists($rtfPath) ? filesize($rtfPath) : 0
-            ]);
+            // Log::info('Iniciando conversão RTF para DOCX', [
+                //     'rtf_path' => $rtfPath,
+                //     'file_exists' => file_exists($rtfPath),
+                //     'file_size' => file_exists($rtfPath) ? filesize($rtfPath) : 0
+            // ]);
 
             // Verificar se arquivo RTF existe
             if (!file_exists($rtfPath)) {
@@ -4241,9 +4241,9 @@ ${texto}
                 unlink($tempRtf);
                 unlink($tempDocx);
                 
-                \Log::info('Conversão RTF para DOCX bem-sucedida usando pandoc', [
-                    'new_file_size' => filesize($rtfPath)
-                ]);
+                // Log::info('Conversão RTF para DOCX bem-sucedida usando pandoc', [
+                    //     'new_file_size' => filesize($rtfPath)
+                // ]);
                 return;
             }
 
@@ -4262,9 +4262,9 @@ ${texto}
                 unlink($tempRtf);
                 unlink($expectedDocx);
                 
-                \Log::info('Conversão RTF para DOCX bem-sucedida usando LibreOffice', [
-                    'new_file_size' => filesize($rtfPath)
-                ]);
+                // Log::info('Conversão RTF para DOCX bem-sucedida usando LibreOffice', [
+                    //     'new_file_size' => filesize($rtfPath)
+                // ]);
                 return;
             }
 
@@ -4272,10 +4272,10 @@ ${texto}
             $this->converterRTFParaDOCXManual($rtfPath);
 
         } catch (\Exception $e) {
-            \Log::warning('Falha na conversão RTF para DOCX', [
-                'error' => $e->getMessage(),
-                'rtf_path' => $rtfPath
-            ]);
+            // Log::warning('Falha na conversão RTF para DOCX', [
+                //     'error' => $e->getMessage(),
+                //     'rtf_path' => $rtfPath
+            // ]);
             
             // Se conversão falhar, manter arquivo original
             // O OnlyOffice pode ainda conseguir abrir, mesmo com problemas de encoding
@@ -4296,14 +4296,14 @@ ${texto}
             // Criar DOCX simples com o texto extraído
             $this->criarDOCXSimples($texto, $rtfPath);
             
-            \Log::info('Conversão RTF para DOCX manual bem-sucedida', [
-                'new_file_size' => filesize($rtfPath)
-            ]);
+            // Log::info('Conversão RTF para DOCX manual bem-sucedida', [
+                //     'new_file_size' => filesize($rtfPath)
+            // ]);
             
         } catch (\Exception $e) {
-            \Log::error('Falha na conversão manual RTF para DOCX', [
-                'error' => $e->getMessage()
-            ]);
+            // Log::error('Falha na conversão manual RTF para DOCX', [
+                //     'error' => $e->getMessage()
+            // ]);
             throw $e;
         }
     }
@@ -4338,7 +4338,7 @@ ${texto}
      */
     private function extrairTextoRTFInteligente($rtfContent)
     {
-        \Log::info('Usando extração RTF inteligente focada em conteúdo com escape sequences');
+        // Log::info('Usando extração RTF inteligente focada em conteúdo com escape sequences');
         
         $texto = $rtfContent;
         
@@ -4362,9 +4362,9 @@ ${texto}
         if (preg_match('/\\\\paperw.*$/s', $texto, $matches)) {
             $corpoDocumento = $matches[0];
             $texto = $corpoDocumento;
-            \Log::info('Corpo extraído para fallback inteligente', [
-                'tamanho_corpo' => strlen($corpoDocumento)
-            ]);
+            // Log::info('Corpo extraído para fallback inteligente', [
+                //     'tamanho_corpo' => strlen($corpoDocumento)
+            // ]);
         }
         
         // ETAPA 3: Buscar texto dentro de chaves que contenha palavras reais 
@@ -4404,11 +4404,11 @@ ${texto}
             $resultado = preg_replace('/\s+/', ' ', $resultado);
             $resultado = trim($resultado);
             
-            \Log::info('Extração RTF inteligente finalizada', [
-                'fragmentos_encontrados' => count($fragmentosTexto),
-                'tamanho_resultado' => strlen($resultado),
-                'preview' => substr($resultado, 0, 150)
-            ]);
+            // Log::info('Extração RTF inteligente finalizada', [
+                //     'fragmentos_encontrados' => count($fragmentosTexto),
+                //     'tamanho_resultado' => strlen($resultado),
+                //     'preview' => substr($resultado, 0, 150)
+            // ]);
             
             return $resultado;
         }
@@ -4422,13 +4422,13 @@ ${texto}
      */
     private function extrairTextoRTFSimples($rtfContent)
     {
-        \Log::info('Usando extração RTF ultra-simplificada - apenas texto limpo');
+        // Log::info('Usando extração RTF ultra-simplificada - apenas texto limpo');
         
         // ETAPA 0: Decodificar sequências Unicode RTF primeiro
         $texto = $this->decodificarUnicodeRTF($rtfContent);
-        \Log::info('Unicode decodificado na extração simples', [
-            'preview' => substr($texto, 0, 200)
-        ]);
+        // Log::info('Unicode decodificado na extração simples', [
+            //     'preview' => substr($texto, 0, 200)
+        // ]);
         
         // ETAPA 1: Converter escape sequences RTF para UTF-8
         $escapeSequences = [
@@ -4487,10 +4487,10 @@ ${texto}
             
             if (!empty($palavrasValidas)) {
                 $texto = implode(' ', $palavrasValidas);
-                \Log::info('Palavras válidas extraídas', [
-                    'quantidade' => count($palavrasValidas),
-                    'palavras' => array_slice($palavrasValidas, 0, 10) // Log primeiras 10
-                ]);
+                // Log::info('Palavras válidas extraídas', [
+                    //     'quantidade' => count($palavrasValidas),
+                    //     'palavras' => array_slice($palavrasValidas, 0, 10) // Log primeiras 10
+                // ]);
             }
         }
         
@@ -4523,10 +4523,10 @@ ${texto}
         $texto = preg_replace('/\s+/', ' ', $texto);
         $texto = trim($texto);
         
-        \Log::info('Extração RTF ultra-simplificada finalizada', [
-            'tamanho_resultado' => strlen($texto),
-            'preview' => substr($texto, 0, 200)
-        ]);
+        // Log::info('Extração RTF ultra-simplificada finalizada', [
+            //     'tamanho_resultado' => strlen($texto),
+            //     'preview' => substr($texto, 0, 200)
+        // ]);
         
         return $texto;
     }
@@ -4570,19 +4570,19 @@ ${texto}
         if ($proposicao->arquivo_path && \Storage::exists($proposicao->arquivo_path)) {
             $caminhoArquivo = storage_path('app/' . $proposicao->arquivo_path);
             
-            \Log::info('Convertendo proposição para PDF (com arquivo físico)', [
-                'proposicao_id' => $proposicao->id,
-                'arquivo_path' => $proposicao->arquivo_path,
-                'caminho_absoluto' => $caminhoArquivo,
-                'arquivo_existe' => file_exists($caminhoArquivo)
-            ]);
+            // Log::info('Convertendo proposição para PDF (com arquivo físico)', [
+                //     'proposicao_id' => $proposicao->id,
+                //     'arquivo_path' => $proposicao->arquivo_path,
+                //     'caminho_absoluto' => $caminhoArquivo,
+                //     'arquivo_existe' => file_exists($caminhoArquivo)
+            // ]);
             
             $this->tentarConversaoComLibreOffice($caminhoArquivo, $caminhoPdfAbsoluto, $proposicao);
         } else {
-            \Log::info('Proposição sem arquivo físico, gerando PDF do conteúdo do banco', [
-                'proposicao_id' => $proposicao->id,
-                'has_content' => !empty($proposicao->conteudo)
-            ]);
+            // Log::info('Proposição sem arquivo físico, gerando PDF do conteúdo do banco', [
+                //     'proposicao_id' => $proposicao->id,
+                //     'has_content' => !empty($proposicao->conteudo)
+            // ]);
             
             // Usar DomPDF diretamente para proposições sem arquivo físico
             $this->criarPDFComDomPDF($caminhoPdfAbsoluto, $proposicao);
@@ -4592,11 +4592,11 @@ ${texto}
         $proposicao->arquivo_pdf_path = $caminhoPdfRelativo;
         $proposicao->save();
         
-        \Log::info('Proposição convertida para PDF', [
-            'proposicao_id' => $proposicao->id,
-            'arquivo_original' => $proposicao->arquivo_path,
-            'arquivo_pdf' => $caminhoPdfRelativo
-        ]);
+        // Log::info('Proposição convertida para PDF', [
+            //     'proposicao_id' => $proposicao->id,
+            //     'arquivo_original' => $proposicao->arquivo_path,
+            //     'arquivo_pdf' => $caminhoPdfRelativo
+        // ]);
     }
 
     /**
@@ -4606,14 +4606,14 @@ ${texto}
     {
         // Verificar se LibreOffice está disponível
         $libreOfficeDisponivel = $this->libreOfficeDisponivel();
-        \Log::info('Verificando LibreOffice', [
-            'disponivel' => $libreOfficeDisponivel,
-            'caminho_pdf' => $caminhoPdfAbsoluto
-        ]);
+        // Log::info('Verificando LibreOffice', [
+            //     'disponivel' => $libreOfficeDisponivel,
+            //     'caminho_pdf' => $caminhoPdfAbsoluto
+        // ]);
         
         if (!$libreOfficeDisponivel) {
             // Fallback: Criar um PDF usando DomPDF
-            \Log::warning('LibreOffice não disponível, usando DomPDF como fallback');
+            // Log::warning('LibreOffice não disponível, usando DomPDF como fallback');
             $this->criarPDFComDomPDF($caminhoPdfAbsoluto, $proposicao);
         } else {
             // Converter para PDF usando LibreOffice
@@ -4623,26 +4623,26 @@ ${texto}
                 escapeshellarg($caminhoArquivo)
             );
             
-            \Log::info('Executando comando LibreOffice', [
-                'comando' => $comando
-            ]);
+            // Log::info('Executando comando LibreOffice', [
+                //     'comando' => $comando
+            // ]);
             
             exec($comando, $output, $returnCode);
             
-            \Log::info('Resultado do comando LibreOffice', [
-                'return_code' => $returnCode,
-                'output' => $output,
-                'pdf_existe' => file_exists($caminhoPdfAbsoluto)
-            ]);
+            // Log::info('Resultado do comando LibreOffice', [
+                //     'return_code' => $returnCode,
+                //     'output' => $output,
+                //     'pdf_existe' => file_exists($caminhoPdfAbsoluto)
+            // ]);
             
             if ($returnCode !== 0) {
-                \Log::warning('LibreOffice falhou, usando DomPDF como fallback', [
-                    'return_code' => $returnCode,
-                    'output' => $output
-                ]);
+                // Log::warning('LibreOffice falhou, usando DomPDF como fallback', [
+                    //     'return_code' => $returnCode,
+                    //     'output' => $output
+                // ]);
                 $this->criarPDFComDomPDF($caminhoPdfAbsoluto, $proposicao);
             } else if (!file_exists($caminhoPdfAbsoluto)) {
-                \Log::warning('PDF não foi criado pelo LibreOffice, usando DomPDF como fallback');
+                // Log::warning('PDF não foi criado pelo LibreOffice, usando DomPDF como fallback');
                 $this->criarPDFComDomPDF($caminhoPdfAbsoluto, $proposicao);
             }
         }
@@ -4729,17 +4729,17 @@ ${texto}
             // Salvar PDF
             file_put_contents($caminhoPdfAbsoluto, $pdf->output());
 
-            \Log::info('PDF criado com DomPDF', [
-                'proposicao_id' => $proposicao->id,
-                'caminho' => $caminhoPdfAbsoluto,
-                'tamanho' => filesize($caminhoPdfAbsoluto)
-            ]);
+            // Log::info('PDF criado com DomPDF', [
+                //     'proposicao_id' => $proposicao->id,
+                //     'caminho' => $caminhoPdfAbsoluto,
+                //     'tamanho' => filesize($caminhoPdfAbsoluto)
+            // ]);
 
         } catch (\Exception $e) {
-            \Log::error('Erro ao criar PDF com DomPDF', [
-                'proposicao_id' => $proposicao->id,
-                'error' => $e->getMessage()
-            ]);
+            // Log::error('Erro ao criar PDF com DomPDF', [
+                //     'proposicao_id' => $proposicao->id,
+                //     'error' => $e->getMessage()
+            // ]);
             throw $e;
         }
     }
@@ -4800,9 +4800,9 @@ ${texto}
             return $templateService->processarTemplate($conteudo, []);
             
         } catch (\Exception $e) {
-            \Log::warning('Erro ao processar variáveis do template:', [
-                'error' => $e->getMessage()
-            ]);
+            // Log::warning('Erro ao processar variáveis do template:', [
+                //     'error' => $e->getMessage()
+            // ]);
             
             // Se houver erro, retornar conteúdo original
             return $conteudo;
@@ -4867,19 +4867,19 @@ ${texto}
             }
             
             // Log para debug
-            \Log::info('Template processado com variáveis', [
-                'template_id' => $template->id,
-                'variables_count' => count($allVariables),
-                'processed_size' => strlen($processedContent)
-            ]);
+            // Log::info('Template processado com variáveis', [
+                //     'template_id' => $template->id,
+                //     'variables_count' => count($allVariables),
+                //     'processed_size' => strlen($processedContent)
+            // ]);
             
             return $processedContent;
             
         } catch (\Exception $e) {
-            \Log::error('Erro ao processar template com variáveis', [
-                'template_id' => $template->id ?? null,
-                'error' => $e->getMessage()
-            ]);
+            // Log::error('Erro ao processar template com variáveis', [
+                //     'template_id' => $template->id ?? null,
+                //     'error' => $e->getMessage()
+            // ]);
             
             // Fallback: criar texto básico
             return $this->criarTextoBasico($proposicao, $templateVariables);
@@ -4968,10 +4968,10 @@ ${texto}
             $resultado = $templatePadraoService->gerarDocumento($dadosProposicao);
             
             if (!$resultado['success']) {
-                \Log::error('Erro ao gerar documento ABNT', [
-                    'proposicao_id' => $proposicao->id,
-                    'error' => $resultado['message']
-                ]);
+                // Log::error('Erro ao gerar documento ABNT', [
+                    //     'proposicao_id' => $proposicao->id,
+                    //     'error' => $resultado['message']
+                // ]);
                 
                 return redirect()->back()
                     ->with('error', 'Erro ao processar template ABNT: ' . $resultado['message']);
@@ -4985,11 +4985,11 @@ ${texto}
                 'validacao_abnt' => json_encode($resultado['validacao_abnt'])
             ]);
             
-            \Log::info('Documento ABNT gerado com sucesso', [
-                'proposicao_id' => $proposicao->id,
-                'score_abnt' => $resultado['validacao_abnt']['score_geral']['percentual'] ?? 0,
-                'template_usado' => $resultado['template_usado']
-            ]);
+            // Log::info('Documento ABNT gerado com sucesso', [
+                //     'proposicao_id' => $proposicao->id,
+                //     'score_abnt' => $resultado['validacao_abnt']['score_geral']['percentual'] ?? 0,
+                //     'template_usado' => $resultado['template_usado']
+            // ]);
             
             // Redirecionar para visualização com relatório ABNT
             return redirect()->route('proposicoes.show', $proposicao->id)
@@ -4998,11 +4998,11 @@ ${texto}
                 ->with('abnt_status', $resultado['validacao_abnt']['score_geral']['status'] ?? 'desconhecido');
                 
         } catch (\Exception $e) {
-            \Log::error('Erro no processamento do template ABNT', [
-                'proposicao_id' => $proposicao->id,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
+            // Log::error('Erro no processamento do template ABNT', [
+                //     'proposicao_id' => $proposicao->id,
+                //     'error' => $e->getMessage(),
+                //     'trace' => $e->getTraceAsString()
+            // ]);
             
             return redirect()->back()
                 ->with('error', 'Erro interno ao processar template ABNT. Tente novamente.');
@@ -5016,20 +5016,20 @@ ${texto}
     {
         $valoresExistentes = [];
         
-        \Log::info('Carregando valores existentes', [
-            'proposicao_id' => $proposicao->id,
-            'status' => $proposicao->status
-        ]);
+        // Log::info('Carregando valores existentes', [
+            //     'proposicao_id' => $proposicao->id,
+            //     'status' => $proposicao->status
+        // ]);
         
         // 1. Carregar variáveis do template (usa accessor que já tenta banco e sessão)
         $variaveisTemplate = $proposicao->variaveis_template;
         if (!empty($variaveisTemplate)) {
             $valoresExistentes = array_merge($valoresExistentes, $variaveisTemplate);
-            \Log::info('Valores carregados via accessor', [
-                'proposicao_id' => $proposicao->id,
-                'variaveis' => array_keys($variaveisTemplate),
-                'valores' => $variaveisTemplate
-            ]);
+            // Log::info('Valores carregados via accessor', [
+                //     'proposicao_id' => $proposicao->id,
+                //     'variaveis' => array_keys($variaveisTemplate),
+                //     'valores' => $variaveisTemplate
+            // ]);
         }
         
         // 3. Mapear campos básicos da proposição para variáveis do template atual
@@ -5057,11 +5057,11 @@ ${texto}
             // Por simplicidade, vou pular essa parte por enquanto
         }
         
-        \Log::info('Valores finais carregados', [
-            'proposicao_id' => $proposicao->id,
-            'total_variaveis' => count($valoresExistentes),
-            'variaveis' => array_keys($valoresExistentes)
-        ]);
+        // Log::info('Valores finais carregados', [
+            //     'proposicao_id' => $proposicao->id,
+            //     'total_variaveis' => count($valoresExistentes),
+            //     'variaveis' => array_keys($valoresExistentes)
+        // ]);
         
         return $valoresExistentes;
     }
@@ -5112,11 +5112,11 @@ ${texto}
         // Remover espaços em branco no início e fim
         $textoLimpo = trim($textoLimpo);
 
-        \Log::info('Código LaTeX removido do texto', [
-            'texto_original_length' => strlen($texto),
-            'texto_limpo_length' => strlen($textoLimpo),
-            'removeu_latex' => $texto !== $textoLimpo
-        ]);
+        // Log::info('Código LaTeX removido do texto', [
+            //     'texto_original_length' => strlen($texto),
+            //     'texto_limpo_length' => strlen($textoLimpo),
+            //     'removeu_latex' => $texto !== $textoLimpo
+        // ]);
 
         return $textoLimpo;
     }

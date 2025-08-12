@@ -46,22 +46,22 @@ class AuditoriaParametroService
             DB::table('auditoria_parametros')->insert($registro);
 
             // Log estruturado para monitoramento
-            Log::info('Auditoria de parâmetro registrada', [
-                'entidade' => $entidade,
-                'entidade_id' => $entidadeId,
-                'acao' => $acao,
-                'user_id' => $registro['user_id'],
-                'ip' => $registro['ip_address']
-            ]);
+            // // Log::info('Auditoria de parâmetro registrada', [
+            //     'entidade' => $entidade,
+            //     'entidade_id' => $entidadeId,
+            //     'acao' => $acao,
+            //     'user_id' => $registro['user_id'],
+            //     'ip' => $registro['ip_address']
+            // ]);
 
         } catch (\Exception $e) {
             // Em caso de erro na auditoria, registrar em log mas não falhar a operação principal
-            Log::error('Erro ao registrar auditoria de parâmetro', [
-                'error' => $e->getMessage(),
-                'entidade' => $entidade,
-                'entidade_id' => $entidadeId,
-                'acao' => $acao
-            ]);
+            // // Log::error('Erro ao registrar auditoria de parâmetro', [
+            //     'error' => $e->getMessage(),
+            //     'entidade' => $entidade,
+            //     'entidade_id' => $entidadeId,
+            //     'acao' => $acao
+            // ]);
         }
     }
 
@@ -401,11 +401,11 @@ class AuditoriaParametroService
             ->where('created_at', '<', $dataLimite)
             ->delete();
 
-        Log::info('Limpeza de auditoria de parâmetros executada', [
-            'registros_removidos' => $totalRemovidos,
-            'data_limite' => $dataLimite->format('Y-m-d H:i:s'),
-            'dias_mantidos' => $diasParaManter
-        ]);
+        // // Log::info('Limpeza de auditoria de parâmetros executada', [
+        //     'registros_removidos' => $totalRemovidos,
+        //     'data_limite' => $dataLimite->format('Y-m-d H:i:s'),
+        //     'dias_mantidos' => $diasParaManter
+        // ]);
 
         return $totalRemovidos;
     }

@@ -182,12 +182,12 @@ class ModuloParametroController extends Controller
     public function destroy(int $id): JsonResponse
     {
         try {
-            \Log::info("AJAX: Iniciando exclusão de módulo", [
-                'id' => $id, 
-                'user_id' => auth()->id(),
-                'request_method' => request()->method(),
-                'url' => request()->fullUrl()
-            ]);
+            // Log::info("AJAX: Iniciando exclusão de módulo", [
+            //     'id' => $id, 
+            //     'user_id' => auth()->id(),
+            //     'request_method' => request()->method(),
+            //     'url' => request()->fullUrl()
+            // ]);
             
             // Verificar conexão com banco de dados
             try {
@@ -195,23 +195,23 @@ class ModuloParametroController extends Controller
                 $dbConnected = true;
             } catch (\Exception $e) {
                 $dbConnected = false;
-                \Log::warning("AJAX: Banco de dados não conectado, simulando exclusão", [
-                    'db_error' => $e->getMessage()
-                ]);
+                // Log::warning("AJAX: Banco de dados não conectado, simulando exclusão", [
+                //     'db_error' => $e->getMessage()
+                // ]);
             }
             
             if ($dbConnected) {
                 // Verificar se é exclusão forçada
                 $force = request()->input('force', false);
-                \Log::info("AJAX: Force delete", ['force' => $force]);
+                // Log::info("AJAX: Force delete", ['force' => $force]);
                 
                 if (!$force) {
                     // Usar service para verificação normal
                     $verificacao = $this->parametroService->podeExcluirModulo($id);
-                    \Log::info("AJAX: Verificação de exclusão", ['verificacao' => $verificacao]);
+                    // Log::info("AJAX: Verificação de exclusão", ['verificacao' => $verificacao]);
                     
                     if (!$verificacao['pode']) {
-                        \Log::warning("AJAX: Exclusão negada", ['motivo' => $verificacao['motivo']]);
+                        // Log::warning("AJAX: Exclusão negada", ['motivo' => $verificacao['motivo']]);
                         return response()->json([
                             'success' => false,
                             'message' => 'Não é possível excluir o módulo: ' . $verificacao['motivo'],
@@ -222,7 +222,7 @@ class ModuloParametroController extends Controller
 
                 // Executar exclusão (normal ou forçada)
                 $this->parametroService->excluirModulo($id, $force);
-                \Log::info("AJAX: Módulo excluído com sucesso", ['id' => $id, 'force' => $force]);
+                // Log::info("AJAX: Módulo excluído com sucesso", ['id' => $id, 'force' => $force]);
                 
                 return response()->json([
                     'success' => true,
@@ -230,7 +230,7 @@ class ModuloParametroController extends Controller
                 ]);
             } else {
                 // Simular exclusão quando banco não está disponível
-                \Log::info("AJAX: Simulando exclusão (banco não disponível)", ['id' => $id]);
+                // Log::info("AJAX: Simulando exclusão (banco não disponível)", ['id' => $id]);
                 
                 return response()->json([
                     'success' => true,
@@ -239,11 +239,11 @@ class ModuloParametroController extends Controller
             }
             
         } catch (\Exception $e) {
-            \Log::error("AJAX: Erro ao excluir módulo", [
-                'id' => $id,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
+            // Log::error("AJAX: Erro ao excluir módulo", [
+            //     'id' => $id,
+            //     'error' => $e->getMessage(),
+            //     'trace' => $e->getTraceAsString()
+            // ]);
             
             return response()->json([
                 'success' => false,
@@ -476,11 +476,11 @@ class ModuloParametroController extends Controller
             return response()->json($dados);
             
         } catch (\Exception $e) {
-            \Log::error('Erro na extração JSON:', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-                'request' => $request->all()
-            ]);
+            // Log::error('Erro na extração JSON:', [
+            //     'error' => $e->getMessage(),
+            //     'trace' => $e->getTraceAsString(),
+            //     'request' => $request->all()
+            // ]);
             
             return response()->json([
                 'erro' => 'Erro ao extrair dados: ' . $e->getMessage(),

@@ -134,7 +134,7 @@ class DocumentoService
             
             return true;
         } catch (\Exception $e) {
-            \Log::error('Erro ao finalizar documento: ' . $e->getMessage());
+            // Log::error('Erro ao finalizar documento: ' . $e->getMessage());
             return false;
         }
     }
@@ -201,7 +201,7 @@ class DocumentoService
                     $nomeArquivo = str_replace('.rtf', '.pdf', $nomeArquivo);
                 }
             } catch (\Exception $e) {
-                \Log::warning('Erro na conversão para PDF: ' . $e->getMessage());
+                // Log::warning('Erro na conversão para PDF: ' . $e->getMessage());
                 // Continua com RTF se conversão falhar
             }
         }
@@ -689,7 +689,7 @@ class DocumentoService
             $instancia->delete();
             return true;
         } catch (\Exception $e) {
-            \Log::error('Erro ao excluir instância de documento: ' . $e->getMessage());
+            // Log::error('Erro ao excluir instância de documento: ' . $e->getMessage());
             return false;
         }
     }

@@ -288,13 +288,13 @@ class TemplateNumeracaoService
                     $proposicao->numero = $numeroAtual;
                     $proposicao->save();
                     
-                    Log::info('Numeração corrigida', [
-                        'proposicao_id' => $proposicao->id,
-                        'numero_antigo' => $proposicao->numero,
-                        'numero_novo' => $numeroAtual,
-                        'tipo' => $tipo->codigo,
-                        'ano' => $ano
-                    ]);
+                    // Log::info('Numeração corrigida', [
+                    //     'proposicao_id' => $proposicao->id,
+                    //     'numero_antigo' => $proposicao->numero,
+                    //     'numero_novo' => $numeroAtual,
+                    //     'tipo' => $tipo->codigo,
+                    //     'ano' => $ano
+                    // ]);
                 }
             }
             

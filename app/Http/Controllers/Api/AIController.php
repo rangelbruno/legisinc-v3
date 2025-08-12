@@ -44,12 +44,12 @@ class AIController extends Controller
             return response()->json($resultado);
 
         } catch (\Exception $e) {
-            \Log::error('Erro no teste de conexão da IA via API', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-                'user_id' => auth()->id(),
-                'request_data' => $request->all()
-            ]);
+            // Log::error('Erro no teste de conexão da IA via API', [
+                //     'error' => $e->getMessage(),
+                //     'trace' => $e->getTraceAsString(),
+                //     'user_id' => auth()->id(),
+                //     'request_data' => $request->all()
+            // ]);
 
             return response()->json([
                 'success' => false,
@@ -89,11 +89,11 @@ class AIController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('Erro ao listar configurações de IA', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-                'user_id' => auth()->id()
-            ]);
+            // Log::error('Erro ao listar configurações de IA', [
+                //     'error' => $e->getMessage(),
+                //     'trace' => $e->getTraceAsString(),
+                //     'user_id' => auth()->id()
+            // ]);
 
             return response()->json([
                 'success' => false,
@@ -133,10 +133,10 @@ class AIController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('Erro ao obter estatísticas de IA', [
-                'error' => $e->getMessage(),
-                'user_id' => auth()->id()
-            ]);
+            // Log::error('Erro ao obter estatísticas de IA', [
+                //     'error' => $e->getMessage(),
+                //     'user_id' => auth()->id()
+            // ]);
 
             return response()->json([
                 'success' => false,

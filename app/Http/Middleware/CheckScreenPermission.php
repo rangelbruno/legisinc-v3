@@ -7,7 +7,7 @@ use App\Models\ScreenPermission;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
+// use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
 
 class CheckScreenPermission
@@ -230,18 +230,18 @@ class CheckScreenPermission
      */
     private function logAccessDenied($user, string $screen, string $action, Request $request): void
     {
-        Log::warning('Acesso negado', [
-            'user_id' => $user->id,
-            'user_email' => $user->email,
-            'user_roles' => $user->getRoleNames()->toArray(),
-            'screen' => $screen,
-            'action' => $action,
-            'route' => $request->route()->getName(),
-            'method' => $request->method(),
-            'ip' => $request->ip(),
-            'user_agent' => $request->userAgent(),
-            'url' => $request->fullUrl(),
-            'timestamp' => now()->toDateTimeString(),
-        ]);
+        // Log::warning('Acesso negado', [
+        //     'user_id' => $user->id,
+        //     'user_email' => $user->email,
+        //     'user_roles' => $user->getRoleNames()->toArray(),
+        //     'screen' => $screen,
+        //     'action' => $action,
+        //     'route' => $request->route()->getName(),
+        //     'method' => $request->method(),
+        //     'ip' => $request->ip(),
+        //     'user_agent' => $request->userAgent(),
+        //     'url' => $request->fullUrl(),
+        //     'timestamp' => now()->toDateTimeString(),
+        // ]);
     }
 }

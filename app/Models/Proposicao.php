@@ -256,10 +256,10 @@ class Proposicao extends Model
                     return $dadosBanco;
                 }
             } catch (\Exception $e) {
-                \Log::warning('Erro ao decodificar variaveis_template do banco', [
-                    'proposicao_id' => $this->id,
-                    'error' => $e->getMessage()
-                ]);
+                // Log::warning('Erro ao decodificar variaveis_template do banco', [
+                    //     'proposicao_id' => $this->id,
+                    //     'error' => $e->getMessage()
+                // ]);
             }
         }
         

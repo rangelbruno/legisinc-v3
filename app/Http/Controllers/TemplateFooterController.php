@@ -22,10 +22,10 @@ class TemplateFooterController extends Controller
      */
     public function index(): View
     {
-        \Log::info('🦶 TemplateFooterController::index chamado', [
-            'user' => auth()->user()->email ?? 'não autenticado',
-            'timestamp' => now()
-        ]);
+        // Log::info('🦶 TemplateFooterController::index chamado', [
+            //     'user' => auth()->user()->email ?? 'não autenticado',
+            //     'timestamp' => now()
+        // ]);
         
         // Obter configurações atuais
         $configuracoes = $this->obterConfiguracoes();
@@ -62,10 +62,10 @@ class TemplateFooterController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('Erro ao salvar configurações do rodapé', [
-                'error' => $e->getMessage(),
-                'user' => auth()->id()
-            ]);
+            // Log::error('Erro ao salvar configurações do rodapé', [
+                //     'error' => $e->getMessage(),
+                //     'user' => auth()->id()
+            // ]);
 
             return response()->json([
                 'success' => false,
@@ -90,9 +90,9 @@ class TemplateFooterController extends Controller
                 'numeracao' => $this->parametroService->obterValor('Templates', 'Rodapé', 'rodape_numeracao') ?: true
             ];
         } catch (\Exception $e) {
-            \Log::warning('Erro ao obter configurações do rodapé, usando padrões', [
-                'error' => $e->getMessage()
-            ]);
+            // Log::warning('Erro ao obter configurações do rodapé, usando padrões', [
+                //     'error' => $e->getMessage()
+            // ]);
             // Se houver erro, usar valores padrão
             return [
                 'usar_rodape' => true,

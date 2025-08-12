@@ -121,18 +121,18 @@ class TemplateController extends Controller
             
             $novoDocumentKey = 'template_' . $tipo->id . '_' . time() . '_' . uniqid();
             
-            \Log::info('Template editor: Generating new document key', [
-                'template_id' => $template->id,
-                'tipo_id' => $tipo->id,
-                'old_key' => $template->document_key,
-                'new_key' => $novoDocumentKey,
-                'reason' => [
-                    'minutes_since_update' => $tempoDesdeUltimaModificacao,
-                    'callback_processing' => $callbackEmProcessamento,
-                    'new_session' => $novaSessao
-                ],
-                'user_id' => auth()->id()
-            ]);
+            // Log::info('Template editor: Generating new document key', [
+                //     'template_id' => $template->id,
+                //     'tipo_id' => $tipo->id,
+                //     'old_key' => $template->document_key,
+                //     'new_key' => $novoDocumentKey,
+                //     'reason' => [
+                //         'minutes_since_update' => $tempoDesdeUltimaModificacao,
+                //         'callback_processing' => $callbackEmProcessamento,
+                //         'new_session' => $novaSessao
+                //     ],
+                //     'user_id' => auth()->id()
+            // ]);
             
             $template->update([
                 'document_key' => $novoDocumentKey,
@@ -147,12 +147,12 @@ class TemplateController extends Controller
             // Registrar nova sessão para evitar conflitos futuros
             \Cache::put($sessionKey, session()->getId(), 3600); // Cache por 1 hora
         } else {
-            \Log::debug('Template editor: Reusing existing document key', [
-                'template_id' => $template->id,
-                'document_key' => $template->document_key,
-                'minutes_since_update' => $tempoDesdeUltimaModificacao,
-                'user_id' => auth()->id()
-            ]);
+            // Log::debug('Template editor: Reusing existing document key', [
+                //     'template_id' => $template->id,
+                //     'document_key' => $template->document_key,
+                //     'minutes_since_update' => $tempoDesdeUltimaModificacao,
+                //     'user_id' => auth()->id()
+            // ]);
             
             // Ainda assim, registrar sessão atual para tracking
             \Cache::put($sessionKey, session()->getId(), 3600);
@@ -192,16 +192,16 @@ class TemplateController extends Controller
         // Forçar refresh do modelo para pegar dados mais recentes
         $template->refresh();
         
-        \Log::info('Template download initiated', [
-            'template_id' => $template->id,
-            'active' => $template->ativo,
-            'format' => $template->formato ?? 'rtf',
-            'content_size_bytes' => $template->conteudo ? strlen($template->conteudo) : 0,
-            'user_agent' => request()->header('User-Agent') ? 'onlyoffice' : 'browser'
-        ]);
+        // Log::info('Template download initiated', [
+            //     'template_id' => $template->id,
+            //     'active' => $template->ativo,
+            //     'format' => $template->formato ?? 'rtf',
+            //     'content_size_bytes' => $template->conteudo ? strlen($template->conteudo) : 0,
+            //     'user_agent' => request()->header('User-Agent') ? 'onlyoffice' : 'browser'
+        // ]);
 
         if (!$template->ativo) {
-            \Log::warning('Template não ativo', ['template_id' => $template->id]);
+            // Log::warning('Template não ativo', ['template_id' => $template->id]);
             abort(404, 'Template não está ativo');
         }
 
@@ -211,25 +211,25 @@ class TemplateController extends Controller
         if (!empty($template->conteudo)) {
             // Usar conteúdo do banco de dados (abordagem principal)
             $conteudoArquivo = $template->conteudo;
-            \Log::debug('Template download: Using database content', [
-                'template_id' => $template->id,
-                'size_bytes' => strlen($conteudoArquivo)
-            ]);
+            // Log::debug('Template download: Using database content', [
+                //     'template_id' => $template->id,
+                //     'size_bytes' => strlen($conteudoArquivo)
+            // ]);
         } elseif ($template->arquivo_path && Storage::exists($template->arquivo_path)) {
             // Fallback para arquivo (compatibilidade)
             $conteudoArquivo = Storage::get($template->arquivo_path);
-            \Log::warning('Template download: Fallback to file storage', [
-                'template_id' => $template->id,
-                'file_path' => $template->arquivo_path,
-                'reason' => 'No content in database'
-            ]);
+            // Log::warning('Template download: Fallback to file storage', [
+                //     'template_id' => $template->id,
+                //     'file_path' => $template->arquivo_path,
+                //     'reason' => 'No content in database'
+            // ]);
         } else {
-            \Log::error('Template download failed: No content available', [
-                'template_id' => $template->id,
-                'has_db_content' => !empty($template->conteudo),
-                'file_path' => $template->arquivo_path,
-                'file_exists' => $template->arquivo_path ? Storage::exists($template->arquivo_path) : false
-            ]);
+            // Log::error('Template download failed: No content available', [
+                //     'template_id' => $template->id,
+                //     'has_db_content' => !empty($template->conteudo),
+                //     'file_path' => $template->arquivo_path,
+                //     'file_exists' => $template->arquivo_path ? Storage::exists($template->arquivo_path) : false
+            // ]);
             abort(404, 'Template não possui conteúdo');
         }
 
@@ -249,16 +249,16 @@ class TemplateController extends Controller
                               str_contains(request()->header('User-Agent'), 'ONLYOFFICE');
         
         if ($isOnlyOfficeRequest) {
-            \Log::debug('Template served to OnlyOffice with variables intact', [
-                'template_id' => $template->id,
-                'client' => 'onlyoffice'
-            ]);
+            // Log::debug('Template served to OnlyOffice with variables intact', [
+                //     'template_id' => $template->id,
+                //     'client' => 'onlyoffice'
+            // ]);
         } else {
-            \Log::debug('Template download with variables intact', [
-                'template_id' => $template->id,
-                'processed_size_bytes' => strlen($conteudoArquivo),
-                'variables_preserved' => true
-            ]);
+            // Log::debug('Template download with variables intact', [
+                //     'template_id' => $template->id,
+                //     'processed_size_bytes' => strlen($conteudoArquivo),
+                //     'variables_preserved' => true
+            // ]);
         }
         
         // Se contém caracteres mal codificados comuns, tentar corrigir
@@ -266,10 +266,10 @@ class TemplateController extends Controller
             strpos($conteudoArquivo, 'SÃ£o Paulo') !== false ||
             strpos($conteudoArquivo, 'relaÃ§Ã£o') !== false) {
             
-            \Log::info('Arquivo contém encoding incorreto, corrigindo antes do download', [
-                'template_id' => $template->id,
-                'path' => $template->arquivo_path
-            ]);
+            // Log::info('Arquivo contém encoding incorreto, corrigindo antes do download', [
+                //     'template_id' => $template->id,
+                //     'path' => $template->arquivo_path
+            // ]);
             
             // Aplicar correções básicas
             $correcoes = [
@@ -363,12 +363,12 @@ class TemplateController extends Controller
             // Atualizar timestamp do template para indicar que foi modificado
             $template->touch();
 
-            \Log::info('Template salvo manualmente', [
-                'template_id' => $template->id,
-                'tipo_id' => $tipo->id,
-                'user_id' => auth()->id(),
-                'document_key' => $template->document_key
-            ]);
+            // Log::info('Template salvo manualmente', [
+                //     'template_id' => $template->id,
+                //     'tipo_id' => $tipo->id,
+                //     'user_id' => auth()->id(),
+                //     'document_key' => $template->document_key
+            // ]);
 
             return response()->json([
                 'success' => true,
@@ -377,10 +377,10 @@ class TemplateController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('Erro ao salvar template manualmente', [
-                'tipo_id' => $tipo->id,
-                'error' => $e->getMessage()
-            ]);
+            // Log::error('Erro ao salvar template manualmente', [
+                //     'tipo_id' => $tipo->id,
+                //     'error' => $e->getMessage()
+            // ]);
 
             return response()->json([
                 'success' => false,
@@ -410,10 +410,10 @@ class TemplateController extends Controller
                             ->with('success', "Template do tipo '{$tipoNome}' foi removido com sucesso.");
 
         } catch (\Exception $e) {
-            \Log::error('Erro ao excluir template', [
-                'template_id' => $template->id,
-                'error' => $e->getMessage()
-            ]);
+            // Log::error('Erro ao excluir template', [
+                //     'template_id' => $template->id,
+                //     'error' => $e->getMessage()
+            // ]);
 
             return redirect()->route('templates.index')
                             ->with('error', 'Erro ao remover template. Tente novamente.');
@@ -431,10 +431,10 @@ class TemplateController extends Controller
             
             $output = Artisan::output();
             
-            \Log::info('Templates regenerados com padrões legais', [
-                'user_id' => auth()->id(),
-                'output' => $output
-            ]);
+            // Log::info('Templates regenerados com padrões legais', [
+                //     'user_id' => auth()->id(),
+                //     'output' => $output
+            // ]);
 
             // Contar templates criados/atualizados
             $totalTemplates = TipoProposicaoTemplate::count();
@@ -443,10 +443,10 @@ class TemplateController extends Controller
                             ->with('success', "Todos os templates foram regenerados seguindo LC 95/1998 e padrões jurídicos! Total: {$totalTemplates} templates conformes.");
 
         } catch (\Exception $e) {
-            \Log::error('Erro ao regenerar templates', [
-                'error' => $e->getMessage(),
-                'user_id' => auth()->id()
-            ]);
+            // Log::error('Erro ao regenerar templates', [
+                //     'error' => $e->getMessage(),
+                //     'user_id' => auth()->id()
+            // ]);
 
             return redirect()->route('templates.index')
                             ->with('error', 'Erro ao regenerar templates: ' . $e->getMessage());
@@ -505,12 +505,12 @@ class TemplateController extends Controller
                 'updated_by' => auth()->id()
             ]);
 
-            \Log::info('Template com padrões legais gerado', [
-                'tipo_id' => $tipo->id,
-                'template_id' => $template->id,
-                'arquivo_path' => $caminhoArquivo,
-                'user_id' => auth()->id()
-            ]);
+            // Log::info('Template com padrões legais gerado', [
+                //     'tipo_id' => $tipo->id,
+                //     'template_id' => $template->id,
+                //     'arquivo_path' => $caminhoArquivo,
+                //     'user_id' => auth()->id()
+            // ]);
 
             return response()->json([
                 'success' => true,
@@ -524,11 +524,11 @@ class TemplateController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('Erro ao gerar template com padrões legais', [
-                'tipo_id' => $tipo->id,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
+            // Log::error('Erro ao gerar template com padrões legais', [
+                //     'tipo_id' => $tipo->id,
+                //     'error' => $e->getMessage(),
+                //     'trace' => $e->getTraceAsString()
+            // ]);
 
             return response()->json([
                 'success' => false,
@@ -582,10 +582,10 @@ class TemplateController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('Erro ao validar template', [
-                'tipo_id' => $tipo->id,
-                'error' => $e->getMessage()
-            ]);
+            // Log::error('Erro ao validar template', [
+                //     'tipo_id' => $tipo->id,
+                //     'error' => $e->getMessage()
+            // ]);
 
             return response()->json([
                 'success' => false,
@@ -669,9 +669,9 @@ class TemplateController extends Controller
             return $this->parametrosService->processarTemplate($conteudo, $dados);
             
         } catch (\Exception $e) {
-            \Log::warning('Erro ao processar variáveis do template:', [
-                'error' => $e->getMessage()
-            ]);
+            // Log::warning('Erro ao processar variáveis do template:', [
+                //     'error' => $e->getMessage()
+            // ]);
             
             // Se houver erro, retornar conteúdo original
             return $conteudo;
@@ -965,10 +965,10 @@ class TemplateController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('Erro ao gerar preview do template', [
-                'tipo_id' => $tipo->id,
-                'error' => $e->getMessage()
-            ]);
+            // Log::error('Erro ao gerar preview do template', [
+                //     'tipo_id' => $tipo->id,
+                //     'error' => $e->getMessage()
+            // ]);
 
             return response()->json([
                 'success' => false,

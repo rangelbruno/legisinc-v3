@@ -59,10 +59,10 @@ class DocumentoTemplateController extends Controller
                 ->with('success', 'Template criado com sucesso!');
 
         } catch (\Exception $e) {
-            \Log::error('Erro ao criar template', [
-                'erro' => $e->getMessage(),
-                'dados' => $request->except('arquivo')
-            ]);
+            // Log::error('Erro ao criar template', [
+                //     'erro' => $e->getMessage(),
+                //     'dados' => $request->except('arquivo')
+            // ]);
 
             return back()->withErrors('Erro ao criar template: ' . $e->getMessage())
                 ->withInput();
@@ -116,10 +116,10 @@ class DocumentoTemplateController extends Controller
                 ->with('success', 'Template atualizado com sucesso!');
 
         } catch (\Exception $e) {
-            \Log::error('Erro ao atualizar template', [
-                'template_id' => $documentoTemplate->id,
-                'erro' => $e->getMessage()
-            ]);
+            // Log::error('Erro ao atualizar template', [
+                //     'template_id' => $documentoTemplate->id,
+                //     'erro' => $e->getMessage()
+            // ]);
 
             return back()->withErrors('Erro ao atualizar template: ' . $e->getMessage())
                 ->withInput();
@@ -142,10 +142,10 @@ class DocumentoTemplateController extends Controller
             }
 
         } catch (\Exception $e) {
-            \Log::error('Erro ao excluir template', [
-                'template_id' => $documentoTemplate->id,
-                'erro' => $e->getMessage()
-            ]);
+            // Log::error('Erro ao excluir template', [
+                //     'template_id' => $documentoTemplate->id,
+                //     'erro' => $e->getMessage()
+            // ]);
 
             return back()->withErrors('Erro ao remover template: ' . $e->getMessage());
         }
@@ -264,10 +264,10 @@ class DocumentoTemplateController extends Controller
                 ->with('success', 'Template duplicado com sucesso!');
 
         } catch (\Exception $e) {
-            \Log::error('Erro ao duplicar template', [
-                'template_id' => $documentoTemplate->id,
-                'erro' => $e->getMessage()
-            ]);
+            // Log::error('Erro ao duplicar template', [
+                //     'template_id' => $documentoTemplate->id,
+                //     'erro' => $e->getMessage()
+            // ]);
 
             return back()->withErrors('Erro ao duplicar template: ' . $e->getMessage());
         }

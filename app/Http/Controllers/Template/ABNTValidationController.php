@@ -45,10 +45,10 @@ class ABNTValidationController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('Erro na validação ABNT via API', [
-                'error' => $e->getMessage(),
-                'user_id' => auth()->id()
-            ]);
+            // Log::error('Erro na validação ABNT via API', [
+                //     'error' => $e->getMessage(),
+                //     'user_id' => auth()->id()
+            // ]);
 
             return response()->json([
                 'success' => false,
@@ -81,10 +81,10 @@ class ABNTValidationController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('Erro ao aplicar correções ABNT', [
-                'error' => $e->getMessage(),
-                'user_id' => auth()->id()
-            ]);
+            // Log::error('Erro ao aplicar correções ABNT', [
+                //     'error' => $e->getMessage(),
+                //     'user_id' => auth()->id()
+            // ]);
 
             return response()->json([
                 'success' => false,
@@ -107,10 +107,10 @@ class ABNTValidationController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('Erro ao obter estatísticas do template ABNT', [
-                'error' => $e->getMessage(),
-                'user_id' => auth()->id()
-            ]);
+            // Log::error('Erro ao obter estatísticas do template ABNT', [
+                //     'error' => $e->getMessage(),
+                //     'user_id' => auth()->id()
+            // ]);
 
             return response()->json([
                 'success' => false,
@@ -147,10 +147,10 @@ class ABNTValidationController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('Erro ao gerar relatório ABNT', [
-                'error' => $e->getMessage(),
-                'user_id' => auth()->id()
-            ]);
+            // Log::error('Erro ao gerar relatório ABNT', [
+                //     'error' => $e->getMessage(),
+                //     'user_id' => auth()->id()
+            // ]);
 
             return response()->json([
                 'success' => false,

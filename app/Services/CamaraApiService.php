@@ -29,17 +29,17 @@ class CamaraApiService
         $cacheKey = "camara_info_" . md5(strtolower($nomeCidade));
         
         return Cache::remember($cacheKey, self::CACHE_TTL, function () use ($nomeCidade) {
-            Log::info('🔍 Buscando dados da câmara', ['cidade' => $nomeCidade]);
+            // Log::info('🔍 Buscando dados da câmara', ['cidade' => $nomeCidade]);
             
             // Tentar múltiplas fontes de dados
             $resultado = $this->tentarMultiplasApis($nomeCidade);
             
             if ($resultado) {
-                Log::info('✅ Dados encontrados', ['cidade' => $nomeCidade, 'fonte' => $resultado['fonte']]);
+                // Log::info('✅ Dados encontrados', ['cidade' => $nomeCidade, 'fonte' => $resultado['fonte']]);
                 return $resultado;
             }
             
-            Log::warning('⚠️ Nenhum dado encontrado', ['cidade' => $nomeCidade]);
+            // Log::warning('⚠️ Nenhum dado encontrado', ['cidade' => $nomeCidade]);
             return $this->gerarDadosGenericos($nomeCidade);
         });
     }
@@ -70,10 +70,10 @@ class CamaraApiService
                     return $resultado;
                 }
             } catch (\Exception $e) {
-                Log::warning("❌ Erro na API {$nome}", [
-                    'cidade' => $nomeCidade,
-                    'erro' => $e->getMessage()
-                ]);
+                // Log::warning("❌ Erro na API {$nome}", [
+                    //     'cidade' => $nomeCidade,
+                    //     'erro' => $e->getMessage()
+                // ]);
                 continue;
             }
         }
@@ -107,7 +107,7 @@ class CamaraApiService
 
             return null;
         } catch (\Exception $e) {
-            Log::error('Erro na API IBGE', ['erro' => $e->getMessage()]);
+            // Log::error('Erro na API IBGE', ['erro' => $e->getMessage()]);
             return null;
         }
     }
@@ -182,7 +182,7 @@ class CamaraApiService
 
             return null;
         } catch (\Exception $e) {
-            Log::error('Erro na API ViaCEP', ['erro' => $e->getMessage()]);
+            // Log::error('Erro na API ViaCEP', ['erro' => $e->getMessage()]);
             return null;
         }
     }
@@ -213,7 +213,7 @@ class CamaraApiService
 
             return null;
         } catch (\Exception $e) {
-            Log::error('Erro na API dados.gov.br', ['erro' => $e->getMessage()]);
+            // Log::error('Erro na API dados.gov.br', ['erro' => $e->getMessage()]);
             return null;
         }
     }
@@ -254,7 +254,7 @@ class CamaraApiService
                 'numero_vereadores' => 55
             ];
         } catch (\Exception $e) {
-            Log::error('Erro na API APILIB', ['erro' => $e->getMessage()]);
+            // Log::error('Erro na API APILIB', ['erro' => $e->getMessage()]);
             return null;
         }
     }
@@ -417,10 +417,10 @@ class CamaraApiService
             // Se encontrou CNPJ, buscar dados completos da empresa
             $dadosCompletos = $this->buscarDadosCompletosCNPJ($cnpj);
             if ($dadosCompletos) {
-                Log::info("✅ Dados completos encontrados via CNPJ", [
-                    'cnpj' => $cnpj,
-                    'razao_social' => $dadosCompletos['razao_social']
-                ]);
+                // Log::info("✅ Dados completos encontrados via CNPJ", [
+                    //     'cnpj' => $cnpj,
+                    //     'razao_social' => $dadosCompletos['razao_social']
+                // ]);
                 
                 // Usar dados reais da Receita Federal
                 $dados = array_merge($dados, [
@@ -481,7 +481,7 @@ class CamaraApiService
             return $this->buscarCNPJAlternativo($cidade, $uf);
             
         } catch (\Exception $e) {
-            Log::warning('Erro ao buscar CNPJ oficial', ['erro' => $e->getMessage()]);
+            // Log::warning('Erro ao buscar CNPJ oficial', ['erro' => $e->getMessage()]);
             return $this->buscarCNPJAlternativo($cidade, $uf);
         }
     }
@@ -505,7 +505,7 @@ class CamaraApiService
                 }
             }
         } catch (\Exception $e) {
-            Log::warning('Erro na API alternativa de CNPJ', ['erro' => $e->getMessage()]);
+            // Log::warning('Erro na API alternativa de CNPJ', ['erro' => $e->getMessage()]);
         }
 
         return $this->gerarCNPJ($cidade);
@@ -535,7 +535,7 @@ class CamaraApiService
                 'telefone' => $this->gerarTelefone($uf)
             ];
         } catch (\Exception $e) {
-            Log::warning('Erro ao buscar endereço real', ['erro' => $e->getMessage()]);
+            // Log::warning('Erro ao buscar endereço real', ['erro' => $e->getMessage()]);
             return [];
         }
     }
@@ -671,7 +671,7 @@ class CamaraApiService
                 }
             }
         } catch (\Exception $e) {
-            Log::warning('Erro ao buscar CEP melhorado', ['erro' => $e->getMessage()]);
+            // Log::warning('Erro ao buscar CEP melhorado', ['erro' => $e->getMessage()]);
         }
 
         return $this->gerarCEP($uf);
@@ -756,7 +756,7 @@ class CamaraApiService
                 }
             }
         } catch (\Exception $e) {
-            Log::warning('Erro ao buscar CEP', ['erro' => $e->getMessage()]);
+            // Log::warning('Erro ao buscar CEP', ['erro' => $e->getMessage()]);
         }
 
         return $this->gerarCEP($uf);
@@ -831,7 +831,7 @@ class CamaraApiService
         // MELHORIA DE PERFORMANCE: Aceitar buscas a partir de 3 caracteres
         // mas com busca mais inteligente
         if (strlen($nomeCidade) < 3) {
-            Log::info("🚫 Busca muito curta para dados conhecidos", ['nome' => $nomeCidade, 'tamanho' => strlen($nomeCidade)]);
+            // Log::info("🚫 Busca muito curta para dados conhecidos", ['nome' => $nomeCidade, 'tamanho' => strlen($nomeCidade)]);
             return null;
         }
         
@@ -856,17 +856,17 @@ class CamaraApiService
         ];
         
         $cidadeNormalizada = strtolower(StringHelper::removeAccents($nomeCidade));
-        Log::info("🔍 Debug busca conhecidos", [
-            'original' => $nomeCidade,
-            'normalizada' => $cidadeNormalizada,
-            'tamanho' => strlen($cidadeNormalizada)
-        ]);
+        // Log::info("🔍 Debug busca conhecidos", [
+            //     'original' => $nomeCidade,
+            //     'normalizada' => $cidadeNormalizada,
+            //     'tamanho' => strlen($cidadeNormalizada)
+        // ]);
         
         // Verificar primeiro se há mapeamento EXATO
         if (isset($mapeamento[$cidadeNormalizada])) {
             $chave = $mapeamento[$cidadeNormalizada];
             if (isset($enderecosConhecidos[$chave])) {
-                Log::info("✅ Dados conhecidos encontrados (exato)", ['cidade' => $nomeCidade, 'chave' => $chave]);
+                // Log::info("✅ Dados conhecidos encontrados (exato)", ['cidade' => $nomeCidade, 'chave' => $chave]);
                 return $this->formatarDadosConhecidos($chave, $enderecosConhecidos[$chave]);
             }
         }
@@ -878,11 +878,11 @@ class CamaraApiService
             // 1. BUSCA POR PREFIXO (para buscas parciais como "Car" -> "Caraguatatuba")
             if (strlen($cidadeNormalizada) >= 3) {
                 if (strpos($cidadeChave, $cidadeNormalizada) === 0) {
-                    Log::info("✅ Dados conhecidos encontrados (prefixo)", [
-                        'cidade' => $nomeCidade, 
-                        'chave' => $chave,
-                        'prefixo' => $cidadeNormalizada
-                    ]);
+                    // Log::info("✅ Dados conhecidos encontrados (prefixo)", [
+                        //     'cidade' => $nomeCidade, 
+                        //     'chave' => $chave,
+                        //     'prefixo' => $cidadeNormalizada
+                    // ]);
                     return $this->formatarDadosConhecidos($chave, $dados);
                 }
             }
@@ -893,11 +893,11 @@ class CamaraApiService
                 similar_text($cidadeNormalizada, $cidadeChave, $similaridade);
                 
                 if ($similaridade >= 75) {
-                    Log::info("✅ Dados conhecidos encontrados (similaridade)", [
-                        'cidade' => $nomeCidade, 
-                        'chave' => $chave,
-                        'similaridade' => round($similaridade, 1)
-                    ]);
+                    // Log::info("✅ Dados conhecidos encontrados (similaridade)", [
+                        //     'cidade' => $nomeCidade, 
+                        //     'chave' => $chave,
+                        //     'similaridade' => round($similaridade, 1)
+                    // ]);
                     return $this->formatarDadosConhecidos($chave, $dados);
                 }
             }
@@ -908,18 +908,18 @@ class CamaraApiService
                 $maxDistancia = floor(strlen($cidadeChave) * 0.3); // Permite 30% de diferença
                 
                 if ($distancia <= $maxDistancia) {
-                    Log::info("✅ Dados conhecidos encontrados (fuzzy)", [
-                        'cidade' => $nomeCidade, 
-                        'chave' => $chave,
-                        'distancia' => $distancia,
-                        'max_permitida' => $maxDistancia
-                    ]);
+                    // Log::info("✅ Dados conhecidos encontrados (fuzzy)", [
+                        //     'cidade' => $nomeCidade, 
+                        //     'chave' => $chave,
+                        //     'distancia' => $distancia,
+                        //     'max_permitida' => $maxDistancia
+                    // ]);
                     return $this->formatarDadosConhecidos($chave, $dados);
                 }
             }
         }
         
-        Log::info("❌ Nenhum dado conhecido encontrado", ['cidade' => $nomeCidade]);
+        // Log::info("❌ Nenhum dado conhecido encontrado", ['cidade' => $nomeCidade]);
         return null;
     }
 
@@ -971,7 +971,7 @@ class CamaraApiService
                 ];
 
                 foreach ($formasComuns as $nomeBusca) {
-                    Log::info("🔍 Buscando CNPJ Gov.br", ['nome' => $nomeBusca, 'uf' => $uf]);
+                    // Log::info("🔍 Buscando CNPJ Gov.br", ['nome' => $nomeBusca, 'uf' => $uf]);
                     
                     // OTIMIZAÇÃO: Timeout reduzido para 5 segundos
                     $response = Http::timeout(5)
@@ -991,10 +991,10 @@ class CamaraApiService
                         if (isset($resultado['data']) && !empty($resultado['data'])) {
                             foreach ($resultado['data'] as $empresa) {
                                 if ($this->validarEmpresaCamaraGov($empresa, $cidade, $uf)) {
-                                    Log::info("✅ CNPJ encontrado Gov.br", [
-                                        'cnpj' => $empresa['cnpj'],
-                                        'razao_social' => $empresa['nome']
-                                    ]);
+                                    // Log::info("✅ CNPJ encontrado Gov.br", [
+                                        //     'cnpj' => $empresa['cnpj'],
+                                        //     'razao_social' => $empresa['nome']
+                                    // ]);
                                     return $this->formatarCNPJ($empresa['cnpj']);
                                 }
                             }
@@ -1010,7 +1010,7 @@ class CamaraApiService
             });
             
         } catch (\Exception $e) {
-            Log::warning('Erro na API Gov.br', ['erro' => $e->getMessage()]);
+            // Log::warning('Erro na API Gov.br', ['erro' => $e->getMessage()]);
             return null;
         }
     }
@@ -1030,7 +1030,7 @@ class CamaraApiService
             ];
 
             foreach ($variacoes as $nomeBusca) {
-                Log::info("🔍 Buscando CNPJ variações", ['nome' => $nomeBusca, 'uf' => $uf]);
+                // Log::info("🔍 Buscando CNPJ variações", ['nome' => $nomeBusca, 'uf' => $uf]);
                 
                 try {
                     $response = Http::timeout(5)
@@ -1050,17 +1050,17 @@ class CamaraApiService
                         if (isset($resultado['data']) && !empty($resultado['data'])) {
                             foreach ($resultado['data'] as $empresa) {
                                 if ($this->validarEmpresaCamaraGov($empresa, $cidade, $uf)) {
-                                    Log::info("✅ CNPJ encontrado variações", [
-                                        'cnpj' => $empresa['cnpj'],
-                                        'razao_social' => $empresa['nome']
-                                    ]);
+                                    // Log::info("✅ CNPJ encontrado variações", [
+                                        //     'cnpj' => $empresa['cnpj'],
+                                        //     'razao_social' => $empresa['nome']
+                                    // ]);
                                     return $this->formatarCNPJ($empresa['cnpj']);
                                 }
                             }
                         }
                     }
                 } catch (\Exception $e) {
-                    Log::warning("Erro em variação: {$nomeBusca}", ['erro' => $e->getMessage()]);
+                    // Log::warning("Erro em variação: {$nomeBusca}", ['erro' => $e->getMessage()]);
                     continue;
                 }
                 
@@ -1098,7 +1098,7 @@ class CamaraApiService
                 }
             }
         } catch (\Exception $e) {
-            Log::info('CNPJ.biz não disponível', ['erro' => $e->getMessage()]);
+            // Log::info('CNPJ.biz não disponível', ['erro' => $e->getMessage()]);
         }
 
         return null;
@@ -1196,7 +1196,7 @@ class CamaraApiService
                 }
             }
         } catch (\Exception $e) {
-            Log::warning('Erro ao buscar dados completos do CNPJ', ['erro' => $e->getMessage()]);
+            // Log::warning('Erro ao buscar dados completos do CNPJ', ['erro' => $e->getMessage()]);
         }
 
         return null;

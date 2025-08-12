@@ -46,6 +46,12 @@ class AITextGenerationService
                 try {
                     // Gerar prompt baseado no tipo e ementa
                     $prompt = $this->criarPrompt($tipoProposicao, $ementa, $config->toApiConfig());
+                    
+                    // Log::info('Preparando para chamar IA', [
+                        //     'configuration' => $config->name,
+                        //     'provider' => $config->provider,
+                        //     'prompt_size' => strlen($prompt)
+                    // ]);
 
                     // Chamar API da IA
                     $response = $this->chamarAI($prompt, $config->toApiConfig());
@@ -55,15 +61,15 @@ class AITextGenerationService
                         $tokensUsados = $this->estimateTokens($prompt . $response['texto']);
                         $config->addTokensUsed($tokensUsados);
 
-                        Log::info('Texto gerado via IA com sucesso', [
-                            'configuration' => $config->name,
-                            'provider' => $config->provider,
-                            'model' => $config->model,
-                            'tipo_proposicao' => $tipoProposicao,
-                            'ementa_length' => strlen($ementa),
-                            'texto_length' => strlen($response['texto']),
-                            'tokens_estimados' => $tokensUsados
-                        ]);
+                        // Log::info('Texto gerado via IA com sucesso', [
+                            //     'configuration' => $config->name,
+                            //     'provider' => $config->provider,
+                            //     'model' => $config->model,
+                            //     'tipo_proposicao' => $tipoProposicao,
+                            //     'ementa_length' => strlen($ementa),
+                            //     'texto_length' => strlen($response['texto']),
+                            //     'tokens_estimados' => $tokensUsados
+                        // ]);
 
                         return [
                             'success' => true,
@@ -75,25 +81,25 @@ class AITextGenerationService
                         ];
                     } else {
                         $erros[] = "Configuração '{$config->name}': {$response['message']}";
-                        Log::warning('Falha em configuração de IA, tentando próxima', [
-                            'configuration' => $config->name,
-                            'error' => $response['message']
-                        ]);
+                        // Log::warning('Falha em configuração de IA, tentando próxima', [
+                            //     'configuration' => $config->name,
+                            //     'error' => $response['message']
+                        // ]);
                     }
                 } catch (\Exception $e) {
                     $erros[] = "Configuração '{$config->name}': {$e->getMessage()}";
-                    Log::error('Erro em configuração de IA', [
-                        'configuration' => $config->name,
-                        'error' => $e->getMessage()
-                    ]);
+                    // Log::error('Erro em configuração de IA', [
+                        //     'configuration' => $config->name,
+                        //     'error' => $e->getMessage()
+                    // ]);
                 }
             }
 
             // Todas as configurações falharam
-            Log::error('Todas as configurações de IA falharam', [
-                'tipo_proposicao' => $tipoProposicao,
-                'errors' => $erros
-            ]);
+            // Log::error('Todas as configurações de IA falharam', [
+                //     'tipo_proposicao' => $tipoProposicao,
+                //     'errors' => $erros
+            // ]);
 
             return [
                 'success' => false,
@@ -102,10 +108,10 @@ class AITextGenerationService
             ];
 
         } catch (\Exception $e) {
-            Log::error('Erro no serviço de geração de texto via IA', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
+            // Log::error('Erro no serviço de geração de texto via IA', [
+                //     'error' => $e->getMessage(),
+                //     'trace' => $e->getTraceAsString()
+            // ]);
 
             return [
                 'success' => false,
@@ -168,7 +174,7 @@ class AITextGenerationService
             ];
 
         } catch (\Exception $e) {
-            Log::error('Erro ao obter configurações de IA', ['error' => $e->getMessage()]);
+            // Log::error('Erro ao obter configurações de IA', ['error' => $e->getMessage()]);
             return null;
         }
     }
@@ -385,29 +391,55 @@ IMPORTANTE:
     protected function chamarGoogle(string $prompt, array $config): array
     {
         try {
+            $url = "https://generativelanguage.googleapis.com/v1beta/models/{$config['model']}:generateContent?key={$config['api_key']}";
+            
+            $payload = [
+                'contents' => [
+                    ['parts' => [['text' => $prompt]]]
+                ],
+                'generationConfig' => [
+                    'maxOutputTokens' => $config['max_tokens'],
+                    'temperature' => $config['temperature']
+                ]
+            ];
+            
+            // Log::info('Chamando Google Gemini API', [
+                //     'model' => $config['model'],
+                //     'url' => str_replace($config['api_key'], 'HIDDEN', $url),
+                //     'max_tokens' => $config['max_tokens'],
+                //     'temperature' => $config['temperature'],
+                //     'prompt_length' => strlen($prompt),
+                //     'payload' => json_encode($payload, JSON_PRETTY_PRINT)
+            // ]);
+            
             $response = Http::timeout(60)
                 ->withHeaders([
                     'Content-Type' => 'application/json'
                 ])
-                ->post("https://generativelanguage.googleapis.com/v1beta/models/{$config['model']}:generateContent?key={$config['api_key']}", [
-                    'contents' => [
-                        ['parts' => [['text' => $prompt]]]
-                    ],
-                    'generationConfig' => [
-                        'maxOutputTokens' => $config['max_tokens'],
-                        'temperature' => $config['temperature']
-                    ]
-                ]);
+                ->post($url, $payload);
 
             if ($response->successful()) {
                 $data = $response->json();
                 
                 if (isset($data['candidates'][0]['content']['parts'][0]['text'])) {
+                    // Log::info('Resposta do Google Gemini recebida com sucesso', [
+                        //     'text_length' => strlen($data['candidates'][0]['content']['parts'][0]['text'])
+                    // ]);
+                    
                     return [
                         'success' => true,
                         'texto' => trim($data['candidates'][0]['content']['parts'][0]['text'])
                     ];
                 }
+                
+                // Log::warning('Resposta do Google Gemini sem texto', [
+                    //     'response' => $data
+                // ]);
+            } else {
+                // Log::error('Erro na resposta do Google Gemini', [
+                    //     'status' => $response->status(),
+                    //     'body' => $response->body()
+                // ]);
             }
 
             return [
@@ -416,9 +448,24 @@ IMPORTANTE:
             ];
 
         } catch (\Exception $e) {
+            // Log::error('Exceção ao chamar Google Gemini', [
+                //     'error' => $e->getMessage(),
+                //     'class' => get_class($e),
+                //     'file' => $e->getFile(),
+                //     'line' => $e->getLine()
+            // ]);
+            
+            // Se for erro de validação da API, retornar mensagem específica
+            if (strpos($e->getMessage(), 'payload is invalid') !== false) {
+                return [
+                    'success' => false,
+                    'message' => 'The payload is invalid.'
+                ];
+            }
+            
             return [
                 'success' => false,
-                'message' => 'Erro ao conectar com Google: ' . $e->getMessage()
+                'message' => $e->getMessage()
             ];
         }
     }

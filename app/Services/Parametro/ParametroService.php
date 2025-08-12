@@ -11,7 +11,7 @@ use App\Services\Parametro\CacheParametroService;
 use App\Services\Parametro\AuditoriaParametroService;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Log;
+// use Illuminate\Support\Facades\Log;
 
 class ParametroService
 {
@@ -137,11 +137,6 @@ class ParametroService
         try {
             return $this->validacaoService->validar($nomeModulo, $nomeSubmodulo, $valor);
         } catch (\Exception $e) {
-            Log::error("Erro na validação de parâmetro: {$e->getMessage()}", [
-                'modulo' => $nomeModulo,
-                'submodulo' => $nomeSubmodulo,
-                'valor' => $valor
-            ]);
             return false;
         }
     }
@@ -189,10 +184,6 @@ class ParametroService
 
             return true;
         } catch (\Exception $e) {
-            Log::error("Erro ao salvar valores de parâmetros: {$e->getMessage()}", [
-                'submodulo_id' => $submoduloId,
-                'valores' => $valores
-            ]);
             return false;
         }
     }
@@ -216,7 +207,6 @@ class ParametroService
             // Encontrar o módulo
             $modulo = ParametroModulo::where('nome', $nomeModulo)->first();
             if (!$modulo) {
-                Log::warning("Módulo '{$nomeModulo}' não encontrado");
                 return false;
             }
 
@@ -226,7 +216,6 @@ class ParametroService
                 ->first();
             
             if (!$submodulo) {
-                Log::warning("Submódulo '{$nomeSubmodulo}' não encontrado no módulo '{$nomeModulo}'");
                 return false;
             }
 
@@ -236,12 +225,11 @@ class ParametroService
                 ->first();
             
             if (!$campo) {
-                Log::warning("Campo '{$nomeCampo}' não encontrado no submódulo '{$nomeSubmodulo}'");
                 return false;
             }
 
-            // Expirar valores antigos (removido por compatibilidade)
-            // $campo->valores()->validos()->update(['valido_ate' => now()]);
+            // Expirar valores antigos para manter apenas o valor mais recente
+            $campo->valores()->whereNull('valido_ate')->update(['valido_ate' => now()]);
 
             // Criar novo valor
             $novoValor = new ParametroValor();
@@ -249,27 +237,13 @@ class ParametroService
             $novoValor->valor = is_array($valor) ? json_encode($valor) : (string)$valor;
             $novoValor->save();
 
-            // Invalidar cache
+            // Invalidar cache (força limpeza completa para garantir)
             $this->cacheService->invalidateConfiguracoes($nomeModulo, $nomeSubmodulo);
-
-            Log::info("Valor '{$nomeCampo}' salvo com sucesso", [
-                'modulo' => $nomeModulo,
-                'submodulo' => $nomeSubmodulo,
-                'campo' => $nomeCampo,
-                'valor' => $valor
-            ]);
+            $this->cacheService->invalidateAll();
 
             return true;
 
         } catch (\Exception $e) {
-            Log::error("Erro ao salvar valor '{$nomeCampo}'", [
-                'modulo' => $nomeModulo,
-                'submodulo' => $nomeSubmodulo,
-                'campo' => $nomeCampo,
-                'valor' => $valor,
-                'error' => $e->getMessage()
-            ]);
-
             return false;
         }
     }
@@ -343,10 +317,6 @@ class ParametroService
             $validator = \Validator::make([$campo->nome => $valor], [$campo->nome => $rules]);
             return !$validator->fails();
         } catch (\Exception $e) {
-            Log::error("Erro na validação de campo: {$e->getMessage()}", [
-                'campo' => $campo->nome,
-                'valor' => $valor
-            ]);
             return false;
         }
     }
@@ -405,28 +375,28 @@ class ParametroService
             // Verificar se possui submódulos (apenas se não for exclusão forçada)
             $totalSubmodulos = $modulo->submodulos()->count();
             if ($totalSubmodulos > 0 && !$force) {
-                Log::warning("Tentativa de exclusão de módulo com submódulos", [
-                    'modulo_id' => $moduloId,
-                    'total_submodulos' => $totalSubmodulos
-                ]);
+                // // Log::warning("Tentativa de exclusão de módulo com submódulos", [
+                //     'modulo_id' => $moduloId,
+                //     'total_submodulos' => $totalSubmodulos
+                // ]);
                 throw new \Exception("Não é possível excluir o módulo pois possui {$totalSubmodulos} submódulo(s) vinculado(s).");
             }
 
             // Log da exclusão antes de executar
-            Log::info("Excluindo módulo de parâmetro", [
-                'modulo_id' => $moduloId,
-                'nome' => $modulo->nome,
-                'user_id' => auth()->id(),
-                'force' => $force,
-                'total_submodulos' => $totalSubmodulos
-            ]);
+            // // Log::info("Excluindo módulo de parâmetro", [
+            //     'modulo_id' => $moduloId,
+            //     'nome' => $modulo->nome,
+            //     'user_id' => auth()->id(),
+            //     'force' => $force,
+            //     'total_submodulos' => $totalSubmodulos
+            // ]);
 
             // Se for exclusão forçada e há submódulos, excluir em cascata
             if ($force && $totalSubmodulos > 0) {
-                Log::info("Executando exclusão forçada - removendo submódulos", [
-                    'modulo_id' => $moduloId,
-                    'total_submodulos' => $totalSubmodulos
-                ]);
+                // // Log::info("Executando exclusão forçada - removendo submódulos", [
+                //     'modulo_id' => $moduloId,
+                //     'total_submodulos' => $totalSubmodulos
+                // ]);
                 
                 // Excluir todos os submódulos e suas dependências
                 foreach ($modulo->submodulos as $submodulo) {
@@ -453,11 +423,11 @@ class ParametroService
             return true;
 
         } catch (\Exception $e) {
-            Log::error("Erro ao excluir módulo de parâmetro", [
-                'modulo_id' => $moduloId,
-                'error' => $e->getMessage(),
-                'user_id' => auth()->id()
-            ]);
+            // // Log::error("Erro ao excluir módulo de parâmetro", [
+            //     'modulo_id' => $moduloId,
+            //     'error' => $e->getMessage(),
+            //     'user_id' => auth()->id()
+            // ]);
             
             throw $e;
         }
@@ -474,20 +444,20 @@ class ParametroService
             // Verificar se possui campos
             $totalCampos = $submodulo->campos()->count();
             if ($totalCampos > 0) {
-                Log::warning("Tentativa de exclusão de submódulo com campos", [
-                    'submodulo_id' => $submoduloId,
-                    'total_campos' => $totalCampos
-                ]);
+                // // Log::warning("Tentativa de exclusão de submódulo com campos", [
+                //     'submodulo_id' => $submoduloId,
+                //     'total_campos' => $totalCampos
+                // ]);
                 throw new \Exception("Não é possível excluir o submódulo pois possui {$totalCampos} campo(s) vinculado(s).");
             }
 
             // Log da exclusão
-            Log::info("Excluindo submódulo de parâmetro", [
-                'submodulo_id' => $submoduloId,
-                'nome' => $submodulo->nome,
-                'modulo_id' => $submodulo->modulo_id,
-                'user_id' => auth()->id()
-            ]);
+            // // Log::info("Excluindo submódulo de parâmetro", [
+            //     'submodulo_id' => $submoduloId,
+            //     'nome' => $submodulo->nome,
+            //     'modulo_id' => $submodulo->modulo_id,
+            //     'user_id' => auth()->id()
+            // ]);
 
             $moduloId = $submodulo->modulo_id;
 
@@ -503,11 +473,11 @@ class ParametroService
             return true;
 
         } catch (\Exception $e) {
-            Log::error("Erro ao excluir submódulo de parâmetro", [
-                'submodulo_id' => $submoduloId,
-                'error' => $e->getMessage(),
-                'user_id' => auth()->id()
-            ]);
+            // // Log::error("Erro ao excluir submódulo de parâmetro", [
+            //     'submodulo_id' => $submoduloId,
+            //     'error' => $e->getMessage(),
+            //     'user_id' => auth()->id()
+            // ]);
             
             throw $e;
         }
@@ -525,13 +495,13 @@ class ParametroService
             $totalValores = $campo->valores()->validos()->count();
             
             // Log da exclusão
-            Log::info("Excluindo campo de parâmetro", [
-                'campo_id' => $campoId,
-                'nome' => $campo->nome,
-                'submodulo_id' => $campo->submodulo_id,
-                'total_valores' => $totalValores,
-                'user_id' => auth()->id()
-            ]);
+            // // Log::info("Excluindo campo de parâmetro", [
+            //     'campo_id' => $campoId,
+            //     'nome' => $campo->nome,
+            //     'submodulo_id' => $campo->submodulo_id,
+            //     'total_valores' => $totalValores,
+            //     'user_id' => auth()->id()
+            // ]);
 
             $submoduloId = $campo->submodulo_id;
 
@@ -554,11 +524,11 @@ class ParametroService
             return true;
 
         } catch (\Exception $e) {
-            Log::error("Erro ao excluir campo de parâmetro", [
-                'campo_id' => $campoId,
-                'error' => $e->getMessage(),
-                'user_id' => auth()->id()
-            ]);
+            // // Log::error("Erro ao excluir campo de parâmetro", [
+            //     'campo_id' => $campoId,
+            //     'error' => $e->getMessage(),
+            //     'user_id' => auth()->id()
+            // ]);
             
             throw $e;
         }

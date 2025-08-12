@@ -247,18 +247,18 @@
                     <!--end::Special Card - IA-->
                     
                     @forelse($modulos as $modulo)
-                    @if($modulo->nome !== 'IA')
+                    @if($modulo->nome !== 'IA' && $modulo->nome !== 'Dados Gerais')
                     <!--begin::Col-->
                     <div class="col-md-6 col-lg-4 col-xl-3">
                         <!--begin::Card-->
-                        <div class="card card-flush h-xl-100">
+                        <div class="card card-flush h-xl-100 @if($modulo->nome === 'Templates') border-success border-2 @elseif($modulo->nome === 'Configuração de IA') border-info border-2 @else border-light @endif">
                             <!--begin::Card header-->
                             <div class="card-header pt-5">
                                 <!--begin::Card title-->
                                 <div class="card-title d-flex flex-column">
                                     <!--begin::Icon-->
                                     <div class="d-flex align-items-center mb-3">
-                                        <i class="ki-duotone {{ $modulo->icon ?: 'ki-setting-2' }} fs-2x text-primary me-3">
+                                        <i class="ki-duotone {{ $modulo->icon ?: 'ki-setting-2' }} fs-2x @if($modulo->nome === 'Templates') text-success @else text-primary @endif me-3">
                                             <span class="path1"></span>
                                             <span class="path2"></span>
                                         </i>
@@ -272,54 +272,23 @@
                                 <!--end::Card title-->
                                 <!--begin::Card toolbar-->
                                 <div class="card-toolbar">
-                                    <!--begin::Menu-->
-                                    <button type="button" class="btn btn-sm btn-icon btn-color-primary btn-active-light-primary" data-kt-menu-trigger="click" data-kt-menu-placement="bottom-end">
-                                        <i class="ki-duotone ki-dots-horizontal fs-2">
-                                            <span class="path1"></span>
-                                            <span class="path2"></span>
-                                            <span class="path3"></span>
-                                        </i>
-                                    </button>
-                                    <!--begin::Menu 3-->
-                                    <div class="menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-gray-800 menu-state-bg-light-primary fw-semibold w-200px py-3" data-kt-menu="true">
-                                        <!--begin::Menu item-->
-                                        <div class="menu-item px-3">
-                                            <a href="{{ route('parametros.show', $modulo->id) }}" class="menu-link px-3">
-                                                <i class="ki-duotone ki-eye fs-6 me-2"></i>
-                                                Visualizar
-                                            </a>
-                                        </div>
-                                        <!--end::Menu item-->
-                                        <!--begin::Menu item-->
-                                        <div class="menu-item px-3">
-                                            <a href="{{ $modulo->nome === 'Configuração de IA' ? route('parametros.configurar-ia') : route('parametros.configurar', $modulo->nome) }}" class="menu-link px-3">
-                                                <i class="ki-duotone ki-setting-3 fs-6 me-2"></i>
-                                                Configurar
-                                            </a>
-                                        </div>
-                                        <!--end::Menu item-->
-                                        <!--begin::Menu item-->
-                                        <div class="menu-item px-3">
-                                            <a href="{{ route('parametros.edit', $modulo->id) }}" class="menu-link px-3">
-                                                <i class="ki-duotone ki-pencil fs-6 me-2"></i>
-                                                Editar
-                                            </a>
-                                        </div>
-                                        <!--end::Menu item-->
-                                        <!--begin::Menu separator-->
-                                        <div class="separator my-2"></div>
-                                        <!--end::Menu separator-->
-                                        <!--begin::Menu item-->
-                                        <div class="menu-item px-3">
-                                            <a href="#" class="menu-link px-3 text-danger" data-kt-action="delete-module" data-module-id="{{ $modulo->id }}">
-                                                <i class="ki-duotone ki-trash fs-6 me-2"></i>
-                                                Excluir
-                                            </a>
-                                        </div>
-                                        <!--end::Menu item-->
-                                    </div>
-                                    <!--end::Menu 3-->
-                                    <!--end::Menu-->
+                                    @if($modulo->nome === 'Templates')
+                                        <span class="badge badge-light-success">
+                                            <i class="ki-duotone ki-document fs-6">
+                                                <span class="path1"></span>
+                                                <span class="path2"></span>
+                                            </i>
+                                            Documentos
+                                        </span>
+                                    @else
+                                        <span class="badge badge-light-primary">
+                                            <i class="ki-duotone ki-setting-2 fs-6">
+                                                <span class="path1"></span>
+                                                <span class="path2"></span>
+                                            </i>
+                                            Sistema
+                                        </span>
+                                    @endif
                                 </div>
                                 <!--end::Card toolbar-->
                             </div>
@@ -344,7 +313,7 @@
                                     <!--begin::Action-->
                                     <div class="d-flex gap-2">
                                         @if($modulo->nome === 'Templates')
-                                            <a href="{{ route('parametros.show', $modulo->id) }}" class="btn btn-sm btn-primary">
+                                            <a href="{{ route('parametros.show', $modulo->id) }}" class="btn btn-sm btn-success">
                                                 <i class="ki-duotone ki-enter-6 fs-6 me-1">
                                                     <span class="path1"></span>
                                                     <span class="path2"></span>

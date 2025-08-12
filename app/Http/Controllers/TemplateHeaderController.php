@@ -22,10 +22,10 @@ class TemplateHeaderController extends Controller
      */
     public function index(): View
     {
-        \Log::info('📋 TemplateHeaderController::index chamado', [
-            'user' => auth()->user()->email ?? 'não autenticado',
-            'timestamp' => now()
-        ]);
+        // Log::info('📋 TemplateHeaderController::index chamado', [
+            //     'user' => auth()->user()->email ?? 'não autenticado',
+            //     'timestamp' => now()
+        // ]);
         
         // Obter configurações atuais
         $configuracoes = $this->obterConfiguracoes();
@@ -56,10 +56,10 @@ class TemplateHeaderController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('Erro ao salvar configurações do cabeçalho', [
-                'error' => $e->getMessage(),
-                'user' => auth()->id()
-            ]);
+            // Log::error('Erro ao salvar configurações do cabeçalho', [
+                //     'error' => $e->getMessage(),
+                //     'user' => auth()->id()
+            // ]);
 
             return response()->json([
                 'success' => false,
@@ -81,9 +81,9 @@ class TemplateHeaderController extends Controller
                 'posicao' => $this->parametroService->obterValor('Templates', 'Cabeçalho', 'cabecalho_posicao') ?: 'topo'
             ];
         } catch (\Exception $e) {
-            \Log::warning('Erro ao obter configurações do cabeçalho, usando padrões', [
-                'error' => $e->getMessage()
-            ]);
+            // Log::warning('Erro ao obter configurações do cabeçalho, usando padrões', [
+                //     'error' => $e->getMessage()
+            // ]);
             // Se houver erro, usar valores padrão
             return [
                 'imagem' => 'template/cabecalho.png',

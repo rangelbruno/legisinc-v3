@@ -21,10 +21,10 @@ class TemplateWatermarkController extends Controller
      */
     public function index(): View
     {
-        \Log::info('🎨 TemplateWatermarkController::index chamado', [
-            'user' => auth()->user()->email ?? 'não autenticado',
-            'timestamp' => now()
-        ]);
+        // Log::info('🎨 TemplateWatermarkController::index chamado', [
+            //     'user' => auth()->user()->email ?? 'não autenticado',
+            //     'timestamp' => now()
+        // ]);
         
         // Obter configurações atuais
         $configuracoes = $this->obterConfiguracoes();
@@ -61,10 +61,10 @@ class TemplateWatermarkController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('Erro ao salvar configurações da marca d\'água', [
-                'error' => $e->getMessage(),
-                'user' => auth()->id()
-            ]);
+            // Log::error('Erro ao salvar configurações da marca d\'água', [
+                //     'error' => $e->getMessage(),
+                //     'user' => auth()->id()
+            // ]);
 
             return response()->json([
                 'success' => false,
@@ -89,9 +89,9 @@ class TemplateWatermarkController extends Controller
                 'tamanho' => $this->parametroService->obterValor('Templates', 'Marca D\'água', 'marca_dagua_tamanho') ?: 100
             ];
         } catch (\Exception $e) {
-            \Log::warning('Erro ao obter configurações da marca d\'água, usando padrões', [
-                'error' => $e->getMessage()
-            ]);
+            // Log::warning('Erro ao obter configurações da marca d\'água, usando padrões', [
+                //     'error' => $e->getMessage()
+            // ]);
             // Se houver erro, usar valores padrão
             return [
                 'imagem' => 'template/marca-dagua.png',

@@ -39,9 +39,9 @@ class ImageUploadController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('Erro ao fazer upload de imagem do template', [
-                'error' => $e->getMessage()
-            ]);
+            // Log::error('Erro ao fazer upload de imagem do template', [
+                //     'error' => $e->getMessage()
+            // ]);
 
             return response()->json([
                 'success' => false,
@@ -71,10 +71,10 @@ class ImageUploadController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('Erro ao fazer upload de imagem da proposição', [
-                'proposicao_id' => $proposicaoId,
-                'error' => $e->getMessage()
-            ]);
+            // Log::error('Erro ao fazer upload de imagem da proposição', [
+                //     'proposicao_id' => $proposicaoId,
+                //     'error' => $e->getMessage()
+            // ]);
 
             return response()->json([
                 'success' => false,
@@ -119,9 +119,9 @@ class ImageUploadController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('Erro ao fazer upload da imagem do cabeçalho', [
-                'error' => $e->getMessage()
-            ]);
+            // Log::error('Erro ao fazer upload da imagem do cabeçalho', [
+                //     'error' => $e->getMessage()
+            // ]);
 
             return response()->json([
                 'success' => false,
@@ -166,9 +166,9 @@ class ImageUploadController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('Erro ao fazer upload da imagem da marca d\'água', [
-                'error' => $e->getMessage()
-            ]);
+            // Log::error('Erro ao fazer upload da imagem da marca d\'água', [
+                //     'error' => $e->getMessage()
+            // ]);
 
             return response()->json([
                 'success' => false,
@@ -213,9 +213,9 @@ class ImageUploadController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('Erro ao fazer upload da imagem do rodapé', [
-                'error' => $e->getMessage()
-            ]);
+            // Log::error('Erro ao fazer upload da imagem do rodapé', [
+                //     'error' => $e->getMessage()
+            // ]);
 
             return response()->json([
                 'success' => false,
@@ -254,9 +254,9 @@ class ImageUploadController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('Erro ao fazer upload múltiplo de imagens', [
-                'error' => $e->getMessage()
-            ]);
+            // Log::error('Erro ao fazer upload múltiplo de imagens', [
+                //     'error' => $e->getMessage()
+            // ]);
 
             return response()->json([
                 'success' => false,

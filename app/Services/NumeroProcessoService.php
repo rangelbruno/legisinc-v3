@@ -158,11 +158,11 @@ class NumeroProcessoService
                 $this->inserirNumeroNoDocumento($proposicao);
             }
             
-            Log::info('Número de processo atribuído', [
-                'proposicao_id' => $proposicao->id,
-                'numero_processo' => $numeroProcesso,
-                'usuario_id' => auth()->id()
-            ]);
+            // Log::info('Número de processo atribuído', [
+                //     'proposicao_id' => $proposicao->id,
+                //     'numero_processo' => $numeroProcesso,
+                //     'usuario_id' => auth()->id()
+            // ]);
             
             return $numeroProcesso;
         });
@@ -185,11 +185,11 @@ class NumeroProcessoService
             $onlyOfficeService->inserirNumeroProcesso($proposicao, $posicao);
             
         } catch (\Exception $e) {
-            Log::warning('Falha ao inserir número de processo no documento', [
-                'proposicao_id' => $proposicao->id,
-                'numero_processo' => $proposicao->numero_processo,
-                'erro' => $e->getMessage()
-            ]);
+            // Log::warning('Falha ao inserir número de processo no documento', [
+                //     'proposicao_id' => $proposicao->id,
+                //     'numero_processo' => $proposicao->numero_processo,
+                //     'erro' => $e->getMessage()
+            // ]);
         }
     }
 

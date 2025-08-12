@@ -421,10 +421,10 @@ class TemplateParametrosService
             return "{\\qc {$rtfImagem}\\par}";
             
         } catch (\Exception $e) {
-            \Log::warning('Erro ao gerar código RTF para imagem:', [
-                'caminho' => $caminhoImagem,
-                'error' => $e->getMessage()
-            ]);
+            // Log::warning('Erro ao gerar código RTF para imagem:', [
+            //     'caminho' => $caminhoImagem,
+            //     'error' => $e->getMessage()
+            // ]);
             
             // Fallback para placeholder se houver erro
             $nomeArquivo = basename($caminhoImagem);

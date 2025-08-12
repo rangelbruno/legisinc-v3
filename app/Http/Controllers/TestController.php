@@ -579,7 +579,7 @@ ARTIGO 2º - O teste deve validar todas as etapas do processo.';
             }
             
             // Resumo final
-            $tramitacoes = \App\Models\TramitacaoLog::where('proposicao_id', $proposicao->id)
+            $tramitacoes = \App\Models\Tramitacao// Log::where('proposicao_id', $proposicao->id)
                 ->orderBy('created_at', 'asc')
                 ->get();
             

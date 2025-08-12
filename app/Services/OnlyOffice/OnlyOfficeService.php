@@ -81,12 +81,12 @@ class OnlyOfficeService
                 break;
         }
         
-        \Log::info('OnlyOffice editor configuration created', [
-            'template_id' => $template->id,
-            'document_key' => $documentKeyWithVersion,
-            'file_type' => $fileType,
-            'user_id' => auth()->id()
-        ]);
+        // Log::info('OnlyOffice editor configuration created', [
+            //     'template_id' => $template->id,
+            //     'document_key' => $documentKeyWithVersion,
+            //     'file_type' => $fileType,
+            //     'user_id' => auth()->id()
+        // ]);
         
         $config = [
             'document' => [
@@ -183,16 +183,16 @@ class OnlyOfficeService
     {
         try {
             $proposicao->update(['arquivo_path' => $arquivoPath]);
-            \Log::info('arquivo_path atualizado para proposição', [
-                'proposicao_id' => $proposicao->id,
-                'arquivo_path' => $arquivoPath
-            ]);
+            // Log::info('arquivo_path atualizado para proposição', [
+                //     'proposicao_id' => $proposicao->id,
+                //     'arquivo_path' => $arquivoPath
+            // ]);
         } catch (\Exception $e) {
-            \Log::warning('Erro ao atualizar arquivo_path da proposição', [
-                'proposicao_id' => $proposicao->id,
-                'arquivo_path' => $arquivoPath,
-                'error' => $e->getMessage()
-            ]);
+            // Log::warning('Erro ao atualizar arquivo_path da proposição', [
+                //     'proposicao_id' => $proposicao->id,
+                //     'arquivo_path' => $arquivoPath,
+                //     'error' => $e->getMessage()
+            // ]);
         }
     }
 
@@ -213,14 +213,14 @@ class OnlyOfficeService
         $status = $data['status'] ?? 0;
         
         // Log detalhado do callback
-        \Log::info('OnlyOffice callback received', [
-            'document_key' => $documentKey,
-            'status' => $status,
-            'status_description' => $this->getStatusDescription($status),
-            'has_document_url' => isset($data['url']),
-            'users_count' => count($data['users'] ?? []),
-            'actions_count' => count($data['actions'] ?? [])
-        ]);
+        // Log::info('OnlyOffice callback received', [
+            //     'document_key' => $documentKey,
+            //     'status' => $status,
+            //     'status_description' => $this->getStatusDescription($status),
+            //     'has_document_url' => isset($data['url']),
+            //     'users_count' => count($data['users'] ?? []),
+            //     'actions_count' => count($data['actions'] ?? [])
+        // ]);
         
         // Implementar lock para evitar processamento concorrente
         $lockKey = "onlyoffice_save_lock_{$documentKey}";
@@ -235,47 +235,47 @@ class OnlyOfficeService
                 
                 // Verificar se não está processando outro callback
                 if ($lock->get()) {
-                    \Log::info('Processando salvamento do template', [
-                        'document_key' => $documentKey,
-                        'status' => $status,
-                        'status_type' => match($status) {
-                            2 => 'auto_save',
-                            6 => 'force_save', 
-                            4 => 'closing_with_url',
-                            default => 'unknown'
-                        },
-                        'url' => $data['url']
-                    ]);
+                    // Log::info('Processando salvamento do template', [
+                        //     'document_key' => $documentKey,
+                        //     'status' => $status,
+                        //     'status_type' => match($status) {
+                        //         2 => 'auto_save',
+                        //         6 => 'force_save', 
+                        //         4 => 'closing_with_url',
+                        //         default => 'unknown'
+                        //     },
+                        //     'url' => $data['url']
+                    // ]);
                     
                     $this->salvarTemplate($template, $data['url']);
                     
                     // Liberar lock após processar
                     $lock->release();
                 } else {
-                    \Log::warning('Callback ignorado - outro processamento em andamento', [
-                        'document_key' => $documentKey,
-                        'status' => $status
-                    ]);
+                    // Log::warning('Callback ignorado - outro processamento em andamento', [
+                        //     'document_key' => $documentKey,
+                        //     'status' => $status
+                    // ]);
                 }
             }
             
             // Status 1 = Documento sendo editado
             // Status 4 = Documento fechado sem mudanças
             if (in_array($status, [1, 4])) {
-                \Log::debug('OnlyOffice editing status update', [
-                    'document_key' => $documentKey,
-                    'status' => $status,
-                    'description' => $status === 1 ? 'Document being edited' : 'Document closed without changes'
-                ]);
+                // Log::debug('OnlyOffice editing status update', [
+                    //     'document_key' => $documentKey,
+                    //     'status' => $status,
+                    //     'description' => $status === 1 ? 'Document being edited' : 'Document closed without changes'
+                // ]);
             }
             
         } catch (\Exception $e) {
-            \Log::error('Erro no processamento do callback', [
-                'document_key' => $documentKey,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-                'data' => $data
-            ]);
+            // Log::error('Erro no processamento do callback', [
+                //     'document_key' => $documentKey,
+                //     'error' => $e->getMessage(),
+                //     'trace' => $e->getTraceAsString(),
+                //     'data' => $data
+            // ]);
             
             // Garantir liberação do lock em caso de erro
             optional($lock)->release();
@@ -303,11 +303,11 @@ class OnlyOfficeService
                 $urlCorrigida = str_replace('http://localhost:8080', 'http://legisinc-onlyoffice', $urlCorrigida);
             }
             
-            \Log::info('OnlyOffice document save: Downloading content', [
-                'template_id' => $template->id,
-                'document_key' => $template->document_key,
-                'url_corrected' => $url !== $urlCorrigida
-            ]);
+            // Log::info('OnlyOffice document save: Downloading content', [
+                //     'template_id' => $template->id,
+                //     'document_key' => $template->document_key,
+                //     'url_corrected' => $url !== $urlCorrigida
+            // ]);
             
             // Download do conteúdo com timeout aumentado
             $response = Http::timeout(60)->get($urlCorrigida);
@@ -320,11 +320,11 @@ class OnlyOfficeService
                 ];
                 
                 foreach ($urlsFallback as $urlFallback) {
-                    \Log::warning('Tentando URL fallback para download', [
-                        'template_id' => $template->id,
-                        'url_fallback' => $urlFallback,
-                        'status_anterior' => $response->status()
-                    ]);
+                    // Log::warning('Tentando URL fallback para download', [
+                        //     'template_id' => $template->id,
+                        //     'url_fallback' => $urlFallback,
+                        //     'status_anterior' => $response->status()
+                    // ]);
                     
                     $response = Http::timeout(60)->get($urlFallback);
                     if ($response->successful()) {
@@ -334,12 +334,12 @@ class OnlyOfficeService
             }
             
             if (!$response || !$response->successful()) {
-                \Log::error('OnlyOffice document save failed: Download error', [
-                    'template_id' => $template->id,
-                    'document_key' => $template->document_key,
-                    'http_status' => $response ? $response->status() : 'null_response',
-                    'error_type' => 'download_failed'
-                ]);
+                // Log::error('OnlyOffice document save failed: Download error', [
+                    //     'template_id' => $template->id,
+                    //     'document_key' => $template->document_key,
+                    //     'http_status' => $response ? $response->status() : 'null_response',
+                    //     'error_type' => 'download_failed'
+                // ]);
                 return;
             }
 
@@ -348,12 +348,12 @@ class OnlyOfficeService
             
             // Validar conteúdo
             if (empty($conteudo) || strlen($conteudo) < 50) {
-                \Log::error('OnlyOffice document save failed: Invalid content', [
-                    'template_id' => $template->id,
-                    'document_key' => $template->document_key,
-                    'content_size_bytes' => strlen($conteudo),
-                    'error_type' => 'invalid_content'
-                ]);
+                // Log::error('OnlyOffice document save failed: Invalid content', [
+                    //     'template_id' => $template->id,
+                    //     'document_key' => $template->document_key,
+                    //     'content_size_bytes' => strlen($conteudo),
+                    //     'error_type' => 'invalid_content'
+                // ]);
                 return;
             }
             
@@ -367,11 +367,11 @@ class OnlyOfficeService
                 $formato = 'html';
             }
             
-            \Log::debug('OnlyOffice content format detected', [
-                'template_id' => $template->id,
-                'detected_format' => $formato,
-                'content_size_bytes' => strlen($conteudo)
-            ]);
+            // Log::debug('OnlyOffice content format detected', [
+                //     'template_id' => $template->id,
+                //     'detected_format' => $formato,
+                //     'content_size_bytes' => strlen($conteudo)
+            // ]);
             
             // Processar conteúdo se necessário
             $conteudoProcessado = $this->processarConteudoTemplate($conteudo, $formato, $template);
@@ -385,12 +385,12 @@ class OnlyOfficeService
                     'updated_at' => now()
                 ]);
                 
-                \Log::info('Template salvo no banco de dados', [
-                    'template_id' => $template->id,
-                    'formato' => $formato,
-                    'content_length' => strlen($conteudoProcessado),
-                    'updated_at' => $template->fresh()->updated_at
-                ]);
+                // Log::info('Template salvo no banco de dados', [
+                    //     'template_id' => $template->id,
+                    //     'formato' => $formato,
+                    //     'content_length' => strlen($conteudoProcessado),
+                    //     'updated_at' => $template->fresh()->updated_at
+                // ]);
                 
                 // Limpar cache
                 \Cache::forget('onlyoffice_template_' . $template->id);
@@ -400,20 +400,20 @@ class OnlyOfficeService
                 $this->extrairVariaveis($template);
             });
             
-            \Log::info('Template salvo com sucesso no banco de dados', [
-                'template_id' => $template->id,
-                'formato' => $formato,
-                'content_size' => strlen($conteudoProcessado)
-            ]);
+            // Log::info('Template salvo com sucesso no banco de dados', [
+                //     'template_id' => $template->id,
+                //     'formato' => $formato,
+                //     'content_size' => strlen($conteudoProcessado)
+            // ]);
             
         } catch (\Exception $e) {
-            \Log::error('OnlyOffice callback error', [
-                'template_id' => $template->id,
-                'document_key' => $template->document_key,
-                'url' => $url,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
+            // Log::error('OnlyOffice callback error', [
+                //     'template_id' => $template->id,
+                //     'document_key' => $template->document_key,
+                //     'url' => $url,
+                //     'error' => $e->getMessage(),
+                //     'trace' => $e->getTraceAsString()
+            // ]);
         }
     }
 
@@ -441,11 +441,11 @@ class OnlyOfficeService
             return $conteudo;
             
         } catch (\Exception $e) {
-            \Log::warning('Erro no processamento do conteúdo do template', [
-                'template_id' => $template->id,
-                'formato' => $formato,
-                'error' => $e->getMessage()
-            ]);
+            // Log::warning('Erro no processamento do conteúdo do template', [
+                //     'template_id' => $template->id,
+                //     'formato' => $formato,
+                //     'error' => $e->getMessage()
+            // ]);
             
             // Retornar conteúdo original se houver erro
             return $conteudo;
@@ -469,10 +469,10 @@ class OnlyOfficeService
         
         foreach ($variaveisImportantes as $variavel) {
             if (!str_contains($conteudo, $variavel) && str_contains($template->conteudo, $variavel)) {
-                \Log::info('Preservando variável importante no template', [
-                    'template_id' => $template->id,
-                    'variavel' => $variavel
-                ]);
+                // Log::info('Preservando variável importante no template', [
+                    //     'template_id' => $template->id,
+                    //     'variavel' => $variavel
+                // ]);
                 // Se a variável não está no novo conteúdo mas estava no antigo, avisar
             }
         }
@@ -575,11 +575,11 @@ class OnlyOfficeService
         // Atualizar template
         $template->update(['arquivo_path' => $path]);
         
-        \Log::info('Template arquivo criado com parâmetros', [
-            'template_id' => $template->id,
-            'path' => $path,
-            'file_exists' => Storage::exists($path)
-        ]);
+        // Log::info('Template arquivo criado com parâmetros', [
+            //     'template_id' => $template->id,
+            //     'path' => $path,
+            //     'file_exists' => Storage::exists($path)
+        // ]);
     }
 
     /**
@@ -848,7 +848,7 @@ ${rodape_texto}
         
         foreach ($possiveisArquivos as $arquivo) {
             if (file_exists($arquivo)) {
-                \Log::info('Usando arquivo base', ['arquivo' => $arquivo]);
+                // Log::info('Usando arquivo base', ['arquivo' => $arquivo]);
                 return file_get_contents($arquivo);
             }
         }
@@ -868,7 +868,7 @@ ${rodape_texto}
         $conteudo .= "- \${numero_proposicao}\par\par";
         $conteudo .= "}";
         
-        \Log::info('Criando template RTF básico com cabeçalho', ['template_id' => $template->id]);
+        // Log::info('Criando template RTF básico com cabeçalho', ['template_id' => $template->id]);
         return $conteudo;
     }
     
@@ -980,19 +980,19 @@ ${rodape_texto}
         
         // Se tem variáveis, usar como está
         if ($temVariaveis) {
-            \Log::info('Template mantém variáveis após edição', [
-                'template_id' => $template->id,
-                'tamanho_conteudo' => strlen($conteudo)
-            ]);
+            // Log::info('Template mantém variáveis após edição', [
+                //     'template_id' => $template->id,
+                //     'tamanho_conteudo' => strlen($conteudo)
+            // ]);
             return $conteudo;
         }
         
         // Se não tem variáveis, mas tem conteúdo significativo, PRESERVAR o conteúdo do usuário
         if (strlen($conteudo) > 1000) {
-            \Log::info('Template sem variáveis mas com conteúdo significativo - PRESERVANDO conteúdo do usuário', [
-                'template_id' => $template->id,
-                'tamanho_conteudo' => strlen($conteudo)
-            ]);
+            // Log::info('Template sem variáveis mas com conteúdo significativo - PRESERVANDO conteúdo do usuário', [
+                //     'template_id' => $template->id,
+                //     'tamanho_conteudo' => strlen($conteudo)
+            // ]);
             
             // PRESERVAR o conteúdo editado pelo usuário, não substituir
             return $conteudo;
@@ -1049,12 +1049,12 @@ ${rodape_texto}
         
         // Se conseguimos inserir pelo menos algumas variáveis, usar o conteúdo modificado
         if ($variaveisInseridas > 0) {
-            \Log::info('Template com variáveis inseridas no conteúdo original', [
-                'template_id' => $template->id,
-                'variaveis_inseridas' => $variaveisInseridas,
-                'tamanho_original' => strlen($conteudoComImagem),
-                'tamanho_final' => strlen($conteudoModificado)
-            ]);
+            // Log::info('Template com variáveis inseridas no conteúdo original', [
+                //     'template_id' => $template->id,
+                //     'variaveis_inseridas' => $variaveisInseridas,
+                //     'tamanho_original' => strlen($conteudoComImagem),
+                //     'tamanho_final' => strlen($conteudoModificado)
+            // ]);
             
             return $conteudoModificado;
         }
@@ -1086,12 +1086,12 @@ ${texto}
 {\qr ${data_atual}\par}
 }';
         
-        \Log::info('Template substituído por versão limpa com variáveis', [
-            'template_id' => $template->id,
-            'tamanho_original' => strlen($conteudoComImagem),
-            'tamanho_final' => strlen($templateComVariaveis),
-            'motivo' => 'Não foi possível inserir variáveis no conteúdo original'
-        ]);
+        // Log::info('Template substituído por versão limpa com variáveis', [
+            //     'template_id' => $template->id,
+            //     'tamanho_original' => strlen($conteudoComImagem),
+            //     'tamanho_final' => strlen($templateComVariaveis),
+            //     'motivo' => 'Não foi possível inserir variáveis no conteúdo original'
+        // ]);
         
         return $templateComVariaveis;
     }
@@ -1103,10 +1103,10 @@ ${texto}
     {
         // Verificar se não é um arquivo muito pequeno (possível erro)
         if (strlen($conteudo) < 100) {
-            \Log::warning('Template muito pequeno, possível erro', [
-                'template_id' => $template->id,
-                'tamanho_conteudo' => strlen($conteudo)
-            ]);
+            // Log::warning('Template muito pequeno, possível erro', [
+                //     'template_id' => $template->id,
+                //     'tamanho_conteudo' => strlen($conteudo)
+            // ]);
             return false;
         }
         
@@ -1117,25 +1117,25 @@ ${texto}
         if (!$temVariavel) {
             // Arquivo muito grande pode conter imagens e ainda ser válido
             if (strlen($conteudo) > 100000) {
-                \Log::info('Template sem variáveis mas com conteúdo significativo (possíveis imagens)', [
-                    'template_id' => $template->id,
-                    'tamanho_conteudo' => strlen($conteudo)
-                ]);
+                // Log::info('Template sem variáveis mas com conteúdo significativo (possíveis imagens)', [
+                    //     'template_id' => $template->id,
+                    //     'tamanho_conteudo' => strlen($conteudo)
+                // ]);
                 return true;
             }
             
-            \Log::warning('Template sem variáveis e conteúdo insuficiente', [
-                'template_id' => $template->id,
-                'tamanho_conteudo' => strlen($conteudo)
-            ]);
+            // Log::warning('Template sem variáveis e conteúdo insuficiente', [
+                //     'template_id' => $template->id,
+                //     'tamanho_conteudo' => strlen($conteudo)
+            // ]);
             return false;
         }
         
-        \Log::info('Template validado com sucesso', [
-            'template_id' => $template->id,
-            'tem_variavel' => $temVariavel,
-            'tamanho_conteudo' => strlen($conteudo)
-        ]);
+        // Log::info('Template validado com sucesso', [
+            //     'template_id' => $template->id,
+            //     'tem_variavel' => $temVariavel,
+            //     'tamanho_conteudo' => strlen($conteudo)
+        // ]);
         
         return true;
     }
@@ -1155,21 +1155,21 @@ ${texto}
                 // Salvar backup
                 \Storage::put($backupPath, $conteudoAtual);
                 
-                \Log::info('Backup do template criado antes da atualização', [
-                    'template_id' => $template->id,
-                    'backup_path' => $backupPath,
-                    'tamanho_original' => strlen($conteudoAtual)
-                ]);
+                // Log::info('Backup do template criado antes da atualização', [
+                    //     'template_id' => $template->id,
+                    //     'backup_path' => $backupPath,
+                    //     'tamanho_original' => strlen($conteudoAtual)
+                // ]);
                 
                 // Limpar backups antigos (manter apenas os 5 mais recentes)
                 $this->limparBackupsAntigos($template);
             }
             
         } catch (\Exception $e) {
-            \Log::error('Erro ao criar backup do template', [
-                'template_id' => $template->id,
-                'error' => $e->getMessage()
-            ]);
+            // Log::error('Erro ao criar backup do template', [
+                //     'template_id' => $template->id,
+                //     'error' => $e->getMessage()
+            // ]);
         }
     }
     
@@ -1198,15 +1198,15 @@ ${texto}
                 $backupsParaRemover = array_slice($backupsDoTemplate, 5);
                 foreach ($backupsParaRemover as $backup) {
                     \Storage::delete($backup);
-                    \Log::info('Backup antigo removido', ['backup_path' => $backup]);
+                    // Log::info('Backup antigo removido', ['backup_path' => $backup]);
                 }
             }
             
         } catch (\Exception $e) {
-            \Log::error('Erro ao limpar backups antigos', [
-                'template_id' => $template->id,
-                'error' => $e->getMessage()
-            ]);
+            // Log::error('Erro ao limpar backups antigos', [
+                //     'template_id' => $template->id,
+                //     'error' => $e->getMessage()
+            // ]);
         }
     }
 
@@ -1247,10 +1247,10 @@ ${texto}
             return $conteudoRTF; // Não é RTF, retornar como está
         }
         
-        \Log::info('Corrigindo encoding RTF - OnlyOffice salvou caracteres UTF-8 em RTF', [
-            'tamanho_original' => strlen($conteudoRTF),
-            'preview_original' => substr($conteudoRTF, 0, 200)
-        ]);
+        // Log::info('Corrigindo encoding RTF - OnlyOffice salvou caracteres UTF-8 em RTF', [
+            //     'tamanho_original' => strlen($conteudoRTF),
+            //     'preview_original' => substr($conteudoRTF, 0, 200)
+        // ]);
         
         // O OnlyOffice está salvando bytes UTF-8 diretamente no RTF
         // Precisamos converter esses bytes para códigos RTF apropriados
@@ -1315,17 +1315,17 @@ ${texto}
             $depois = substr_count($conteudoCorrigido, $utf8Bytes);
             
             if ($antes > $depois) {
-                \Log::info("Corrigido: $antes ocorrências de bytes UTF-8 para códigos RTF", [
-                    'utf8_hex' => bin2hex($utf8Bytes),
-                    'rtf_code' => $rtfCode
-                ]);
+                // Log::info("Corrigido: $antes ocorrências de bytes UTF-8 para códigos RTF", [
+                    //     'utf8_hex' => bin2hex($utf8Bytes),
+                    //     'rtf_code' => $rtfCode
+                // ]);
             }
         }
         
-        \Log::info('Encoding RTF corrigido - bytes UTF-8 convertidos para códigos RTF', [
-            'tamanho_final' => strlen($conteudoCorrigido),
-            'preview_final' => substr($conteudoCorrigido, 0, 200)
-        ]);
+        // Log::info('Encoding RTF corrigido - bytes UTF-8 convertidos para códigos RTF', [
+            //     'tamanho_final' => strlen($conteudoCorrigido),
+            //     'preview_final' => substr($conteudoCorrigido, 0, 200)
+        // ]);
         
         return $conteudoCorrigido;
     }
@@ -1395,10 +1395,10 @@ ${texto}
      */
     private function corrigirEncodingParaExibicao(string $conteudoRTF): string
     {
-        \Log::info('Aplicando correção adicional de encoding para OnlyOffice', [
-            'tamanho_original' => strlen($conteudoRTF),
-            'preview' => substr($conteudoRTF, 0, 200)
-        ]);
+        // Log::info('Aplicando correção adicional de encoding para OnlyOffice', [
+            //     'tamanho_original' => strlen($conteudoRTF),
+            //     'preview' => substr($conteudoRTF, 0, 200)
+        // ]);
         
         // Se não é RTF, não fazer nada
         if (strpos($conteudoRTF, '{\rtf') === false) {
@@ -1429,15 +1429,15 @@ ${texto}
             $depois = substr_count($conteudoCorrigido, $rtfCode);
             
             if ($antes > $depois) {
-                \Log::info("Substituição RTF->UTF8: {$rtfCode} -> {$utf8Char}", [
-                    'ocorrencias' => ($antes - $depois)
-                ]);
+                // Log::info("Substituição RTF->UTF8: {$rtfCode} -> {$utf8Char}", [
+                    //     'ocorrencias' => ($antes - $depois)
+                // ]);
             }
         }
         
-        \Log::info('Correção de encoding para OnlyOffice aplicada', [
-            'tamanho_final' => strlen($conteudoCorrigido)
-        ]);
+        // Log::info('Correção de encoding para OnlyOffice aplicada', [
+            //     'tamanho_final' => strlen($conteudoCorrigido)
+        // ]);
         
         return $conteudoCorrigido;
     }
@@ -1449,10 +1449,10 @@ ${texto}
     {
         // Log para debug (apenas para textos com acentos)
         if (preg_match('/[áàãâéèêíìîóòõôúùûçÁÀÃÂÉÈÊÍÌÎÓÒÕÔÚÙÛÇ]/', $text)) {
-            \Log::info('Codificando texto para Unicode RTF', [
-                'texto_original' => mb_substr($text, 0, 100),
-                'length' => mb_strlen($text, 'UTF-8')
-            ]);
+            // Log::info('Codificando texto para Unicode RTF', [
+                //     'texto_original' => mb_substr($text, 0, 100),
+                //     'length' => mb_strlen($text, 'UTF-8')
+            // ]);
         }
         
         // Converter para UTF-8 se necessário
@@ -1486,11 +1486,11 @@ ${texto}
         
         // Log resultado (apenas para textos com acentos)
         if ($caracteresConvertidos > 0) {
-            \Log::info('Texto codificado para Unicode RTF', [
-                'amostra_resultado' => mb_substr($resultado, 0, 100),
-                'tamanho_final' => mb_strlen($resultado),
-                'caracteres_convertidos' => $caracteresConvertidos
-            ]);
+            // Log::info('Texto codificado para Unicode RTF', [
+                //     'amostra_resultado' => mb_substr($resultado, 0, 100),
+                //     'tamanho_final' => mb_strlen($resultado),
+                //     'caracteres_convertidos' => $caracteresConvertidos
+            // ]);
         }
         
         return $resultado;
@@ -1505,41 +1505,41 @@ ${texto}
             $template = $proposicao->template;
             
             // Verificar se o template tem arquivo
-            \Log::info('Verificando arquivo do template', [
-                'template_id' => $template->id,
-                'arquivo_path' => $template->arquivo_path,
-                'storage_path' => storage_path('app/' . $template->arquivo_path),
-                'file_exists_storage' => Storage::exists($template->arquivo_path),
-                'file_exists_direct' => file_exists(storage_path('app/' . $template->arquivo_path))
-            ]);
+            // Log::info('Verificando arquivo do template', [
+                //     'template_id' => $template->id,
+                //     'arquivo_path' => $template->arquivo_path,
+                //     'storage_path' => storage_path('app/' . $template->arquivo_path),
+                //     'file_exists_storage' => Storage::exists($template->arquivo_path),
+                //     'file_exists_direct' => file_exists(storage_path('app/' . $template->arquivo_path))
+            // ]);
             
             if (!$template->arquivo_path) {
-                \Log::warning('Template sem caminho de arquivo', [
-                    'proposicao_id' => $proposicao->id,
-                    'template_id' => $template->id
-                ]);
+                // Log::warning('Template sem caminho de arquivo', [
+                    //     'proposicao_id' => $proposicao->id,
+                    //     'template_id' => $template->id
+                // ]);
                 return $this->gerarDocumentoRTFProposicao($proposicao);
             }
             
             // Verificar diretamente se o arquivo existe
             $caminhoCompleto = storage_path('app/' . $template->arquivo_path);
             if (!file_exists($caminhoCompleto)) {
-                \Log::warning('Arquivo de template não encontrado', [
-                    'proposicao_id' => $proposicao->id,
-                    'template_id' => $template->id,
-                    'caminho' => $caminhoCompleto
-                ]);
+                // Log::warning('Arquivo de template não encontrado', [
+                    //     'proposicao_id' => $proposicao->id,
+                    //     'template_id' => $template->id,
+                    //     'caminho' => $caminhoCompleto
+                // ]);
                 return $this->gerarDocumentoRTFProposicao($proposicao);
             }
 
             // Carregar o conteúdo do template diretamente
             $conteudoTemplate = file_get_contents($caminhoCompleto);
             
-            \Log::info('Template carregado', [
-                'template_id' => $template->id,
-                'tamanho' => strlen($conteudoTemplate),
-                'preview' => substr($conteudoTemplate, 0, 100)
-            ]);
+            // Log::info('Template carregado', [
+                //     'template_id' => $template->id,
+                //     'tamanho' => strlen($conteudoTemplate),
+                //     'preview' => substr($conteudoTemplate, 0, 100)
+            // ]);
             
             // Preparar dados para substituição - sem processar caracteres especiais por enquanto
             $dados = [
@@ -1558,11 +1558,11 @@ ${texto}
             // Substituir variáveis no template
             $conteudoProcessado = $conteudoTemplate;
             
-            \Log::info('Antes da substituição', [
-                'template_id' => $template->id,
-                'dados' => $dados,
-                'preview_antes' => substr($conteudoProcessado, 0, 500)
-            ]);
+            // Log::info('Antes da substituição', [
+                //     'template_id' => $template->id,
+                //     'dados' => $dados,
+                //     'preview_antes' => substr($conteudoProcessado, 0, 500)
+            // ]);
             
             foreach ($dados as $variavel => $valor) {
                 $variavelCompleta = '${' . $variavel . '}';
@@ -1576,20 +1576,20 @@ ${texto}
                 
                 $depois = substr_count($conteudoProcessado, $variavelCompleta);
                 
-                \Log::info('Substituição de variável', [
-                    'variavel' => $variavelCompleta,
-                    'valor_original' => $valor,
-                    'valor_escapado' => $valorEscapado,
-                    'ocorrencias_antes' => $antes,
-                    'ocorrencias_depois' => $depois,
-                    'substituido' => $antes - $depois
-                ]);
+                // Log::info('Substituição de variável', [
+                    //     'variavel' => $variavelCompleta,
+                    //     'valor_original' => $valor,
+                    //     'valor_escapado' => $valorEscapado,
+                    //     'ocorrencias_antes' => $antes,
+                    //     'ocorrencias_depois' => $depois,
+                    //     'substituido' => $antes - $depois
+                // ]);
             }
             
-            \Log::info('Após substituição', [
-                'template_id' => $template->id,
-                'preview_depois' => substr($conteudoProcessado, 0, 500)
-            ]);
+            // Log::info('Após substituição', [
+                //     'template_id' => $template->id,
+                //     'preview_depois' => substr($conteudoProcessado, 0, 500)
+            // ]);
 
             // Verificar a extensão do arquivo do template
             $extensao = pathinfo($template->arquivo_path, PATHINFO_EXTENSION);
@@ -1606,7 +1606,7 @@ ${texto}
                     return response()->download($tempFile, "proposicao_{$proposicao->id}.rtf")
                         ->deleteFileAfterSend(true);
                 } catch (\Exception $e) {
-                    \Log::error('Erro ao processar documento', ['erro' => $e->getMessage()]);
+                    // Log::error('Erro ao processar documento', ['erro' => $e->getMessage()]);
                     return response()->download($tempFile, "proposicao_{$proposicao->id}.rtf")
                         ->deleteFileAfterSend(true);
                 }
@@ -1622,10 +1622,10 @@ ${texto}
                 $conteudoProcessado = str_replace('${' . $variavel . '}', $valor, $conteudoProcessado);
             }
             
-            \Log::info('Variáveis substituídas no template', [
-                'template_id' => $template->id,
-                'variaveis' => array_keys($dados)
-            ]);
+            // Log::info('Variáveis substituídas no template', [
+                //     'template_id' => $template->id,
+                //     'variaveis' => array_keys($dados)
+            // ]);
 
             // Verificar a extensão do arquivo do template
             $extensao = pathinfo($template->arquivo_path, PATHINFO_EXTENSION);
@@ -1645,10 +1645,10 @@ ${texto}
             */
             
         } catch (\Exception $e) {
-            \Log::error('Erro ao gerar documento com template', [
-                'proposicao_id' => $proposicao->id,
-                'error' => $e->getMessage()
-            ]);
+            // Log::error('Erro ao gerar documento com template', [
+                //     'proposicao_id' => $proposicao->id,
+                //     'error' => $e->getMessage()
+            // ]);
             
             // Em caso de erro, usar documento padrão
             return $this->gerarDocumentoRTFProposicao($proposicao);
@@ -1664,18 +1664,18 @@ ${texto}
         $proposicao->load(['template', 'autor']);
         
         // Log do conteúdo da proposição para debug
-        \Log::info('Gerando documento para proposição', [
-            'proposicao_id' => $proposicao->id,
-            'tipo' => $proposicao->tipo,
-            'template_id' => $proposicao->template_id,
-            'arquivo_path' => $proposicao->arquivo_path,
-            'ementa_length' => strlen($proposicao->ementa ?? ''),
-            'conteudo_length' => strlen($proposicao->conteudo ?? ''),
-            'has_conteudo' => !empty($proposicao->conteudo),
-            'conteudo_preview' => $proposicao->conteudo ? substr(strip_tags($proposicao->conteudo), 0, 200) : 'VAZIO',
-            'status' => $proposicao->status,
-            'autor_nome' => $proposicao->autor->name ?? 'SEM AUTOR'
-        ]);
+        // Log::info('Gerando documento para proposição', [
+            //     'proposicao_id' => $proposicao->id,
+            //     'tipo' => $proposicao->tipo,
+            //     'template_id' => $proposicao->template_id,
+            //     'arquivo_path' => $proposicao->arquivo_path,
+            //     'ementa_length' => strlen($proposicao->ementa ?? ''),
+            //     'conteudo_length' => strlen($proposicao->conteudo ?? ''),
+            //     'has_conteudo' => !empty($proposicao->conteudo),
+            //     'conteudo_preview' => $proposicao->conteudo ? substr(strip_tags($proposicao->conteudo), 0, 200) : 'VAZIO',
+            //     'status' => $proposicao->status,
+            //     'autor_nome' => $proposicao->autor->name ?? 'SEM AUTOR'
+        // ]);
 
         // FORÇAR uso do template ABNT se há conteúdo de IA ou se está em edição
         $temConteudoIA = !empty($proposicao->conteudo) && 
@@ -1685,12 +1685,12 @@ ${texto}
                          strlen($proposicao->conteudo) > 200);
         
         if ($temConteudoIA || $proposicao->status === 'em_edicao') {
-            \Log::info('FORÇANDO uso do Template ABNT', [
-                'proposicao_id' => $proposicao->id,
-                'motivo' => $temConteudoIA ? 'conteudo_ia_detectado' : 'status_em_edicao',
-                'conteudo_length' => strlen($proposicao->conteudo ?? ''),
-                'status' => $proposicao->status
-            ]);
+            // Log::info('FORÇANDO uso do Template ABNT', [
+                //     'proposicao_id' => $proposicao->id,
+                //     'motivo' => $temConteudoIA ? 'conteudo_ia_detectado' : 'status_em_edicao',
+                //     'conteudo_length' => strlen($proposicao->conteudo ?? ''),
+                //     'status' => $proposicao->status
+            // ]);
             
             // Ir direto para o método ABNT - DOCX para melhor compatibilidade
             return $this->gerarDocumentoDOCXProposicao($proposicao);
@@ -1728,10 +1728,10 @@ ${texto}
         }
         
         if ($arquivoSalvo) {
-            \Log::info('Usando arquivo salvo da proposição', [
-                'proposicao_id' => $proposicao->id,
-                'arquivo_path' => $arquivoSalvo
-            ]);
+            // Log::info('Usando arquivo salvo da proposição', [
+                //     'proposicao_id' => $proposicao->id,
+                //     'arquivo_path' => $arquivoSalvo
+            // ]);
             
             // Determinar o caminho completo baseado no storage usado
             $caminhoCompleto = $arquivoSalvo;
@@ -1765,10 +1765,10 @@ ${texto}
         }
         
         // Tentar buscar template pelo tipo da proposição
-        \Log::info('Buscando template para tipo de proposição', [
-            'proposicao_id' => $proposicao->id,
-            'tipo' => $proposicao->tipo
-        ]);
+        // Log::info('Buscando template para tipo de proposição', [
+            //     'proposicao_id' => $proposicao->id,
+            //     'tipo' => $proposicao->tipo
+        // ]);
         
         // Mapear tipos comuns para códigos
         $tipoMapeado = $this->mapearTipoProposicao($proposicao->tipo);
@@ -1780,36 +1780,36 @@ ${texto}
             ->first();
             
         if ($tipoProposicao) {
-            \Log::info('Tipo de proposição encontrado', [
-                'tipo_id' => $tipoProposicao->id,
-                'codigo' => $tipoProposicao->codigo,
-                'nome' => $tipoProposicao->nome
-            ]);
+            // Log::info('Tipo de proposição encontrado', [
+                //     'tipo_id' => $tipoProposicao->id,
+                //     'codigo' => $tipoProposicao->codigo,
+                //     'nome' => $tipoProposicao->nome
+            // ]);
             
             if ($tipoProposicao->templates()->exists()) {
                 $template = $tipoProposicao->templates()->where('ativo', true)->first();
                 if ($template) {
-                    \Log::info('Template encontrado para o tipo', [
-                        'template_id' => $template->id,
-                        'arquivo_path' => $template->arquivo_path
-                    ]);
+                    // Log::info('Template encontrado para o tipo', [
+                        //     'template_id' => $template->id,
+                        //     'arquivo_path' => $template->arquivo_path
+                    // ]);
                     $proposicao->template = $template; // Associar temporariamente para uso
                     return $this->gerarDocumentoComTemplate($proposicao);
                 } else {
-                    \Log::warning('Nenhum template ativo encontrado para o tipo', [
-                        'tipo_id' => $tipoProposicao->id
-                    ]);
+                    // Log::warning('Nenhum template ativo encontrado para o tipo', [
+                        //     'tipo_id' => $tipoProposicao->id
+                    // ]);
                 }
             } else {
-                \Log::warning('Tipo não possui templates', [
-                    'tipo_id' => $tipoProposicao->id,
-                    'tipo_nome' => $tipoProposicao->nome
-                ]);
+                // Log::warning('Tipo não possui templates', [
+                    //     'tipo_id' => $tipoProposicao->id,
+                    //     'tipo_nome' => $tipoProposicao->nome
+                // ]);
             }
         } else {
-            \Log::warning('Tipo de proposição não encontrado', [
-                'tipo_buscado' => $proposicao->tipo
-            ]);
+            // Log::warning('Tipo de proposição não encontrado', [
+                //     'tipo_buscado' => $proposicao->tipo
+            // ]);
         }
 
         $phpWord = new \PhpOffice\PhpWord\PhpWord();
@@ -1854,7 +1854,7 @@ ${texto}
                     \PhpOffice\PhpWord\Shared\Html::addHtml($section, $proposicao->conteudo);
                 } catch (\Exception $e) {
                     // Se a conversão HTML falhar, usar texto limpo
-                    \Log::warning('Erro ao converter HTML, usando texto limpo', ['error' => $e->getMessage()]);
+                    // Log::warning('Erro ao converter HTML, usando texto limpo', ['error' => $e->getMessage()]);
                     $textoLimpo = strip_tags($proposicao->conteudo);
                     $paragrafos = explode("\n", $textoLimpo);
                     foreach ($paragrafos as $paragrafo) {
@@ -1937,11 +1937,11 @@ ${texto}
     private function gerarDocumentoDOCXProposicao(\App\Models\Proposicao $proposicao)
     {
         try {
-            \Log::info('Gerando documento DOCX com template ABNT', [
-                'proposicao_id' => $proposicao->id,
-                'conteudo_length' => strlen($proposicao->conteudo ?? ''),
-                'ementa' => $proposicao->ementa
-            ]);
+            // Log::info('Gerando documento DOCX com template ABNT', [
+                //     'proposicao_id' => $proposicao->id,
+                //     'conteudo_length' => strlen($proposicao->conteudo ?? ''),
+                //     'ementa' => $proposicao->ementa
+            // ]);
             
             if (!class_exists('\PhpOffice\PhpWord\PhpWord')) {
                 // Fallback para RTF se PhpWord não disponível
@@ -2013,11 +2013,11 @@ ${texto}
             $objWriter = \PhpOffice\PhpWord\IOFactory::createWriter($phpWord, 'Word2007');
             $objWriter->save($tempFile);
             
-            \Log::info('Documento DOCX gerado', [
-                'proposicao_id' => $proposicao->id,
-                'arquivo_temp' => $tempFile,
-                'file_size' => filesize($tempFile)
-            ]);
+            // Log::info('Documento DOCX gerado', [
+                //     'proposicao_id' => $proposicao->id,
+                //     'arquivo_temp' => $tempFile,
+                //     'file_size' => filesize($tempFile)
+            // ]);
             
             // Retornar arquivo DOCX
             return response()->download($tempFile, "proposicao_{$proposicao->id}.docx", [
@@ -2025,11 +2025,11 @@ ${texto}
             ])->deleteFileAfterSend(true);
             
         } catch (\Exception $e) {
-            \Log::error('Erro ao gerar DOCX direto', [
-                'proposicao_id' => $proposicao->id,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
+            // Log::error('Erro ao gerar DOCX direto', [
+                //     'proposicao_id' => $proposicao->id,
+                //     'error' => $e->getMessage(),
+                //     'trace' => $e->getTraceAsString()
+            // ]);
             
             // Fallback para RTF
             return $this->gerarDocumentoRTFProposicao($proposicao);
@@ -2042,11 +2042,11 @@ ${texto}
     private function gerarDocumentoRTFProposicao(\App\Models\Proposicao $proposicao)
     {
         try {
-            \Log::info('Gerando documento RTF com template ABNT', [
-                'proposicao_id' => $proposicao->id,
-                'conteudo_length' => strlen($proposicao->conteudo ?? ''),
-                'ementa' => $proposicao->ementa
-            ]);
+            // Log::info('Gerando documento RTF com template ABNT', [
+                //     'proposicao_id' => $proposicao->id,
+                //     'conteudo_length' => strlen($proposicao->conteudo ?? ''),
+                //     'ementa' => $proposicao->ementa
+            // ]);
             
             // Gerar RTF direto com dados da proposição (método simplificado)
             $rtfContent = $this->gerarRTFDireto($proposicao);
@@ -2059,13 +2059,13 @@ ${texto}
             $debugFile = storage_path('app/public/debug_proposicao_' . $proposicao->id . '.rtf');
             file_put_contents($debugFile, $rtfContent);
             
-            \Log::info('Documento RTF direto gerado', [
-                'proposicao_id' => $proposicao->id,
-                'arquivo_temp' => $tempFile,
-                'debug_file' => $debugFile,
-                'rtf_size' => strlen($rtfContent),
-                'rtf_preview' => substr($rtfContent, 0, 500)
-            ]);
+            // Log::info('Documento RTF direto gerado', [
+                //     'proposicao_id' => $proposicao->id,
+                //     'arquivo_temp' => $tempFile,
+                //     'debug_file' => $debugFile,
+                //     'rtf_size' => strlen($rtfContent),
+                //     'rtf_preview' => substr($rtfContent, 0, 500)
+            // ]);
             
             // Retornar conteúdo RTF diretamente
             return response($rtfContent)
@@ -2073,11 +2073,11 @@ ${texto}
                 ->header('Content-Disposition', 'attachment; filename="proposicao_' . $proposicao->id . '.rtf"');
             
         } catch (\Exception $e) {
-            \Log::error('Erro ao gerar RTF direto', [
-                'proposicao_id' => $proposicao->id,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
+            // Log::error('Erro ao gerar RTF direto', [
+                //     'proposicao_id' => $proposicao->id,
+                //     'error' => $e->getMessage(),
+                //     'trace' => $e->getTraceAsString()
+            // ]);
             
             // Fallback para método antigo
             return $this->gerarDocumentoRTFSimples($proposicao);
@@ -2340,15 +2340,15 @@ Status: " . ucfirst(str_replace('_', ' ', $proposicao->status)) . "\par
             $dataLocal = 'São Paulo, ' . date('d') . ' de ' . $this->obterMesPortugues(date('n')) . ' de ' . date('Y') . '.';
             
             // Log do processamento para debug
-            \Log::info('Processamento conteúdo IA para RTF', [
-                'proposicao_id' => $proposicao->id,
-                'titulo' => $titulo,
-                'ementa_length' => strlen($ementa),
-                'articulado_length' => strlen($articulado),
-                'justificativa_length' => strlen($justificativa),
-                'assinatura' => $assinatura,
-                'conteudo_original_preview' => substr($proposicao->conteudo, 0, 200)
-            ]);
+            // Log::info('Processamento conteúdo IA para RTF', [
+                //     'proposicao_id' => $proposicao->id,
+                //     'titulo' => $titulo,
+                //     'ementa_length' => strlen($ementa),
+                //     'articulado_length' => strlen($articulado),
+                //     'justificativa_length' => strlen($justificativa),
+                //     'assinatura' => $assinatura,
+                //     'conteudo_original_preview' => substr($proposicao->conteudo, 0, 200)
+            // ]);
         }
 
         // Cabeçalho institucional
@@ -2537,9 +2537,9 @@ Status: " . ucfirst(str_replace('_', ' ', $proposicao->status)) . "\par
             return $cabecalho;
             
         } catch (\Exception $e) {
-            \Log::warning('Erro ao obter parâmetros do cabeçalho', [
-                'error' => $e->getMessage()
-            ]);
+            // Log::warning('Erro ao obter parâmetros do cabeçalho', [
+                //     'error' => $e->getMessage()
+            // ]);
             
             return 'CÂMARA MUNICIPAL';
         }
@@ -2551,23 +2551,23 @@ Status: " . ucfirst(str_replace('_', ' ', $proposicao->status)) . "\par
     private function processarConteudoIA(string $conteudo): string
     {
         if (empty($conteudo)) {
-            \Log::warning('Conteúdo IA vazio para processamento RTF');
+            // Log::warning('Conteúdo IA vazio para processamento RTF');
             return '';
         }
 
-        \Log::info('Iniciando processamento conteúdo IA', [
-            'conteudo_length' => strlen($conteudo),
-            'conteudo_preview' => substr($conteudo, 0, 300)
-        ]);
+        // Log::info('Iniciando processamento conteúdo IA', [
+            //     'conteudo_length' => strlen($conteudo),
+            //     'conteudo_preview' => substr($conteudo, 0, 300)
+        // ]);
 
         $rtf = '';
         $linhas = explode("\n", strip_tags($conteudo));
         $numeroArtigo = 1;
         
-        \Log::info('Conteúdo IA dividido em linhas', [
-            'total_linhas' => count($linhas),
-            'linhas_nao_vazias' => count(array_filter($linhas, fn($l) => !empty(trim($l))))
-        ]);
+        // Log::info('Conteúdo IA dividido em linhas', [
+            //     'total_linhas' => count($linhas),
+            //     'linhas_nao_vazias' => count(array_filter($linhas, fn($l) => !empty(trim($l))))
+        // ]);
 
         foreach ($linhas as $linha) {
             $linha = trim($linha);
@@ -2612,10 +2612,10 @@ Status: " . ucfirst(str_replace('_', ' ', $proposicao->status)) . "\par
             }
         }
 
-        \Log::info('Processamento conteúdo IA finalizado', [
-            'rtf_length' => strlen($rtf),
-            'rtf_preview' => substr($rtf, 0, 200)
-        ]);
+        // Log::info('Processamento conteúdo IA finalizado', [
+            //     'rtf_length' => strlen($rtf),
+            //     'rtf_preview' => substr($rtf, 0, 200)
+        // ]);
 
         return $rtf;
     }
@@ -2705,31 +2705,31 @@ Status: " . ucfirst(str_replace('_', ' ', $proposicao->status)) . "\par
                     $urlOtimizada = str_replace(['http://localhost:8080', 'http://127.0.0.1:8080'], 'http://legisinc-onlyoffice', $originalUrl);
                 }
                 
-                \Log::info('OnlyOffice callback - tentando baixar documento', [
-                    'proposicao_id' => $proposicao->id,
-                    'original_url' => $originalUrl,
-                    'optimized_url' => $urlOtimizada
-                ]);
+                // Log::info('OnlyOffice callback - tentando baixar documento', [
+                    //     'proposicao_id' => $proposicao->id,
+                    //     'original_url' => $originalUrl,
+                    //     'optimized_url' => $urlOtimizada
+                // ]);
                 
                 // Baixar o documento atualizado
                 $downloadStart = microtime(true);
                 $response = Http::timeout(60)->get($urlOtimizada);
                 $downloadTime = microtime(true) - $downloadStart;
                 
-                \Log::info('OnlyOffice callback - download concluído', [
-                    'proposicao_id' => $proposicao->id,
-                    'download_time_seconds' => round($downloadTime, 2),
-                    'response_successful' => $response->successful(),
-                    'response_status' => $response->status()
-                ]);
+                // Log::info('OnlyOffice callback - download concluído', [
+                    //     'proposicao_id' => $proposicao->id,
+                    //     'download_time_seconds' => round($downloadTime, 2),
+                    //     'response_successful' => $response->successful(),
+                    //     'response_status' => $response->status()
+                // ]);
                 
                 if (!$response->successful()) {
-                    \Log::error('Erro ao baixar documento do OnlyOffice', [
-                        'proposicao_id' => $proposicao->id,
-                        'original_url' => $originalUrl,
-                        'optimized_url' => $urlOtimizada,
-                        'status' => $response->status()
-                    ]);
+                    // Log::error('Erro ao baixar documento do OnlyOffice', [
+                        //     'proposicao_id' => $proposicao->id,
+                        //     'original_url' => $originalUrl,
+                        //     'optimized_url' => $urlOtimizada,
+                        //     'status' => $response->status()
+                    // ]);
                     return ['error' => 1];
                 }
 
@@ -2754,17 +2754,17 @@ Status: " . ucfirst(str_replace('_', ' ', $proposicao->status)) . "\par
                     'modificado_por' => auth()->id()
                 ]);
                 
-                \Log::info('Proposição atualizada com sucesso via OnlyOffice', [
-                    'proposicao_id' => $proposicao->id,
-                    'arquivo_path' => $nomeArquivo,
-                    'conteudo_length' => strlen($conteudo)
-                ]);
+                // Log::info('Proposição atualizada com sucesso via OnlyOffice', [
+                    //     'proposicao_id' => $proposicao->id,
+                    //     'arquivo_path' => $nomeArquivo,
+                    //     'conteudo_length' => strlen($conteudo)
+                // ]);
                 
             } catch (\Exception $e) {
-                \Log::error('Erro ao processar callback do OnlyOffice para proposição', [
-                    'proposicao_id' => $proposicao->id,
-                    'error' => $e->getMessage()
-                ]);
+                // Log::error('Erro ao processar callback do OnlyOffice para proposição', [
+                    //     'proposicao_id' => $proposicao->id,
+                    //     'error' => $e->getMessage()
+                // ]);
                 return ['error' => 1];
             }
         }
@@ -2832,11 +2832,11 @@ Status: " . ucfirst(str_replace('_', ' ', $proposicao->status)) . "\par
      */
     public function inserirNumeroProcesso(\App\Models\Proposicao $proposicao, string $posicao = 'cabecalho'): void
     {
-        \Log::info('Inserindo número de processo no documento', [
-            'proposicao_id' => $proposicao->id,
-            'numero_processo' => $proposicao->numero_processo,
-            'posicao' => $posicao
-        ]);
+        // Log::info('Inserindo número de processo no documento', [
+            //     'proposicao_id' => $proposicao->id,
+            //     'numero_processo' => $proposicao->numero_processo,
+            //     'posicao' => $posicao
+        // ]);
 
         try {
             // Atualizar o conteúdo da proposição com o número do processo
@@ -2878,17 +2878,17 @@ Status: " . ucfirst(str_replace('_', ' ', $proposicao->status)) . "\par
                 $this->regenerarPDFComProtocolo($proposicao);
             }
             
-            \Log::info('Número de processo inserido com sucesso', [
-                'proposicao_id' => $proposicao->id,
-                'numero_processo' => $numeroProcesso
-            ]);
+            // Log::info('Número de processo inserido com sucesso', [
+                //     'proposicao_id' => $proposicao->id,
+                //     'numero_processo' => $numeroProcesso
+            // ]);
             
         } catch (\Exception $e) {
-            \Log::error('Erro ao inserir número de processo no documento', [
-                'proposicao_id' => $proposicao->id,
-                'numero_processo' => $proposicao->numero_processo,
-                'error' => $e->getMessage()
-            ]);
+            // Log::error('Erro ao inserir número de processo no documento', [
+                //     'proposicao_id' => $proposicao->id,
+                //     'numero_processo' => $proposicao->numero_processo,
+                //     'error' => $e->getMessage()
+            // ]);
             
             throw $e;
         }
@@ -2899,12 +2899,12 @@ Status: " . ucfirst(str_replace('_', ' ', $proposicao->status)) . "\par
      */
     public function regenerarPDFComProtocolo(\App\Models\Proposicao $proposicao): void
     {
-        \Log::info('Regenerando PDF com número de protocolo', [
-            'proposicao_id' => $proposicao->id,
-            'numero_protocolo' => $proposicao->numero_protocolo,
-            'numero_processo' => $proposicao->numero_processo,
-            'arquivo_pdf_path_atual' => $proposicao->arquivo_pdf_path
-        ]);
+        // Log::info('Regenerando PDF com número de protocolo', [
+            //     'proposicao_id' => $proposicao->id,
+            //     'numero_protocolo' => $proposicao->numero_protocolo,
+            //     'numero_processo' => $proposicao->numero_processo,
+            //     'arquivo_pdf_path_atual' => $proposicao->arquivo_pdf_path
+        // ]);
 
         // Recarregar a proposição para ter os dados atualizados
         $proposicao->refresh();
@@ -2921,20 +2921,20 @@ Status: " . ucfirst(str_replace('_', ' ', $proposicao->status)) . "\par
         try {
             $method->invoke($proposicaoController, $proposicao);
             
-            \Log::info('PDF regenerado com sucesso', [
-                'proposicao_id' => $proposicao->id,
-                'numero_protocolo' => $proposicao->numero_protocolo,
-                'numero_processo' => $proposicao->numero_processo,
-                'novo_arquivo_pdf_path' => $proposicao->fresh()->arquivo_pdf_path
-            ]);
+            // Log::info('PDF regenerado com sucesso', [
+                //     'proposicao_id' => $proposicao->id,
+                //     'numero_protocolo' => $proposicao->numero_protocolo,
+                //     'numero_processo' => $proposicao->numero_processo,
+                //     'novo_arquivo_pdf_path' => $proposicao->fresh()->arquivo_pdf_path
+            // ]);
         } catch (\Exception $e) {
-            \Log::error('Erro ao regenerar PDF com número de protocolo', [
-                'proposicao_id' => $proposicao->id,
-                'numero_protocolo' => $proposicao->numero_protocolo,
-                'numero_processo' => $proposicao->numero_processo,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
+            // Log::error('Erro ao regenerar PDF com número de protocolo', [
+                //     'proposicao_id' => $proposicao->id,
+                //     'numero_protocolo' => $proposicao->numero_protocolo,
+                //     'numero_processo' => $proposicao->numero_processo,
+                //     'error' => $e->getMessage(),
+                //     'trace' => $e->getTraceAsString()
+            // ]);
             
             throw $e;
         }

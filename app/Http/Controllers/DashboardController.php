@@ -101,7 +101,7 @@ class DashboardController extends Controller
             return view('dashboard.parlamentar', compact('estatisticas', 'proposicoes_recentes', 'proposicoes_urgentes'));
             
         } catch (\Exception $e) {
-            \Log::error('Erro no dashboard parlamentar: ' . $e->getMessage());
+            // Log::error('Erro no dashboard parlamentar: ' . $e->getMessage());
             return view('dashboard');
         }
     }
@@ -139,7 +139,7 @@ class DashboardController extends Controller
             return view('dashboard.legislativo', compact('estatisticas', 'proposicoes_para_revisao', 'minhas_revisoes'));
             
         } catch (\Exception $e) {
-            \Log::error('Erro no dashboard legislativo: ' . $e->getMessage());
+            // Log::error('Erro no dashboard legislativo: ' . $e->getMessage());
             return view('dashboard');
         }
     }
@@ -219,7 +219,7 @@ class DashboardController extends Controller
             return view('dashboard.protocolo', compact('estatisticas', 'proposicoes_para_protocolo', 'protocolos_recentes', 'alertas_protocolo', 'numeracao_tipos'));
             
         } catch (\Exception $e) {
-            \Log::error('Erro no dashboard protocolo: ' . $e->getMessage());
+            // Log::error('Erro no dashboard protocolo: ' . $e->getMessage());
             return view('dashboard');
         }
     }
@@ -330,7 +330,7 @@ class DashboardController extends Controller
             ));
             
         } catch (\Exception $e) {
-            \Log::error('Erro no dashboard expediente: ' . $e->getMessage());
+            // Log::error('Erro no dashboard expediente: ' . $e->getMessage());
             return view('dashboard');
         }
     }
@@ -347,7 +347,7 @@ class DashboardController extends Controller
             return $this->dashboardLegislativo();
             
         } catch (\Exception $e) {
-            \Log::error('Erro no dashboard assessor jurídico: ' . $e->getMessage());
+            // Log::error('Erro no dashboard assessor jurídico: ' . $e->getMessage());
             return view('dashboard');
         }
     }
@@ -486,7 +486,7 @@ class DashboardController extends Controller
             
         } catch (\Exception $e) {
             // Se houver erro (tabela não existe, etc), retornar dashboard padrão
-            \Log::error('Erro no dashboard admin: ' . $e->getMessage());
+            // Log::error('Erro no dashboard admin: ' . $e->getMessage());
             return view('dashboard');
         }
     }
@@ -512,7 +512,7 @@ class DashboardController extends Controller
             return view('dashboard.relator', compact('estatisticas', 'proposicoes_para_parecer', 'pareceres_recentes'));
             
         } catch (\Exception $e) {
-            \Log::error('Erro no dashboard relator: ' . $e->getMessage());
+            // Log::error('Erro no dashboard relator: ' . $e->getMessage());
             return view('dashboard');
         }
     }
@@ -564,7 +564,7 @@ class DashboardController extends Controller
             return view('dashboard.assessor', compact('estatisticas', 'proposicoes_em_elaboracao', 'parlamentarVinculado'));
             
         } catch (\Exception $e) {
-            \Log::error('Erro no dashboard assessor: ' . $e->getMessage());
+            // Log::error('Erro no dashboard assessor: ' . $e->getMessage());
             return view('dashboard');
         }
     }
@@ -596,7 +596,7 @@ class DashboardController extends Controller
             return view('dashboard.cidadao', compact('estatisticas', 'minhas_propostas', 'proposicoes_publicas'));
             
         } catch (\Exception $e) {
-            \Log::error('Erro no dashboard cidadão: ' . $e->getMessage());
+            // Log::error('Erro no dashboard cidadão: ' . $e->getMessage());
             return view('dashboard');
         }
     }
@@ -627,7 +627,7 @@ class DashboardController extends Controller
             return view('dashboard.publico', compact('estatisticas', 'proposicoes_recentes', 'proposicoes_populares'));
             
         } catch (\Exception $e) {
-            \Log::error('Erro no dashboard público: ' . $e->getMessage());
+            // Log::error('Erro no dashboard público: ' . $e->getMessage());
             return view('dashboard');
         }
     }

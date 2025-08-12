@@ -39,15 +39,6 @@
             <!--end::Page title-->
             <!--begin::Actions-->
             <div class="d-flex align-items-center gap-2 gap-lg-3">
-                <!--begin::API Status button-->
-                <button type="button" id="check-api-status-btn" class="btn btn-sm btn-flex btn-light-primary" onclick="checkApiStatus()">
-                    <i class="ki-duotone ki-wifi fs-3">
-                        <span class="path1"></span>
-                        <span class="path2"></span>
-                    </i>
-                    Status APIs
-                </button>
-                <!--end::API Status button-->
                 <!--begin::Secondary button-->
                 <a href="{{ route('parametros.index') }}" class="btn btn-sm btn-flex btn-secondary">
                     <i class="ki-duotone ki-arrow-left fs-3"></i>
@@ -95,7 +86,7 @@
             <!--end::Alert-->
 
             <!--begin::Form-->
-            <form id="dados-gerais-form" method="POST" action="{{ route('parametros.dados-gerais-camara.store') }}">
+            <form id="dados-gerais-form" method="POST" action="{{ route('parametros.dados-gerais-camara.store') }}" novalidate>
                 @csrf
                 
                 <!--begin::Card with tabs-->
@@ -172,42 +163,18 @@
                                         <!--begin::Input group-->
                                         <div class="fv-row mb-7">
                                             <label class="form-label fw-semibold fs-6 required">Nome da Câmara</label>
-                                            <div class="position-relative">
-                                                <input type="text" class="form-control form-control-solid" name="nome_camara" 
-                                                       id="nome_camara_input"
-                                                       value="{{ $configuracoes['nome_camara'] ?? '' }}" 
-                                                       placeholder="Ex: Câmara Municipal de São Paulo ou digite apenas: São Paulo"
-                                                       autocomplete="off"
-                                                       required />
-                                                <div id="busca_loading" class="position-absolute top-50 end-0 translate-middle-y me-3" style="display: none;">
-                                                    <div class="spinner-border spinner-border-sm text-primary" role="status">
-                                                        <span class="visually-hidden">Buscando...</span>
-                                                    </div>
-                                                </div>
-                                                <!-- Dropdown de sugestões -->
-                                                <div id="camara_suggestions" class="position-absolute w-100 bg-white border rounded shadow-sm" 
-                                                     style="display: none; z-index: 1000; max-height: 300px; overflow-y: auto;">
-                                                </div>
-                                            </div>
+                                            <input type="text" class="form-control form-control-solid" name="nome_camara" 
+                                                   id="nome_camara_input"
+                                                   value="{{ $configuracoes['nome_camara'] ?? '' }}" 
+                                                   placeholder="Ex: Câmara Municipal de São Paulo"
+                                                   required />
                                             <div class="form-text">
-                                                <i class="ki-duotone ki-information fs-6 text-warning me-1">
+                                                <i class="ki-duotone ki-information fs-6 text-info me-1">
                                                     <span class="path1"></span>
                                                     <span class="path2"></span>
                                                     <span class="path3"></span>
                                                 </i>
-                                                Digite a cidade para preenchimento automático (dados são modelos genéricos - sempre verificar antes de salvar)
-                                            </div>
-                                            <!-- Alert de busca -->
-                                            <div id="busca_alert" class="alert alert-info d-none mt-3" role="alert">
-                                                <i class="ki-duotone ki-information-4 fs-2 text-info me-3">
-                                                    <span class="path1"></span>
-                                                    <span class="path2"></span>
-                                                    <span class="path3"></span>
-                                                </i>
-                                                <div class="d-flex flex-column">
-                                                    <h5 class="mb-1">Dados encontrados!</h5>
-                                                    <span id="busca_message">Os campos serão preenchidos automaticamente</span>
-                                                </div>
+                                                Informe o nome completo da Câmara Municipal
                                             </div>
                                         </div>
                                         <!--end::Input group-->
@@ -233,6 +200,22 @@
                                         <!--end::Input group-->
                                     </div>
                                 </div>
+                                <!--begin::Save button for this tab-->
+                                <div class="d-flex justify-content-end pt-6">
+                                    <button type="button" class="btn btn-primary btn-save-tab" data-tab="identificacao">
+                                        <span class="indicator-label">
+                                            <i class="ki-duotone ki-check fs-6 me-2">
+                                                <span class="path1"></span>
+                                                <span class="path2"></span>
+                                            </i>
+                                            Salvar Identificação
+                                        </span>
+                                        <span class="indicator-progress">Salvando...
+                                            <span class="spinner-border spinner-border-sm align-middle ms-2"></span>
+                                        </span>
+                                    </button>
+                                </div>
+                                <!--end::Save button-->
                             </div>
                             <!--end::Tab pane - Identificação-->
                             
@@ -240,66 +223,46 @@
                             <div class="tab-pane fade" id="kt_tab_endereco" role="tabpanel">
                                 <div class="row g-6">
                                     <div class="col-12">
-                                        <!--begin::Input group-->
+                                        <!--begin::Input group - CEP em primeiro-->
                                         <div class="row">
-                                            <div class="col-md-8">
+                                            <div class="col-md-4">
                                                 <div class="fv-row mb-7">
-                                                    <label class="form-label fw-semibold fs-6 required">Endereço</label>
-                                                    <input type="text" class="form-control form-control-solid" name="endereco" 
-                                                           value="{{ $configuracoes['endereco'] ?? '' }}" required />
+                                                    <label class="form-label fw-semibold fs-6 required">
+                                                        <i class="ki-duotone ki-geolocation fs-6 me-2">
+                                                            <span class="path1"></span>
+                                                            <span class="path2"></span>
+                                                        </i>
+                                                        CEP
+                                                    </label>
+                                                    <div class="position-relative">
+                                                        <input type="text" class="form-control form-control-solid" name="cep" id="cep_input"
+                                                               placeholder="Digite o CEP (00000-000)" maxlength="9"
+                                                               value="{{ $configuracoes['cep'] ?? '' }}" required />
+                                                        <div id="cep_loading" class="position-absolute top-50 end-0 translate-middle-y pe-3 d-none">
+                                                            <span class="spinner-border spinner-border-sm text-primary" role="status"></span>
+                                                        </div>
+                                                    </div>
+                                                    <div class="form-text">
+                                                        <i class="ki-duotone ki-information-5 fs-7 me-1">
+                                                            <span class="path1"></span>
+                                                            <span class="path2"></span>
+                                                            <span class="path3"></span>
+                                                        </i>
+                                                        Busca automática ao digitar 8 dígitos
+                                                    </div>
                                                 </div>
                                             </div>
                                             <div class="col-md-4">
                                                 <div class="fv-row mb-7">
-                                                    <label class="form-label fw-semibold fs-6">Número</label>
-                                                    <input type="text" class="form-control form-control-solid" name="numero" 
-                                                           value="{{ $configuracoes['numero'] ?? '' }}" />
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <!--end::Input group-->
-
-                                        <!--begin::Input group-->
-                                        <div class="fv-row mb-7">
-                                            <label class="form-label fw-semibold fs-6">Complemento</label>
-                                            <input type="text" class="form-control form-control-solid" name="complemento" 
-                                                   value="{{ $configuracoes['complemento'] ?? '' }}" />
-                                        </div>
-                                        <!--end::Input group-->
-
-                                        <!--begin::Input group-->
-                                        <div class="row">
-                                            <div class="col-md-6">
-                                                <div class="fv-row mb-7">
-                                                    <label class="form-label fw-semibold fs-6 required">Bairro</label>
-                                                    <input type="text" class="form-control form-control-solid" name="bairro" 
-                                                           value="{{ $configuracoes['bairro'] ?? '' }}" required />
-                                                </div>
-                                            </div>
-                                            <div class="col-md-6">
-                                                <div class="fv-row mb-7">
-                                                    <label class="form-label fw-semibold fs-6 required">CEP</label>
-                                                    <input type="text" class="form-control form-control-solid" name="cep" 
-                                                           data-mask="00000-000"
-                                                           value="{{ $configuracoes['cep'] ?? '' }}" required />
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <!--end::Input group-->
-
-                                        <!--begin::Input group-->
-                                        <div class="row">
-                                            <div class="col-md-8">
-                                                <div class="fv-row mb-7">
                                                     <label class="form-label fw-semibold fs-6 required">Cidade</label>
-                                                    <input type="text" class="form-control form-control-solid" name="cidade" 
+                                                    <input type="text" class="form-control form-control-solid" name="cidade" id="cidade_input"
                                                            value="{{ $configuracoes['cidade'] ?? '' }}" required />
                                                 </div>
                                             </div>
                                             <div class="col-md-4">
                                                 <div class="fv-row mb-7">
                                                     <label class="form-label fw-semibold fs-6 required">Estado</label>
-                                                    <select class="form-select form-select-solid" name="estado" required>
+                                                    <select class="form-select form-select-solid" name="estado" id="estado_select" required>
                                                         <option value="">Selecione</option>
                                                         @foreach(['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'] as $uf)
                                                             <option value="{{ $uf }}" {{ ($configuracoes['estado'] ?? '') == $uf ? 'selected' : '' }}>{{ $uf }}</option>
@@ -309,8 +272,73 @@
                                             </div>
                                         </div>
                                         <!--end::Input group-->
+
+                                        <!--begin::Input group - Endereço e Número-->
+                                        <div class="row">
+                                            <div class="col-md-8">
+                                                <div class="fv-row mb-7">
+                                                    <label class="form-label fw-semibold fs-6 required">Endereço (Logradouro)</label>
+                                                    <input type="text" class="form-control form-control-solid" name="endereco" id="endereco_input"
+                                                           placeholder="Será preenchido automaticamente pelo CEP"
+                                                           value="{{ $configuracoes['endereco'] ?? '' }}" required />
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="fv-row mb-7">
+                                                    <label class="form-label fw-semibold fs-6">
+                                                        <i class="ki-duotone ki-home-2 fs-6 me-2">
+                                                            <span class="path1"></span>
+                                                            <span class="path2"></span>
+                                                        </i>
+                                                        Número
+                                                    </label>
+                                                    <input type="text" class="form-control form-control-solid" name="numero" id="numero_input"
+                                                           placeholder="Ex: 123, 456-A"
+                                                           value="{{ $configuracoes['numero'] ?? '' }}" />
+                                                    <div class="form-text">Campo focado automaticamente após busca do CEP</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <!--end::Input group-->
+
+                                        <!--begin::Input group - Bairro e Complemento-->
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="fv-row mb-7">
+                                                    <label class="form-label fw-semibold fs-6 required">Bairro</label>
+                                                    <input type="text" class="form-control form-control-solid" name="bairro" id="bairro_input"
+                                                           placeholder="Será preenchido automaticamente pelo CEP"
+                                                           value="{{ $configuracoes['bairro'] ?? '' }}" required />
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="fv-row mb-7">
+                                                    <label class="form-label fw-semibold fs-6">Complemento</label>
+                                                    <input type="text" class="form-control form-control-solid" name="complemento" 
+                                                           placeholder="Ex: Sala 101, Bloco A, Anexo"
+                                                           value="{{ $configuracoes['complemento'] ?? '' }}" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <!--end::Input group-->
                                     </div>
                                 </div>
+                                <!--begin::Save button for this tab-->
+                                <div class="d-flex justify-content-end pt-6">
+                                    <button type="button" class="btn btn-success btn-save-tab" data-tab="endereco">
+                                        <span class="indicator-label">
+                                            <i class="ki-duotone ki-geolocation fs-6 me-2">
+                                                <span class="path1"></span>
+                                                <span class="path2"></span>
+                                            </i>
+                                            Salvar Endereço
+                                        </span>
+                                        <span class="indicator-progress">Salvando...
+                                            <span class="spinner-border spinner-border-sm align-middle ms-2"></span>
+                                        </span>
+                                    </button>
+                                </div>
+                                <!--end::Save button-->
                             </div>
                             <!--end::Tab pane - Endereço-->
                             
@@ -367,6 +395,22 @@
                                         <!--end::Input group-->
                                     </div>
                                 </div>
+                                <!--begin::Save button for this tab-->
+                                <div class="d-flex justify-content-end pt-6">
+                                    <button type="button" class="btn btn-info btn-save-tab" data-tab="contatos">
+                                        <span class="indicator-label">
+                                            <i class="ki-duotone ki-phone fs-6 me-2">
+                                                <span class="path1"></span>
+                                                <span class="path2"></span>
+                                            </i>
+                                            Salvar Contatos
+                                        </span>
+                                        <span class="indicator-progress">Salvando...
+                                            <span class="spinner-border spinner-border-sm align-middle ms-2"></span>
+                                        </span>
+                                    </button>
+                                </div>
+                                <!--end::Save button-->
                             </div>
                             <!--end::Tab pane - Contatos-->
                             
@@ -393,6 +437,22 @@
                                         <!--end::Input group-->
                                     </div>
                                 </div>
+                                <!--begin::Save button for this tab-->
+                                <div class="d-flex justify-content-end pt-6">
+                                    <button type="button" class="btn btn-warning btn-save-tab" data-tab="funcionamento">
+                                        <span class="indicator-label">
+                                            <i class="ki-duotone ki-time fs-6 me-2">
+                                                <span class="path1"></span>
+                                                <span class="path2"></span>
+                                            </i>
+                                            Salvar Funcionamento
+                                        </span>
+                                        <span class="indicator-progress">Salvando...
+                                            <span class="spinner-border spinner-border-sm align-middle ms-2"></span>
+                                        </span>
+                                    </button>
+                                </div>
+                                <!--end::Save button-->
                             </div>
                             <!--end::Tab pane - Funcionamento-->
                             
@@ -405,21 +465,12 @@
                                             <div class="col-md-8">
                                                 <div class="fv-row mb-7">
                                                     <label class="form-label fw-semibold fs-6 required">Presidente da Câmara</label>
-                                                    <div class="position-relative">
-                                                        <input type="text" class="form-control form-control-solid" 
-                                                               id="presidente_nome_input"
-                                                               name="presidente_nome" 
-                                                               value="{{ $configuracoes['presidente_nome'] ?? '' }}" 
-                                                               placeholder="Digite o nome do presidente para buscar..."
-                                                               autocomplete="off"
-                                                               required />
-                                                        <input type="hidden" name="presidente_id" id="presidente_id" />
-                                                        
-                                                        <!-- Dropdown de sugestões -->
-                                                        <div id="presidente_suggestions" class="position-absolute w-100 bg-white border rounded shadow-sm" 
-                                                             style="display: none; z-index: 1000; max-height: 300px; overflow-y: auto; top: 100%;">
-                                                        </div>
-                                                    </div>
+                                                    <input type="text" class="form-control form-control-solid" 
+                                                           id="presidente_nome_input"
+                                                           name="presidente_nome" 
+                                                           value="{{ $configuracoes['presidente_nome'] ?? '' }}" 
+                                                           placeholder="Nome completo do presidente"
+                                                           required />
                                                 </div>
                                             </div>
                                             <div class="col-md-4">
@@ -429,7 +480,7 @@
                                                            id="presidente_partido_input"
                                                            name="presidente_partido" 
                                                            value="{{ $configuracoes['presidente_partido'] ?? '' }}" 
-                                                           placeholder="Partido será preenchido automaticamente"
+                                                           placeholder="Sigla do partido"
                                                            required />
                                                 </div>
                                             </div>
@@ -458,6 +509,23 @@
                                         <!--end::Input group-->
                                     </div>
                                 </div>
+                                <!--begin::Save button for this tab-->
+                                <div class="d-flex justify-content-end pt-6">
+                                    <button type="button" class="btn btn-dark btn-save-tab" data-tab="gestao">
+                                        <span class="indicator-label">
+                                            <i class="ki-duotone ki-user-square fs-6 me-2">
+                                                <span class="path1"></span>
+                                                <span class="path2"></span>
+                                                <span class="path3"></span>
+                                            </i>
+                                            Salvar Gestão
+                                        </span>
+                                        <span class="indicator-progress">Salvando...
+                                            <span class="spinner-border spinner-border-sm align-middle ms-2"></span>
+                                        </span>
+                                    </button>
+                                </div>
+                                <!--end::Save button-->
                             </div>
                             <!--end::Tab pane - Gestão Atual-->
                         </div>
@@ -466,13 +534,24 @@
                     <!--end::Card body-->
                     
                     <!--begin::Card footer-->
-                    <div class="card-footer d-flex justify-content-end py-6 px-9">
-                        <button type="reset" class="btn btn-light btn-active-light-primary me-2">Cancelar</button>
-                        <button type="submit" class="btn btn-primary" id="kt_account_profile_details_submit">
-                            <span class="indicator-label">Salvar Configurações</span>
-                            <span class="indicator-progress">Salvando...
-                                <span class="spinner-border spinner-border-sm align-middle ms-2"></span>
-                            </span>
+                    <div class="card-footer d-flex justify-content-between align-items-center py-6 px-9">
+                        <div class="text-muted fs-7">
+                            <i class="ki-duotone ki-information-5 fs-6 me-1">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                                <span class="path3"></span>
+                            </i>
+                            Salve os dados de cada aba individualmente usando os botões acima
+                        </div>
+                        <button type="reset" class="btn btn-light btn-active-light-primary">
+                            <i class="ki-duotone ki-trash fs-6 me-1">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                                <span class="path3"></span>
+                                <span class="path4"></span>
+                                <span class="path5"></span>
+                            </i>
+                            Limpar Formulário
                         </button>
                     </div>
                     <!--end::Card footer-->
@@ -495,39 +574,174 @@
         document.addEventListener('DOMContentLoaded', function() {
             console.log('📋 Dados Gerais da Câmara carregado');
             
-            // Apply masks safely
-            $('[data-mask]').each(function() {
+            // Apply CEP mask specifically
+            const cepInput = $('#cep_input');
+            if (cepInput.length) {
+                cepInput.mask('00000-000', {
+                    placeholder: '00000-000',
+                    clearIfNotMatch: true
+                });
+            }
+
+            // Apply other masks safely
+            $('[data-mask]').not('#cep_input').each(function() {
                 const $field = $(this);
                 const mask = $field.data('mask');
-                const value = $field.val();
                 
-                // Only apply mask if field has a value and it's a string
-                if (mask && value && typeof value === 'string' && value.trim() !== '') {
-                    console.log('Aplicando máscara', mask, 'para campo', $field.attr('name'), 'com valor', value);
-                    $field.mask(mask);
-                } else {
-                    console.log('Pulando máscara para campo', $field.attr('name'), '- valor:', value, 'tipo:', typeof value);
+                if (mask && typeof mask === 'string') {
+                    try {
+                        // Ensure the field has a valid string value before applying mask
+                        let currentValue = $field.val();
+                        
+                        // Convert null, undefined, or non-string values to empty string
+                        if (currentValue === null || currentValue === undefined || typeof currentValue !== 'string') {
+                            currentValue = '';
+                            $field.val(currentValue);
+                        }
+                        
+                        // Only apply mask if we have a valid string value
+                        $field.mask(mask, {
+                            clearIfNotMatch: true,
+                            placeholder: ''
+                        });
+                        
+                        console.log('Máscara aplicada:', mask, 'para campo', $field.attr('name'));
+                    } catch (error) {
+                        console.warn('Erro ao aplicar máscara:', error, 'campo:', $field.attr('name'));
+                    }
                 }
             });
             
-            // Sistema de busca automática de câmaras (com delay para garantir DOM)
-            setTimeout(() => {
-                initCamaraBuscaAutomatica();
-            }, 500);
+            // Removido sistema de busca automática - entrada manual apenas
             
             const form = document.getElementById('dados-gerais-form');
             
-            // Handle form submission
-            form.addEventListener('submit', function(e) {
-                e.preventDefault();
+            // Handle individual tab saving
+            const saveButtons = document.querySelectorAll('.btn-save-tab');
+            saveButtons.forEach(button => {
+                button.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    const tabName = this.getAttribute('data-tab');
+                    const tabPane = document.getElementById(`kt_tab_${tabName}`);
+                    
+                    if (!tabPane) {
+                        console.error('Tab pane not found:', tabName);
+                        return;
+                    }
+                    
+                    // Get only fields from the current tab
+                    const tabFields = tabPane.querySelectorAll('input, select, textarea');
+                    const requiredTabFields = tabPane.querySelectorAll('[required]');
+                    const emptyFields = [];
+                    
+                    // Validate only required fields in the current tab
+                    requiredTabFields.forEach(field => {
+                        if (!field.value.trim()) {
+                            emptyFields.push({
+                                field: field,
+                                name: field.getAttribute('name'),
+                                tab: tabPane
+                            });
+                        }
+                    });
+                    
+                    // If there are empty required fields in this tab, show validation error
+                    if (emptyFields.length > 0) {
+                        const firstEmptyField = emptyFields[0];
+                        
+                        // Focus on the first empty field
+                        setTimeout(() => {
+                            firstEmptyField.field.focus();
+                            firstEmptyField.field.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }, 100);
+                        
+                        // Show simple validation alert for this tab
+                        const tabDisplayNames = {
+                            'identificacao': 'Identificação',
+                            'endereco': 'Endereço', 
+                            'contatos': 'Contatos',
+                            'funcionamento': 'Funcionamento',
+                            'gestao': 'Gestão Atual'
+                        };
+                        
+                        const fieldLabels = {
+                            'nome_camara': 'Nome da Câmara',
+                            'sigla_camara': 'Sigla',
+                            'endereco': 'Endereço',
+                            'bairro': 'Bairro',
+                            'cidade': 'Cidade', 
+                            'estado': 'Estado',
+                            'cep': 'CEP',
+                            'telefone': 'Telefone Principal',
+                            'email_institucional': 'E-mail Institucional',
+                            'horario_funcionamento': 'Horário de Funcionamento',
+                            'horario_atendimento': 'Horário de Atendimento',
+                            'presidente_nome': 'Nome do Presidente',
+                            'presidente_partido': 'Partido do Presidente',
+                            'legislatura_atual': 'Legislatura Atual',
+                            'numero_vereadores': 'Número de Vereadores'
+                        };
+                        
+                        let fieldsList = emptyFields.map(item => fieldLabels[item.name] || item.name).join(', ');
+                        
+                        Swal.fire({
+                            title: '⚠️ Campos Obrigatórios',
+                            html: `
+                                <div class="text-start">
+                                    <div class="alert alert-light-warning d-flex align-items-center p-4 mb-3">
+                                        <i class="ki-duotone ki-information-5 fs-2 text-warning me-3">
+                                            <span class="path1"></span>
+                                            <span class="path2"></span>
+                                            <span class="path3"></span>
+                                        </i>
+                                        <div>
+                                            <strong>Aba "${tabDisplayNames[tabName]}"</strong><br>
+                                            <span class="text-muted">Preencha os campos obrigatórios para salvar</span>
+                                        </div>
+                                    </div>
+                                    <p class="mb-3"><strong>Campos pendentes:</strong></p>
+                                    <p class="text-gray-700">${fieldsList}</p>
+                                </div>
+                            `,
+                            icon: 'warning',
+                            confirmButtonText: '📝 Preencher',
+                            confirmButtonColor: '#ffc107'
+                        });
+                        
+                        return; // Don't continue with save
+                    }
+                    
+                    // Create FormData with only fields from the current tab
+                    const formData = new FormData();
+                    
+                    // Add CSRF token
+                    const csrfToken = document.querySelector('meta[name="csrf-token"]');
+                    if (csrfToken && csrfToken.getAttribute('content')) {
+                        formData.append('_token', csrfToken.getAttribute('content'));
+                        console.log('🔐 Token CSRF adicionado:', csrfToken.getAttribute('content').substring(0, 10) + '...');
+                    } else {
+                        console.warn('⚠️ Token CSRF não encontrado!');
+                    }
+                    
+                    // Add only the fields from the current tab
+                    console.log('📋 Campos encontrados na aba:', tabFields.length);
+                    tabFields.forEach(field => {
+                        if (field.name) {
+                            console.log('📝 Adicionando campo:', field.name, '=', field.value || '');
+                            formData.append(field.name, field.value || '');
+                        }
+                    });
+                    
+                    // Add tab identifier for backend processing
+                    formData.append('save_tab', tabName);
+                    console.log('💾 Enviando dados para aba:', tabName);
                 
-                const formData = new FormData(form);
-                
-                // Show loading
-                const submitBtn = form.querySelector('button[type="submit"]');
-                submitBtn.classList.add('btn-loading');
-                submitBtn.querySelector('.indicator-label').style.display = 'none';
-                submitBtn.querySelector('.indicator-progress').style.display = 'inline-block';
+                // Show loading state on the current button
+                const currentButton = this;
+                currentButton.classList.add('btn-loading');
+                currentButton.querySelector('.indicator-label').style.display = 'none';
+                currentButton.querySelector('.indicator-progress').style.display = 'inline-block';
                 
                 fetch(form.action, {
                     method: 'POST',
@@ -536,45 +750,360 @@
                         'X-Requested-With': 'XMLHttpRequest'
                     }
                 })
-                .then(response => response.json())
+                .then(response => {
+                    console.log('📡 Status da resposta:', response.status);
+                    return response.json();
+                })
                 .then(data => {
-                    submitBtn.classList.remove('btn-loading');
-                    submitBtn.querySelector('.indicator-label').style.display = 'inline-block';
-                    submitBtn.querySelector('.indicator-progress').style.display = 'none';
+                    console.log('📨 Resposta do servidor:', data);
+                    // Reset button state
+                    currentButton.classList.remove('btn-loading');
+                    currentButton.querySelector('.indicator-label').style.display = 'inline-block';
+                    currentButton.querySelector('.indicator-progress').style.display = 'none';
                     
                     if (data.success) {
+                        // Get display name for the tab that was saved
+                        const tabDisplayNames = {
+                            'identificacao': 'Identificação',
+                            'endereco': 'Endereço', 
+                            'contatos': 'Contatos',
+                            'funcionamento': 'Funcionamento',
+                            'gestao': 'Gestão Atual'
+                        };
+                        const savedTabName = tabDisplayNames[tabName] || tabName;
+                        
                         Swal.fire({
-                            title: 'Sucesso!',
-                            text: data.message,
+                            title: '✅ Dados Salvos com Sucesso!',
+                            html: `
+                                <div class="text-start">
+                                    <h5 class="mb-3"><i class="ki-duotone ki-check-circle fs-2 text-success me-2">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                    </i>Informações da Aba "${savedTabName}" Salvas</h5>
+                                    
+                                    <div class="alert alert-light-success d-flex align-items-center p-4 mb-3">
+                                        <i class="ki-duotone ki-information-5 fs-2 text-success me-3">
+                                            <span class="path1"></span>
+                                            <span class="path2"></span>
+                                            <span class="path3"></span>
+                                        </i>
+                                        <div>
+                                            <strong>Dados da câmara atualizados:</strong><br>
+                                            <span class="text-muted">As informações foram salvas e estão disponíveis para uso no sistema.</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="d-flex align-items-center text-muted fs-7">
+                                        <i class="ki-duotone ki-time fs-6 me-2">
+                                            <span class="path1"></span>
+                                            <span class="path2"></span>
+                                        </i>
+                                        Salvo em: ${new Date().toLocaleString('pt-BR')}
+                                    </div>
+                                </div>
+                            `,
                             icon: 'success',
-                            confirmButtonText: 'OK'
+                            width: 500,
+                            confirmButtonText: '👍 Perfeito!',
+                            confirmButtonColor: '#50cd89',
+                            allowOutsideClick: false,
+                            customClass: {
+                                popup: 'swal2-success-detailed'
+                            }
                         });
                     } else {
                         Swal.fire({
-                            title: 'Erro',
-                            text: data.message || 'Erro ao salvar configurações.',
+                            title: '❌ Erro ao Salvar',
+                            html: `
+                                <div class="text-start">
+                                    <div class="alert alert-light-danger d-flex align-items-center p-4 mb-3">
+                                        <i class="ki-duotone ki-cross-circle fs-2 text-danger me-3">
+                                            <span class="path1"></span>
+                                            <span class="path2"></span>
+                                        </i>
+                                        <div>
+                                            <strong>Não foi possível salvar os dados:</strong><br>
+                                            <span class="text-muted">${data.message || 'Erro inesperado ao processar as informações.'}</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="alert alert-light-warning p-3">
+                                        <i class="ki-duotone ki-information fs-6 me-2">
+                                            <span class="path1"></span>
+                                            <span class="path2"></span>
+                                            <span class="path3"></span>
+                                        </i>
+                                        <strong>Sugestões:</strong>
+                                        <ul class="mb-0 mt-2">
+                                            <li>Verifique se todos os campos obrigatórios estão preenchidos</li>
+                                            <li>Confirme se os dados estão no formato correto</li>
+                                            <li>Tente novamente em alguns momentos</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            `,
                             icon: 'error',
-                            confirmButtonText: 'OK'
+                            width: 550,
+                            confirmButtonText: '🔄 Tentar Novamente',
+                            confirmButtonColor: '#f1416c'
                         });
                     }
                 })
                 .catch(error => {
-                    submitBtn.classList.remove('btn-loading');
-                    submitBtn.querySelector('.indicator-label').style.display = 'inline-block';
-                    submitBtn.querySelector('.indicator-progress').style.display = 'none';
+                    // Reset button state on error
+                    currentButton.classList.remove('btn-loading');
+                    currentButton.querySelector('.indicator-label').style.display = 'inline-block';
+                    currentButton.querySelector('.indicator-progress').style.display = 'none';
                     
-                    console.error('Error:', error);
+                    console.error('❌ Erro durante o salvamento:', error);
                     Swal.fire({
-                        title: 'Erro',
-                        text: 'Erro de conexão ao salvar configurações.',
+                        title: '🌐 Erro de Conexão',
+                        html: `
+                            <div class="text-start">
+                                <div class="alert alert-light-danger d-flex align-items-center p-4 mb-3">
+                                    <i class="ki-duotone ki-disconnect fs-2 text-danger me-3">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                        <span class="path3"></span>
+                                        <span class="path4"></span>
+                                        <span class="path5"></span>
+                                    </i>
+                                    <div>
+                                        <strong>Falha na comunicação com o servidor:</strong><br>
+                                        <span class="text-muted">Não foi possível estabelecer conexão para salvar os dados.</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="alert alert-light-primary p-3">
+                                    <i class="ki-duotone ki-information fs-6 me-2">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                        <span class="path3"></span>
+                                    </i>
+                                    <strong>O que fazer:</strong>
+                                    <ul class="mb-0 mt-2">
+                                        <li>Verifique sua conexão com a internet</li>
+                                        <li>Aguarde alguns segundos e tente novamente</li>
+                                        <li>Se o problema persistir, contate o suporte técnico</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        `,
                         icon: 'error',
-                        confirmButtonText: 'OK'
+                        width: 550,
+                        confirmButtonText: '🔄 Tentar Novamente',
+                        confirmButtonColor: '#f1416c'
                     });
                 });
             });
+
+            // Sistema de busca automática de endereço por CEP
+            initCepAutofill();
+        });
+
+        /**
+         * Busca endereço pela API interna de CEP
+         */
+        async function buscarEnderecoPorCep(cep) {
+            const loadingDiv = document.getElementById('cep_loading');
+            const cepInput = document.getElementById('cep_input');
             
-            // Sistema de Busca Automática de Câmaras
-            function initCamaraBuscaAutomatica() {
+            try {
+                // Mostrar loading
+                loadingDiv.classList.remove('d-none');
+                cepInput.style.paddingRight = '2.5rem'; // Espaço para o spinner
+                
+                console.log('🔍 Buscando CEP via API interna:', cep);
+                
+                const response = await fetch(`/api/cep/${cep}`, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (!result.success) {
+                    throw new Error(result.message || 'CEP não encontrado');
+                }
+                
+                const data = result.data;
+                
+                // Adicionar ao cache antes de preencher
+                if (window.addCepToCache) {
+                    window.addCepToCache(cep, data);
+                }
+                
+                // Preencher campos automaticamente
+                preencherCamposEndereco(data);
+                
+                // Mostrar toast de sucesso discreto
+                toastr.success(`Endereço encontrado: ${data.localidade || 'N/A'} - ${data.uf || 'N/A'}`, '✅ CEP Encontrado', {
+                    timeOut: 3000,
+                    positionClass: 'toast-top-right',
+                    showMethod: 'slideDown',
+                    hideMethod: 'slideUp'
+                });
+                
+            } catch (error) {
+                console.error('Erro na busca do CEP:', error);
+                
+                // Mostrar toast de erro discreto
+                toastr.warning(`CEP ${cep} não encontrado. Preencha manualmente.`, '⚠️ CEP não encontrado', {
+                    timeOut: 4000,
+                    positionClass: 'toast-top-right',
+                    showMethod: 'slideDown',
+                    hideMethod: 'slideUp'
+                });
+            } finally {
+                // Esconder loading
+                loadingDiv.classList.add('d-none');
+                cepInput.style.paddingRight = ''; // Remover espaço extra
+            }
+        }
+        
+        /**
+         * Preenche os campos de endereço com os dados da API
+         */
+        function preencherCamposEndereco(data) {
+            const campos = {
+                endereco_input: data.logradouro || '',
+                bairro_input: data.bairro || '',
+                cidade_input: data.localidade || '',
+                estado_select: data.uf || ''
+            };
+            
+            // Preencher campos com animação suave
+            Object.entries(campos).forEach(([fieldId, valor], index) => {
+                const field = document.getElementById(fieldId);
+                if (field && valor) {
+                    // Animação escalonada (cada campo um pouco depois do anterior)
+                    setTimeout(() => {
+                        // Efeito de fade para indicar mudança
+                        field.style.transition = 'all 0.3s ease';
+                        field.style.backgroundColor = '#d4edda';
+                        field.value = valor;
+                        
+                        // Remover efeito visual após um tempo
+                        setTimeout(() => {
+                            field.style.backgroundColor = '';
+                            field.style.transition = '';
+                        }, 1500);
+                    }, index * 100); // 100ms entre cada campo
+                }
+            });
+            
+            // Após preencher todos os campos, focar no campo número
+            setTimeout(() => {
+                const numeroInput = document.getElementById('numero_input');
+                if (numeroInput) {
+                    numeroInput.focus();
+                    numeroInput.select(); // Seleciona o texto se já houver algo
+                    
+                    // Adicionar efeito visual no campo focado
+                    numeroInput.style.transition = 'all 0.4s ease';
+                    numeroInput.style.borderColor = '#50cd89';
+                    numeroInput.style.boxShadow = '0 0 0 0.2rem rgba(80, 205, 137, 0.25)';
+                    
+                    // Remover efeito visual após um tempo
+                    setTimeout(() => {
+                        numeroInput.style.borderColor = '';
+                        numeroInput.style.boxShadow = '';
+                        numeroInput.style.transition = '';
+                    }, 2000);
+                }
+            }, 500); // Aguarda todos os campos serem preenchidos (4 campos * 100ms + margem)
+            
+            console.log('✅ Campos preenchidos automaticamente:', campos);
+        }
+
+        /**
+         * Inicializa o sistema de preenchimento automático por CEP
+         */
+        function initCepAutofill() {
+            const cepInput = document.getElementById('cep_input');
+            const loadingDiv = document.getElementById('cep_loading');
+            
+            if (!cepInput) return;
+            
+            let searchTimeout;
+            let lastSearchedCep = '';
+            let isSearching = false; // Flag para evitar múltiplas buscas simultâneas
+            
+            // Cache simples para CEPs já buscados
+            const cepCache = new Map();
+            
+            function performCepSearch(cep) {
+                // Evitar buscas duplicadas
+                if (isSearching || cep === lastSearchedCep) {
+                    return;
+                }
+                
+                // Verificar cache primeiro
+                if (cepCache.has(cep)) {
+                    console.log('✅ CEP encontrado no cache:', cep);
+                    preencherCamposEndereco(cepCache.get(cep));
+                    toastr.success('Endereço carregado do cache', '⚡ Cache', { timeOut: 1500 });
+                    return;
+                }
+                
+                lastSearchedCep = cep;
+                isSearching = true;
+                buscarEnderecoPorCep(cep).finally(() => {
+                    isSearching = false;
+                });
+            }
+            
+            // Busca automática quando o usuário digita
+            cepInput.addEventListener('input', function() {
+                clearTimeout(searchTimeout);
+                const rawValue = this.value;
+                const cep = rawValue.replace(/\D/g, ''); // Remove caracteres não numéricos
+                
+                // Limpar loading se não tiver 8 dígitos
+                if (cep.length < 8) {
+                    loadingDiv.classList.add('d-none');
+                    return;
+                }
+                
+                // Se tiver 8 dígitos
+                if (cep.length === 8) {
+                    searchTimeout = setTimeout(() => {
+                        performCepSearch(cep);
+                    }, 800); // Aguarda 800ms após parar de digitar
+                }
+            });
+
+            // Busca também quando cola texto
+            cepInput.addEventListener('paste', function() {
+                setTimeout(() => {
+                    const cep = this.value.replace(/\D/g, '');
+                    if (cep.length === 8) {
+                        performCepSearch(cep);
+                    }
+                }, 100);
+            });
+
+            // Busca quando sai do campo (blur) se tiver 8 dígitos
+            cepInput.addEventListener('blur', function() {
+                const cep = this.value.replace(/\D/g, '');
+                if (cep.length === 8) {
+                    performCepSearch(cep);
+                }
+            });
+            
+            // Função para adicionar ao cache (será chamada pela buscarEnderecoPorCep)
+            window.addCepToCache = function(cep, data) {
+                cepCache.set(cep, data);
+            };
+        }
+        
+            
+        // Função removida - Sistema de busca automática desativado
+            /*function initCamaraBuscaAutomatica() {
                 const input = document.getElementById('nome_camara_input');
                 const loading = document.getElementById('busca_loading');
                 const suggestions = document.getElementById('camara_suggestions');
@@ -1194,16 +1723,13 @@
                 console.log('- Loading:', loading ? 'OK' : 'ERRO');
                 console.log('- Suggestions:', suggestions ? 'OK' : 'ERRO');
                 console.log('- Alert:', alert ? 'OK' : 'ERRO');
-            }
+            }*/
             
-            // Inicializar sistema de autocomplete do Presidente
-            setTimeout(() => {
-                initPresidenteAutocomplete();
-            }, 500);
+            // Sistema de autocomplete removido - entrada manual apenas
         });
 
-        // Sistema de Autocomplete do Presidente da Câmara
-        function initPresidenteAutocomplete() {
+        // Sistema de autocomplete removido - entrada manual apenas
+        /*function initPresidenteAutocomplete() {
             const presidenteInput = document.getElementById('presidente_nome_input');
             const presidentePartidoInput = document.getElementById('presidente_partido_input');
             const presidenteIdInput = document.getElementById('presidente_id');
@@ -1475,10 +2001,10 @@
             });
             
             console.log('👤 Autocomplete do presidente configurado com sucesso');
-        }
+        }*/
 
-        // Função para verificar status das APIs
-        async function checkApiStatus() {
+        // Função removida - verificação de status de APIs desativada
+        /*async function checkApiStatus() {
             const btn = document.getElementById('check-api-status-btn');
             const originalText = btn.innerHTML;
             
@@ -1571,7 +2097,7 @@
                     popup: 'swal2-api-status'
                 }
             });
-        }
+        }*/
     </script>
     
     <style>
@@ -1620,6 +2146,76 @@
         .badge.fs-8 {
             font-size: 0.7rem;
             padding: 0.25rem 0.5rem;
+        }
+        
+        /* Custom SweetAlert styling */
+        .swal2-success-detailed .swal2-popup {
+            border: 2px solid #50cd89;
+        }
+        
+        .swal2-success-detailed .swal2-title {
+            color: #50cd89;
+            font-weight: 600;
+        }
+        
+        .swal2-popup .alert {
+            border: 1px solid rgba(0,0,0,0.1);
+            border-radius: 8px;
+        }
+        
+        .swal2-popup .alert-light-success {
+            background-color: rgba(80, 205, 137, 0.1);
+            border-color: rgba(80, 205, 137, 0.2);
+        }
+        
+        .swal2-popup .alert-light-danger {
+            background-color: rgba(241, 65, 108, 0.1);
+            border-color: rgba(241, 65, 108, 0.2);
+        }
+        
+        .swal2-popup .alert-light-warning {
+            background-color: rgba(255, 199, 0, 0.1);
+            border-color: rgba(255, 199, 0, 0.2);
+        }
+        
+        .swal2-popup .alert-light-primary {
+            background-color: rgba(26, 141, 234, 0.1);
+            border-color: rgba(26, 141, 234, 0.2);
+        }
+        
+        /* Animation for success popup */
+        .swal2-success-detailed.swal2-show {
+            animation: swal2-success-show 0.3s ease-out;
+        }
+        
+        @keyframes swal2-success-show {
+            0% {
+                transform: scale(0.8);
+                opacity: 0;
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+        
+        /* Custom validation popup styling */
+        .swal2-validation-popup .swal2-popup {
+            border: 2px solid #ffc107;
+        }
+        
+        .swal2-validation-popup .swal2-title {
+            color: #ffc107;
+            font-weight: 600;
+        }
+        
+        .swal2-validation-popup .bg-light {
+            background-color: rgba(248, 249, 250, 0.8) !important;
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+        
+        .swal2-validation-popup ul li {
+            padding: 2px 0;
         }
     </style>
 @endpush

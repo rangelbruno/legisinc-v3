@@ -55,13 +55,13 @@ class DynamicPermissionService
             // Salvar novas permissões - APENAS as que têm acesso true
             foreach ($permissions as $routeName => $hasAccess) {
                 // Log para debug
-                \Log::info("Processing permission for {$roleName}: {$routeName} = " . json_encode($hasAccess));
+                // Log::info("Processing permission for {$roleName}: {$routeName} = " . json_encode($hasAccess));
                 
                 // Só salvar se realmente tem acesso
                 if ($hasAccess === true || $hasAccess === 1 || $hasAccess === '1' || $hasAccess === 'true') {
                     $routeData = $this->findRouteData($routeName);
                     
-                    \Log::info("Creating permission for {$roleName}: {$routeName} with can_access=true");
+                    // Log::info("Creating permission for {$roleName}: {$routeName} with can_access=true");
                     
                     ScreenPermission::create([
                         'role_name' => $roleName,
@@ -74,7 +74,7 @@ class DynamicPermissionService
                         'can_delete' => $this->shouldHaveDeletePermission($routeName),
                     ]);
                 } else {
-                    \Log::info("Skipping permission for {$roleName}: {$routeName} (hasAccess = " . json_encode($hasAccess) . ")");
+                    // Log::info("Skipping permission for {$roleName}: {$routeName} (hasAccess = " . json_encode($hasAccess) . ")");
                 }
             }
             
@@ -89,7 +89,7 @@ class DynamicPermissionService
             
         } catch (\Exception $e) {
             DB::rollBack();
-            \Log::error('Erro ao salvar permissões: ' . $e->getMessage());
+            // Log::error('Erro ao salvar permissões: ' . $e->getMessage());
             return false;
         }
     }
@@ -209,27 +209,27 @@ class DynamicPermissionService
      */
     public function getRolePermissions(string $roleName): Collection
     {
-        \Log::info('DynamicPermissionService::getRolePermissions called for role: ' . $roleName);
+        // Log::info('DynamicPermissionService::getRolePermissions called for role: ' . $roleName);
         
         // Buscar todas as permissões do role
         $permissions = ScreenPermission::where('role_name', $roleName)->get();
         
-        \Log::info('Found permissions count: ' . $permissions->count());
+        // Log::info('Found permissions count: ' . $permissions->count());
         
         // Se não há permissões, aplicar padrões automaticamente
         if ($permissions->isEmpty()) {
-            \Log::info('No permissions found for role: ' . $roleName . '. Applying defaults.');
+            // Log::info('No permissions found for role: ' . $roleName . '. Applying defaults.');
             $this->applyDefaultPermissions($roleName);
             
             // Buscar novamente após aplicar os padrões
             $permissions = ScreenPermission::where('role_name', $roleName)->get();
-            \Log::info('After applying defaults, found permissions count: ' . $permissions->count());
+            // Log::info('After applying defaults, found permissions count: ' . $permissions->count());
         }
         
         // Debug: verificar valores reais
         foreach ($permissions as $index => $permission) {
             $canAccess = $permission->can_access;
-            \Log::info("Permission #{$index}: {$permission->screen_route} - can_access value: " . json_encode($canAccess) . " (type: " . gettype($canAccess) . ")");
+            // Log::info("Permission #{$index}: {$permission->screen_route} - can_access value: " . json_encode($canAccess) . " (type: " . gettype($canAccess) . ")");
         }
         
         // Retornar TODAS as permissões do role, não apenas as ativas
@@ -453,7 +453,7 @@ class DynamicPermissionService
             app()->make(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
         } catch (\Exception $e) {
             // Se falhar ao limpar cache, apenas logar o erro mas continuar
-            \Log::warning('Não foi possível limpar o cache de permissões: ' . $e->getMessage());
+            // Log::warning('Não foi possível limpar o cache de permissões: ' . $e->getMessage());
         }
     }
 }

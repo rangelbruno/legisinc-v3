@@ -27,12 +27,12 @@ class OnlyOfficeController extends Controller
         }
         
         $user = auth()->user();
-        \Log::info('OnlyOffice editarModelo - User check:', [
-            'user_id' => $user->id,
-            'user_name' => $user->name,
-            'user_roles' => $user->getRoleNames()->toArray(),
-            'modelo_id' => $modelo->id,
-        ]);
+        // Log::info('OnlyOffice editarModelo - User check:', [
+            //     'user_id' => $user->id,
+            //     'user_name' => $user->name,
+            //     'user_roles' => $user->getRoleNames()->toArray(),
+            //     'modelo_id' => $modelo->id,
+        // ]);
         
         $this->authorize('update', $modelo);
         
@@ -46,19 +46,19 @@ class OnlyOfficeController extends Controller
             $novoDocumentKey = 'modelo_' . time() . '_' . uniqid() . '_' . rand(1000, 9999);
             $modelo->update(['document_key' => $novoDocumentKey]);
             
-            \Log::info('Document key regenerated for modelo:', [
-                'modelo_id' => $modelo->id,
-                'old_key' => $oldKey,
-                'new_key' => $novoDocumentKey,
-                'reason' => 'empty key or file modified >5min ago',
-                'key_age_minutes' => $keyAge
-            ]);
+            // Log::info('Document key regenerated for modelo:', [
+                //     'modelo_id' => $modelo->id,
+                //     'old_key' => $oldKey,
+                //     'new_key' => $novoDocumentKey,
+                //     'reason' => 'empty key or file modified >5min ago',
+                //     'key_age_minutes' => $keyAge
+            // ]);
         } else {
-            \Log::info('Using existing document key for modelo (recently modified):', [
-                'modelo_id' => $modelo->id,
-                'existing_key' => $modelo->document_key,
-                'key_age_minutes' => $keyAge
-            ]);
+            // Log::info('Using existing document key for modelo (recently modified):', [
+                //     'modelo_id' => $modelo->id,
+                //     'existing_key' => $modelo->document_key,
+                //     'key_age_minutes' => $keyAge
+            // ]);
         }
         
         $config = $this->onlyOfficeService->criarConfiguracao(
@@ -129,27 +129,27 @@ class OnlyOfficeController extends Controller
     public function callback(Request $request, string $documentKey)
     {
         try {
-            \Log::info('OnlyOffice Callback received:', [
-                'document_key' => $documentKey,
-                'data' => $request->all(),
-                'headers' => $request->headers->all()
-            ]);
+            // Log::info('OnlyOffice Callback received:', [
+                //     'document_key' => $documentKey,
+                //     'data' => $request->all(),
+                //     'headers' => $request->headers->all()
+            // ]);
             
             $data = $request->all();
             $resultado = $this->onlyOfficeService->processarCallback($documentKey, $data);
             
-            \Log::info('OnlyOffice Callback processed successfully:', [
-                'document_key' => $documentKey,
-                'result' => $resultado
-            ]);
+            // Log::info('OnlyOffice Callback processed successfully:', [
+                //     'document_key' => $documentKey,
+                //     'result' => $resultado
+            // ]);
             
             return response()->json($resultado);
         } catch (\Exception $e) {
-            \Log::error('Erro no callback ONLYOFFICE: ' . $e->getMessage(), [
-                'document_key' => $documentKey,
-                'data' => $request->all(),
-                'trace' => $e->getTraceAsString()
-            ]);
+            // Log::error('Erro no callback ONLYOFFICE: ' . $e->getMessage(), [
+                //     'document_key' => $documentKey,
+                //     'data' => $request->all(),
+                //     'trace' => $e->getTraceAsString()
+            // ]);
             
             return response()->json(['error' => 1, 'message' => $e->getMessage()]);
         }
@@ -160,26 +160,26 @@ class OnlyOfficeController extends Controller
         // Skip authorization for OnlyOffice server access
         // $this->authorize('view', $modelo);
         
-        \Log::info('Download modelo requested from OnlyOffice:', [
-            'request_headers' => request()->headers->all(),
-            'request_ip' => request()->ip(),
-            'user_agent' => request()->userAgent(),
-            'modelo_id' => $modelo->id,
-            'modelo_nome' => $modelo->nome,
-            'arquivo_path' => $modelo->arquivo_path,
-            'arquivo_nome' => $modelo->arquivo_nome,
-            'document_key' => $modelo->document_key
-        ]);
+        // Log::info('Download modelo requested from OnlyOffice:', [
+            //     'request_headers' => request()->headers->all(),
+            //     'request_ip' => request()->ip(),
+            //     'user_agent' => request()->userAgent(),
+            //     'modelo_id' => $modelo->id,
+            //     'modelo_nome' => $modelo->nome,
+            //     'arquivo_path' => $modelo->arquivo_path,
+            //     'arquivo_nome' => $modelo->arquivo_nome,
+            //     'document_key' => $modelo->document_key
+        // ]);
         
         // List all files in the directory for debugging
         $files = Storage::disk('public')->files('documentos/modelos');
-        \Log::info('Files in modelos directory:', $files);
+        // Log::info('Files in modelos directory:', $files);
         
         if (!$modelo->arquivo_path || !Storage::disk('public')->exists($modelo->arquivo_path)) {
-            \Log::warning('File not found, creating empty file:', [
-                'arquivo_path' => $modelo->arquivo_path,
-                'exists' => Storage::disk('public')->exists($modelo->arquivo_path ?? 'NULL')
-            ]);
+            // Log::warning('File not found, creating empty file:', [
+                //     'arquivo_path' => $modelo->arquivo_path,
+                //     'exists' => Storage::disk('public')->exists($modelo->arquivo_path ?? 'NULL')
+            // ]);
             
             // Try to find existing files with similar names
             $modeloSlug = \Illuminate\Support\Str::slug($modelo->nome);
@@ -195,7 +195,7 @@ class OnlyOfficeController extends Controller
             foreach ($possibleFiles as $possibleFile) {
                 if (Storage::disk('public')->exists($possibleFile)) {
                     $foundFile = $possibleFile;
-                    \Log::info('Found existing file:', ['file' => $foundFile]);
+                    // Log::info('Found existing file:', ['file' => $foundFile]);
                     break;
                 }
             }
@@ -208,10 +208,10 @@ class OnlyOfficeController extends Controller
                     'arquivo_size' => Storage::disk('public')->size($foundFile)
                 ]);
                 
-                \Log::info('Updated modelo with found file:', [
-                    'modelo_id' => $modelo->id,
-                    'new_path' => $foundFile
-                ]);
+                // Log::info('Updated modelo with found file:', [
+                    //     'modelo_id' => $modelo->id,
+                    //     'new_path' => $foundFile
+                // ]);
             } else {
                 // Criar arquivo vazio se não existir
                 $this->criarArquivoVazio($modelo);
@@ -264,7 +264,7 @@ class OnlyOfficeController extends Controller
             throw new \Exception('Erro ao baixar PDF convertido');
             
         } catch (\Exception $e) {
-            \Log::error('Erro na conversão para PDF: ' . $e->getMessage());
+            // Log::error('Erro na conversão para PDF: ' . $e->getMessage());
             return back()->with('error', 'Erro ao converter documento para PDF: ' . $e->getMessage());
         }
     }
@@ -391,12 +391,12 @@ Você pode editá-lo usando o OnlyOffice.\par
         }
         
         $user = auth()->user();
-        \Log::info('OnlyOffice editarModeloStandalone - User check:', [
-            'user_id' => $user->id,
-            'user_name' => $user->name,
-            'user_roles' => $user->getRoleNames()->toArray(),
-            'modelo_id' => $modelo->id,
-        ]);
+        // Log::info('OnlyOffice editarModeloStandalone - User check:', [
+            //     'user_id' => $user->id,
+            //     'user_name' => $user->name,
+            //     'user_roles' => $user->getRoleNames()->toArray(),
+            //     'modelo_id' => $modelo->id,
+        // ]);
         
         $this->authorize('update', $modelo);
         
@@ -410,31 +410,31 @@ Você pode editá-lo usando o OnlyOffice.\par
             $novoDocumentKey = 'modelo_' . time() . '_' . uniqid() . '_' . rand(1000, 9999);
             $modelo->update(['document_key' => $novoDocumentKey]);
             
-            \Log::info('Document key regenerated for modelo:', [
-                'modelo_id' => $modelo->id,
-                'old_key' => $oldKey,
-                'new_key' => $novoDocumentKey,
-                'reason' => 'empty key or file modified >5min ago',
-                'key_age_minutes' => $keyAge
-            ]);
+            // Log::info('Document key regenerated for modelo:', [
+                //     'modelo_id' => $modelo->id,
+                //     'old_key' => $oldKey,
+                //     'new_key' => $novoDocumentKey,
+                //     'reason' => 'empty key or file modified >5min ago',
+                //     'key_age_minutes' => $keyAge
+            // ]);
         } else {
-            \Log::info('Using existing document key for modelo (recently modified):', [
-                'modelo_id' => $modelo->id,
-                'existing_key' => $modelo->document_key,
-                'key_age_minutes' => $keyAge
-            ]);
+            // Log::info('Using existing document key for modelo (recently modified):', [
+                //     'modelo_id' => $modelo->id,
+                //     'existing_key' => $modelo->document_key,
+                //     'key_age_minutes' => $keyAge
+            // ]);
         }
         
         $downloadUrl = $this->generateFileUrlForOnlyOffice('onlyoffice.file.modelo', $modelo);
         
-        \Log::info('OnlyOffice configuration debug:', [
-            'modelo_id' => $modelo->id,
-            'document_key' => $modelo->document_key,
-            'arquivo_nome' => $modelo->arquivo_nome,
-            'arquivo_path' => $modelo->arquivo_path,
-            'download_url' => $downloadUrl,
-            'route_check' => route('onlyoffice.file.modelo', $modelo)
-        ]);
+        // Log::info('OnlyOffice configuration debug:', [
+            //     'modelo_id' => $modelo->id,
+            //     'document_key' => $modelo->document_key,
+            //     'arquivo_nome' => $modelo->arquivo_nome,
+            //     'arquivo_path' => $modelo->arquivo_path,
+            //     'download_url' => $downloadUrl,
+            //     'route_check' => route('onlyoffice.file.modelo', $modelo)
+        // ]);
         
         $config = $this->onlyOfficeService->criarConfiguracao(
             $modelo->document_key,
@@ -513,9 +513,9 @@ Você pode editá-lo usando o OnlyOffice.\par
             return $templateService->processarTemplate($conteudo, []);
             
         } catch (\Exception $e) {
-            \Log::warning('Erro ao processar variáveis do template:', [
-                'error' => $e->getMessage()
-            ]);
+            // Log::warning('Erro ao processar variáveis do template:', [
+                //     'error' => $e->getMessage()
+            // ]);
             
             // Se houver erro, retornar conteúdo original
             return $conteudo;
@@ -560,12 +560,12 @@ Você pode editá-lo usando o OnlyOffice.\par
                     'arquivo_size' => Storage::disk('public')->size($mostRecent)
                 ]);
                 
-                \Log::info('Updated modelo to point to most recent file:', [
-                    'modelo_id' => $modelo->id,
-                    'old_path' => $modelo->arquivo_path,
-                    'new_path' => $mostRecent,
-                    'new_size' => Storage::disk('public')->size($mostRecent)
-                ]);
+                // Log::info('Updated modelo to point to most recent file:', [
+                    //     'modelo_id' => $modelo->id,
+                    //     'old_path' => $modelo->arquivo_path,
+                    //     'new_path' => $mostRecent,
+                    //     'new_size' => Storage::disk('public')->size($mostRecent)
+                // ]);
                 
                 return response()->json([
                     'success' => true,
@@ -576,13 +576,13 @@ Você pode editá-lo usando o OnlyOffice.\par
             }
             
             // Log the manual save attempt
-            \Log::info('Manual save requested for modelo:', [
-                'modelo_id' => $modelo->id,
-                'document_key' => $documentKey,
-                'user_id' => auth()->id(),
-                'current_file' => $modelo->arquivo_path,
-                'files_found' => $files
-            ]);
+            // Log::info('Manual save requested for modelo:', [
+                //     'modelo_id' => $modelo->id,
+                //     'document_key' => $documentKey,
+                //     'user_id' => auth()->id(),
+                //     'current_file' => $modelo->arquivo_path,
+                //     'files_found' => $files
+            // ]);
             
             return response()->json([
                 'success' => true,
@@ -592,10 +592,10 @@ Você pode editá-lo usando o OnlyOffice.\par
             ]);
             
         } catch (\Exception $e) {
-            \Log::error('Error in manual save:', [
-                'modelo_id' => $modelo->id,
-                'error' => $e->getMessage()
-            ]);
+            // Log::error('Error in manual save:', [
+                //     'modelo_id' => $modelo->id,
+                //     'error' => $e->getMessage()
+            // ]);
             
             return response()->json([
                 'error' => 'Failed to save: ' . $e->getMessage()

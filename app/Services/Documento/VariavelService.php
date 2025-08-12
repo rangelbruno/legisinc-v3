@@ -21,7 +21,7 @@ class VariavelService
             
             return $this->extrairVariaveisManualmente($caminhoArquivo);
         } catch (\Exception $e) {
-            \Log::warning('Erro ao extrair variáveis do documento: ' . $e->getMessage());
+            // Log::warning('Erro ao extrair variáveis do documento: ' . $e->getMessage());
             return $this->definirVariaveisPadrao();
         }
     }
@@ -164,7 +164,7 @@ class VariavelService
                 $zip->close();
             }
         } catch (\Exception $e) {
-            \Log::warning('Erro na extração manual de variáveis: ' . $e->getMessage());
+            // Log::warning('Erro na extração manual de variáveis: ' . $e->getMessage());
         }
 
         return array_unique($variaveis);

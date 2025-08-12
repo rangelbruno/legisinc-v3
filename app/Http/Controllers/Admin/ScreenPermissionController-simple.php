@@ -45,7 +45,7 @@ class ScreenPermissionController extends Controller
             ];
             
         } catch (\Exception $e) {
-            Log::error('Erro ao carregar tela de permissões: ' . $e->getMessage());
+            // Log::error('Erro ao carregar tela de permissões: ' . $e->getMessage());
             
             // Dados vazios em caso de erro
             $roles = [];

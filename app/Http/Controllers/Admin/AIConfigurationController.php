@@ -26,7 +26,7 @@ class AIConfigurationController extends Controller
      */
     public function index(): View
     {
-        \Log::info('Acessando index das configurações de IA', ['user' => auth()->id()]);
+        // Log::info('Acessando index das configurações de IA', ['user' => auth()->id()]);
         
         // Temporariamente usar coleção vazia se houver problemas com o banco
         try {
@@ -34,7 +34,7 @@ class AIConfigurationController extends Controller
                 ->orderBy('name')
                 ->get();
         } catch (\Exception $e) {
-            \Log::warning('Erro ao buscar configurações, usando coleção vazia', ['error' => $e->getMessage()]);
+            // Log::warning('Erro ao buscar configurações, usando coleção vazia', ['error' => $e->getMessage()]);
             $configurations = collect();
         }
 
@@ -91,33 +91,33 @@ class AIConfigurationController extends Controller
 
             DB::beginTransaction();
 
-            Log::info('Tentando criar configuração de IA', [
-                'name' => $validated['name'],
-                'provider' => $validated['provider'],
-                'user' => auth()->id()
-            ]);
+            // Log::info('Tentando criar configuração de IA', [
+                //     'name' => $validated['name'],
+                //     'provider' => $validated['provider'],
+                //     'user' => auth()->id()
+            // ]);
 
             $configuration = AIConfiguration::create($validated);
 
-            Log::info('Configuração de IA criada com sucesso', [
-                'id' => $configuration->id,
-                'name' => $configuration->name
-            ]);
+            // Log::info('Configuração de IA criada com sucesso', [
+                //     'id' => $configuration->id,
+                //     'name' => $configuration->name
+            // ]);
 
             // Testar a configuração se solicitado
             if ($request->has('test_connection')) {
-                Log::info('Testando configuração após criação');
+                // Log::info('Testando configuração após criação');
                 $testResult = $this->aiService->testarConexao(null, $configuration->id);
                 
                 if (!$testResult['success']) {
                     DB::rollback();
-                    Log::warning('Teste falhou após criação', ['result' => $testResult]);
+                    // Log::warning('Teste falhou após criação', ['result' => $testResult]);
                     return back()
                         ->withErrors(['test' => 'Configuração criada mas falhou no teste: ' . $testResult['message']])
                         ->withInput();
                 }
                 
-                Log::info('Teste passou com sucesso após criação');
+                // Log::info('Teste passou com sucesso após criação');
             }
 
             DB::commit();
@@ -133,12 +133,12 @@ class AIConfigurationController extends Controller
                 
         } catch (\Exception $e) {
             DB::rollback();
-            Log::error('Erro ao criar configuração de IA', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-                'data' => $request->all(),
-                'user' => auth()->id()
-            ]);
+            // Log::error('Erro ao criar configuração de IA', [
+                //     'error' => $e->getMessage(),
+                //     'trace' => $e->getTraceAsString(),
+                //     'data' => $request->all(),
+                //     'user' => auth()->id()
+            // ]);
 
             $errorMessage = 'Erro ao criar configuração: ' . $e->getMessage();
             
@@ -215,11 +215,11 @@ class AIConfigurationController extends Controller
 
         } catch (\Exception $e) {
             DB::rollback();
-            Log::error('Erro ao atualizar configuração de IA', [
-                'id' => $aiConfiguration->id,
-                'error' => $e->getMessage(),
-                'data' => $validated
-            ]);
+            // Log::error('Erro ao atualizar configuração de IA', [
+                //     'id' => $aiConfiguration->id,
+                //     'error' => $e->getMessage(),
+                //     'data' => $validated
+            // ]);
 
             return back()
                 ->withErrors(['general' => 'Erro ao atualizar configuração: ' . $e->getMessage()])
@@ -241,10 +241,10 @@ class AIConfigurationController extends Controller
                 ->with('success', "Configuração '$name' removida com sucesso!");
 
         } catch (\Exception $e) {
-            Log::error('Erro ao remover configuração de IA', [
-                'id' => $aiConfiguration->id,
-                'error' => $e->getMessage()
-            ]);
+            // Log::error('Erro ao remover configuração de IA', [
+                //     'id' => $aiConfiguration->id,
+                //     'error' => $e->getMessage()
+            // ]);
 
             return back()
                 ->withErrors(['general' => 'Erro ao remover configuração: ' . $e->getMessage()]);
@@ -262,10 +262,10 @@ class AIConfigurationController extends Controller
             return response()->json($result);
 
         } catch (\Exception $e) {
-            Log::error('Erro ao testar conexão de IA', [
-                'id' => $aiConfiguration->id,
-                'error' => $e->getMessage()
-            ]);
+            // Log::error('Erro ao testar conexão de IA', [
+                //     'id' => $aiConfiguration->id,
+                //     'error' => $e->getMessage()
+            // ]);
 
             return response()->json([
                 'success' => false,
@@ -310,11 +310,11 @@ class AIConfigurationController extends Controller
             ], 422);
             
         } catch (\Exception $e) {
-            Log::error('Erro ao testar dados de conexão de IA', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-                'data' => $request->all()
-            ]);
+            // Log::error('Erro ao testar dados de conexão de IA', [
+                //     'error' => $e->getMessage(),
+                //     'trace' => $e->getTraceAsString(),
+                //     'data' => $request->all()
+            // ]);
 
             return response()->json([
                 'success' => false,
@@ -338,9 +338,9 @@ class AIConfigurationController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            Log::error('Erro ao testar todas as configurações de IA', [
-                'error' => $e->getMessage()
-            ]);
+            // Log::error('Erro ao testar todas as configurações de IA', [
+                //     'error' => $e->getMessage()
+            // ]);
 
             return response()->json([
                 'success' => false,

@@ -117,11 +117,11 @@ class ProposicaoProtocoloController extends Controller
             $onlyOfficeService = app(\App\Services\OnlyOffice\OnlyOfficeService::class);
             $onlyOfficeService->regenerarPDFComProtocolo($proposicao);
         } catch (\Exception $e) {
-            \Log::warning('Falha ao regenerar PDF com número de protocolo', [
-                'proposicao_id' => $proposicao->id,
-                'numero_protocolo' => $numeroProtocolo,
-                'error' => $e->getMessage()
-            ]);
+            // Log::warning('Falha ao regenerar PDF com número de protocolo', [
+                //     'proposicao_id' => $proposicao->id,
+                //     'numero_protocolo' => $numeroProtocolo,
+                //     'error' => $e->getMessage()
+            // ]);
         }
 
         // TODO: Implementar sistema de tramitação quando disponível

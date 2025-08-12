@@ -129,7 +129,7 @@ class ParlamentarController extends Controller
         $validatedData['status'] = 'ativo';
 
         // Debug: log dados validados
-        \Log::info('Dados validados para criação:', $validatedData);
+        // Log::info('Dados validados para criação:', $validatedData);
 
         try {
             // Processar upload da foto
@@ -153,7 +153,7 @@ class ParlamentarController extends Controller
             // Re-adicionar status pois pode ter sido removido
             $validatedData['status'] = 'ativo';
             
-            \Log::info('Dados finais para criação:', $validatedData);
+            // Log::info('Dados finais para criação:', $validatedData);
             
             $parlamentar = $this->parlamentarService->create($validatedData);
             
@@ -220,7 +220,7 @@ class ParlamentarController extends Controller
 
 
         // Debug: log dados validados
-        \Log::info('Dados validados para atualização:', $validatedData);
+        // Log::info('Dados validados para atualização:', $validatedData);
 
         try {
             // Processar upload da foto
@@ -244,7 +244,7 @@ class ParlamentarController extends Controller
             }
             
             // Para atualização, manter campos vazios pois podem ser para limpar dados
-            \Log::info('Dados finais para atualização:', $validatedData);
+            // Log::info('Dados finais para atualização:', $validatedData);
             
             $parlamentar = $this->parlamentarService->update($id, $validatedData);
             
@@ -551,10 +551,10 @@ class ParlamentarController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('Erro na busca de parlamentares via API', [
-                'erro' => $e->getMessage(),
-                'termo' => $request->get('q', '')
-            ]);
+            // Log::error('Erro na busca de parlamentares via API', [
+                //     'erro' => $e->getMessage(),
+                //     'termo' => $request->get('q', '')
+            // ]);
 
             return response()->json([
                 'success' => false,

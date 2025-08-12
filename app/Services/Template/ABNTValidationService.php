@@ -71,10 +71,10 @@ class ABNTValidationService
             $validacoes['score_geral'] = $this->calcularScoreGeral($validacoes);
             
         } catch (\Exception $e) {
-            Log::error('Erro na validação ABNT', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
+            // Log::error('Erro na validação ABNT', [
+            //     'error' => $e->getMessage(),
+            //     'trace' => $e->getTraceAsString()
+            // ]);
             
             $validacoes['erro'] = [
                 'status' => 'erro',
@@ -408,9 +408,9 @@ class ABNTValidationService
             }
 
         } catch (\Exception $e) {
-            Log::error('Erro ao aplicar correções automáticas', [
-                'error' => $e->getMessage()
-            ]);
+            // Log::error('Erro ao aplicar correções automáticas', [
+            //     'error' => $e->getMessage()
+            // ]);
         }
 
         return [

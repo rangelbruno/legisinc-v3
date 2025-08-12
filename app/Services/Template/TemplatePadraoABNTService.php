@@ -59,11 +59,11 @@ class TemplatePadraoABNTService
                 $validacao = $this->abntValidationService->validarDocumento($documentoHTML);
             }
 
-            Log::info('Documento gerado com template padrão ABNT', [
-                'tipo_proposicao' => $dadosProposicao['tipo'] ?? 'desconhecido',
-                'score_abnt' => $validacao['score_geral']['percentual'] ?? 0,
-                'variaveis_processadas' => count($variaveisProcessadas)
-            ]);
+            // Log::info('Documento gerado com template padrão ABNT', [
+            //     'tipo_proposicao' => $dadosProposicao['tipo'] ?? 'desconhecido',
+            //     'score_abnt' => $validacao['score_geral']['percentual'] ?? 0,
+            //     'variaveis_processadas' => count($variaveisProcessadas)
+            // ]);
 
             return [
                 'success' => true,
@@ -74,11 +74,11 @@ class TemplatePadraoABNTService
             ];
 
         } catch (\Exception $e) {
-            Log::error('Erro ao gerar documento com template padrão ABNT', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-                'dados_proposicao' => $dadosProposicao
-            ]);
+            // Log::error('Erro ao gerar documento com template padrão ABNT', [
+            //     'error' => $e->getMessage(),
+            //     'trace' => $e->getTraceAsString(),
+            //     'dados_proposicao' => $dadosProposicao
+            // ]);
 
             return [
                 'success' => false,
@@ -108,9 +108,9 @@ class TemplatePadraoABNTService
             $variaveis = array_merge($variaveis, $this->obterVariaveisCalculadas($dadosProposicao, $variaveis));
             
         } catch (\Exception $e) {
-            Log::warning('Erro ao processar variáveis', [
-                'error' => $e->getMessage()
-            ]);
+            // Log::warning('Erro ao processar variáveis', [
+            //     'error' => $e->getMessage()
+            // ]);
         }
 
         return $variaveis;
@@ -176,9 +176,9 @@ class TemplatePadraoABNTService
                 "<img src=\"/storage/{$imagemCabecalho}\" alt=\"Logotipo da Câmara\" class=\"logo-cabecalho\">" : '';
                 
         } catch (\Exception $e) {
-            Log::warning('Erro ao obter variáveis de parâmetros', [
-                'error' => $e->getMessage()
-            ]);
+            // Log::warning('Erro ao obter variáveis de parâmetros', [
+            //     'error' => $e->getMessage()
+            // ]);
         }
         
         return $variaveis;

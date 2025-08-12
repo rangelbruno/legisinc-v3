@@ -28,7 +28,7 @@ class CamaraInfoController extends Controller
         $nome = $request->input('nome');
         
         try {
-            \Log::info('🔍 Iniciando busca por câmara', ['nome' => $nome]);
+            // Log::info('🔍 Iniciando busca por câmara', ['nome' => $nome]);
             
             // Usar o novo serviço que integra com APIs externas
             $dadosCamara = $this->camaraApiService->buscarCamaraPorCidade($nome);
@@ -54,10 +54,10 @@ class CamaraInfoController extends Controller
             ]);
             
         } catch (\Exception $e) {
-            \Log::error('Erro ao buscar câmara', [
-                'nome' => $nome,
-                'error' => $e->getMessage()
-            ]);
+            // Log::error('Erro ao buscar câmara', [
+                //     'nome' => $nome,
+                //     'error' => $e->getMessage()
+            // ]);
             
             return response()->json([
                 'success' => false,

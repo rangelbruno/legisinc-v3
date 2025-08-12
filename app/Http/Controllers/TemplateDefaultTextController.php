@@ -21,10 +21,10 @@ class TemplateDefaultTextController extends Controller
      */
     public function index(): View
     {
-        \Log::info('📝 TemplateDefaultTextController::index chamado', [
-            'user' => auth()->user()->email ?? 'não autenticado',
-            'timestamp' => now()
-        ]);
+        // Log::info('📝 TemplateDefaultTextController::index chamado', [
+            //     'user' => auth()->user()->email ?? 'não autenticado',
+            //     'timestamp' => now()
+        // ]);
         
         // Obter configurações atuais
         $configuracoes = $this->obterConfiguracoes();
@@ -63,10 +63,10 @@ class TemplateDefaultTextController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('Erro ao salvar configurações do texto padrão', [
-                'error' => $e->getMessage(),
-                'user' => auth()->id()
-            ]);
+            // Log::error('Erro ao salvar configurações do texto padrão', [
+                //     'error' => $e->getMessage(),
+                //     'user' => auth()->id()
+            // ]);
 
             return response()->json([
                 'success' => false,
@@ -91,9 +91,9 @@ class TemplateDefaultTextController extends Controller
                 'assinatura_departamento' => $this->parametroService->obterValor('Templates', 'Texto Padrão', 'assinatura_departamento') ?: 'Câmara Municipal'
             ];
         } catch (\Exception $e) {
-            \Log::warning('Erro ao obter configurações do texto padrão, usando padrões', [
-                'error' => $e->getMessage()
-            ]);
+            // Log::warning('Erro ao obter configurações do texto padrão, usando padrões', [
+                //     'error' => $e->getMessage()
+            // ]);
             // Se houver erro, usar valores padrão
             return [
                 'usar_texto_padrao' => false,

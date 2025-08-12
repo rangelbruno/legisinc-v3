@@ -6,7 +6,7 @@ use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
+// use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
 
 class CheckPermission
@@ -28,16 +28,16 @@ class CheckPermission
         $userRoles = $user->getRoleNames();
         
         // Log temporário para debug
-        Log::info('CheckPermission Debug', [
-            'user_id' => $user->id,
-            'user_email' => $user->email,
-            'roles' => $userRoles->toArray(),
-            'permission_requested' => $permission,
-            'route' => $request->route()->getName()
-        ]);
+        // Log::info('CheckPermission Debug', [
+        //     'user_id' => $user->id,
+        //     'user_email' => $user->email,
+        //     'roles' => $userRoles->toArray(),
+        //     'permission_requested' => $permission,
+        //     'route' => $request->route()->getName()
+        // ]);
         
         if ($userRoles->contains('ADMIN') || $userRoles->contains('Administrador')) {
-            Log::info('Admin access granted', ['user' => $user->email]);
+            // Log::info('Admin access granted', ['user' => $user->email]);
             return $next($request);
         }
 

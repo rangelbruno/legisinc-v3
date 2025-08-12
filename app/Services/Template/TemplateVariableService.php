@@ -110,9 +110,9 @@ class TemplateVariableService
             $variables['total_paginas'] = '1';
 
         } catch (\Exception $e) {
-            Log::error('Erro ao obter variáveis de template', [
-                'error' => $e->getMessage()
-            ]);
+            // Log::error('Erro ao obter variáveis de template', [
+            //     'error' => $e->getMessage()
+            // ]);
         }
 
         return $variables;

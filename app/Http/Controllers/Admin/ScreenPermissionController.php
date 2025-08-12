@@ -24,14 +24,14 @@ class ScreenPermissionController extends Controller
     public function index(): View
     {
         try {
-            Log::info('ScreenPermissionController::index called');
+            // Log::info('ScreenPermissionController::index called');
             
             $data = $this->permissionService->getPermissionStructure();
             
-            Log::info('Permission structure loaded:');
-            Log::info('Modules count: ' . $data['modules']->count());
-            Log::info('Roles count: ' . $data['roles']->count());
-            Log::info('Current permissions: ' . json_encode($data['current']));
+            // Log::info('Permission structure loaded:');
+            // Log::info('Modules count: ' . $data['modules']->count());
+            // Log::info('Roles count: ' . $data['roles']->count());
+            // Log::info('Current permissions: ' . json_encode($data['current']));
             
             // Adicionar informações sobre configurações padrão
             $roleStatuses = [];
@@ -49,8 +49,8 @@ class ScreenPermissionController extends Controller
             ]);
             
         } catch (\Exception $e) {
-            Log::error('Erro ao carregar permissões: ' . $e->getMessage());
-            Log::error('Stack trace: ' . $e->getTraceAsString());
+            // Log::error('Erro ao carregar permissões: ' . $e->getMessage());
+            // Log::error('Stack trace: ' . $e->getTraceAsString());
             
             // Fallback para dados vazios
             return view('admin.screen-permissions.dynamic', [
@@ -75,7 +75,7 @@ class ScreenPermissionController extends Controller
     public function saveRolePermissions(Request $request): JsonResponse
     {
         $startTime = microtime(true);
-        Log::info('ScreenPermissionController::saveRolePermissions iniciado');
+        // Log::info('ScreenPermissionController::saveRolePermissions iniciado');
         
         $request->validate([
             'role' => 'required|string',
@@ -83,10 +83,10 @@ class ScreenPermissionController extends Controller
         ]);
 
         try {
-            Log::info('Dados recebidos:', [
-                'role' => $request->input('role'),
-                'permissions_count' => count($request->input('permissions'))
-            ]);
+            // Log::info('Dados recebidos:', [
+                //     'role' => $request->input('role'),
+                //     'permissions_count' => count($request->input('permissions'))
+            // ]);
             
             $success = $this->permissionService->saveRolePermissions(
                 $request->input('role'),
@@ -96,7 +96,7 @@ class ScreenPermissionController extends Controller
             $endTime = microtime(true);
             $duration = ($endTime - $startTime) * 1000; // em millisegundos
             
-            Log::info('Processo de salvamento concluído em ' . round($duration, 2) . 'ms');
+            // Log::info('Processo de salvamento concluído em ' . round($duration, 2) . 'ms');
 
             if ($success) {
                 return response()->json([
@@ -111,8 +111,8 @@ class ScreenPermissionController extends Controller
             }
 
         } catch (\Exception $e) {
-            Log::error('Erro ao salvar permissões: ' . $e->getMessage());
-            Log::error('Stack trace: ' . $e->getTraceAsString());
+            // Log::error('Erro ao salvar permissões: ' . $e->getMessage());
+            // Log::error('Stack trace: ' . $e->getTraceAsString());
             
             return response()->json([
                 'success' => false,
@@ -148,7 +148,7 @@ class ScreenPermissionController extends Controller
             }
 
         } catch (\Exception $e) {
-            Log::error('Erro ao aplicar permissões padrão: ' . $e->getMessage());
+            // Log::error('Erro ao aplicar permissões padrão: ' . $e->getMessage());
             
             return response()->json([
                 'success' => false,
@@ -180,7 +180,7 @@ class ScreenPermissionController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            Log::error('Erro ao inicializar sistema: ' . $e->getMessage());
+            // Log::error('Erro ao inicializar sistema: ' . $e->getMessage());
             
             return response()->json([
                 'success' => false,
@@ -195,11 +195,11 @@ class ScreenPermissionController extends Controller
     public function getRolePermissions(string $role): JsonResponse
     {
         try {
-            Log::info('ScreenPermissionController::getRolePermissions called for role: ' . $role);
+            // Log::info('ScreenPermissionController::getRolePermissions called for role: ' . $role);
             
             $permissions = $this->permissionService->getRolePermissions($role);
             
-            Log::info('Permissions retrieved: ' . $permissions->count() . ' items');
+            // Log::info('Permissions retrieved: ' . $permissions->count() . ' items');
             
             // Retornar apenas as rotas que têm can_access = true como array simples
             $activeRoutes = [];
@@ -209,7 +209,7 @@ class ScreenPermissionController extends Controller
                 }
             }
             
-            Log::info('Active routes: ' . json_encode($activeRoutes));
+            // Log::info('Active routes: ' . json_encode($activeRoutes));
             
             return response()->json([
                 'success' => true,
@@ -217,8 +217,8 @@ class ScreenPermissionController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            Log::error('Erro ao buscar permissões do role: ' . $e->getMessage());
-            Log::error('Stack trace: ' . $e->getTraceAsString());
+            // Log::error('Erro ao buscar permissões do role: ' . $e->getMessage());
+            // Log::error('Stack trace: ' . $e->getTraceAsString());
             
             return response()->json([
                 'success' => false,
@@ -251,7 +251,7 @@ class ScreenPermissionController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            Log::error('Erro ao testar permissões: ' . $e->getMessage());
+            // Log::error('Erro ao testar permissões: ' . $e->getMessage());
             
             return response()->json([
                 'success' => false,
@@ -272,7 +272,7 @@ class ScreenPermissionController extends Controller
         try {
             $roleName = $request->input('role');
             
-            Log::info('Aplicando configuração padrão para role: ' . $roleName);
+            // Log::info('Aplicando configuração padrão para role: ' . $roleName);
             
             // Aplicar permissões padrão
             $success = $this->permissionService->applyDefaultPermissions($roleName);
@@ -288,10 +288,10 @@ class ScreenPermissionController extends Controller
                     }
                 }
                 
-                Log::info('Configuração padrão aplicada com sucesso', [
-                    'role' => $roleName,
-                    'permissions_count' => count($permissionArray)
-                ]);
+                // Log::info('Configuração padrão aplicada com sucesso', [
+                    //     'role' => $roleName,
+                    //     'permissions_count' => count($permissionArray)
+                // ]);
                 
                 return response()->json([
                     'success' => true,
@@ -307,8 +307,8 @@ class ScreenPermissionController extends Controller
             }
             
         } catch (\Exception $e) {
-            Log::error('Erro ao aplicar configuração padrão: ' . $e->getMessage());
-            Log::error('Stack trace: ' . $e->getTraceAsString());
+            // Log::error('Erro ao aplicar configuração padrão: ' . $e->getMessage());
+            // Log::error('Stack trace: ' . $e->getTraceAsString());
             
             return response()->json([
                 'success' => false,

@@ -39,7 +39,7 @@ class AIProviderService
             }
 
         } catch (\Exception $e) {
-            Log::error('Error getting real usage statistics: ' . $e->getMessage());
+            // Log::error('Error getting real usage statistics: ' . $e->getMessage());
             return $this->getFallbackStats();
         }
     }
@@ -76,7 +76,7 @@ class AIProviderService
             }
 
         } catch (\Exception $e) {
-            Log::error('Error getting real chart data: ' . $e->getMessage());
+            // Log::error('Error getting real chart data: ' . $e->getMessage());
             return $this->generateRealisticChartData();
         }
     }
@@ -106,7 +106,7 @@ class AIProviderService
             }
 
         } catch (\Exception $e) {
-            Log::error('Error validating provider connection: ' . $e->getMessage());
+            // Log::error('Error validating provider connection: ' . $e->getMessage());
             return [
                 'status' => 'error',
                 'message' => 'Erro interno na validação: ' . $e->getMessage()
@@ -162,7 +162,7 @@ class AIProviderService
             }
 
         } catch (\Exception $e) {
-            Log::warning('OpenAI API call failed, using fallback: ' . $e->getMessage());
+            // Log::warning('OpenAI API call failed, using fallback: ' . $e->getMessage());
         }
 
         return $this->getDatabaseStats();
@@ -556,7 +556,7 @@ class AIProviderService
             return true;
 
         } catch (\Exception $e) {
-            Log::error('Failed to record token usage: ' . $e->getMessage());
+            // Log::error('Failed to record token usage: ' . $e->getMessage());
             return false;
         }
     }
@@ -621,11 +621,11 @@ class AIProviderService
                 }
             }
 
-            Log::info("Generated sample usage data for provider {$providerId}");
+            // Log::info("Generated sample usage data for provider {$providerId}");
             return true;
 
         } catch (\Exception $e) {
-            Log::error('Failed to generate sample usage data: ' . $e->getMessage());
+            // Log::error('Failed to generate sample usage data: ' . $e->getMessage());
             return false;
         }
     }

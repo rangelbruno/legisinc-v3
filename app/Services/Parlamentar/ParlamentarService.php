@@ -205,7 +205,7 @@ class ParlamentarService
             
             return '';
         } catch (\Exception $e) {
-            \Log::error('Erro ao formatar data: ' . $e->getMessage(), ['date' => $date]);
+            // Log::error('Erro ao formatar data: ' . $e->getMessage(), ['date' => $date]);
             return '';
         }
     }
@@ -237,7 +237,7 @@ class ParlamentarService
             
             return '';
         } catch (\Exception $e) {
-            \Log::error('Erro ao formatar datetime: ' . $e->getMessage(), ['datetime' => $datetime]);
+            // Log::error('Erro ao formatar datetime: ' . $e->getMessage(), ['datetime' => $datetime]);
             return '';
         }
     }

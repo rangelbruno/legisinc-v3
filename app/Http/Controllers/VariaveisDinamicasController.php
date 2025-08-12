@@ -22,10 +22,10 @@ class VariaveisDinamicasController extends Controller
      */
     public function index(): View
     {
-        \Log::info('📋 VariaveisDinamicasController::index chamado', [
-            'user' => auth()->user()->email ?? 'não autenticado',
-            'timestamp' => now()
-        ]);
+        // Log::info('📋 VariaveisDinamicasController::index chamado', [
+            //     'user' => auth()->user()->email ?? 'não autenticado',
+            //     'timestamp' => now()
+        // ]);
         
         // Obter configurações atuais
         $configuracoes = $this->obterConfiguracoes();
@@ -38,11 +38,11 @@ class VariaveisDinamicasController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
-        \Log::info('💾 VariaveisDinamicasController::store chamado', [
-            'user' => auth()->user()->email ?? 'não autenticado',
-            'data' => $request->all(),
-            'timestamp' => now()
-        ]);
+        // Log::info('💾 VariaveisDinamicasController::store chamado', [
+            //     'user' => auth()->user()->email ?? 'não autenticado',
+            //     'data' => $request->all(),
+            //     'timestamp' => now()
+        // ]);
         
         $request->validate([
             'variaveis' => 'required|array|min:1',
@@ -65,10 +65,10 @@ class VariaveisDinamicasController extends Controller
         ]);
 
         try {
-            \Log::info('💾 Iniciando salvamento das variáveis dinâmicas', [
-                'user' => auth()->user()->email,
-                'total_variaveis' => count($request->input('variaveis'))
-            ]);
+            // Log::info('💾 Iniciando salvamento das variáveis dinâmicas', [
+                //     'user' => auth()->user()->email,
+                //     'total_variaveis' => count($request->input('variaveis'))
+            // ]);
 
             $variaveis = $request->input('variaveis');
             
@@ -135,10 +135,10 @@ class VariaveisDinamicasController extends Controller
             // Salvar no sistema de parâmetros
             $this->salvarVariaveisParametros($variaveisProcessadas);
 
-            \Log::info('✅ Variáveis dinâmicas salvas com sucesso', [
-                'user' => auth()->user()->email,
-                'total_variaveis' => count($variaveisProcessadas)
-            ]);
+            // Log::info('✅ Variáveis dinâmicas salvas com sucesso', [
+                //     'user' => auth()->user()->email,
+                //     'total_variaveis' => count($variaveisProcessadas)
+            // ]);
 
             return response()->json([
                 'success' => true,
@@ -148,11 +148,11 @@ class VariaveisDinamicasController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('❌ Erro ao salvar variáveis dinâmicas', [
-                'user' => auth()->user()->email,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
+            // Log::error('❌ Erro ao salvar variáveis dinâmicas', [
+                //     'user' => auth()->user()->email,
+                //     'error' => $e->getMessage(),
+                //     'trace' => $e->getTraceAsString()
+            // ]);
 
             return response()->json([
                 'success' => false,
@@ -190,9 +190,9 @@ class VariaveisDinamicasController extends Controller
                 'variaveis_padrao' => $this->obterVariaveisPadrao()
             ];
         } catch (\Exception $e) {
-            \Log::error('❌ Erro ao obter configurações de variáveis dinâmicas', [
-                'error' => $e->getMessage()
-            ]);
+            // Log::error('❌ Erro ao obter configurações de variáveis dinâmicas', [
+                //     'error' => $e->getMessage()
+            // ]);
 
             return [
                 'variaveis' => $this->obterVariaveisPadrao(),
@@ -252,9 +252,9 @@ class VariaveisDinamicasController extends Controller
                 ];
             })->toArray();
         } catch (\Exception $e) {
-            \Log::error('❌ Erro ao obter variáveis dos parâmetros', [
-                'error' => $e->getMessage()
-            ]);
+            // Log::error('❌ Erro ao obter variáveis dos parâmetros', [
+                //     'error' => $e->getMessage()
+            // ]);
             return [];
         }
     }
@@ -296,16 +296,16 @@ class VariaveisDinamicasController extends Controller
             
             \DB::commit();
             
-            \Log::info('📝 Variáveis dinâmicas salvas com sucesso', [
-                'total' => count($variaveis),
-                'user_id' => $userId
-            ]);
+            // Log::info('📝 Variáveis dinâmicas salvas com sucesso', [
+                //     'total' => count($variaveis),
+                //     'user_id' => $userId
+            // ]);
         } catch (\Exception $e) {
             \DB::rollBack();
-            \Log::error('❌ Erro ao salvar variáveis nos parâmetros', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
+            // Log::error('❌ Erro ao salvar variáveis nos parâmetros', [
+                //     'error' => $e->getMessage(),
+                //     'trace' => $e->getTraceAsString()
+            // ]);
             throw $e;
         }
     }

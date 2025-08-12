@@ -134,7 +134,7 @@ class PermissionManagementService
         $routeName = $this->findRouteNameByRoute($route);
         
         if (!$module || !$routeName) {
-            Log::warning("Rota não encontrada para permissão: {$permission}");
+            // Log::warning("Rota não encontrada para permissão: {$permission}");
             return;
         }
 
@@ -216,10 +216,10 @@ class PermissionManagementService
             }
         }
         
-        Log::info("Sincronização de permissões concluída", [
-            'created' => $created,
-            'updated' => $updated
-        ]);
+        // Log::info("Sincronização de permissões concluída", [
+            //     'created' => $created,
+            //     'updated' => $updated
+        // ]);
         
         return compact('created', 'updated');
     }
@@ -261,10 +261,10 @@ class PermissionManagementService
                 }
             }
             
-            Log::info('Permissões importadas com sucesso', [
-                'backup_timestamp' => $backup['timestamp'] ?? 'unknown',
-                'permissions_imported' => ScreenPermission::count()
-            ]);
+            // Log::info('Permissões importadas com sucesso', [
+                //     'backup_timestamp' => $backup['timestamp'] ?? 'unknown',
+                //     'permissions_imported' => ScreenPermission::count()
+            // ]);
             
             $this->invalidateAllCaches();
         });
@@ -376,21 +376,21 @@ class PermissionManagementService
 
     private function logPermissionUpdate(string $roleName, array $permissions): void
     {
-        Log::info('Permissões atualizadas', [
-            'role' => $roleName,
-            'admin_user' => auth()->id(),
-            'permissions_count' => count($permissions),
-            'timestamp' => now()->toDateTimeString(),
-        ]);
+        // Log::info('Permissões atualizadas', [
+            //     'role' => $roleName,
+            //     'admin_user' => auth()->id(),
+            //     'permissions_count' => count($permissions),
+            //     'timestamp' => now()->toDateTimeString(),
+        // ]);
     }
 
     private function logPermissionReset(UserRole $role): void
     {
-        Log::info('Permissões resetadas para padrão', [
-            'role' => $role->value,
-            'admin_user' => auth()->id(),
-            'timestamp' => now()->toDateTimeString(),
-        ]);
+        // Log::info('Permissões resetadas para padrão', [
+            //     'role' => $role->value,
+            //     'admin_user' => auth()->id(),
+            //     'timestamp' => now()->toDateTimeString(),
+        // ]);
     }
 
     private function invalidateRelatedCaches(string $roleName): void

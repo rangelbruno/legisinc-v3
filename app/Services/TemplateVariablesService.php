@@ -360,10 +360,10 @@ class TemplateVariablesService
         
         $content = $this->getTemplateContent($template);
         if (!$content) {
-            \Log::warning('Template variable extraction: No content available', [
-                'template_id' => $template->id ?? 'unknown',
-                'error_type' => 'empty_content'
-            ]);
+            // Log::warning('Template variable extraction: No content available', [
+                //     'template_id' => $template->id ?? 'unknown',
+                //     'error_type' => 'empty_content'
+            // ]);
             return [];
         }
 
@@ -377,11 +377,11 @@ class TemplateVariablesService
         $foundVariables = array_unique($allVariables);
         $templateVariables = [];
 
-        \Log::debug('Template variable extraction completed', [
-            'template_id' => $template->id,
-            'variables_count' => count($foundVariables),
-            'variables' => $foundVariables
-        ]);
+        // Log::debug('Template variable extraction completed', [
+            //     'template_id' => $template->id,
+            //     'variables_count' => count($foundVariables),
+            //     'variables' => $foundVariables
+        // ]);
 
         // Obter todas as variáveis disponíveis (incluindo parâmetros dinâmicos)
         $allAvailableVariables = $this->getAllAvailableVariables();
@@ -401,12 +401,12 @@ class TemplateVariablesService
             }
         }
 
-        \Log::info('Template variables mapped', [
-            'template_id' => $template->id,
-            'total_variables' => count($templateVariables),
-            'system_variables' => count(array_filter($templateVariables, fn($v) => !isset($v['is_parameter']))),
-            'parameter_variables' => count(array_filter($templateVariables, fn($v) => isset($v['is_parameter'])))
-        ]);
+        // Log::info('Template variables mapped', [
+            //     'template_id' => $template->id,
+            //     'total_variables' => count($templateVariables),
+            //     'system_variables' => count(array_filter($templateVariables, fn($v) => !isset($v['is_parameter']))),
+            //     'parameter_variables' => count(array_filter($templateVariables, fn($v) => isset($v['is_parameter'])))
+        // ]);
 
         return $templateVariables;
     }
@@ -435,12 +435,12 @@ class TemplateVariablesService
             
             return $content;
         } catch (\Exception $e) {
-            \Log::error('Template variable extraction failed: File read error', [
-                'template_id' => $template->id,
-                'file_path' => $template->arquivo_path,
-                'error' => $e->getMessage(),
-                'error_type' => 'file_read_failed'
-            ]);
+            // Log::error('Template variable extraction failed: File read error', [
+                //     'template_id' => $template->id,
+                //     'file_path' => $template->arquivo_path,
+                //     'error' => $e->getMessage(),
+                //     'error_type' => 'file_read_failed'
+            // ]);
             return null;
         }
     }
@@ -452,9 +452,9 @@ class TemplateVariablesService
     {
         try {
             // Log do conteúdo original para debug
-            \Log::debug('RTF content extraction started', [
-                'content_size_bytes' => strlen($rtfContent)
-            ]);
+            // Log::debug('RTF content extraction started', [
+                //     'content_size_bytes' => strlen($rtfContent)
+            // ]);
             
             $text = $rtfContent;
             
@@ -536,20 +536,20 @@ class TemplateVariablesService
                 }
             }
             
-            \Log::debug('RTF content extraction completed', [
-                'original_size_bytes' => strlen($rtfContent),
-                'extracted_size_bytes' => strlen($text),
-                'variables_preserved' => count($variableMap),
-                'extraction_ratio' => round((strlen($text) / strlen($rtfContent)) * 100, 1) . '%'
-            ]);
+            // Log::debug('RTF content extraction completed', [
+                //     'original_size_bytes' => strlen($rtfContent),
+                //     'extracted_size_bytes' => strlen($text),
+                //     'variables_preserved' => count($variableMap),
+                //     'extraction_ratio' => round((strlen($text) / strlen($rtfContent)) * 100, 1) . '%'
+            // ]);
             
             return $text;
             
         } catch (\Exception $e) {
-            \Log::error('RTF content extraction failed', [
-                'error' => $e->getMessage(),
-                'error_type' => 'rtf_processing_failed'
-            ]);
+            // Log::error('RTF content extraction failed', [
+                //     'error' => $e->getMessage(),
+                //     'error_type' => 'rtf_processing_failed'
+            // ]);
             
             // Fallback: método simples para extrair ao menos as variáveis
             return $this->extractTextFromRTFSimple($rtfContent);
@@ -562,9 +562,9 @@ class TemplateVariablesService
     private function extractTextFromRTFSimple(string $rtfContent): string
     {
         try {
-            \Log::warning('RTF extraction: Using simple fallback method', [
-                'reason' => 'Advanced extraction failed'
-            ]);
+            // Log::warning('RTF extraction: Using simple fallback method', [
+                //     'reason' => 'Advanced extraction failed'
+            // ]);
             
             // Simplesmente remover códigos RTF básicos e manter variáveis
             $text = $rtfContent;
@@ -588,18 +588,18 @@ class TemplateVariablesService
                 $text .= ' ' . implode(' ', $variables);
             }
             
-            \Log::debug('RTF fallback extraction completed', [
-                'variables_preserved' => count($variables),
-                'extracted_size_bytes' => strlen($text)
-            ]);
+            // Log::debug('RTF fallback extraction completed', [
+                //     'variables_preserved' => count($variables),
+                //     'extracted_size_bytes' => strlen($text)
+            // ]);
             
             return trim($text);
             
         } catch (\Exception $e) {
-            \Log::error('RTF extraction failed completely', [
-                'error' => $e->getMessage(),
-                'error_type' => 'rtf_fallback_failed'
-            ]);
+            // Log::error('RTF extraction failed completely', [
+                //     'error' => $e->getMessage(),
+                //     'error_type' => 'rtf_fallback_failed'
+            // ]);
             return '';
         }
     }

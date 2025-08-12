@@ -31,6 +31,8 @@ class DatabaseSeeder extends Seeder
             ParametroSeeder::class,
             ParametroPermissionSeeder::class,
             ParametroExemploSeeder::class,
+            DadosGeraisParametrosSeeder::class,
+            DadosGeraisValoresSeeder::class,
         ]);
 
         // Seeder de permissões de menu
@@ -68,6 +70,8 @@ class DatabaseSeeder extends Seeder
         $this->command->info('');
         $this->command->info('✅ Database seeded successfully!');
         $this->command->info('📄 OnlyOffice DocumentServer: Tabelas inicializadas');
+        $this->command->info('🏛️ Dados Gerais da Câmara: Módulos, campos e valores padrão configurados');
+        $this->command->info('⚙️ Configure seus dados em: /parametros-dados-gerais-camara');
         $this->command->info('');
         $this->command->info('👥 Usuários Disponíveis:');
         $this->command->info('🔧 Admin: bruno@sistema.gov.br / admin@sistema.gov.br - Senha: 123456/admin123');

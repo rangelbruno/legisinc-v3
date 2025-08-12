@@ -203,7 +203,7 @@ class PermissionCacheService
 
             return $permissions;
         } catch (\ValueError $e) {
-            Log::warning("Role inválido: {$roleName}");
+            // Log::warning("Role inválido: {$roleName}");
             return [];
         }
     }
@@ -231,7 +231,7 @@ class PermissionCacheService
         Cache::forget($cacheKey);
         Cache::forget($matrixKey);
         
-        Log::info("Cache de permissões limpo para usuário {$userId}");
+        // Log::info("Cache de permissões limpo para usuário {$userId}");
     }
 
     public function clearAllPermissionCaches(): void
@@ -247,9 +247,9 @@ class PermissionCacheService
                 $this->clearUserCache($userId);
             }
             
-            Log::info("Caches de permissões limpos para " . count($userIds) . " usuários");
+            // Log::info("Caches de permissões limpos para " . count($userIds) . " usuários");
         } catch (\Exception $e) {
-            Log::error("Erro ao limpar caches de permissões: " . $e->getMessage());
+            // Log::error("Erro ao limpar caches de permissões: " . $e->getMessage());
         }
     }
 
@@ -261,7 +261,7 @@ class PermissionCacheService
         Cache::forget($cacheKey);
         $this->loadUserPermissions($userId);
         
-        Log::info("Cache aquecido para usuário {$userId}");
+        // Log::info("Cache aquecido para usuário {$userId}");
     }
 
     public function getCacheStatistics(): array
@@ -310,7 +310,7 @@ class PermissionCacheService
                 ]);
             }
         } catch (\Exception $e) {
-            Log::error("Erro ao registrar tentativa de acesso: " . $e->getMessage());
+            // Log::error("Erro ao registrar tentativa de acesso: " . $e->getMessage());
         }
     }
 
@@ -327,7 +327,7 @@ class PermissionCacheService
             $count++;
         }
 
-        Log::info("Cache pré-carregado para {$count} usuários ativos");
+        // Log::info("Cache pré-carregado para {$count} usuários ativos");
         return $count;
     }
 }

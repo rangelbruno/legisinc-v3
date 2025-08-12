@@ -33,10 +33,10 @@ if (!function_exists('parametro')) {
                 
                 return $parametro->valor_formatado ?? $default;
             } catch (\Exception $e) {
-                \Log::error('Erro ao obter parâmetro', [
-                    'codigo' => $codigo,
-                    'error' => $e->getMessage()
-                ]);
+                // \Log::error('Erro ao obter parâmetro', [
+                //     'codigo' => $codigo,
+                //     'error' => $e->getMessage()
+                // ]);
                 
                 return $default;
             }
@@ -82,10 +82,10 @@ if (!function_exists('parametros_grupo')) {
                 
                 return $resultado;
             } catch (\Exception $e) {
-                \Log::error('Erro ao obter parâmetros do grupo', [
-                    'codigo_grupo' => $codigoGrupo,
-                    'error' => $e->getMessage()
-                ]);
+                // \Log::error('Erro ao obter parâmetros do grupo', [
+                //     'codigo_grupo' => $codigoGrupo,
+                //     'error' => $e->getMessage()
+                // ]);
                 
                 return [];
             }
@@ -300,10 +300,10 @@ if (!function_exists('ParametroHelper')) {
                     'visivel' => $parametro->visivel
                 ];
             } catch (\Exception $e) {
-                \Log::error('Erro ao obter parâmetro completo', [
-                    'codigo' => $codigo,
-                    'error' => $e->getMessage()
-                ]);
+                // \Log::error('Erro ao obter parâmetro completo', [
+//                     'codigo' => $codigo,
+//                     'error' => $e->getMessage()
+//                 ]);
                 
                 return null;
             }
@@ -333,11 +333,11 @@ if (!function_exists('ParametroHelper')) {
                 
                 return true;
             } catch (\Exception $e) {
-                \Log::error('Erro ao definir parâmetro', [
-                    'codigo' => $codigo,
-                    'valor' => $valor,
-                    'error' => $e->getMessage()
-                ]);
+                // \Log::error('Erro ao definir parâmetro', [
+//                     'codigo' => $codigo,
+//                     'valor' => $valor,
+//                     'error' => $e->getMessage()
+//                 ]);
                 
                 return false;
             }
@@ -362,10 +362,10 @@ if (!function_exists('ParametroHelper')) {
                 
                 return $resultado;
             } catch (\Exception $e) {
-                \Log::error('Erro ao obter parâmetros por prefixo', [
-                    'prefixo' => $prefixo,
-                    'error' => $e->getMessage()
-                ]);
+                // \Log::error('Erro ao obter parâmetros por prefixo', [
+//                     'prefixo' => $prefixo,
+//                     'error' => $e->getMessage()
+//                 ]);
                 
                 return [];
             }
@@ -385,10 +385,10 @@ if (!function_exists('ParametroHelper')) {
                     $cacheService->limparTodoCache();
                 }
             } catch (\Exception $e) {
-                \Log::error('Erro ao limpar cache de parâmetros', [
-                    'codigo' => $codigo,
-                    'error' => $e->getMessage()
-                ]);
+                // \Log::error('Erro ao limpar cache de parâmetros', [
+//                     'codigo' => $codigo,
+//                     'error' => $e->getMessage()
+//                 ]);
             }
         }
         
@@ -402,9 +402,9 @@ if (!function_exists('ParametroHelper')) {
                 $cacheService->limparTodoCache();
                 $cacheService->preaquecerCache();
             } catch (\Exception $e) {
-                \Log::error('Erro ao recarregar cache de parâmetros', [
-                    'error' => $e->getMessage()
-                ]);
+                // \Log::error('Erro ao recarregar cache de parâmetros', [
+//                     'error' => $e->getMessage()
+//                 ]);
             }
         }
     }

@@ -143,10 +143,10 @@ class TemplateInstanceService
             }
             
         } catch (Exception $e) {
-            \Log::warning('Erro ao processar variáveis via OnlyOffice, usando fallback', [
-                'instance_id' => $instance->id,
-                'erro' => $e->getMessage()
-            ]);
+            // Log::warning('Erro ao processar variáveis via OnlyOffice, usando fallback', [
+            //     'instance_id' => $instance->id,
+            //     'erro' => $e->getMessage()
+            // ]);
             
             // Fallback: substituição simples
             $this->substituirVariaveisSimples($instance, $variaveis);
@@ -226,10 +226,10 @@ class TemplateInstanceService
             return true;
             
         } catch (Exception $e) {
-            \Log::error('Erro ao excluir instância de template', [
-                'instance_id' => $instance->id,
-                'erro' => $e->getMessage()
-            ]);
+            // Log::error('Erro ao excluir instância de template', [
+            //     'instance_id' => $instance->id,
+            //     'erro' => $e->getMessage()
+            // ]);
             return false;
         }
     }

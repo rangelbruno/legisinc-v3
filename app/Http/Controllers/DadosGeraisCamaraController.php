@@ -6,6 +6,7 @@ use App\Services\Parametro\ParametroService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\View\View;
+use Illuminate\Support\Facades\DB;
 
 class DadosGeraisCamaraController extends Controller
 {
@@ -21,11 +22,6 @@ class DadosGeraisCamaraController extends Controller
      */
     public function index(): View
     {
-        \Log::info('📋 DadosGeraisCamaraController::index chamado', [
-            'user' => auth()->user()->email ?? 'não autenticado',
-            'timestamp' => now()
-        ]);
-        
         // Obter configurações atuais
         $configuracoes = $this->obterConfiguracoes();
         
@@ -37,74 +33,35 @@ class DadosGeraisCamaraController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
+        $saveTab = $request->input('save_tab');
         
-        $request->validate([
-            'nome_camara' => 'required|string|max:255',
-            'sigla_camara' => 'required|string|max:20',
-            'cnpj' => 'nullable|string|max:20',
-            'endereco' => 'required|string|max:255',
-            'numero' => 'nullable|string|max:20',
-            'complemento' => 'nullable|string|max:100',
-            'bairro' => 'required|string|max:100',
-            'cidade' => 'required|string|max:100',
-            'estado' => 'required|string|max:3',
-            'cep' => 'required|string|max:12',
-            'telefone' => 'required|string|max:20',
-            'telefone_secundario' => 'nullable|string|max:20',
-            'email_institucional' => 'required|email|max:255',
-            'email_contato' => 'nullable|email|max:255',
-            'website' => 'nullable|string|max:255',
-            'horario_funcionamento' => 'required|string|max:100',
-            'horario_atendimento' => 'required|string|max:100',
-            'presidente_nome' => 'required|string|max:255',
-            'presidente_partido' => 'required|string|max:50',
-            'legislatura_atual' => 'required|string|max:50',
-            'numero_vereadores' => 'required|integer|min:5|max:55'
-        ]);
+        // Define validation rules by tab
+        $validationRules = $this->getValidationRulesByTab($saveTab);
+        
+        // Apply validation only for the current tab fields
+        $request->validate($validationRules);
 
         try {
-            // Salvar cada configuração - Dados Básicos
-            $this->parametroService->salvarValor('Dados Gerais', 'Identificação', 'nome_camara', $request->input('nome_camara'));
-            $this->parametroService->salvarValor('Dados Gerais', 'Identificação', 'sigla_camara', $request->input('sigla_camara'));
-            $this->parametroService->salvarValor('Dados Gerais', 'Identificação', 'cnpj', $request->input('cnpj'));
-            
-            // Endereço
-            $this->parametroService->salvarValor('Dados Gerais', 'Endereço', 'endereco', $request->input('endereco'));
-            $this->parametroService->salvarValor('Dados Gerais', 'Endereço', 'numero', $request->input('numero'));
-            $this->parametroService->salvarValor('Dados Gerais', 'Endereço', 'complemento', $request->input('complemento'));
-            $this->parametroService->salvarValor('Dados Gerais', 'Endereço', 'bairro', $request->input('bairro'));
-            $this->parametroService->salvarValor('Dados Gerais', 'Endereço', 'cidade', $request->input('cidade'));
-            $this->parametroService->salvarValor('Dados Gerais', 'Endereço', 'estado', $request->input('estado'));
-            $this->parametroService->salvarValor('Dados Gerais', 'Endereço', 'cep', $request->input('cep'));
-            
-            // Contatos
-            $this->parametroService->salvarValor('Dados Gerais', 'Contatos', 'telefone', $request->input('telefone'));
-            $this->parametroService->salvarValor('Dados Gerais', 'Contatos', 'telefone_secundario', $request->input('telefone_secundario'));
-            $this->parametroService->salvarValor('Dados Gerais', 'Contatos', 'email_institucional', $request->input('email_institucional'));
-            $this->parametroService->salvarValor('Dados Gerais', 'Contatos', 'email_contato', $request->input('email_contato'));
-            $this->parametroService->salvarValor('Dados Gerais', 'Contatos', 'website', $request->input('website'));
-            
-            // Funcionamento
-            $this->parametroService->salvarValor('Dados Gerais', 'Funcionamento', 'horario_funcionamento', $request->input('horario_funcionamento'));
-            $this->parametroService->salvarValor('Dados Gerais', 'Funcionamento', 'horario_atendimento', $request->input('horario_atendimento'));
-            
-            // Gestão
-            $this->parametroService->salvarValor('Dados Gerais', 'Gestão', 'presidente_nome', $request->input('presidente_nome'));
-            $this->parametroService->salvarValor('Dados Gerais', 'Gestão', 'presidente_partido', $request->input('presidente_partido'));
-            $this->parametroService->salvarValor('Dados Gerais', 'Gestão', 'legislatura_atual', $request->input('legislatura_atual'));
-            $this->parametroService->salvarValor('Dados Gerais', 'Gestão', 'numero_vereadores', $request->input('numero_vereadores'));
+            // Save only the fields provided in the request based on the tab
+            $this->saveTabFields($request, $saveTab);
+
+            $tabNames = [
+                'identificacao' => 'Identificação',
+                'endereco' => 'Endereço',
+                'contatos' => 'Contatos',
+                'funcionamento' => 'Funcionamento',
+                'gestao' => 'Gestão Atual'
+            ];
+
+            $tabDisplayName = $tabNames[$saveTab] ?? 'dados';
 
             return response()->json([
                 'success' => true,
-                'message' => 'Dados gerais da câmara salvos com sucesso!'
+                'message' => "Dados da aba \"$tabDisplayName\" salvos com sucesso!",
+                'saved_tab' => $saveTab
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('Erro ao salvar dados gerais da câmara', [
-                'error' => $e->getMessage(),
-                'user' => auth()->id()
-            ]);
-
             return response()->json([
                 'success' => false,
                 'message' => 'Erro ao salvar configurações: ' . $e->getMessage()
@@ -118,44 +75,19 @@ class DadosGeraisCamaraController extends Controller
     private function obterConfiguracoes(): array
     {
         try {
-            $configuracoes = [
-                // Identificação
-                'nome_camara' => $this->parametroService->obterValor('Dados Gerais', 'Identificação', 'nome_camara') ?: 'Câmara Municipal',
-                'sigla_camara' => $this->parametroService->obterValor('Dados Gerais', 'Identificação', 'sigla_camara') ?: 'CM',
-                'cnpj' => $this->parametroService->obterValor('Dados Gerais', 'Identificação', 'cnpj') ?: '',
-                
-                // Endereço
-                'endereco' => $this->parametroService->obterValor('Dados Gerais', 'Endereço', 'endereco') ?: '',
-                'numero' => $this->parametroService->obterValor('Dados Gerais', 'Endereço', 'numero') ?: '',
-                'complemento' => $this->parametroService->obterValor('Dados Gerais', 'Endereço', 'complemento') ?: '',
-                'bairro' => $this->parametroService->obterValor('Dados Gerais', 'Endereço', 'bairro') ?: '',
-                'cidade' => $this->parametroService->obterValor('Dados Gerais', 'Endereço', 'cidade') ?: '',
-                'estado' => $this->parametroService->obterValor('Dados Gerais', 'Endereço', 'estado') ?: 'SP',
-                'cep' => $this->parametroService->obterValor('Dados Gerais', 'Endereço', 'cep') ?: '',
-                
-                // Contatos
-                'telefone' => $this->parametroService->obterValor('Dados Gerais', 'Contatos', 'telefone') ?: '',
-                'telefone_secundario' => $this->parametroService->obterValor('Dados Gerais', 'Contatos', 'telefone_secundario') ?: '',
-                'email_institucional' => $this->parametroService->obterValor('Dados Gerais', 'Contatos', 'email_institucional') ?: '',
-                'email_contato' => $this->parametroService->obterValor('Dados Gerais', 'Contatos', 'email_contato') ?: '',
-                'website' => $this->parametroService->obterValor('Dados Gerais', 'Contatos', 'website') ?: '',
-                
-                // Funcionamento
-                'horario_funcionamento' => $this->parametroService->obterValor('Dados Gerais', 'Funcionamento', 'horario_funcionamento') ?: 'Segunda a Sexta, 8h às 17h',
-                'horario_atendimento' => $this->parametroService->obterValor('Dados Gerais', 'Funcionamento', 'horario_atendimento') ?: 'Segunda a Sexta, 8h às 16h',
-                
-                // Gestão
-                'presidente_nome' => $this->parametroService->obterValor('Dados Gerais', 'Gestão', 'presidente_nome') ?: '',
-                'presidente_partido' => $this->parametroService->obterValor('Dados Gerais', 'Gestão', 'presidente_partido') ?: '',
-                'legislatura_atual' => $this->parametroService->obterValor('Dados Gerais', 'Gestão', 'legislatura_atual') ?: '2021-2024',
-                'numero_vereadores' => $this->parametroService->obterValor('Dados Gerais', 'Gestão', 'numero_vereadores') ?: 9
-            ];
+            // Estratégia agressiva: limpar caches principais
+            \Cache::flush(); // Limpa todo o cache Redis
+            
+            // Limpar OpCache se disponível
+            if (function_exists('opcache_reset')) {
+                opcache_reset();
+            }
+            
+            // Buscar dados DIRETAMENTE do banco, bypassing o ParametroService temporariamente
+            $configuracoes = $this->obterConfiguracoesDiretas();
             
             return $configuracoes;
         } catch (\Exception $e) {
-            \Log::warning('Erro ao obter dados gerais da câmara, usando padrões', [
-                'error' => $e->getMessage()
-            ]);
             // Se houver erro, usar valores padrão
             return [
                 'nome_camara' => 'Câmara Municipal',
@@ -180,6 +112,147 @@ class DadosGeraisCamaraController extends Controller
                 'legislatura_atual' => '2021-2024',
                 'numero_vereadores' => 9
             ];
+        }
+    }
+
+    /**
+     * Obter configurações diretamente do banco de dados (bypass cache)
+     */
+    private function obterConfiguracoesDiretas(): array
+    {
+        $configuracoes = [];
+        
+        // Query direta para buscar todos os valores de uma vez
+        $valores = DB::table('parametros_valores as pv')
+            ->join('parametros_campos as pc', 'pv.campo_id', '=', 'pc.id')
+            ->join('parametros_submodulos as ps', 'pc.submodulo_id', '=', 'ps.id')
+            ->join('parametros_modulos as pm', 'ps.modulo_id', '=', 'pm.id')
+            ->where('pm.nome', 'Dados Gerais')
+            ->whereNull('pv.valido_ate')
+            ->select('pc.nome as campo', 'ps.nome as submodulo', 'pv.valor')
+            ->get()
+            ->keyBy('campo');
+
+        // Mapear os valores ou usar defaults
+        $configuracoes = [
+            // Identificação
+            'nome_camara' => optional($valores->get('nome_camara'))->valor ?? 'Câmara Municipal',
+            'sigla_camara' => optional($valores->get('sigla_camara'))->valor ?? 'CM',
+            'cnpj' => optional($valores->get('cnpj'))->valor ?? '',
+            
+            // Endereço
+            'endereco' => optional($valores->get('endereco'))->valor ?? '',
+            'numero' => optional($valores->get('numero'))->valor ?? '',
+            'complemento' => optional($valores->get('complemento'))->valor ?? '',
+            'bairro' => optional($valores->get('bairro'))->valor ?? '',
+            'cidade' => optional($valores->get('cidade'))->valor ?? '',
+            'estado' => optional($valores->get('estado'))->valor ?? 'SP',
+            'cep' => optional($valores->get('cep'))->valor ?? '',
+            
+            // Contatos
+            'telefone' => optional($valores->get('telefone'))->valor ?? '',
+            'telefone_secundario' => optional($valores->get('telefone_secundario'))->valor ?? '',
+            'email_institucional' => optional($valores->get('email_institucional'))->valor ?? '',
+            'email_contato' => optional($valores->get('email_contato'))->valor ?? '',
+            'website' => optional($valores->get('website'))->valor ?? '',
+            
+            // Funcionamento
+            'horario_funcionamento' => optional($valores->get('horario_funcionamento'))->valor ?? 'Segunda a Sexta, 8h às 17h',
+            'horario_atendimento' => optional($valores->get('horario_atendimento'))->valor ?? 'Segunda a Sexta, 8h às 16h',
+            
+            // Gestão
+            'presidente_nome' => optional($valores->get('presidente_nome'))->valor ?? '',
+            'presidente_partido' => optional($valores->get('presidente_partido'))->valor ?? '',
+            'legislatura_atual' => optional($valores->get('legislatura_atual'))->valor ?? '2021-2024',
+            'numero_vereadores' => optional($valores->get('numero_vereadores'))->valor ?? 9
+        ];
+
+        return $configuracoes;
+    }
+
+    /**
+     * Get validation rules for a specific tab
+     */
+    private function getValidationRulesByTab(string $tab): array
+    {
+        $allRules = [
+            'identificacao' => [
+                'nome_camara' => 'required|string|max:255',
+                'sigla_camara' => 'required|string|max:20',
+                'cnpj' => 'nullable|string|max:20',
+            ],
+            'endereco' => [
+                'endereco' => 'required|string|max:255',
+                'numero' => 'nullable|string|max:20',
+                'complemento' => 'nullable|string|max:100',
+                'bairro' => 'required|string|max:100',
+                'cidade' => 'required|string|max:100',
+                'estado' => 'required|string|max:3',
+                'cep' => 'required|string|max:12',
+            ],
+            'contatos' => [
+                'telefone' => 'required|string|max:20',
+                'telefone_secundario' => 'nullable|string|max:20',
+                'email_institucional' => 'required|email|max:255',
+                'email_contato' => 'nullable|email|max:255',
+                'website' => 'nullable|string|max:255',
+            ],
+            'funcionamento' => [
+                'horario_funcionamento' => 'required|string|max:100',
+                'horario_atendimento' => 'required|string|max:100',
+            ],
+            'gestao' => [
+                'presidente_nome' => 'required|string|max:255',
+                'presidente_partido' => 'required|string|max:50',
+                'legislatura_atual' => 'required|string|max:50',
+                'numero_vereadores' => 'required|integer|min:5|max:55',
+            ]
+        ];
+
+        return $allRules[$tab] ?? [];
+    }
+
+    /**
+     * Save fields for a specific tab
+     */
+    private function saveTabFields(Request $request, string $tab): void
+    {
+        $tabMapping = [
+            'identificacao' => [
+                'submodule' => 'Identificação',
+                'fields' => ['nome_camara', 'sigla_camara', 'cnpj']
+            ],
+            'endereco' => [
+                'submodule' => 'Endereço',
+                'fields' => ['endereco', 'numero', 'complemento', 'bairro', 'cidade', 'estado', 'cep']
+            ],
+            'contatos' => [
+                'submodule' => 'Contatos',
+                'fields' => ['telefone', 'telefone_secundario', 'email_institucional', 'email_contato', 'website']
+            ],
+            'funcionamento' => [
+                'submodule' => 'Funcionamento',
+                'fields' => ['horario_funcionamento', 'horario_atendimento']
+            ],
+            'gestao' => [
+                'submodule' => 'Gestão',
+                'fields' => ['presidente_nome', 'presidente_partido', 'legislatura_atual', 'numero_vereadores']
+            ]
+        ];
+
+        if (!isset($tabMapping[$tab])) {
+            throw new \InvalidArgumentException("Invalid tab: $tab");
+        }
+
+        $config = $tabMapping[$tab];
+        $submoduleName = $config['submodule'];
+        $fields = $config['fields'];
+
+        foreach ($fields as $field) {
+            if ($request->has($field)) {
+                $valor = $request->input($field);
+                $this->parametroService->salvarValor('Dados Gerais', $submoduleName, $field, $valor);
+            }
         }
     }
 }

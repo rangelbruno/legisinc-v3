@@ -264,9 +264,9 @@ class SegurancaParametroService
         try {
             return Crypt::encryptString((string) $valor);
         } catch (\Exception $e) {
-            Log::error('Erro ao criptografar valor sensível', [
-                'error' => $e->getMessage()
-            ]);
+            // // Log::error('Erro ao criptografar valor sensível', [
+            //     'error' => $e->getMessage()
+            // ]);
             throw new \RuntimeException('Erro ao criptografar valor');
         }
     }
@@ -283,9 +283,9 @@ class SegurancaParametroService
         try {
             return Crypt::decryptString($valorCriptografado);
         } catch (\Exception $e) {
-            Log::error('Erro ao descriptografar valor sensível', [
-                'error' => $e->getMessage()
-            ]);
+            // // Log::error('Erro ao descriptografar valor sensível', [
+//                 'error' => $e->getMessage()
+//             ]);
             throw new \RuntimeException('Erro ao descriptografar valor');
         }
     }
@@ -313,14 +313,14 @@ class SegurancaParametroService
         }
         
         // Log tentativa de acesso negado
-        Log::warning('Acesso negado a parâmetro', [
-            'user_id' => $userId,
-            'operacao' => $operacao,
-            'recurso' => $recurso,
-            'permissao_requerida' => $permissao,
-            'ip' => request()->ip(),
-            'user_agent' => request()->userAgent()
-        ]);
+        // // Log::warning('Acesso negado a parâmetro', [
+        //     'user_id' => $userId,
+        //     'operacao' => $operacao,
+        //     'recurso' => $recurso,
+        //     'permissao_requerida' => $permissao,
+        //     'ip' => request()->ip(),
+        //     'user_agent' => request()->userAgent()
+        // ]);
         
         return false;
     }
@@ -339,12 +339,12 @@ class SegurancaParametroService
         });
         
         if ($contador >= $limite) {
-            Log::warning('Rate limit excedido para parâmetros', [
-                'user_id' => $userId,
-                'operacao' => $operacao,
-                'contador' => $contador,
-                'limite' => $limite
-            ]);
+            // // Log::warning('Rate limit excedido para parâmetros', [
+//                 'user_id' => $userId,
+//                 'operacao' => $operacao,
+//                 'contador' => $contador,
+//                 'limite' => $limite
+//             ]);
             return false;
         }
         
@@ -508,12 +508,12 @@ class SegurancaParametroService
      */
     public function auditarOperacaoSeguranca(string $operacao, array $detalhes = []): void
     {
-        Log::info('Operação de segurança em parâmetros', array_merge([
-            'operacao' => $operacao,
-            'user_id' => auth()->id(),
-            'ip' => request()->ip(),
-            'user_agent' => request()->userAgent(),
-            'timestamp' => now()
-        ], $detalhes));
+        // // Log::info('Operação de segurança em parâmetros', array_merge([
+        //     'operacao' => $operacao,
+        //     'user_id' => auth()->id(),
+        //     'ip' => request()->ip(),
+        //     'user_agent' => request()->userAgent(),
+        //     'timestamp' => now()
+        // ], $detalhes));
     }
 }
