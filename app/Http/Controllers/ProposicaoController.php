@@ -1445,9 +1445,9 @@ class ProposicaoController extends Controller
     private function criarArquivoProposicao($proposicaoId, $template)
     {
         try {
-            // Definir nome do arquivo da proposição (usar DOCX)
+            // Definir nome do arquivo da proposição (usar RTF para preservar formatação)
             $templateIdForFile = $template ? $template->id : 'blank';
-            $nomeArquivo = "proposicao_{$proposicaoId}_template_{$templateIdForFile}.docx";
+            $nomeArquivo = "proposicao_{$proposicaoId}_template_{$templateIdForFile}.rtf";
             $pathDestino = "proposicoes/{$nomeArquivo}";
             $pathCompleto = storage_path('app/public/' . $pathDestino);
             
@@ -2015,6 +2015,7 @@ ${texto}
      */
     private function substituirVariaveisRTF($conteudoRTF, $proposicao, $variaveisPreenchidas)
     {
+        
         // Obter as proposição real do banco de dados se ela for um objeto simples
         if (!($proposicao instanceof \App\Models\Proposicao)) {
             $proposicaoModel = \App\Models\Proposicao::find($proposicao->id);
@@ -2062,8 +2063,56 @@ ${texto}
             'sessao_legislativa' => $agora->format('Y')
         ];
         
-        // Combinar variáveis do sistema e preenchidas pelo parlamentar
-        $todasVariaveis = array_merge($variaveisSystem, $variaveisPreenchidas);
+        // Obter variáveis dos parâmetros do sistema
+        $templateParametrosService = app(\App\Services\Template\TemplateParametrosService::class);
+        $dadosCompletos = [
+            'proposicao' => $proposicao,
+            'autor' => $user,
+            'variaveis' => $variaveisPreenchidas
+        ];
+        
+        // Processar template via serviço para obter todas as variáveis (incluindo parâmetros)
+        $templateComVariaveis = $templateParametrosService->processarTemplate('${imagem_cabecalho} ${cabecalho_nome_camara} ${cabecalho_endereco} ${cabecalho_telefone} ${cabecalho_website} ${rodape_texto} ${assinatura_padrao}', $dadosCompletos);
+        
+        // Extrair variáveis dos parâmetros usando o serviço
+        $parametros = $templateParametrosService->obterParametrosTemplates();
+        $variaveisParametros = [];
+        
+        // Mapear variáveis dos parâmetros
+        $mapeamentoParametros = [
+            'imagem_cabecalho' => 'Cabeçalho.cabecalho_imagem',
+            'cabecalho_nome_camara' => 'Cabeçalho.cabecalho_nome_camara',
+            'cabecalho_endereco' => 'Cabeçalho.cabecalho_endereco', 
+            'cabecalho_telefone' => 'Cabeçalho.cabecalho_telefone',
+            'cabecalho_website' => 'Cabeçalho.cabecalho_website',
+            'rodape_texto' => 'Rodapé.rodape_texto',
+            'assinatura_padrao' => 'Variáveis Dinâmicas.var_assinatura_padrao'
+        ];
+        
+        foreach ($mapeamentoParametros as $variavel => $chaveParametro) {
+            if (isset($parametros[$chaveParametro])) {
+                if ($variavel === 'imagem_cabecalho') {
+                    // Para imagem, gerar código RTF completo
+                    $imagemCabecalho = $parametros[$chaveParametro];
+                    if (!empty($imagemCabecalho)) {
+                        $caminhoCompleto = public_path($imagemCabecalho);
+                        if (file_exists($caminhoCompleto)) {
+                            $variaveisParametros[$variavel] = $this->gerarCodigoRTFImagem($caminhoCompleto);
+                        } else {
+                            $variaveisParametros[$variavel] = '';
+                        }
+                    } else {
+                        $variaveisParametros[$variavel] = '';
+                    }
+                } else {
+                    $variaveisParametros[$variavel] = $parametros[$chaveParametro];
+                }
+            }
+        }
+        
+        // Combinar todas as variáveis: sistema, parâmetros e preenchidas pelo parlamentar
+        $todasVariaveis = array_merge($variaveisSystem, $variaveisParametros, $variaveisPreenchidas);
+        
         
         // DEBUG: Log das variáveis encontradas no template
         $variaveisNoTemplate = [];
@@ -2712,6 +2761,25 @@ ${texto}
                             mkdir($diretorio, 0775, true);
                             chown($diretorio, 'www-data');
                             chgrp($diretorio, 'www-data');
+                        }
+                        
+                        // IMPORTANTE: Processar variáveis antes de salvar
+                        // O OnlyOffice retorna o arquivo com as variáveis não processadas
+                        // Precisamos substituí-las antes de salvar
+                        if ($proposicao) {
+                            \Log::info('DEBUG - Processando variáveis do arquivo retornado pelo OnlyOffice', [
+                                'proposicao_id' => $proposicaoId,
+                                'tamanho_original' => strlen($fileContent)
+                            ]);
+                            
+                            // Processar as variáveis usando nosso método
+                            $fileContent = $this->substituirVariaveisRTF($fileContent, $proposicao, []);
+                            
+                            \Log::info('DEBUG - Arquivo processado após substituir variáveis', [
+                                'tamanho_processado' => strlen($fileContent),
+                                'tem_imagem_cabecalho' => strpos($fileContent, '${imagem_cabecalho}') !== false,
+                                'tem_pngblip' => strpos($fileContent, 'pngblip') !== false
+                            ]);
                         }
                         
                         file_put_contents($pathCompleto, $fileContent);
@@ -3833,6 +3901,27 @@ ${texto}
                     $fileContent = file_get_contents($data['url']);
                     
                     if ($fileContent) {
+                        // IMPORTANTE: Processar variáveis antes de salvar
+                        // Buscar a proposição relacionada à instância
+                        if ($instance->proposicao_id) {
+                            $proposicao = Proposicao::find($instance->proposicao_id);
+                            if ($proposicao) {
+                                \Log::info('DEBUG - Processando variáveis do arquivo de instância retornado pelo OnlyOffice', [
+                                    'instance_id' => $instanceId,
+                                    'proposicao_id' => $instance->proposicao_id,
+                                    'tamanho_original' => strlen($fileContent)
+                                ]);
+                                
+                                // Processar as variáveis usando nosso método
+                                $fileContent = $this->substituirVariaveisRTF($fileContent, $proposicao, []);
+                                
+                                \Log::info('DEBUG - Arquivo de instância processado após substituir variáveis', [
+                                    'tamanho_processado' => strlen($fileContent),
+                                    'tem_pngblip' => strpos($fileContent, 'pngblip') !== false
+                                ]);
+                            }
+                        }
+                        
                         // Salvar arquivo atualizado
                         \Storage::put($instance->arquivo_instance_path, $fileContent);
                         
@@ -5119,5 +5208,64 @@ ${texto}
         // ]);
 
         return $textoLimpo;
+    }
+    
+    /**
+     * Gerar código RTF para inserir uma imagem
+     */
+    private function gerarCodigoRTFImagem(string $caminhoImagem): string
+    {
+        try {
+            // Verificar se arquivo existe e obter informações
+            if (!file_exists($caminhoImagem)) {
+                return '[IMAGEM DO CABEÇALHO - ARQUIVO NÃO ENCONTRADO]';
+            }
+            
+            $info = getimagesize($caminhoImagem);
+            if (!$info) {
+                return '[IMAGEM DO CABEÇALHO - FORMATO INVÁLIDO]';
+            }
+            
+            // Para o OnlyOffice, vamos inserir a imagem usando código RTF específico
+            // Primeiro, converter a imagem para formato hexadecimal
+            $imagemData = file_get_contents($caminhoImagem);
+            $imagemHex = bin2hex($imagemData);
+            
+            // Obter dimensões da imagem
+            $largura = $info[0];
+            $altura = $info[1];
+            
+            // Redimensionar se necessário (máximo 200px de largura para evitar arquivo muito grande)
+            if ($largura > 200) {
+                $novaLargura = 200;
+                $novaAltura = intval(($novaLargura * $altura) / $largura);
+            } else {
+                $novaLargura = $largura;
+                $novaAltura = $altura;
+            }
+            
+            // Converter para twips (1 pixel = 15 twips aprox)
+            $larguraTwips = $novaLargura * 15;
+            $alturaTwips = $novaAltura * 15;
+            
+            // Determinar o tipo MIME da imagem
+            $tipoImagem = $info['mime'];
+            $formatoRTF = match($tipoImagem) {
+                'image/png' => 'pngblip',
+                'image/jpeg', 'image/jpg' => 'jpegblip',
+                default => 'pngblip'
+            };
+            
+            // Gerar código RTF para inserir a imagem
+            $rtfImagem = "{\pict\\{$formatoRTF}\\picw{$largura}\\pich{$altura}\\picwgoal{$larguraTwips}\\pichgoal{$alturaTwips} {$imagemHex}}";
+            
+            // Centralizar a imagem
+            return "{\\qc {$rtfImagem}\\par}";
+            
+        } catch (\Exception $e) {
+            // Fallback para placeholder se houver erro
+            $nomeArquivo = basename($caminhoImagem);
+            return "{\\qc\\b\\fs20 [INSERIR IMAGEM: {$nomeArquivo}]\\par}";
+        }
     }
 }

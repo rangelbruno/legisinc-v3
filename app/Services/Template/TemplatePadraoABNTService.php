@@ -28,6 +28,7 @@ class TemplatePadraoABNTService
      */
     public function gerarDocumento(array $dadosProposicao, array $variaveisUsuario = []): array
     {
+        
         try {
             // Carregar template padrão ABNT
             $templatePath = storage_path('templates/template_padrao_abnt.html');
@@ -170,10 +171,29 @@ class TemplatePadraoABNTService
             $variaveis['legislatura_atual'] = $this->parametroService->obterValor('Dados Gerais', 'Legislatura', 'legislatura_atual') ?? date('Y');
             $variaveis['sessao_legislativa'] = $this->parametroService->obterValor('Dados Gerais', 'Legislatura', 'sessao_legislativa') ?? date('Y');
             
+            // Variáveis específicas de cabeçalho dos parâmetros Templates
+            $variaveis['cabecalho_nome_camara'] = $this->parametroService->obterValor('Templates', 'Cabeçalho', 'cabecalho_nome_camara') ?? 'CÂMARA MUNICIPAL';
+            $variaveis['cabecalho_endereco'] = $this->parametroService->obterValor('Templates', 'Cabeçalho', 'cabecalho_endereco') ?? '';
+            $variaveis['cabecalho_telefone'] = $this->parametroService->obterValor('Templates', 'Cabeçalho', 'cabecalho_telefone') ?? '';
+            $variaveis['cabecalho_website'] = $this->parametroService->obterValor('Templates', 'Cabeçalho', 'cabecalho_website') ?? '';
+            
+            // Variáveis de rodapé e outras configurações
+            $variaveis['rodape_texto'] = $this->parametroService->obterValor('Templates', 'Rodapé', 'rodape_texto') ?? '';
+            $variaveis['assinatura_padrao'] = $this->parametroService->obterValor('Templates', 'Variáveis Dinâmicas', 'var_assinatura_padrao') ?? '';
+            
             // Imagens
             $imagemCabecalho = $this->parametroService->obterValor('Templates', 'Cabeçalho', 'cabecalho_imagem');
-            $variaveis['imagem_cabecalho'] = $imagemCabecalho ? 
-                "<img src=\"/storage/{$imagemCabecalho}\" alt=\"Logotipo da Câmara\" class=\"logo-cabecalho\">" : '';
+            if ($imagemCabecalho) {
+                // Gerar código RTF para a imagem ao invés de HTML
+                $caminhoCompleto = public_path($imagemCabecalho);
+                if (file_exists($caminhoCompleto)) {
+                    $variaveis['imagem_cabecalho'] = $this->gerarCodigoRTFImagem($caminhoCompleto);
+                } else {
+                    $variaveis['imagem_cabecalho'] = '';
+                }
+            } else {
+                $variaveis['imagem_cabecalho'] = '';
+            }
                 
         } catch (\Exception $e) {
             // Log::warning('Erro ao obter variáveis de parâmetros', [
@@ -386,6 +406,65 @@ class TemplatePadraoABNTService
                 'template_existe' => false,
                 'erro' => $e->getMessage()
             ];
+        }
+    }
+    
+    /**
+     * Gerar código RTF para inserir uma imagem
+     */
+    private function gerarCodigoRTFImagem(string $caminhoImagem): string
+    {
+        try {
+            // Verificar se arquivo existe e obter informações
+            if (!file_exists($caminhoImagem)) {
+                return '[IMAGEM DO CABEÇALHO - ARQUIVO NÃO ENCONTRADO]';
+            }
+            
+            $info = getimagesize($caminhoImagem);
+            if (!$info) {
+                return '[IMAGEM DO CABEÇALHO - FORMATO INVÁLIDO]';
+            }
+            
+            // Para o OnlyOffice, vamos inserir a imagem usando código RTF específico
+            // Primeiro, converter a imagem para formato hexadecimal
+            $imagemData = file_get_contents($caminhoImagem);
+            $imagemHex = bin2hex($imagemData);
+            
+            // Obter dimensões da imagem
+            $largura = $info[0];
+            $altura = $info[1];
+            
+            // Redimensionar se necessário (máximo 200px de largura para evitar arquivo muito grande)
+            if ($largura > 200) {
+                $novaLargura = 200;
+                $novaAltura = intval(($novaLargura * $altura) / $largura);
+            } else {
+                $novaLargura = $largura;
+                $novaAltura = $altura;
+            }
+            
+            // Converter para twips (1 pixel = 15 twips aprox)
+            $larguraTwips = $novaLargura * 15;
+            $alturaTwips = $novaAltura * 15;
+            
+            // Determinar o tipo MIME da imagem
+            $tipoImagem = $info['mime'];
+            $formatoRTF = match($tipoImagem) {
+                'image/png' => 'pngblip',
+                'image/jpeg', 'image/jpg' => 'jpegblip',
+                default => 'pngblip'
+            };
+            
+            // Gerar código RTF para inserir a imagem
+            $rtfImagem = "{\pict\\{$formatoRTF}\\picw{$largura}\\pich{$altura}\\picwgoal{$larguraTwips}\\pichgoal{$alturaTwips} {$imagemHex}}";
+            
+            // Centralizar a imagem
+            return "{\\qc {$rtfImagem}\\par}";
+            
+        } catch (\Exception $e) {
+            // Fallback para placeholder se houver erro
+            $nomeArquivo = basename($caminhoImagem);
+            return "{\\qc\\b\\fs20 [INSERIR IMAGEM: {$nomeArquivo}]\\par}";
         }
     }
 }
