@@ -2905,14 +2905,14 @@ Status: " . ucfirst(str_replace('_', ' ', $proposicao->status)) . "\par
     {
         // Log::info('Inserindo número de processo no documento', [
             //     'proposicao_id' => $proposicao->id,
-            //     'numero_processo' => $proposicao->numero_processo,
+            //     'numero_protocolo' => $proposicao->numero_protocolo,
             //     'posicao' => $posicao
         // ]);
 
         try {
             // Atualizar o conteúdo da proposição com o número do processo
             $conteudo = $proposicao->conteudo;
-            $numeroProcesso = $proposicao->numero_processo;
+            $numeroProcesso = $proposicao->numero_protocolo;
             
             // Adicionar número baseado na posição configurada
             switch ($posicao) {
@@ -2951,13 +2951,13 @@ Status: " . ucfirst(str_replace('_', ' ', $proposicao->status)) . "\par
             
             // Log::info('Número de processo inserido com sucesso', [
                 //     'proposicao_id' => $proposicao->id,
-                //     'numero_processo' => $numeroProcesso
+                //     'numero_protocolo' => $numeroProcesso
             // ]);
             
         } catch (\Exception $e) {
             // Log::error('Erro ao inserir número de processo no documento', [
                 //     'proposicao_id' => $proposicao->id,
-                //     'numero_processo' => $proposicao->numero_processo,
+                //     'numero_protocolo' => $proposicao->numero_protocolo,
                 //     'error' => $e->getMessage()
             // ]);
             
@@ -2973,7 +2973,7 @@ Status: " . ucfirst(str_replace('_', ' ', $proposicao->status)) . "\par
         // Log::info('Regenerando PDF com número de protocolo', [
             //     'proposicao_id' => $proposicao->id,
             //     'numero_protocolo' => $proposicao->numero_protocolo,
-            //     'numero_processo' => $proposicao->numero_processo,
+            //     'numero_protocolo' => $proposicao->numero_protocolo,
             //     'arquivo_pdf_path_atual' => $proposicao->arquivo_pdf_path
         // ]);
 
@@ -2995,14 +2995,14 @@ Status: " . ucfirst(str_replace('_', ' ', $proposicao->status)) . "\par
             // Log::info('PDF regenerado com sucesso', [
                 //     'proposicao_id' => $proposicao->id,
                 //     'numero_protocolo' => $proposicao->numero_protocolo,
-                //     'numero_processo' => $proposicao->numero_processo,
+                //     'numero_protocolo' => $proposicao->numero_protocolo,
                 //     'novo_arquivo_pdf_path' => $proposicao->fresh()->arquivo_pdf_path
             // ]);
         } catch (\Exception $e) {
             // Log::error('Erro ao regenerar PDF com número de protocolo', [
                 //     'proposicao_id' => $proposicao->id,
                 //     'numero_protocolo' => $proposicao->numero_protocolo,
-                //     'numero_processo' => $proposicao->numero_processo,
+                //     'numero_protocolo' => $proposicao->numero_protocolo,
                 //     'error' => $e->getMessage(),
                 //     'trace' => $e->getTraceAsString()
             // ]);

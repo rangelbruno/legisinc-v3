@@ -208,8 +208,9 @@
                                 
                                 <!--begin::Comissões de Destino-->
                                 <div class="mb-8">
-                                    <label class="required fs-6 fw-semibold form-label mb-2">Comissões de Destino</label>
-                                    <p class="text-muted fs-7 mb-4">Selecione as comissões que irão analisar esta proposição</p>
+                                    <fieldset>
+                                        <legend class="required fs-6 fw-semibold form-label mb-2">Comissões de Destino</legend>
+                                        <p class="text-muted fs-7 mb-4">Selecione as comissões que irão analisar esta proposição</p>
                                     
                                     <div class="row g-3">
                                         @foreach($comissoes as $comissao => $obrigatoria)
@@ -228,7 +229,7 @@
                                         </div>
                                         @endforeach
                                     </div>
-                                    
+                                    </fieldset>
                                     <!-- Campos hidden para comissões obrigatórias -->
                                     @foreach($comissoes as $comissao => $obrigatoria)
                                         @if($obrigatoria)

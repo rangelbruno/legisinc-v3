@@ -43,7 +43,10 @@ class SystemDiagnosticController extends Controller
             // Obter lista de tabelas com informações detalhadas
             $tables = $this->getDatabaseTables();
             
-            return view('admin.system-diagnostic.database', compact('databaseInfo', 'tables'));
+            // Obter relacionamentos entre tabelas
+            $relationships = $this->getDatabaseRelationships();
+            
+            return view('admin.system-diagnostic.database-simple', compact('databaseInfo', 'tables', 'relationships'));
         } catch (\Exception $e) {
             return redirect()->route('admin.system-diagnostic.index')
                 ->with('error', 'Erro ao carregar informações do banco de dados: ' . $e->getMessage());
@@ -427,6 +430,93 @@ class SystemDiagnosticController extends Controller
         }
 
         return $tables;
+    }
+
+    private function getDatabaseRelationships()
+    {
+        $driver = config('database.default');
+        $relationships = [];
+
+        try {
+            if ($driver === 'pgsql') {
+                $result = DB::select("
+                    SELECT 
+                        tc.constraint_name,
+                        tc.table_name as from_table,
+                        kcu.column_name as from_column,
+                        ccu.table_name as to_table,
+                        ccu.column_name as to_column
+                    FROM information_schema.table_constraints AS tc
+                    JOIN information_schema.key_column_usage AS kcu
+                        ON tc.constraint_name = kcu.constraint_name
+                        AND tc.table_schema = kcu.table_schema
+                    JOIN information_schema.constraint_column_usage AS ccu
+                        ON ccu.constraint_name = tc.constraint_name
+                        AND ccu.table_schema = tc.table_schema
+                    WHERE tc.constraint_type = 'FOREIGN KEY'
+                        AND tc.table_schema = 'public'
+                    ORDER BY tc.table_name, tc.constraint_name
+                ");
+                
+                foreach ($result as $row) {
+                    $relationships[] = [
+                        'constraint_name' => $row->constraint_name,
+                        'from_table' => $row->from_table,
+                        'from_column' => $row->from_column,
+                        'to_table' => $row->to_table,
+                        'to_column' => $row->to_column
+                    ];
+                }
+            } elseif ($driver === 'mysql') {
+                $database = config('database.connections.mysql.database');
+                $result = DB::select("
+                    SELECT 
+                        CONSTRAINT_NAME as constraint_name,
+                        TABLE_NAME as from_table,
+                        COLUMN_NAME as from_column,
+                        REFERENCED_TABLE_NAME as to_table,
+                        REFERENCED_COLUMN_NAME as to_column
+                    FROM information_schema.KEY_COLUMN_USAGE
+                    WHERE REFERENCED_TABLE_SCHEMA = ?
+                        AND REFERENCED_TABLE_NAME IS NOT NULL
+                    ORDER BY TABLE_NAME, CONSTRAINT_NAME
+                ", [$database]);
+                
+                foreach ($result as $row) {
+                    $relationships[] = [
+                        'constraint_name' => $row->constraint_name,
+                        'from_table' => $row->from_table,
+                        'from_column' => $row->from_column,
+                        'to_table' => $row->to_table,
+                        'to_column' => $row->to_column
+                    ];
+                }
+            } elseif ($driver === 'sqlite') {
+                // Para SQLite, precisamos fazer uma abordagem diferente
+                $tables = $this->getSimpleTableList();
+                foreach ($tables as $table) {
+                    try {
+                        $foreignKeys = DB::select("PRAGMA foreign_key_list({$table})");
+                        foreach ($foreignKeys as $fk) {
+                            $relationships[] = [
+                                'constraint_name' => "fk_{$table}_{$fk->from}",
+                                'from_table' => $table,
+                                'from_column' => $fk->from,
+                                'to_table' => $fk->table,
+                                'to_column' => $fk->to
+                            ];
+                        }
+                    } catch (\Exception $e) {
+                        // Ignorar erro para esta tabela
+                    }
+                }
+            }
+        } catch (\Exception $e) {
+            // Se falhar, retornar array vazio
+            $relationships = [];
+        }
+
+        return $relationships;
     }
 
     private function formatBytes($bytes, $precision = 2)

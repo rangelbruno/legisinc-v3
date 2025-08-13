@@ -443,7 +443,7 @@
                 <div class="card-body py-3">
                     <div class="row g-3 g-md-5 g-xl-8">
                         <div class="col-xl-3 col-lg-6 col-md-6 col-12">
-                            <label class="required fw-semibold fs-6 mb-2">Tipo de Proposição</label>
+                            <label for="filtro-tipo" class="required fw-semibold fs-6 mb-2">Tipo de Proposição</label>
                             <select id="filtro-tipo" class="form-select form-select-solid" data-control="select2" data-placeholder="Selecionar tipo">
                                 <option value="">Todos os tipos</option>
                                 <option value="PL">Projeto de Lei</option>
@@ -457,7 +457,7 @@
                             </select>
                         </div>
                         <div class="col-xl-3 col-lg-6 col-md-6 col-12">
-                            <label class="required fw-semibold fs-6 mb-2">Urgência</label>
+                            <label for="filtro-urgencia" class="required fw-semibold fs-6 mb-2">Urgência</label>
                             <select id="filtro-urgencia" class="form-select form-select-solid" data-control="select2" data-placeholder="Selecionar urgência">
                                 <option value="">Todas as urgências</option>
                                 <option value="urgentissima">Urgentíssima</option>
@@ -466,7 +466,7 @@
                             </select>
                         </div>
                         <div class="col-xl-3 col-lg-6 col-md-6 col-12">
-                            <label class="required fw-semibold fs-6 mb-2">Autor</label>
+                            <label for="filtro-autor" class="required fw-semibold fs-6 mb-2">Autor</label>
                             <input type="text" id="filtro-autor" class="form-control form-control-solid" placeholder="Nome do autor" />
                         </div>
                         <div class="col-xl-3 col-lg-6 col-md-6 col-12">

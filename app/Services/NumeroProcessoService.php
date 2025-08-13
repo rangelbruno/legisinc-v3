@@ -69,7 +69,7 @@ class NumeroProcessoService
      */
     private function obterProximoSequencial(Proposicao $proposicao): int
     {
-        $query = Proposicao::whereNotNull('numero_processo');
+        $query = Proposicao::whereNotNull('numero_protocolo');
         
         // Verificar se deve reiniciar anualmente
         $reiniciarAnualmente = filter_var(
@@ -105,8 +105,8 @@ class NumeroProcessoService
     {
         return DB::transaction(function () use ($proposicao, $numeroManual) {
             // Verificar se já possui número
-            if ($proposicao->numero_processo) {
-                throw new \Exception('Proposição já possui número de processo: ' . $proposicao->numero_processo);
+            if ($proposicao->numero_protocolo) {
+                throw new \Exception('Proposição já possui número de protocolo: ' . $proposicao->numero_protocolo);
             }
             
             // Determinar número a ser usado
@@ -142,7 +142,7 @@ class NumeroProcessoService
             
             // Atualizar proposição
             $proposicao->update([
-                'numero_processo' => $numeroProcesso,
+                'numero_protocolo' => $numeroProcesso,
                 'numero_sequencial' => $numeroSequencial,
                 'data_protocolo' => now(),
                 'funcionario_protocolo_id' => auth()->id()
@@ -160,7 +160,7 @@ class NumeroProcessoService
             
             // Log::info('Número de processo atribuído', [
                 //     'proposicao_id' => $proposicao->id,
-                //     'numero_processo' => $numeroProcesso,
+                //     'numero_protocolo' => $numeroProcesso,
                 //     'usuario_id' => auth()->id()
             // ]);
             
@@ -187,7 +187,7 @@ class NumeroProcessoService
         } catch (\Exception $e) {
             // Log::warning('Falha ao inserir número de processo no documento', [
                 //     'proposicao_id' => $proposicao->id,
-                //     'numero_processo' => $proposicao->numero_processo,
+                //     'numero_protocolo' => $proposicao->numero_protocolo,
                 //     'erro' => $e->getMessage()
             // ]);
         }
@@ -198,7 +198,7 @@ class NumeroProcessoService
      */
     private function numeroExiste(string $numero): bool
     {
-        return Proposicao::where('numero_processo', $numero)->exists();
+        return Proposicao::where('numero_protocolo', $numero)->exists();
     }
 
     /**
