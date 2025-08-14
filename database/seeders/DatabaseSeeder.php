@@ -106,9 +106,14 @@ class DatabaseSeeder extends Seeder
         $this->command->info('📞 Telefone: (12) 3882-5588');
         $this->command->info('🌐 Website: www.camaracaraguatatuba.sp.gov.br');
         $this->command->info('');
-        $this->command->info('📋 ===== TEMPLATE DE MOÇÃO FUNCIONAL =====');
+        $this->command->info('📋 ===== TEMPLATES EDITÁVEIS FUNCIONAIS =====');
+        $this->command->info('✅ Templates editáveis no admin (/admin/templates)');
+        $this->command->info('✅ Variáveis substituídas automaticamente');
+        $this->command->info('✅ Suporte a RTF Unicode do OnlyOffice');
+        $this->command->info('✅ Conteúdo do banco prioritário sobre arquivos');
+        $this->command->info('✅ Processamento de ${variavel}, $variavel e $\\{variavel\\}');
+        $this->command->info('✅ Decoder Unicode para templates RTF complexos');
         $this->command->info('✅ Cabeçalho com imagem automática');
-        $this->command->info('✅ Variáveis substituídas corretamente');
         $this->command->info('✅ Acentuação portuguesa funcionando');
         $this->command->info('✅ OnlyOffice integrado e operacional');
         $this->command->info('');

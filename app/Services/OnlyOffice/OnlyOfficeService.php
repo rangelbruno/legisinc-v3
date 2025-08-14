@@ -1705,8 +1705,23 @@ ${texto}
                 return $this->gerarDocumentoRTFProposicao($proposicao);
             }
 
-            // Carregar o conteúdo do template usando Storage
-            $conteudoTemplate = Storage::get($template->arquivo_path);
+            // Priorizar conteúdo do banco (editado no admin) sobre arquivo do seeder
+            if (!empty($template->conteudo)) {
+                // Usar conteúdo salvo no banco de dados (editado no admin)
+                $conteudoTemplate = $template->conteudo;
+                Log::info('Usando conteúdo do banco (template editado no admin)', [
+                    'template_id' => $template->id,
+                    'tamanho_banco' => strlen($template->conteudo)
+                ]);
+            } else {
+                // Fallback: usar arquivo do seeder
+                $conteudoTemplate = Storage::get($template->arquivo_path);
+                Log::info('Usando conteúdo do arquivo (template do seeder)', [
+                    'template_id' => $template->id,
+                    'arquivo_path' => $template->arquivo_path,
+                    'tamanho_arquivo' => strlen($conteudoTemplate)
+                ]);
+            }
             
             // Log::info('Template carregado', [
                 //     'template_id' => $template->id,

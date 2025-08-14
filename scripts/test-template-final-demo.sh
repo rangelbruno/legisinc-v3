@@ -1,56 +1,116 @@
 #!/bin/bash
 
-echo "=== Template do Administrador - Demonstração Final ==="
-echo "Date: $(date)"
+echo "🔍 DIAGNÓSTICO FINAL - Template Real vs Processamento"
+echo "=================================================="
 
-echo -e "\n📋 RESUMO DO TEMPLATE DE MOÇÃO:"
-echo "Template criado pelo administrador com as seguintes variáveis:"
-echo "• \${imagem_cabecalho}"
-echo "• \${cabecalho_nome_camara} → CÂMARA MUNICIPAL DE CARAGUATATUBA"
-echo "• \${cabecalho_endereco}"
-echo "• \${cabecalho_telefone}"
-echo "• \${cabecalho_website}"
-echo "• \${numero_proposicao}/\${ano_atual} → 0001/2025"
-echo "• \${ementa} → Ementa da proposição"
-echo "• \${texto} → Conteúdo da proposição (IA ou manual)"
-echo "• \${justificativa} → Vazio por padrão"
-echo "• \${municipio}, \${dia} de \${mes_extenso} de \${ano_atual}"
-echo "• \${autor_nome} → Jessica Santos"
-echo "• \${autor_cargo} → Vereador"
+echo ""
+echo "1. Analisando o conteúdo real do template editado no admin:"
+docker exec legisinc-app php artisan tinker --execute="
+\$template = \App\Models\TipoProposicaoTemplate::find(6);
+if(\$template && \$template->conteudo) {
+    \$conteudo = \$template->conteudo;
+    echo '📊 Tamanho do template: ' . number_format(strlen(\$conteudo)) . ' chars';
+    
+    // Extrair uma pequena amostra do conteúdo
+    echo '📄 Primeiros 1000 chars:';
+    echo '---';
+    echo substr(\$conteudo, 0, 1000);
+    echo '---';
+    
+    // Procurar por variáveis específicas que você mencionou
+    \$variaveisExemplo = ['numero_proposicao', 'ementa', 'texto', 'municipio', 'autor_nome'];
+    echo '🔍 Procurando variáveis no template:';
+    foreach(\$variaveisExemplo as \$var) {
+        // Procurar diferentes formatos
+        if(strpos(\$conteudo, '\${' . \$var . '}') !== false) {
+            echo \"✅ Encontrou \$var no formato \\\${var}\";
+        } elseif(strpos(\$conteudo, '\$' . \$var) !== false) {
+            echo \"✅ Encontrou \$var no formato \\\$var\";
+        } else {
+            echo \"❌ NÃO encontrou \$var\";
+        }
+    }
+}
+"
 
-echo -e "\n🔄 PROCESSO CORRIGIDO:"
-echo "1. Parlamentar cria proposição tipo 'mocao'"
-echo "2. Sistema busca template para tipo 'mocao' (ID: 12)"
-echo "3. Encontra template do administrador (ID: 6)"
-echo "4. Substitui todas as variáveis pelos valores corretos"
-echo "5. Parlamentar edita no OnlyOffice com estrutura formal"
+echo ""
+echo "2. Testando processamento real:"
 
-echo -e "\n📄 DOCUMENTO GERADO (decodificado):"
-TOKEN=$(echo -n "1|$(date +%s)" | base64)
-DOCUMENT_RAW=$(docker exec legisinc-onlyoffice curl -s -H "User-Agent: ASC.DocService" "http://legisinc-app/proposicoes/1/onlyoffice/download?token=$TOKEN")
+# Buscar usuário
+USER_ID=$(docker exec legisinc-app php artisan tinker --execute="
+\$user = \App\Models\User::where('email', 'jessica@sistema.gov.br')->first();
+echo \$user->id ?? 1;
+" 2>/dev/null | tail -n1)
 
-echo "---"
-echo "$DOCUMENT_RAW" | sed 's/\\u[0-9A-Fa-f]\{3,4\}\*/[UNICODE]/g' | sed 's/{\\rtf.*\\f0\\fs24\\sl360\\slmult1 \\par //' | sed 's/\\par /\n/g' | sed 's/\\b /[BOLD]/g' | sed 's/ \\b0/[/BOLD]/g' | head -20 | tail -15
-echo "..."
-echo "$DOCUMENT_RAW" | sed 's/\\u[0-9A-Fa-f]\{3,4\}\*/[UNICODE]/g' | tail -5 | head -3
-echo "---"
+# Criar proposição de teste  
+PROPOSICAO_ID=$(docker exec legisinc-app php artisan tinker --execute="
+\$proposicao = \App\Models\Proposicao::create([
+    'tipo' => 'mocao',
+    'ementa' => 'DIAGNÓSTICO - Teste de substituição de variáveis no template real',
+    'conteudo' => 'Este conteúdo deve aparecer na variável texto do template.',
+    'justificativa' => 'Esta justificativa deve aparecer na variável justificativa.',
+    'autor_id' => $USER_ID,
+    'status' => 'rascunho'
+]);
+echo \$proposicao->id;
+" 2>/dev/null | tail -n1)
 
-echo -e "\n✅ CORREÇÕES APLICADAS:"
-echo "• Removida lógica que forçava template ABNT para proposições em edição"
-echo "• Template do administrador tem precedência sobre métodos automáticos"
-echo "• Variáveis sendo substituídas corretamente pelos parâmetros da câmara"
-echo "• Estrutura formal preservada conforme definido pelo administrador"
+echo "   📋 Proposição criada: ID $PROPOSICAO_ID"
 
-echo -e "\n🎯 RESULTADO:"
-echo "• O parlamentar agora pode criar proposições usando o template formal"
-echo "• As variáveis são substituídas automaticamente"
-echo "• O documento mantém a estrutura oficial definida pelo administrador"
-echo "• O legislativo pode editar o documento mantendo a formatação"
+# Processar com template real
+echo ""
+echo "3. Processando template real:"
+docker exec legisinc-app php artisan tinker --execute="
+\$templateProcessor = app(\App\Services\Template\TemplateProcessorService::class);
+\$proposicao = \App\Models\Proposicao::find($PROPOSICAO_ID);
+\$template = \App\Models\TipoProposicaoTemplate::find(6);
 
-echo -e "\n📝 PRÓXIMOS PASSOS RECOMENDADOS:"
-echo "• Testar com outros tipos de proposição (projeto de lei, etc.)"
-echo "• Verificar se todos os parâmetros da câmara estão configurados"
-echo "• Ajustar template se necessário para melhor formatação"
-echo "• Treinar usuários sobre o novo fluxo"
+if(\$proposicao && \$template) {
+    try {
+        \$dadosEditaveis = [
+            'ementa' => \$proposicao->ementa,
+            'texto' => \$proposicao->conteudo,
+            'justificativa' => \$proposicao->justificativa ?? 'Justificativa de teste',
+            'numero_proposicao' => sprintf('%04d', \$proposicao->id)
+        ];
+        
+        \$resultado = \$templateProcessor->processarTemplate(\$template, \$proposicao, \$dadosEditaveis);
+        
+        echo '✅ Template processado!';
+        echo '📊 Tamanho: ' . number_format(strlen(\$resultado)) . ' chars';
+        
+        // Verificar variáveis não substituídas
+        \$variaveisNaoSubstituidas = [];
+        if(preg_match_all('/\\\$\{([a-zA-Z_][a-zA-Z0-9_]*)\}/', \$resultado, \$matches)) {
+            \$variaveisNaoSubstituidas = array_merge(\$variaveisNaoSubstituidas, \$matches[1]);
+        }
+        if(preg_match_all('/\\\$([a-zA-Z_][a-zA-Z0-9_]*)(?![a-zA-Z0-9_])/', \$resultado, \$matches)) {
+            \$variaveisNaoSubstituidas = array_merge(\$variaveisNaoSubstituidas, \$matches[1]);
+        }
+        
+        \$variaveisNaoSubstituidas = array_unique(\$variaveisNaoSubstituidas);
+        
+        if(empty(\$variaveisNaoSubstituidas)) {
+            echo '✅ Todas as variáveis foram substituídas!';
+        } else {
+            echo '⚠️  Variáveis NÃO substituídas: ' . implode(', ', \$variaveisNaoSubstituidas);
+        }
+        
+    } catch (\Exception \$e) {
+        echo '❌ Erro: ' . \$e->getMessage();
+    }
+}
+"
 
-echo -e "\n=== Demonstração Concluída ==="
+echo ""
+echo "4. Limpeza:"
+docker exec legisinc-app php artisan tinker --execute="
+\$proposicao = \App\Models\Proposicao::find($PROPOSICAO_ID);
+if(\$proposicao) {
+    \$proposicao->delete();
+    echo '🗑️  Proposição removida';
+}
+"
+
+echo ""
+echo "✅ Diagnóstico concluído!"

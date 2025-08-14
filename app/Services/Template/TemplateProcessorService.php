@@ -159,6 +159,16 @@ class TemplateProcessorService
         // Verificar se é conteúdo RTF
         $isRTF = strpos($conteudo, '{\rtf') !== false;
         
+        // Se é RTF do OnlyOffice, primeiro decodificar sequências Unicode para encontrar variáveis
+        if ($isRTF) {
+            $conteudo = $this->decodificarVariaveisUnicodeRTF($conteudo, $variaveis);
+        }
+        
+        // Ordenar variáveis por tamanho do nome (maior primeiro) para evitar substituições parciais
+        uksort($variaveis, function($a, $b) {
+            return strlen($b) - strlen($a);
+        });
+        
         foreach ($variaveis as $variavel => $valor) {
             // Tratamento especial para imagens em RTF
             if ($isRTF && ($variavel === 'imagem_cabecalho' || $variavel === 'cabecalho_imagem')) {
@@ -190,16 +200,28 @@ class TemplateProcessorService
             
             // Tratar diferentes formatos de variáveis encontrados no template
             $formatos = [
-                '$\\{' . $variavel . '\\}',  // Formato RTF escapado: $\{variavel\}
-                '${' . $variavel . '}',      // Formato normal: ${variavel}
+                '$\\{' . $variavel . '\\}',           // Formato RTF escapado: $\{variavel\}
+                '${' . $variavel . '}',               // Formato normal: ${variavel}
+                '$' . $variavel . '(?![a-zA-Z0-9_])', // Formato sem chaves: $variavel (com word boundary)
             ];
             
             foreach ($formatos as $formato) {
-                $antes = substr_count($conteudo, $formato);
-                if ($antes > 0) {
-                    $conteudo = str_replace($formato, $valor, $conteudo);
-                    // Debug para verificar substituições
-                    // Log::info("Substituído $formato por $valor ($antes ocorrências)");
+                // Para o formato sem chaves, usar regex para evitar substituições parciais
+                if (strpos($formato, '(?![a-zA-Z0-9_])') !== false) {
+                    $pattern = '/\$' . preg_quote($variavel, '/') . '(?![a-zA-Z0-9_])/';
+                    $antes = preg_match_all($pattern, $conteudo);
+                    if ($antes > 0) {
+                        $conteudo = preg_replace($pattern, $valor, $conteudo);
+                        // Debug para verificar substituições
+                        // Log::info("Substituído (regex) $variavel por $valor ($antes ocorrências)");
+                    }
+                } else {
+                    $antes = substr_count($conteudo, $formato);
+                    if ($antes > 0) {
+                        $conteudo = str_replace($formato, $valor, $conteudo);
+                        // Debug para verificar substituições
+                        // Log::info("Substituído $formato por $valor ($antes ocorrências)");
+                    }
                 }
             }
         }
@@ -207,6 +229,7 @@ class TemplateProcessorService
         // Limpar variáveis não substituídas (mostrar como placeholders)
         $conteudo = preg_replace('/\$\\\\\{([a-zA-Z_][a-zA-Z0-9_]*)\\\\\}/', '[${$1}]', $conteudo);
         $conteudo = preg_replace('/\$\{([a-zA-Z_][a-zA-Z0-9_]*)\}/', '[${$1}]', $conteudo);
+        $conteudo = preg_replace('/\$([a-zA-Z_][a-zA-Z0-9_]*)(?![a-zA-Z0-9_])/', '[$1]', $conteudo);  // Formato sem chaves
         
         return $conteudo;
     }
@@ -362,7 +385,18 @@ class TemplateProcessorService
      */
     private function obterConteudoTemplate(TipoProposicaoTemplate $template): string
     {
-        // Se template tem arquivo físico
+        // PRIORIDADE 1: Conteúdo do banco de dados (editado no admin)
+        if (!empty($template->conteudo)) {
+            \Log::info('TemplateProcessorService: Usando conteúdo do banco (template editado no admin)', [
+                'template_id' => $template->id,
+                'tamanho_banco' => strlen($template->conteudo)
+            ]);
+            // Para RTF do OnlyOffice, retornar diretamente sem processamento
+            // O conteúdo já contém as variáveis no formato correto
+            return $template->conteudo;
+        }
+        
+        // PRIORIDADE 2: Arquivo físico (fallback para templates do seeder)
         if ($template->arquivo_path) {
             $conteudo = null;
             
@@ -374,14 +408,96 @@ class TemplateProcessorService
             }
             
             if ($conteudo) {
+                \Log::info('TemplateProcessorService: Usando conteúdo do arquivo (template do seeder)', [
+                    'template_id' => $template->id,
+                    'arquivo_path' => $template->arquivo_path,
+                    'tamanho_arquivo' => strlen($conteudo)
+                ]);
                 // Para RTF do OnlyOffice, retornar diretamente sem processamento
                 // O arquivo já contém as variáveis no formato correto
                 return $conteudo;
             }
         }
         
-        // Template básico se não houver arquivo
+        // PRIORIDADE 3: Template básico (fallback final)
+        \Log::warning('TemplateProcessorService: Usando template básico (nenhum conteúdo encontrado)', [
+            'template_id' => $template->id,
+            'tem_conteudo_banco' => !empty($template->conteudo),
+            'tem_arquivo' => !empty($template->arquivo_path)
+        ]);
         return $this->getTemplateBasico($template->tipoProposicao->nome ?? 'Proposição');
+    }
+    
+    /**
+     * Decodificar variáveis Unicode em RTF do OnlyOffice
+     * Converte sequências \uNNN* de volta para texto para poder encontrar variáveis
+     */
+    private function decodificarVariaveisUnicodeRTF(string $conteudo, array $variaveis): string
+    {
+        \Log::info('Decodificando variáveis Unicode em RTF do OnlyOffice');
+        
+        // Primeiro, criar uma versão decodificada do conteúdo para buscar variáveis
+        $conteudoDecodificado = $this->decodificarUnicodeRTF($conteudo);
+        
+        // Procurar variáveis na versão decodificada
+        $variaveisEncontradas = [];
+        foreach (array_keys($variaveis) as $variavel) {
+            $formatosVariavel = [
+                '${' . $variavel . '}',
+                '$' . $variavel
+            ];
+            
+            foreach ($formatosVariavel as $formato) {
+                if (strpos($conteudoDecodificado, $formato) !== false) {
+                    $variaveisEncontradas[] = $formato;
+                    \Log::info('Variável encontrada no RTF decodificado: ' . $formato);
+                    
+                    // Converter a variável de volta para Unicode e substituir no conteúdo original
+                    $unicodeVariavel = $this->codificarParaUnicodeRTF($formato);
+                    $conteudo = str_replace($unicodeVariavel, $formato, $conteudo);
+                }
+            }
+        }
+        
+        if (!empty($variaveisEncontradas)) {
+            \Log::info('Total de variáveis decodificadas do RTF: ' . count($variaveisEncontradas));
+        } else {
+            \Log::warning('Nenhuma variável encontrada no RTF decodificado');
+        }
+        
+        return $conteudo;
+    }
+    
+    /**
+     * Decodificar sequências \uNNN* do RTF para texto normal
+     */
+    private function decodificarUnicodeRTF(string $rtfContent): string
+    {
+        // Usar uma regex que não conflite com \u
+        return preg_replace_callback('/\\\\u(\d+)\\*/', function($matches) {
+            $codepoint = (int)$matches[1];
+            if ($codepoint > 0 && $codepoint < 1114112) { // Valid Unicode range
+                return mb_chr($codepoint, 'UTF-8') ?: '';
+            }
+            return '';
+        }, $rtfContent);
+    }
+    
+    /**
+     * Codificar texto para sequências \uNNN* do RTF
+     */
+    private function codificarParaUnicodeRTF(string $texto): string
+    {
+        $resultado = '';
+        $length = mb_strlen($texto, 'UTF-8');
+        
+        for ($i = 0; $i < $length; $i++) {
+            $char = mb_substr($texto, $i, 1, 'UTF-8');
+            $codepoint = mb_ord($char, 'UTF-8');
+            $resultado .= '\\u' . $codepoint . '*';
+        }
+        
+        return $resultado;
     }
 
     /**
