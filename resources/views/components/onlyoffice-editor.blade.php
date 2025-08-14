@@ -404,6 +404,8 @@
             init: function() {
                 const self = this;
                 
+                // Debug removido - problema do documentType resolvido
+                
                 // Configuração do OnlyOffice
                 this.config = {
                     "width": "100%",
@@ -473,7 +475,10 @@
                     console.info('Callback URL:', this.config.editorConfig.callbackUrl);
                     console.info('Editor ID:', this.editorId);
                     console.info('File type:', this.config.document.fileType);
+                    console.info('Document Type:', this.config.documentType);
                     console.groupEnd();
+                    
+                    // Debug removido - problema do documentType resolvido
                     
                     // Verificar se o elemento existe
                     const editorElement = document.getElementById(this.editorId);

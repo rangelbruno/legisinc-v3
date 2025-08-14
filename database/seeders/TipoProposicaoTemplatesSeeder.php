@@ -392,12 +392,13 @@ class TipoProposicaoTemplatesSeeder extends Seeder
         $rtf = '{\rtf1\ansi\ansicpg65001\deff0 {\fonttbl {\f0 Arial;}}\f0\fs24\sl360\slmult1 ';
         
         // CABEÇALHO COMPLETO
-        // Verificar se deve incluir imagem ou texto
+        // A variável ${imagem_cabecalho} será processada pelo TemplateProcessorService
+        // que irá converter a imagem para o formato RTF correto
         $rtf .= '${imagem_cabecalho}\par ';
-        $rtf .= '${cabecalho_nome_camara}\par ';
-        $rtf .= '${cabecalho_endereco}\par ';
-        $rtf .= '${cabecalho_telefone}\par ';
-        $rtf .= '${cabecalho_website}\par \par ';
+        $rtf .= '\qc\b ${cabecalho_nome_camara}\b0\par ';
+        $rtf .= '\qc ${cabecalho_endereco}\par ';
+        $rtf .= '\qc ${cabecalho_telefone}\par ';
+        $rtf .= '\qc ${cabecalho_website}\par \par \ql ';
         
         // Epígrafe com variáveis atualizadas
         $epigrafe = str_replace('${ano}', '${ano_atual}', $template['epigrafe']);
@@ -420,15 +421,15 @@ class TipoProposicaoTemplatesSeeder extends Seeder
         
         // RODAPÉ COMPLETO com todas as variáveis disponíveis
         $rtf .= '\par ';
-        $rtf .= '${municipio}, ${dia} de ${mes_extenso} de ${ano_atual}.\par \par ';
+        $rtf .= '\qr ${municipio}, ${dia} de ${mes_extenso} de ${ano_atual}.\par \par ';
         
         // Área de assinatura com dados do autor
-        $rtf .= '${assinatura_padrao}\par ';
-        $rtf .= '${autor_nome}\par ';
-        $rtf .= '${autor_cargo}\par \par ';
+        $rtf .= '\qr ${assinatura_padrao}\par ';
+        $rtf .= '\qr ${autor_nome}\par ';
+        $rtf .= '\qr ${autor_cargo}\par \par ';
         
         // Rodapé institucional
-        $rtf .= '${rodape_texto}\par ';
+        $rtf .= '\qc\fs18 ${rodape_texto}\fs24\par ';
         
         // Fechar RTF
         $rtf .= '}';
@@ -438,10 +439,11 @@ class TipoProposicaoTemplatesSeeder extends Seeder
 
     /**
      * Converter texto UTF-8 para RTF Unicode
+     * Sincronizado com TemplateProcessorService
      */
     private function converterParaRTF(string $texto): string
     {
-        // Escapar caracteres especiais do RTF
+        // Escapar caracteres especiais do RTF primeiro
         $texto = str_replace(['\\', '{', '}'], ['\\\\', '\\{', '\\}'], $texto);
         
         $resultado = '';
@@ -451,6 +453,7 @@ class TipoProposicaoTemplatesSeeder extends Seeder
             $char = mb_substr($texto, $i, 1, 'UTF-8');
             $codepoint = mb_ord($char, 'UTF-8');
             
+            // Converter caracteres não-ASCII para códigos RTF Unicode
             if ($codepoint > 127) {
                 $resultado .= '\\u' . $codepoint . '*';
             } else {

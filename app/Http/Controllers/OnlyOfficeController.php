@@ -47,8 +47,18 @@ class OnlyOfficeController extends Controller
         // Carregar relacionamentos necessários
         $proposicao->load('autor');
         
-        // Gerar configurações do OnlyOffice
-        $config = $this->generateOnlyOfficeConfig($proposicao);
+        // Usar OnlyOfficeService para gerar configuração consistente
+        if ($proposicao->template_id && $proposicao->template) {
+            $config = $this->onlyOfficeService->gerarConfiguracaoEditor(
+                $proposicao->template,
+                $proposicao,
+                'proposicao',
+                $proposicao->id
+            );
+        } else {
+            // Fallback para proposições sem template
+            $config = $this->generateOnlyOfficeConfig($proposicao);
+        }
 
         return view('proposicoes.legislativo.onlyoffice-editor', compact('proposicao', 'config'));
     }
@@ -363,8 +373,18 @@ class OnlyOfficeController extends Controller
             ]);
         }
         
-        // Gerar configurações do OnlyOffice
-        $config = $this->generateOnlyOfficeConfig($proposicao);
+        // Usar OnlyOfficeService para gerar configuração consistente
+        if ($proposicao->template_id && $proposicao->template) {
+            $config = $this->onlyOfficeService->gerarConfiguracaoEditor(
+                $proposicao->template,
+                $proposicao,
+                'proposicao',
+                $proposicao->id
+            );
+        } else {
+            // Fallback para proposições sem template
+            $config = $this->generateOnlyOfficeConfig($proposicao);
+        }
 
         // Usar view específica para parlamentares
         return view('proposicoes.parlamentar.onlyoffice-editor', compact('proposicao', 'config'));

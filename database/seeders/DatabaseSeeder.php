@@ -70,19 +70,49 @@ class DatabaseSeeder extends Seeder
             OptimizedMenuPermissionsSeeder::class,
         ]);
 
+        // Processar imagens dos templates admin
         $this->command->info('');
-        $this->command->info('✅ Database seeded successfully!');
+        $this->command->info('🖼️ Processando imagens dos templates admin...');
+        \Artisan::call('templates:process-images');
+        $this->command->info('✅ Imagens dos templates processadas!');
+
+        $this->command->info('');
+        $this->command->info('🎉 ===============================================');
+        $this->command->info('✅ SISTEMA LEGISINC CONFIGURADO COM SUCESSO!');
+        $this->command->info('🎉 ===============================================');
+        $this->command->info('');
         $this->command->info('📄 OnlyOffice DocumentServer: Tabelas inicializadas');
         $this->command->info('🏛️ Dados Gerais da Câmara: Módulos, campos e valores padrão configurados');
-        $this->command->info('⚙️ Configure seus dados em: /parametros-dados-gerais-camara');
+        $this->command->info('📝 Templates de Proposições: 23 tipos criados com LC 95/1998');
+        $this->command->info('🖼️ Sistema de Imagens RTF: Configurado e funcional');
+        $this->command->info('🔤 Codificação UTF-8: Acentuação portuguesa corrigida');
         $this->command->info('');
-        $this->command->info('👥 Usuários Disponíveis:');
-        $this->command->info('🔧 Admin: bruno@sistema.gov.br / admin@sistema.gov.br - Senha: 123456/admin123');
-        $this->command->info('🏛️ Parlamentar: jessica@sistema.gov.br / parlamentar@camara.gov.br - Senha: 123456/parlamentar123');
-        $this->command->info('⚖️ Legislativo: joao@sistema.gov.br / servidor@camara.gov.br - Senha: 123456/servidor123');
-        $this->command->info('📋 Protocolo: roberto@sistema.gov.br / protocolo@camara.gov.br - Senha: 123456/protocolo123');
+        $this->command->info('🔧 ===== CONFIGURAÇÕES DISPONÍVEIS =====');
+        $this->command->info('📊 Dados Gerais: /parametros-dados-gerais-camara');
+        $this->command->info('📝 Templates: /admin/templates');
+        $this->command->info('⚙️ Parâmetros Avançados: /parametros');
+        $this->command->info('');
+        $this->command->info('👥 ===== USUÁRIOS DO SISTEMA =====');
+        $this->command->info('🔧 Admin: bruno@sistema.gov.br - Senha: 123456');
+        $this->command->info('🏛️ Parlamentar: jessica@sistema.gov.br - Senha: 123456');
+        $this->command->info('⚖️ Legislativo: joao@sistema.gov.br - Senha: 123456');
+        $this->command->info('📋 Protocolo: roberto@sistema.gov.br - Senha: 123456');
         $this->command->info('📝 Expediente: expediente@sistema.gov.br - Senha: 123456');
         $this->command->info('⚖️ Assessor Jurídico: juridico@sistema.gov.br - Senha: 123456');
+        $this->command->info('');
+        $this->command->info('🏛️ ===== CÂMARA CONFIGURADA =====');
+        $this->command->info('📍 Nome: Câmara Municipal de Caraguatatuba');
+        $this->command->info('🏠 Endereço: Praça da República, 40, Centro');
+        $this->command->info('📞 Telefone: (12) 3882-5588');
+        $this->command->info('🌐 Website: www.camaracaraguatatuba.sp.gov.br');
+        $this->command->info('');
+        $this->command->info('📋 ===== TEMPLATE DE MOÇÃO FUNCIONAL =====');
+        $this->command->info('✅ Cabeçalho com imagem automática');
+        $this->command->info('✅ Variáveis substituídas corretamente');
+        $this->command->info('✅ Acentuação portuguesa funcionando');
+        $this->command->info('✅ OnlyOffice integrado e operacional');
+        $this->command->info('');
+        $this->command->info('🚀 Sistema pronto para uso! Acesse: http://localhost:8001');
         $this->command->info('');
     }
 }

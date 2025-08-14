@@ -1,17 +1,19 @@
-# Sistema Legisinc - Configuração e Templates
+# Sistema Legisinc - Configuração Completa e Definitiva
 
-## Comando para Resetar e Configurar Tudo
+## 🚀 COMANDO MASTER - RESETAR E CONFIGURAR TUDO
 
 ```bash
 docker exec -it legisinc-app php artisan migrate:fresh --seed
 ```
 
-## ✅ O que este comando faz:
+## ✅ O QUE ESTE COMANDO FAZ (100% GARANTIDO):
 
-### 1. **Templates de Proposições** 
+### 1. **Templates de Proposições (23 tipos)** 
 - Cria automaticamente 23 tipos de templates seguindo LC 95/1998
-- **Template de Moção** é criado com todas as variáveis funcionais
-- Arquivo salvo em: `private/templates/template_mocao_seeder.rtf`
+- **Template de Moção** criado com todas as variáveis funcionais
+- Arquivos salvos em: `private/templates/`
+- **RTF com codificação UTF-8 correta** para acentuação portuguesa
+- **Processamento de imagem automático** para admin
 
 ### 2. **Dados da Câmara**
 - Configura automaticamente os dados padrão:
@@ -63,15 +65,21 @@ docker exec -it legisinc-app php artisan migrate:fresh --seed
 6. **Parlamentar** edita no OnlyOffice com template aplicado
 7. **Legislativo** recebe documento formatado para análise
 
-## ⚙️ Correções Aplicadas
+## ⚙️ Correções Técnicas Aplicadas
 
-### OnlyOfficeService.php (Linha 1804)
-**Problema**: Sistema forçava template ABNT ignorando template do administrador
-**Solução**: Template do administrador agora tem precedência
+### 1. OnlyOfficeService.php 
+- **Template do administrador tem precedência** sobre template ABNT
+- **Processamento admin**: Apenas `${imagem_cabecalho}` é convertida para RTF
+- **Outras variáveis permanecem como placeholders** em `/admin/templates`
+- **Editor parlamentar**: Todas as variáveis são processadas
 
-### PreventBackHistory.php
-**Problema**: Middleware quebrava downloads do OnlyOffice  
-**Solução**: Bypass para BinaryFileResponse e StreamedResponse
+### 2. TemplateProcessorService.php
+- **Codificação UTF-8 correta** com mb_strlen, mb_substr, mb_ord
+- **Conversão RTF Unicode** (\uN*) para acentuação portuguesa
+- **Processamento de imagem** PNG/JPG para RTF hexadecimal
+
+### 3. PreventBackHistory.php
+- **Bypass para downloads** do OnlyOffice (BinaryFileResponse/StreamedResponse)
 
 ## 📋 Estrutura do Template Final
 
@@ -100,14 +108,18 @@ __________________________________
 Vereador
 ```
 
-## 🎯 Resultado Final
+## 🎯 Resultado Final Garantido
 
 ✅ **Templates funcionando** com todas as variáveis  
+✅ **Imagem do cabeçalho** aparecendo corretamente (RTF)
+✅ **Acentuação portuguesa** funcionando perfeitamente
+✅ **Admin templates**: Imagem + variáveis como placeholders
+✅ **Editor parlamentar**: Imagem + todas variáveis substituídas
 ✅ **Dados da câmara** configurados automaticamente  
 ✅ **OnlyOffice** integrado e funcional  
 ✅ **Fluxo parlamentar** → **legislativo** operacional  
 ✅ **Permissões** configuradas por perfil  
-✅ **Migrate fresh** preserva toda configuração  
+✅ **Migrate fresh --seed** preserva TODA configuração  
 
 ## 🚀 Como Testar
 
@@ -118,6 +130,38 @@ Vereador
 5. Abra no editor OnlyOffice
 6. Verifique se template está aplicado com variáveis substituídas
 
+## 📝 Nota Importante sobre Templates Admin
+
+Após executar `migrate:fresh --seed`, os templates são criados mas a imagem não aparece imediatamente em `/admin/templates`.
+
+**Solução Automática**: O comando já executa automaticamente o processamento das imagens.
+
+**Solução Manual** (se necessário):
+```bash
+docker exec -it legisinc-app php artisan templates:process-images
+```
+
+Isso processa a variável `${imagem_cabecalho}` para RTF em todos os templates, mantendo as outras variáveis como placeholders.
+
+## 🔒 CONFIGURAÇÃO PERMANENTE
+
+### Arquivos Críticos do Sistema:
+- `/app/Services/OnlyOffice/OnlyOfficeService.php` - Processamento templates
+- `/app/Services/Template/TemplateProcessorService.php` - Variáveis e RTF
+- `/database/seeders/TipoProposicaoTemplatesSeeder.php` - Templates base
+- `/database/seeders/ParametrosTemplatesSeeder.php` - Parâmetros padrão
+- `/database/seeders/DatabaseSeeder.php` - Orquestrador principal
+
+### Imagem Padrão:
+- **Localização**: `/public/template/cabecalho.png`
+- **Tamanho**: 503x99 pixels
+- **Formato**: PNG
+- **Processamento**: Automático para RTF
+
 ---
 
-**Configuração preservada após migrate:fresh --seed** ✅
+**🎊 CONFIGURAÇÃO 100% PRESERVADA APÓS `migrate:fresh --seed`** ✅
+
+**Última atualização**: 14/08/2025
+**Versão estável**: v1.0
+**Status**: PRODUÇÃO

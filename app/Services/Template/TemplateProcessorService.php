@@ -6,6 +6,7 @@ use App\Models\Proposicao;
 use App\Models\TipoProposicaoTemplate;
 use App\Models\User;
 use App\Services\Parametro\ParametroService;
+use App\Services\Template\TemplateVariableService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
@@ -13,10 +14,12 @@ use Illuminate\Support\Str;
 class TemplateProcessorService
 {
     protected ParametroService $parametroService;
+    protected TemplateVariableService $templateVariableService;
 
-    public function __construct(ParametroService $parametroService)
+    public function __construct(ParametroService $parametroService, TemplateVariableService $templateVariableService)
     {
         $this->parametroService = $parametroService;
+        $this->templateVariableService = $templateVariableService;
     }
 
     private array $systemVariables = [
@@ -157,10 +160,27 @@ class TemplateProcessorService
         $isRTF = strpos($conteudo, '{\rtf') !== false;
         
         foreach ($variaveis as $variavel => $valor) {
-            $placeholder = '${' . $variavel . '}';
-            
-            // Se é conteúdo RTF, aplicar conversão apropriada
-            if ($isRTF) {
+            // Tratamento especial para imagens em RTF
+            if ($isRTF && ($variavel === 'imagem_cabecalho' || $variavel === 'cabecalho_imagem')) {
+                if ($valor && file_exists(public_path($valor))) {
+                    // Log para debug
+                    \Log::info('Imagem do cabeçalho encontrada', [
+                        'path' => $valor,
+                        'full_path' => public_path($valor),
+                        'exists' => true
+                    ]);
+                    
+                    // Gerar código RTF para imagem
+                    $valor = $this->gerarImagemRTF(public_path($valor));
+                } else {
+                    \Log::warning('Imagem do cabeçalho não encontrada', [
+                        'path' => $valor,
+                        'full_path' => public_path($valor),
+                        'exists' => false
+                    ]);
+                    $valor = ''; // Deixar vazio se não encontrada
+                }
+            } else if ($isRTF) {
                 // Primeiro, corrigir caracteres mal codificados comuns
                 $valor = $this->corrigirCaracteresMalCodificados($valor);
                 
@@ -168,10 +188,24 @@ class TemplateProcessorService
                 $valor = $this->converterParaRTF($valor);
             }
             
-            $conteudo = str_replace($placeholder, $valor, $conteudo);
+            // Tratar diferentes formatos de variáveis encontrados no template
+            $formatos = [
+                '$\\{' . $variavel . '\\}',  // Formato RTF escapado: $\{variavel\}
+                '${' . $variavel . '}',      // Formato normal: ${variavel}
+            ];
+            
+            foreach ($formatos as $formato) {
+                $antes = substr_count($conteudo, $formato);
+                if ($antes > 0) {
+                    $conteudo = str_replace($formato, $valor, $conteudo);
+                    // Debug para verificar substituições
+                    // Log::info("Substituído $formato por $valor ($antes ocorrências)");
+                }
+            }
         }
         
         // Limpar variáveis não substituídas (mostrar como placeholders)
+        $conteudo = preg_replace('/\$\\\\\{([a-zA-Z_][a-zA-Z0-9_]*)\\\\\}/', '[${$1}]', $conteudo);
         $conteudo = preg_replace('/\$\{([a-zA-Z_][a-zA-Z0-9_]*)\}/', '[${$1}]', $conteudo);
         
         return $conteudo;
@@ -221,41 +255,27 @@ class TemplateProcessorService
     }
     
     /**
-     * Converter texto UTF-8 para códigos RTF
+     * Converter texto UTF-8 para códigos RTF Unicode
      */
     private function converterParaRTF(string $texto): string
     {
-        // Mapear caracteres acentuados para códigos RTF
-        $mapeamento = [
-            'á' => "\\'e1",
-            'à' => "\\'e0", 
-            'â' => "\\'e2",
-            'ã' => "\\'e3",
-            'é' => "\\'e9",
-            'ê' => "\\'ea",
-            'í' => "\\'ed",
-            'ó' => "\\'f3",
-            'ô' => "\\'f4",
-            'õ' => "\\'f5",
-            'ú' => "\\'fa",
-            'ü' => "\\'fc",
-            'ç' => "\\'e7",
-            'Á' => "\\'c1",
-            'À' => "\\'c0",
-            'Â' => "\\'c2", 
-            'Ã' => "\\'c3",
-            'É' => "\\'c9",
-            'Ê' => "\\'ca",
-            'Í' => "\\'cd",
-            'Ó' => "\\'d3",
-            'Ô' => "\\'d4",
-            'Õ' => "\\'d5",
-            'Ú' => "\\'da",
-            'Ü' => "\\'dc",
-            'Ç' => "\\'c7",
-        ];
+        $textoProcessado = '';
+        $length = mb_strlen($texto, 'UTF-8');
         
-        return str_replace(array_keys($mapeamento), array_values($mapeamento), $texto);
+        for ($i = 0; $i < $length; $i++) {
+            $char = mb_substr($texto, $i, 1, 'UTF-8');
+            $codepoint = mb_ord($char, 'UTF-8');
+            
+            if ($codepoint > 127) {
+                // Gerar sequência RTF Unicode correta: \uN*
+                $textoProcessado .= '\\u' . $codepoint . '*';
+            } else {
+                // Caracteres ASCII normais
+                $textoProcessado .= $char;
+            }
+        }
+        
+        return $textoProcessado;
     }
 
     /**
@@ -269,7 +289,11 @@ class TemplateProcessorService
         // Obter autor da proposição (pode ser diferente do usuário logado)
         $autor = $proposicao->autor ?? $user;
         
-        return [
+        // Obter variáveis do TemplateVariableService (parâmetros do sistema)
+        $variaveisParametros = $this->templateVariableService->getTemplateVariables();
+        
+        // Combinar com variáveis específicas da proposição
+        $variaveisProposicao = [
             // Datas e horários
             'data' => $agora->format('d/m/Y'),
             'data_atual' => $agora->format('d/m/Y'),
@@ -277,32 +301,43 @@ class TemplateProcessorService
             'mes_atual' => $agora->format('m'),
             'ano_atual' => $agora->format('Y'),
             'dia_atual' => $agora->format('d'),
+            'dia' => $agora->format('d'), // Compatibilidade RTF
             'hora_atual' => $agora->format('H:i'),
             'data_criacao' => $proposicao->created_at?->format('d/m/Y') ?? $agora->format('d/m/Y'),
+            
+            // Mês por extenso em português
+            'mes_extenso' => $this->obterMesExtenso($agora->format('n')),
             
             // Proposição
             'numero_proposicao' => $this->gerarNumeroProposicao($proposicao),
             'tipo_proposicao' => $proposicao->tipo_formatado ?? '[TIPO DA PROPOSIÇÃO]',
             'status_proposicao' => $proposicao->status ?? 'rascunho',
+            'ementa' => $proposicao->ementa ?? '[EMENTA]',
+            'texto' => $proposicao->conteudo ?? '[TEXTO]', // Corrigir campo
+            'justificativa' => $proposicao->justificativa ?? '[JUSTIFICATIVA]',
             
             // Parlamentar / Autor
             'nome_parlamentar' => $user->name ?? '[NOME DO PARLAMENTAR]',
             'autor_nome' => $autor->name ?? '[NOME DO AUTOR]',
+            'autor_cargo' => $this->obterCargoParlamentar($autor),
             'cargo_parlamentar' => $this->obterCargoParlamentar($user),
             'email_parlamentar' => $user->email ?? '[EMAIL DO PARLAMENTAR]',
             'partido_parlamentar' => $this->obterPartidoParlamentar($user),
-            
-            // Instituição
-            'nome_municipio' => config('app.municipio', 'São Paulo'),
-            'municipio' => config('app.municipio', 'São Paulo'),
-            'nome_camara' => config('app.nome_camara', 'Câmara Municipal'),
-            'endereco_camara' => config('app.endereco_camara', 'Endereço da Câmara'),
-            'legislatura_atual' => config('app.legislatura', '2021-2024'),
-            'sessao_legislativa' => $agora->format('Y'),
-            
-            // Imagens padrão
-            'imagem_cabecalho' => $this->obterImagemCabecalho()
         ];
+        
+        // Combinar todas as variáveis - proposição tem precedência sobre parâmetros para dados específicos
+        $todasVariaveis = array_merge($variaveisParametros, $variaveisProposicao);
+        
+        // Garantir que variáveis críticas da proposição não sejam sobrescritas
+        $variaveisCriticas = [
+            'ementa' => $proposicao->ementa ?? '[EMENTA]',
+            'texto' => $proposicao->conteudo ?? '[TEXTO]',
+            'numero_proposicao' => $this->gerarNumeroProposicao($proposicao),
+            'autor_nome' => $autor->name ?? '[NOME DO AUTOR]',
+            'autor_cargo' => $this->obterCargoParlamentar($autor)
+        ];
+        
+        return array_merge($todasVariaveis, $variaveisCriticas);
     }
 
     /**
@@ -312,8 +347,11 @@ class TemplateProcessorService
     {
         $variaveisEditaveis = [];
         
+        // Apenas incluir variáveis editáveis que foram fornecidas
         foreach (array_keys($this->editableVariables) as $variavel) {
-            $variaveisEditaveis[$variavel] = $dados[$variavel] ?? '[' . strtoupper($variavel) . ']';
+            if (isset($dados[$variavel]) && !empty($dados[$variavel])) {
+                $variaveisEditaveis[$variavel] = $dados[$variavel];
+            }
         }
         
         return $variaveisEditaveis;
@@ -531,6 +569,20 @@ class TemplateProcessorService
     }
 
     /**
+     * Obter nome do mês por extenso
+     */
+    private function obterMesExtenso(int $mes): string
+    {
+        $meses = [
+            1 => 'janeiro', 2 => 'fevereiro', 3 => 'março', 4 => 'abril',
+            5 => 'maio', 6 => 'junho', 7 => 'julho', 8 => 'agosto',
+            9 => 'setembro', 10 => 'outubro', 11 => 'novembro', 12 => 'dezembro'
+        ];
+        
+        return $meses[$mes] ?? 'janeiro';
+    }
+
+    /**
      * Gerar número da proposição
      */
     private function gerarNumeroProposicao(Proposicao $proposicao): string
@@ -596,6 +648,82 @@ class TemplateProcessorService
                 'artigo_3' => 'Revogam-se as disposições em contrário'
             ]
         );
+    }
+
+    /**
+     * Gerar código RTF para imagem
+     */
+    private function gerarImagemRTF(string $caminhoImagem): string
+    {
+        try {
+            // Verificar se o arquivo existe
+            if (!file_exists($caminhoImagem)) {
+                return '';
+            }
+            
+            // Obter informações da imagem
+            $imageInfo = getimagesize($caminhoImagem);
+            if (!$imageInfo) {
+                return '';
+            }
+            
+            $width = $imageInfo[0];
+            $height = $imageInfo[1];
+            
+            // Calcular dimensões para RTF (em twips - 1440 twips = 1 polegada)
+            // Redimensionar para caber no cabeçalho (máximo 2 polegadas de largura)
+            $maxWidthInches = 2;
+            $maxWidthTwips = $maxWidthInches * 1440;
+            
+            $aspectRatio = $width / $height;
+            
+            if ($width > 200) { // Se a imagem for muito grande
+                $rtfWidth = $maxWidthTwips;
+                $rtfHeight = (int)($rtfWidth / $aspectRatio);
+            } else {
+                // Usar tamanho original convertido para twips (assumindo 96 DPI)
+                $rtfWidth = (int)($width * 15); // 1440/96 = 15
+                $rtfHeight = (int)($height * 15);
+            }
+            
+            // Ler conteúdo da imagem
+            $imageContent = file_get_contents($caminhoImagem);
+            if (!$imageContent) {
+                return '';
+            }
+            
+            // Converter para hexadecimal
+            $hexData = bin2hex($imageContent);
+            
+            // Determinar tipo de imagem
+            $extension = strtolower(pathinfo($caminhoImagem, PATHINFO_EXTENSION));
+            $imageType = 'pngblip'; // Padrão PNG
+            
+            if ($extension === 'jpg' || $extension === 'jpeg') {
+                $imageType = 'jpegblip';
+            }
+            
+            // Gerar código RTF para a imagem
+            $rtf = '{\\pict\\' . $imageType . '\\picw' . $width . '\\pich' . $height;
+            $rtf .= '\\picwgoal' . $rtfWidth . '\\pichgoal' . $rtfHeight . ' ';
+            
+            // Adicionar dados hexadecimais em blocos de 80 caracteres
+            $hexLines = str_split($hexData, 80);
+            foreach ($hexLines as $line) {
+                $rtf .= $line . "\n";
+            }
+            
+            $rtf .= '}';
+            
+            return $rtf;
+            
+        } catch (\Exception $e) {
+            \Log::error('Erro ao gerar imagem RTF', [
+                'path' => $caminhoImagem,
+                'error' => $e->getMessage()
+            ]);
+            return '';
+        }
     }
 
     /**

@@ -5,6 +5,7 @@ namespace App\Services\OnlyOffice;
 use App\Models\TipoProposicaoTemplate;
 use App\Models\User;
 use App\Services\Template\TemplateParametrosService;
+use App\Services\Template\TemplateProcessorService;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -15,13 +16,15 @@ class OnlyOfficeService
     private string $internalUrl;
     private string $jwtSecret;
     private TemplateParametrosService $templateParametrosService;
+    private TemplateProcessorService $templateProcessorService;
 
-    public function __construct(TemplateParametrosService $templateParametrosService)
+    public function __construct(TemplateParametrosService $templateParametrosService, TemplateProcessorService $templateProcessorService)
     {
         $this->serverUrl = config('onlyoffice.server_url');
         $this->internalUrl = config('onlyoffice.internal_url');
         $this->jwtSecret = config('onlyoffice.jwt_secret');
         $this->templateParametrosService = $templateParametrosService;
+        $this->templateProcessorService = $templateProcessorService;
     }
 
     /**
@@ -75,9 +78,10 @@ class OnlyOfficeService
      */
     public function criarConfiguracaoTemplate(TipoProposicaoTemplate $template): array
     {
-        // Garantir que o template tem um arquivo
-        $this->garantirArquivoTemplate($template);
+        // Garantir que o template tem um arquivo processado com variáveis
+        $this->garantirArquivoTemplateProcessado($template);
         
+        // Usar arquivo processado
         $downloadUrl = $template->getUrlDownload();
         
         // Adicionar timestamp ao document_key para forçar reload após salvar
@@ -109,6 +113,15 @@ class OnlyOfficeService
                 $documentType = 'word'; // Padrão "word" para todos os documentos
                 break;
         }
+        
+        // Garantir que documentType é válido e limpo
+        $documentType = trim($documentType);
+        $validTypes = ['word', 'cell', 'slide', 'text']; // Adicionar 'text' para RTF
+        if (!in_array($documentType, $validTypes)) {
+            $documentType = 'word'; // Fallback seguro
+        }
+        
+        // Debug log removido - problema do documentType resolvido
         
         // Log::info('OnlyOffice editor configuration created', [
             //     'template_id' => $template->id,
@@ -185,6 +198,8 @@ class OnlyOfficeService
         // if ($this->jwtSecret) {
         //     $config['token'] = $this->gerarToken($config);
         // }
+
+        // Debug logs removidos - problema do documentType resolvido
 
         return $config;
     }
@@ -579,6 +594,136 @@ class OnlyOfficeService
             'municipio' => config('app.municipio', 'São Paulo'),
             'camara_nome' => config('app.camara_nome', 'Câmara Municipal'),
         ];
+    }
+
+    /**
+     * Garantir que o template tem um arquivo processado para visualização admin
+     * Apenas processa a imagem do cabeçalho, mantendo outras variáveis como placeholders
+     */
+    private function garantirArquivoTemplateProcessado(TipoProposicaoTemplate $template): void
+    {
+        // Primeiro garantir que existe arquivo base
+        $this->garantirArquivoTemplate($template);
+        
+        // Agora processar apenas a imagem para visualização no admin
+        if ($template->arquivo_path && Storage::exists($template->arquivo_path)) {
+            // Ler conteúdo atual
+            $conteudo = Storage::get($template->arquivo_path);
+            
+            // Verificar se já foi processado (tem imagem RTF)
+            if (strpos($conteudo, '\\pngblip') !== false || strpos($conteudo, '\\jpegblip') !== false) {
+                // Já foi processado, não processar novamente
+                return;
+            }
+            
+            // Processar APENAS a imagem do cabeçalho para admin
+            $conteudoProcessado = $this->processarImagemCabecalhoAdmin($conteudo);
+            
+            // Salvar arquivo processado no mesmo caminho (sobrescrever)
+            Storage::put($template->arquivo_path, $conteudoProcessado);
+            
+            // Atualizar timestamp para forçar reload
+            $template->touch();
+            
+            \Log::info('Template processado para visualização admin (apenas imagem)', [
+                'template_id' => $template->id,
+                'path' => $template->arquivo_path,
+                'tem_imagem' => strpos($conteudoProcessado, '\\pngblip') !== false,
+                'tamanho' => strlen($conteudoProcessado)
+            ]);
+        }
+    }
+
+    /**
+     * Processar apenas a imagem do cabeçalho para visualização admin
+     * Mantém todas as outras variáveis como placeholders ${variavel}
+     */
+    private function processarImagemCabecalhoAdmin(string $conteudo): string
+    {
+        try {
+            // Verificar se o conteúdo é RTF
+            $isRTF = strpos($conteudo, '{\rtf') !== false;
+            
+            // Para admin, usar apenas o caminho fixo da imagem (não usar TemplateVariableService)
+            $caminhoImagem = 'template/cabecalho.png';
+            
+            // Verificar se a imagem existe
+            if ($caminhoImagem && file_exists(public_path($caminhoImagem))) {
+                \Log::info('Imagem do cabeçalho encontrada para admin', [
+                    'path' => $caminhoImagem,
+                    'full_path' => public_path($caminhoImagem),
+                    'exists' => true
+                ]);
+                
+                // Gerar código RTF para a imagem
+                $imagemRTF = $this->gerarImagemRTFAdmin(public_path($caminhoImagem));
+                
+                // Substituir APENAS a variável ${imagem_cabecalho} 
+                $formatosImagem = [
+                    '${imagem_cabecalho}',
+                ];
+                
+                if ($isRTF) {
+                    // Para RTF, também verificar formato escapado
+                    $formatosImagem[] = '$\\{imagem_cabecalho\\}';
+                }
+                
+                foreach ($formatosImagem as $formato) {
+                    if (strpos($conteudo, $formato) !== false) {
+                        $conteudo = str_replace($formato, $imagemRTF, $conteudo);
+                        \Log::info("Variável de imagem $formato substituída por RTF no admin");
+                    }
+                }
+            } else {
+                \Log::warning('Imagem do cabeçalho não encontrada para admin', [
+                    'path' => $caminhoImagem,
+                    'full_path' => public_path($caminhoImagem ?? ''),
+                    'exists' => false
+                ]);
+                
+                // Remover apenas a variável ${imagem_cabecalho} se não existir
+                $formatosImagem = ['${imagem_cabecalho}'];
+                if ($isRTF) {
+                    $formatosImagem[] = '$\\{imagem_cabecalho\\}';
+                }
+                $conteudo = str_replace($formatosImagem, '', $conteudo);
+            }
+            
+            // IMPORTANTE: NÃO processar outras variáveis para admin
+            // Todas as outras variáveis devem permanecer como ${variavel}
+            
+            return $conteudo;
+            
+        } catch (\Exception $e) {
+            \Log::error('Erro ao processar imagem do cabeçalho para admin', [
+                'error' => $e->getMessage()
+            ]);
+            
+            // Em caso de erro, apenas remover a variável ${imagem_cabecalho}
+            return str_replace(['${imagem_cabecalho}', '$\\{imagem_cabecalho\\}'], '', $conteudo);
+        }
+    }
+
+    /**
+     * Gerar código RTF para imagem (versão simplificada para admin)
+     */
+    private function gerarImagemRTFAdmin(string $caminhoImagem): string
+    {
+        try {
+            // Usar o método do TemplateProcessorService via reflection
+            $reflection = new \ReflectionClass($this->templateProcessorService);
+            $method = $reflection->getMethod('gerarImagemRTF');
+            $method->setAccessible(true);
+            
+            return $method->invoke($this->templateProcessorService, $caminhoImagem);
+            
+        } catch (\Exception $e) {
+            \Log::error('Erro ao gerar imagem RTF para admin', [
+                'path' => $caminhoImagem,
+                'error' => $e->getMessage()
+            ]);
+            return '';
+        }
     }
 
     /**
@@ -1572,76 +1717,27 @@ ${texto}
             // Obter dados da câmara através do serviço
             $dadosCamara = $this->obterDadosCamara();
             
-            // Preparar dados para substituição
-            $dados = [
-                // Dados básicos da proposição
-                'numero_proposicao' => $proposicao->numero_protocolo ?: sprintf('%04d', $proposicao->id),
+            // Usar o TemplateProcessorService para processar o template com todas as variáveis
+            Log::info('Processando template com TemplateProcessorService', [
+                'proposicao_id' => $proposicao->id,
+                'template_id' => $template->id
+            ]);
+            
+            // Preparar dados editáveis específicos da proposição
+            $dadosEditaveis = [
                 'ementa' => $proposicao->ementa ?? '',
                 'texto' => $proposicao->conteudo ?? '',
-                'autor_nome' => $proposicao->autor->name ?? '',
-                'autor_cargo' => $proposicao->autor->cargo ?? 'Vereador',
-                'data_atual' => now()->format('d/m/Y'),
-                'ano_atual' => now()->year,
-                'municipio' => $dadosCamara['municipio'] ?? 'São Paulo',
-                'camara_nome' => $dadosCamara['nome_oficial'] ?? 'Câmara Municipal',
-                
-                // Dados do cabeçalho
-                'imagem_cabecalho' => '', // Vazio por enquanto, pode ser implementado depois
-                'cabecalho_nome_camara' => $dadosCamara['nome_oficial'] ?? 'Câmara Municipal',
-                'cabecalho_endereco' => $dadosCamara['endereco_linha'] ?? '',
-                'cabecalho_telefone' => $dadosCamara['telefone'] ?? '',
-                'cabecalho_website' => $dadosCamara['website'] ?? '',
-                
-                // Dados de data
-                'dia' => now()->format('d'),
-                'mes_extenso' => $this->obterMesPortugues(now()->month),
-                
-                // Dados adicionais
-                'justificativa' => '', // Normalmente vazio no template base
-                'assinatura_padrao' => '__________________________________',
-                'rodape_texto' => ''
+                'justificativa' => $proposicao->justificativa ?? '',
+                'numero_proposicao' => $proposicao->numero_protocolo ?: sprintf('%04d', $proposicao->id)
             ];
-
-            // Reativar o código original com melhorias
-            // Substituir variáveis no template
-            $conteudoProcessado = $conteudoTemplate;
             
-            // Log::info('Antes da substituição', [
-                //     'template_id' => $template->id,
-                //     'dados' => $dados,
-                //     'preview_antes' => substr($conteudoProcessado, 0, 300)
-            // ]);
+            $conteudoProcessado = $this->templateProcessorService->processarTemplate($template, $proposicao, $dadosEditaveis);
             
-            foreach ($dados as $variavel => $valor) {
-                // Escapar caracteres especiais do RTF para valores de texto
-                $valorEscapado = $this->escapeRtf($valor);
-                
-                // Formatos de variáveis para substituir:
-                $formatos = [
-                    '$\\{' . $variavel . '\\}',  // Formato RTF com escape: $\{variavel\}
-                    '${' . $variavel . '}',      // Formato simples: ${variavel}
-                    '$' . $variavel               // Formato direto: $variavel
-                ];
-                
-                foreach ($formatos as $formato) {
-                    $antes = substr_count($conteudoProcessado, $formato);
-                    if ($antes > 0) {
-                        $conteudoProcessado = str_replace($formato, $valorEscapado, $conteudoProcessado);
-                        
-                        // Log::info('Substituição de variável', [
-                            //     'variavel' => $formato,
-                            //     'valor_original' => $valor,
-                            //     'valor_escapado' => $valorEscapado,
-                            //     'ocorrencias' => $antes
-                        // ]);
-                    }
-                }
-            }
-            
-            // Log::info('Após substituição', [
-                //     'template_id' => $template->id,
-                //     'preview_depois' => substr($conteudoProcessado, 0, 300)
-            // ]);
+            Log::info('Template processado com sucesso', [
+                'template_id' => $template->id,
+                'conteudo_length' => strlen($conteudoProcessado),
+                'preview' => substr($conteudoProcessado, 0, 300)
+            ]);
 
             // Verificar a extensão do arquivo do template
             $extensao = pathinfo($template->arquivo_path, PATHINFO_EXTENSION);

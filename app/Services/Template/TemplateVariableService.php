@@ -24,7 +24,8 @@ class TemplateVariableService
 
         try {
             // Variáveis do módulo Templates - Cabeçalho
-            $variables['cabecalho_imagem'] = $this->parametroService->obterValor('Templates', 'Cabeçalho', 'cabecalho_imagem') ?: '';
+            $variables['cabecalho_imagem'] = $this->parametroService->obterValor('Templates', 'Cabeçalho', 'cabecalho_imagem') ?: 'template/cabecalho.png';
+            $variables['imagem_cabecalho'] = $variables['cabecalho_imagem']; // Compatibilidade para templates RTF
             $variables['cabecalho_nome_camara'] = $this->parametroService->obterValor('Templates', 'Cabeçalho', 'cabecalho_nome_camara') ?: 'CÂMARA MUNICIPAL';
             $variables['cabecalho_endereco'] = $this->parametroService->obterValor('Templates', 'Cabeçalho', 'cabecalho_endereco') ?: '';
             $variables['cabecalho_telefone'] = $this->parametroService->obterValor('Templates', 'Cabeçalho', 'cabecalho_telefone') ?: '';
@@ -38,6 +39,7 @@ class TemplateVariableService
             $variables['var_prefixo_numeracao'] = $this->parametroService->obterValor('Templates', 'Variáveis Dinâmicas', 'var_prefixo_numeracao') ?: 'PROP';
             $variables['var_formato_data'] = $this->parametroService->obterValor('Templates', 'Variáveis Dinâmicas', 'var_formato_data') ?: 'd/m/Y';
             $variables['var_assinatura_padrao'] = $this->parametroService->obterValor('Templates', 'Variáveis Dinâmicas', 'var_assinatura_padrao') ?: "Sala das Sessões, em _____ de _____________ de _______.\n\n\n_________________________________\nVereador(a)";
+            $variables['assinatura_padrao'] = $variables['var_assinatura_padrao']; // Compatibilidade para templates RTF
 
             // Variáveis do módulo Templates - Formatação
             $variables['format_fonte'] = $this->parametroService->obterValor('Templates', 'Formatação', 'format_fonte') ?: 'Arial';
@@ -56,7 +58,7 @@ class TemplateVariableService
             $variables['complemento'] = $this->parametroService->obterValor('Dados Gerais', 'Endereço', 'complemento') ?: '';
             $variables['bairro'] = $this->parametroService->obterValor('Dados Gerais', 'Endereço', 'bairro') ?: '';
             $variables['cidade'] = $this->parametroService->obterValor('Dados Gerais', 'Endereço', 'cidade') ?: '';
-            $variables['municipio'] = $variables['cidade']; // Alias para compatibilidade
+            $variables['municipio'] = $variables['cidade'] ?: 'Caraguatatuba'; // Alias para compatibilidade
             $variables['estado'] = $this->parametroService->obterValor('Dados Gerais', 'Endereço', 'estado') ?: 'SP';
             $variables['cep'] = $this->parametroService->obterValor('Dados Gerais', 'Endereço', 'cep') ?: '';
 
@@ -102,8 +104,22 @@ class TemplateVariableService
             // Variáveis de data e hora
             $variables['data_atual'] = date($variables['var_formato_data']);
             $variables['ano'] = date('Y');
+            $variables['ano_atual'] = date('Y'); // Compatibilidade para templates RTF
             $variables['mes'] = date('m');
             $variables['dia'] = date('d');
+            
+            // Mês por extenso em português
+            $meses = ['', 'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 
+                     'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+            $variables['mes_extenso'] = $meses[(int)date('n')];
+            
+            // Variáveis específicas para templates RTF (serão substituídas dinamicamente nas proposições)
+            $variables['numero_proposicao'] = '{numero_proposicao}';
+            $variables['ementa'] = '{ementa}';
+            $variables['texto'] = '{texto}';
+            $variables['justificativa'] = '{justificativa}';
+            $variables['autor_nome'] = '{autor_nome}';
+            $variables['autor_cargo'] = '{autor_cargo}';
 
             // Variáveis de paginação (serão substituídas dinamicamente)
             $variables['pagina_atual'] = '1';
@@ -145,6 +161,7 @@ class TemplateVariableService
         return [
             // Cabeçalho
             '${cabecalho_imagem}' => 'Imagem do brasão ou logo da câmara',
+            '${imagem_cabecalho}' => 'Imagem do brasão ou logo da câmara (alias RTF)',
             '${cabecalho_nome_camara}' => 'Nome completo da câmara municipal',
             '${cabecalho_endereco}' => 'Endereço da câmara no cabeçalho',
             '${cabecalho_telefone}' => 'Telefone no cabeçalho',
@@ -158,6 +175,7 @@ class TemplateVariableService
             '${var_prefixo_numeracao}' => 'Prefixo da numeração de proposições',
             '${var_formato_data}' => 'Formato de data',
             '${var_assinatura_padrao}' => 'Texto padrão de assinatura',
+            '${assinatura_padrao}' => 'Área de assinatura padrão (alias RTF)',
             
             // Formatação
             '${format_fonte}' => 'Fonte padrão',

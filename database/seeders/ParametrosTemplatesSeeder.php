@@ -184,6 +184,7 @@ class ParametrosTemplatesSeeder extends Seeder
         );
 
         // Definir valores padrão usando dados de Caraguatatuba
+        $this->definirValor($campoLogo, 'template/cabecalho.png');
         $this->definirValor($campoNomeCamara, 'CÂMARA MUNICIPAL DE CARAGUATATUBA');
         $this->definirValor($campoEndereco, "Praça da República, 40\nCentro - Caraguatatuba/SP\nCEP: 11660-020");
         $this->definirValor($campoTelefone, '(12) 3882-5588');
@@ -227,7 +228,7 @@ class ParametrosTemplatesSeeder extends Seeder
         );
 
         // Definir valores padrão
-        $this->definirValor($campoTextoRodape, 'Documento oficial da Câmara Municipal');
+        $this->definirValor($campoTextoRodape, 'Câmara Municipal de Caraguatatuba - Documento Oficial');
         $this->definirValor($campoNumeracao, '1', 'boolean');
     }
 
@@ -294,7 +295,7 @@ class ParametrosTemplatesSeeder extends Seeder
         // Definir valores
         $this->definirValor($campoPrefixo, 'PROP');
         $this->definirValor($campoFormatoData, 'd/m/Y');
-        $this->definirValor($campoAssinatura, "Sala das Sessões, em _____ de _____________ de _______.\n\n\n_________________________________\nVereador(a)");
+        $this->definirValor($campoAssinatura, "__________________________________");
     }
 
     private function criarCamposFormatacao($submodulo)
