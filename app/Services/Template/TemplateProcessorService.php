@@ -703,12 +703,20 @@ class TemplateProcessorService
      */
     private function gerarNumeroProposicao(Proposicao $proposicao): string
     {
-        if ($proposicao->numero) {
+        // Verificar se o protocolo já atribuiu um número
+        if (!empty($proposicao->numero_protocolo)) {
+            // Se tem número de protocolo, usar ele
+            return $proposicao->numero_protocolo;
+        }
+        
+        // Se tem número definido (compatibilidade com campo antigo)
+        if (!empty($proposicao->numero)) {
             return $proposicao->numero;
         }
         
-        // Gerar número baseado no ID e ano
-        return sprintf('%04d/%d', $proposicao->id, $proposicao->ano ?? date('Y'));
+        // Se não foi protocolado ainda, retornar placeholder
+        // Não gerar número automaticamente - só o protocolo pode atribuir
+        return '[AGUARDANDO PROTOCOLO]';
     }
 
     /**

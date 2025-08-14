@@ -41,7 +41,8 @@ docker exec -it legisinc-app php artisan migrate:fresh --seed
 - `${cabecalho_website}` → **www.camaracaraguatatuba.sp.gov.br**
 
 ### Proposição
-- `${numero_proposicao}/${ano_atual}` → **0001/2025**
+- `${numero_proposicao}` → **[AGUARDANDO PROTOCOLO]** (até ser protocolado)
+- `${numero_proposicao}` → **0001/2025** (após protocolo atribuir número)
 - `${ementa}` → Ementa da proposição
 - `${texto}` → Conteúdo da proposição (IA ou manual)
 - `${justificativa}` → Justificativa (opcional)
@@ -60,10 +61,12 @@ docker exec -it legisinc-app php artisan migrate:fresh --seed
 1. **Administrador** cria templates com variáveis
 2. **Parlamentar** cria proposição tipo "moção"
 3. **Sistema** detecta tipo e busca template (ID: 6)
-4. **Variáveis** são substituídas pelos dados corretos
+4. **Variáveis** são substituídas (número_proposicao = [AGUARDANDO PROTOCOLO])
 5. **Documento** é gerado com estrutura formal
 6. **Parlamentar** edita no OnlyOffice com template aplicado
-7. **Legislativo** recebe documento formatado para análise
+7. **Protocolo** atribui número oficial (ex: 0001/2025)
+8. **Sistema** atualiza variável ${numero_proposicao} com número real
+9. **Legislativo** recebe documento formatado para análise
 
 ## ⚙️ Correções Técnicas Aplicadas
 
@@ -72,11 +75,13 @@ docker exec -it legisinc-app php artisan migrate:fresh --seed
 - **Processamento admin**: Apenas `${imagem_cabecalho}` é convertida para RTF
 - **Outras variáveis permanecem como placeholders** em `/admin/templates`
 - **Editor parlamentar**: Todas as variáveis são processadas
+- **Número de proposição**: Exibe [AGUARDANDO PROTOCOLO] até ser protocolado
 
 ### 2. TemplateProcessorService.php
 - **Codificação UTF-8 correta** com mb_strlen, mb_substr, mb_ord
 - **Conversão RTF Unicode** (\uN*) para acentuação portuguesa
 - **Processamento de imagem** PNG/JPG para RTF hexadecimal
+- **Método gerarNumeroProposicao**: Verifica `numero_protocolo` antes de gerar
 
 ### 3. PreventBackHistory.php
 - **Bypass para downloads** do OnlyOffice (BinaryFileResponse/StreamedResponse)
@@ -89,7 +94,7 @@ Praça da República, 40, Centro
 (12) 3882-5588
 www.camaracaraguatatuba.sp.gov.br
 
-MOÇÃO Nº 0001/2025
+MOÇÃO Nº [AGUARDANDO PROTOCOLO]
 
 EMENTA: [Ementa da proposição]
 
@@ -115,9 +120,10 @@ Vereador
 ✅ **Acentuação portuguesa** funcionando perfeitamente
 ✅ **Admin templates**: Imagem + variáveis como placeholders
 ✅ **Editor parlamentar**: Imagem + todas variáveis substituídas
+✅ **Número de proposição**: [AGUARDANDO PROTOCOLO] até protocolar
 ✅ **Dados da câmara** configurados automaticamente  
 ✅ **OnlyOffice** integrado e funcional  
-✅ **Fluxo parlamentar** → **legislativo** operacional  
+✅ **Fluxo parlamentar** → **protocolo** → **legislativo** operacional  
 ✅ **Permissões** configuradas por perfil  
 ✅ **Migrate fresh --seed** preserva TODA configuração  
 
@@ -160,8 +166,19 @@ Isso processa a variável `${imagem_cabecalho}` para RTF em todos os templates, 
 
 ---
 
+## 📌 IMPORTANTE: Numeração de Proposições
+
+**A variável `${numero_proposicao}` segue o fluxo legislativo correto:**
+
+1. **Criação da proposição**: Exibe `[AGUARDANDO PROTOCOLO]`
+2. **Após protocolar**: Exibe o número oficial (ex: `0001/2025`)
+3. **Apenas o Protocolo** pode atribuir números oficiais
+4. **Sistema não gera números automaticamente** (respeitando processo legislativo)
+
+---
+
 **🎊 CONFIGURAÇÃO 100% PRESERVADA APÓS `migrate:fresh --seed`** ✅
 
 **Última atualização**: 14/08/2025
-**Versão estável**: v1.0
+**Versão estável**: v1.1
 **Status**: PRODUÇÃO

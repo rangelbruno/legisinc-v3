@@ -584,7 +584,7 @@ class OnlyOfficeService
         $ano = $dados['ano'] ?? date('Y');
         
         return [
-            'numero_proposicao' => $dados['numero_protocolo'] ?? sprintf('%04d/%d', $proposicaoId, $ano),
+            'numero_proposicao' => $dados['numero_protocolo'] ?? '[AGUARDANDO PROTOCOLO]',
             'ementa' => $dados['ementa'],
             'texto' => $dados['texto'],
             'autor_nome' => $autor->name,
@@ -1743,7 +1743,7 @@ ${texto}
                 'ementa' => $proposicao->ementa ?? '',
                 'texto' => $proposicao->conteudo ?? '',
                 'justificativa' => $proposicao->justificativa ?? '',
-                'numero_proposicao' => $proposicao->numero_protocolo ?: sprintf('%04d', $proposicao->id)
+                'numero_proposicao' => $proposicao->numero_protocolo ?: '[AGUARDANDO PROTOCOLO]'
             ];
             
             $conteudoProcessado = $this->templateProcessorService->processarTemplate($template, $proposicao, $dadosEditaveis);
