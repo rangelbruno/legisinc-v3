@@ -4795,20 +4795,48 @@ ${texto}
     private function criarPDFComDomPDF(string $caminhoPdfAbsoluto, Proposicao $proposicao): void
     {
         try {
-            // Ler conteúdo do arquivo original
-            $conteudoOriginal = '';
-            if ($proposicao->arquivo_path && \Storage::exists($proposicao->arquivo_path)) {
-                $conteudoOriginal = \Storage::get($proposicao->arquivo_path);
-                // Remover tags RTF básicas se for RTF
-                $conteudoOriginal = strip_tags($conteudoOriginal);
-                $conteudoOriginal = preg_replace('/\\{[^}]*\\}/', '', $conteudoOriginal);
-                $conteudoOriginal = trim($conteudoOriginal);
+            // Tentar obter conteúdo mais atual possível
+            $conteudo = '';
+            
+            // ESTRATÉGIA DE EXPORTAÇÃO DIRETA: Como "Salvar como PDF" do OnlyOffice
+            
+            // 1. Verificar se existe arquivo editado pelo Legislativo
+            if ($proposicao->arquivo_path) {
+                $caminhoArquivo = null;
+                
+                // Tentar encontrar o arquivo editado (RTF do OnlyOffice)
+                $possiveisCaminhos = [
+                    storage_path('app/' . $proposicao->arquivo_path),
+                    storage_path('app/private/' . $proposicao->arquivo_path),
+                    storage_path('app/proposicoes/' . basename($proposicao->arquivo_path))
+                ];
+                
+                foreach ($possiveisCaminhos as $caminho) {
+                    if (file_exists($caminho)) {
+                        $caminhoArquivo = $caminho;
+                        break;
+                    }
+                }
+                
+                // 2. Se encontrou arquivo RTF editado, tentar conversão direta para PDF
+                if ($caminhoArquivo && $this->libreOfficeDisponivel()) {
+                    if ($this->converterArquivoParaPDFDireto($caminhoArquivo, $caminhoPdfAbsoluto)) {
+                        // Conversão direta bem-sucedida - PDF idêntico ao do OnlyOffice
+                        // Log::info('PDF gerado por conversão direta do arquivo editado');
+                        return;
+                    }
+                }
+            }
+            
+            // 3. Fallback: Se conversão direta falhar, usar método DomPDF com conteúdo do banco
+            $conteudo = '';
+            if (!empty($proposicao->conteudo)) {
+                $conteudo = $proposicao->conteudo;
+            } else {
+                $conteudo = $proposicao->ementa ?: 'Conteúdo não disponível';
             }
 
-            // Usar conteúdo do banco se arquivo não existir
-            $conteudo = $conteudoOriginal ?: $proposicao->conteudo;
-
-            // Criar HTML simples para o PDF se o template não existir
+            // Criar HTML para DomPDF como fallback
             $html = $this->gerarHTMLParaPDF($proposicao, $conteudo);
 
             // Usar DomPDF para gerar PDF
@@ -4831,6 +4859,363 @@ ${texto}
             // ]);
             throw $e;
         }
+    }
+
+    /**
+     * Converter RTF para texto limpo removendo códigos RTF
+     */
+    private function converterRTFParaTexto(string $rtfContent): string
+    {
+        // Se não é RTF, retornar como está
+        if (!str_contains($rtfContent, '{\rtf')) {
+            return $rtfContent;
+        }
+        
+        // Para RTF muito complexo como do OnlyOffice, vamos usar uma abordagem mais simples:
+        // Buscar por texto real entre códigos RTF usando padrões específicos
+        
+        $textosEncontrados = [];
+        
+        // 1. Buscar texto em português comum (frases)
+        preg_match_all('/(?:[A-ZÁÉÍÓÚÂÊÎÔÛÃÕÀÈÌÒÙÇ][a-záéíóúâêîôûãõàèìòùç\s,.-]{15,})/u', $rtfContent, $matches);
+        if (!empty($matches[0])) {
+            foreach ($matches[0] as $match) {
+                // Limpar RTF restante
+                $clean = preg_replace('/\\\\\w+\d*\s*/', ' ', $match);
+                $clean = preg_replace('/[{}\\\\]/', '', $clean);
+                $clean = trim($clean);
+                if (strlen($clean) > 10) {
+                    $textosEncontrados[] = $clean;
+                }
+            }
+        }
+        
+        // 2. Buscar por textos específicos conhecidos
+        $palavrasChave = [
+            'CÂMARA MUNICIPAL',
+            'Praça da República',
+            'Caraguatatuba',
+            'MOÇÃO',
+            'EMENTA',
+            'Resolve',
+            'manifesta',
+            'dirigir a presente'
+        ];
+        
+        foreach ($palavrasChave as $palavra) {
+            if (stripos($rtfContent, $palavra) !== false) {
+                // Extrair contexto ao redor da palavra
+                preg_match_all('/[^{}\\\\]*' . preg_quote($palavra, '/') . '[^{}\\\\]{0,100}/i', $rtfContent, $matches);
+                if (!empty($matches[0])) {
+                    foreach ($matches[0] as $match) {
+                        $clean = preg_replace('/\\\\\w+\d*\s*/', ' ', $match);
+                        $clean = preg_replace('/[{}\\\\]/', '', $clean);
+                        $clean = trim($clean);
+                        if (strlen($clean) > 5) {
+                            $textosEncontrados[] = $clean;
+                        }
+                    }
+                }
+            }
+        }
+        
+        // 3. Se ainda não encontramos texto suficiente, usar método strip_tags
+        if (empty($textosEncontrados)) {
+            $texto = strip_tags($rtfContent);
+            $texto = preg_replace('/\\\\\w+\d*\s*/', ' ', $texto);
+            $texto = preg_replace('/[{}\\\\]/', '', $texto);
+            $texto = preg_replace('/[^\w\s\.,;:!?\-()áéíóúâêîôûãõàèìòùçÁÉÍÓÚÂÊÎÔÛÃÕÀÈÌÒÙÇ]/u', ' ', $texto);
+            $texto = preg_replace('/\s+/', ' ', $texto);
+            return trim($texto);
+        }
+        
+        // Juntar textos encontrados e limpar
+        $textoFinal = implode(' ', array_unique($textosEncontrados));
+        $textoFinal = preg_replace('/\s+/', ' ', $textoFinal);
+        
+        return trim($textoFinal);
+    }
+
+    /**
+     * Converter arquivo RTF editado diretamente para PDF usando LibreOffice
+     * Esta é a conversão mais fiel possível - idêntica ao "Salvar como PDF" do OnlyOffice
+     */
+    private function converterArquivoParaPDFDireto(string $caminhoArquivo, string $caminhoPdfDestino): bool
+    {
+        try {
+            // Garantir que o diretório de destino existe
+            $diretorioDestino = dirname($caminhoPdfDestino);
+            if (!is_dir($diretorioDestino)) {
+                mkdir($diretorioDestino, 0755, true);
+            }
+            
+            // Comando LibreOffice para conversão direta RTF -> PDF
+            $comando = sprintf(
+                'libreoffice --headless --invisible --nodefault --nolockcheck --nologo --norestore --convert-to pdf --outdir %s %s 2>/dev/null',
+                escapeshellarg($diretorioDestino),
+                escapeshellarg($caminhoArquivo)
+            );
+            
+            // Log::info('Executando conversão direta RTF para PDF', [
+                //     'comando' => $comando,
+                //     'arquivo_origem' => $caminhoArquivo,
+                //     'destino' => $caminhoPdfDestino
+            // ]);
+            
+            exec($comando, $output, $returnCode);
+            
+            // LibreOffice gera PDF com mesmo nome do arquivo fonte
+            $nomeArquivoSemExtensao = pathinfo($caminhoArquivo, PATHINFO_FILENAME);
+            $pdfGerado = $diretorioDestino . '/' . $nomeArquivoSemExtensao . '.pdf';
+            
+            // Verificar se conversão foi bem-sucedida
+            if ($returnCode === 0 && file_exists($pdfGerado)) {
+                // Se PDF foi gerado com nome diferente, renomear
+                if ($pdfGerado !== $caminhoPdfDestino) {
+                    rename($pdfGerado, $caminhoPdfDestino);
+                }
+                
+                // Log::info('Conversão direta RTF -> PDF bem-sucedida', [
+                    //     'tamanho_pdf' => filesize($caminhoPdfDestino),
+                    //     'return_code' => $returnCode
+                // ]);
+                
+                return true;
+            } else {
+                // Log::warning('Falha na conversão direta RTF -> PDF', [
+                    //     'return_code' => $returnCode,
+                    //     'output' => implode("\n", $output),
+                    //     'pdf_esperado' => $pdfGerado,
+                    //     'pdf_existe' => file_exists($pdfGerado)
+                // ]);
+                
+                return false;
+            }
+            
+        } catch (\Exception $e) {
+            // Log::error('Erro na conversão direta RTF -> PDF', [
+                //     'error' => $e->getMessage(),
+                //     'arquivo' => $caminhoArquivo
+            // ]);
+            
+            return false;
+        }
+    }
+    
+    /**
+     * Instalar LibreOffice se não estiver disponível (método para containers)
+     */
+    private function instalarLibreOfficeSeNecessario(): bool
+    {
+        if ($this->libreOfficeDisponivel()) {
+            return true;
+        }
+        
+        // Tentar instalar LibreOffice em ambiente Docker/Linux
+        try {
+            // Detectar tipo de sistema (Alpine vs Debian/Ubuntu)
+            exec('which apk', $apkOutput, $apkReturn);
+            $isAlpine = ($apkReturn === 0);
+            
+            if ($isAlpine) {
+                // Alpine Linux (container Docker atual)
+                $comandos = [
+                    'apk add --no-cache libreoffice',
+                    'apk add --no-cache fontconfig ttf-liberation ttf-dejavu',
+                    'fc-cache -f'
+                ];
+            } else {
+                // Debian/Ubuntu
+                $comandos = [
+                    'apt-get update -qq',
+                    'apt-get install -y -qq libreoffice --no-install-recommends',
+                    'apt-get install -y -qq fonts-liberation fonts-dejavu-core',
+                    'apt-get clean',
+                    'rm -rf /var/lib/apt/lists/*'
+                ];
+            }
+            
+            foreach ($comandos as $comando) {
+                exec($comando, $output, $returnCode);
+                if ($returnCode !== 0) {
+                    return false;
+                }
+            }
+            
+            return $this->libreOfficeDisponivel();
+            
+        } catch (\Exception $e) {
+            return false;
+        }
+    }
+
+    /**
+     * Gerar conteúdo completo para PDF quando documento foi editado pelo Legislativo
+     */
+    private function gerarConteudoCompletoParaPDF(\App\Models\Proposicao $proposicao): string
+    {
+        $conteudoCompleto = '';
+        
+        // 1. Adicionar informação sobre edição
+        $conteudoCompleto .= "DOCUMENTO EDITADO PELO LEGISLATIVO\n";
+        $conteudoCompleto .= "Última modificação: " . $proposicao->ultima_modificacao->format('d/m/Y H:i') . "\n";
+        if ($proposicao->modificadoPor) {
+            $conteudoCompleto .= "Modificado por: " . $proposicao->modificadoPor->name . "\n";
+        }
+        $conteudoCompleto .= str_repeat("-", 50) . "\n\n";
+        
+        // 2. Adicionar ementa
+        $conteudoCompleto .= "EMENTA:\n";
+        $conteudoCompleto .= $proposicao->ementa . "\n\n";
+        
+        // 3. Adicionar conteúdo do banco
+        if (!empty($proposicao->conteudo)) {
+            $conteudoCompleto .= "CONTEÚDO ORIGINAL:\n";
+            $conteudoCompleto .= $proposicao->conteudo . "\n\n";
+        }
+        
+        // 4. Tentar extrair informações básicas do arquivo editado
+        if ($proposicao->arquivo_path) {
+            $caminhoArquivo = null;
+            $possiveisCaminhos = [
+                storage_path('app/' . $proposicao->arquivo_path),
+                storage_path('app/private/' . $proposicao->arquivo_path)
+            ];
+            
+            foreach ($possiveisCaminhos as $caminho) {
+                if (file_exists($caminho)) {
+                    $caminhoArquivo = $caminho;
+                    break;
+                }
+            }
+            
+            if ($caminhoArquivo) {
+                $conteudoCompleto .= "INFORMAÇÕES DO ARQUIVO EDITADO:\n";
+                $conteudoCompleto .= "Arquivo: " . basename($proposicao->arquivo_path) . "\n";
+                $conteudoCompleto .= "Tamanho: " . number_format(filesize($caminhoArquivo) / 1024, 2) . " KB\n";
+                $conteudoCompleto .= "Data do arquivo: " . date('d/m/Y H:i:s', filemtime($caminhoArquivo)) . "\n\n";
+                
+                // Tentar extrair alguns trechos legíveis do RTF
+                $arquivoContent = file_get_contents($caminhoArquivo);
+                $trechosExtraidos = $this->extrairTrechosLegiveisRTF($arquivoContent);
+                
+                if (!empty($trechosExtraidos)) {
+                    $conteudoCompleto .= "TRECHOS IDENTIFICADOS NO DOCUMENTO EDITADO:\n";
+                    $conteudoCompleto .= $trechosExtraidos . "\n\n";
+                }
+            }
+        }
+        
+        // 5. Adicionar observações do fluxo legislativo se houver
+        if ($proposicao->observacoes_legislativo) {
+            $conteudoCompleto .= "OBSERVAÇÕES DO LEGISLATIVO:\n";
+            $conteudoCompleto .= $proposicao->observacoes_legislativo . "\n\n";
+        }
+        
+        $conteudoCompleto .= "NOTA: Este PDF contém a versão mais atual do documento, incluindo todas as alterações realizadas durante o processo legislativo.";
+        
+        return $conteudoCompleto;
+    }
+    
+    /**
+     * Extrair trechos legíveis de um arquivo RTF (método simplificado)
+     */
+    private function extrairTrechosLegiveisRTF(string $rtfContent): string
+    {
+        $trechos = [];
+        
+        // Buscar por texto comum em português
+        $patterns = [
+            '/(?:^|\s)([A-ZÁÉÍÓÚÂÊÎÔÛÃÕÀÈÌÒÙÇ][a-záéíóúâêîôûãõàèìòùç\s,.\-!?:;]{25,})(?:\s|$)/mu',
+            '/\b(Art\.|Artigo|Parágrafo|Inciso|Alínea)[^{}\\\\]{5,50}/i',
+            '/\b(Considerando|Resolve|Determina|Estabelece)[^{}\\\\]{5,100}/i'
+        ];
+        
+        foreach ($patterns as $pattern) {
+            if (preg_match_all($pattern, $rtfContent, $matches)) {
+                foreach ($matches[1] as $match) {
+                    $match = trim($match);
+                    if (strlen($match) > 15 && !preg_match('/[{}\\\\]/', $match)) {
+                        $trechos[] = $match;
+                    }
+                }
+            }
+        }
+        
+        // Remover duplicatas e retornar os primeiros 5 trechos
+        $trechos = array_unique($trechos);
+        $trechos = array_slice($trechos, 0, 5);
+        
+        return implode("\n- ", $trechos);
+    }
+
+    /**
+     * Método alternativo para extrair texto de RTF quando conversão principal falha
+     */
+    private function extrairTextoRTFAlternativo(string $rtfContent): string
+    {
+        // Método mais agressivo usando LibreOffice se disponível
+        if ($this->libreOfficeDisponivel()) {
+            try {
+                // Salvar RTF temporariamente
+                $tempRtf = tempnam(sys_get_temp_dir(), 'rtf_extract_') . '.rtf';
+                $tempTxt = tempnam(sys_get_temp_dir(), 'txt_extract_') . '.txt';
+                
+                file_put_contents($tempRtf, $rtfContent);
+                
+                // Usar LibreOffice para converter RTF para texto
+                $comando = sprintf(
+                    'libreoffice --headless --convert-to txt --outdir %s %s 2>/dev/null',
+                    escapeshellarg(dirname($tempTxt)),
+                    escapeshellarg($tempRtf)
+                );
+                
+                exec($comando, $output, $returnCode);
+                
+                $arquivoTxt = dirname($tempTxt) . '/' . pathinfo($tempRtf, PATHINFO_FILENAME) . '.txt';
+                
+                if ($returnCode === 0 && file_exists($arquivoTxt)) {
+                    $texto = file_get_contents($arquivoTxt);
+                    
+                    // Limpar arquivos temporários
+                    @unlink($tempRtf);
+                    @unlink($arquivoTxt);
+                    
+                    if (!empty($texto) && strlen($texto) > 20) {
+                        return trim($texto);
+                    }
+                }
+            } catch (\Exception $e) {
+                // Log::warning('Falha na extração RTF com LibreOffice: ' . $e->getMessage());
+            }
+        }
+        
+        // Método de fallback: buscar por texto comum entre códigos RTF
+        $textoExtraido = '';
+        
+        // Extrair texto que aparece entre espaços e caracteres comuns
+        if (preg_match_all('/\s([A-Za-zÀ-ÿ\s,.\-!?:;]{15,})\s/u', $rtfContent, $matches)) {
+            foreach ($matches[1] as $match) {
+                $match = trim($match);
+                if (strlen($match) > 10 && !preg_match('/[{}\\\\]/', $match)) {
+                    $textoExtraido .= $match . ' ';
+                }
+            }
+        }
+        
+        // Se ainda não temos texto suficiente, buscar parágrafos
+        if (strlen($textoExtraido) < 100) {
+            if (preg_match_all('/[A-ZÁÉÍÓÚÂÊÎÔÛÃÕÀÈÌÒÙÇ][a-záéíóúâêîôûãõàèìòùç\s,.\-!?:;]{30,}/u', $rtfContent, $matches)) {
+                foreach ($matches[0] as $match) {
+                    $match = trim($match);
+                    if (strlen($match) > 20 && !preg_match('/[{}\\\\]/', $match)) {
+                        $textoExtraido .= $match . ' ';
+                    }
+                }
+            }
+        }
+        
+        return trim($textoExtraido);
     }
 
     /**
@@ -5267,5 +5652,164 @@ ${texto}
             $nomeArquivo = basename($caminhoImagem);
             return "{\\qc\\b\\fs20 [INSERIR IMAGEM: {$nomeArquivo}]\\par}";
         }
+    }
+    
+    /**
+     * Retorna dados atualizados da proposição via AJAX
+     * Usado após fechar o editor OnlyOffice para atualizar a página sem reload completo
+     */
+    public function getDadosAtualizados(Proposicao $proposicao)
+    {
+        try {
+            // Verificar permissão de visualização (se houver usuário autenticado)
+            if (auth()->check()) {
+                $user = auth()->user();
+                if ($user->isParlamentar() && $proposicao->autor_id !== auth()->id()) {
+                    return response()->json(['error' => 'Sem permissão'], 403);
+                }
+            }
+            
+            // Recarregar a proposição do banco para garantir dados fresh
+            $proposicao->refresh();
+            
+            // ESTRATÉGIA SIMPLIFICADA: Sempre extrair ementa do conteúdo original da database
+            $conteudoProcessado = $proposicao->conteudo;
+            $ementaExtraida = $proposicao->ementa;
+            
+            // 1. SEMPRE tentar extrair ementa do conteúdo original (limpo e confiável)
+            if ($proposicao->conteudo && strlen($proposicao->conteudo) > 20) {
+                $novaEmenta = $this->extrairEmentaDoConteudo($proposicao->conteudo, $proposicao->ementa);
+                if ($novaEmenta && $novaEmenta !== 'Ementa a ser definida') {
+                    $ementaExtraida = $novaEmenta;
+                    \Log::info("✅ Ementa extraída do conteúdo original: " . substr($ementaExtraida, 0, 100));
+                }
+            }
+            
+            // 2. Se existe arquivo salvo, tentar mostrar conteúdo atualizado
+            if ($proposicao->arquivo_path) {
+                try {
+                    $onlyOfficeService = app(\App\Services\OnlyOffice\OnlyOfficeService::class);
+                    $textoDoArquivo = $onlyOfficeService->extrairTextoDoArquivo($proposicao);
+                    
+                    // Verificar se a extração do arquivo foi bem-sucedida
+                    if ($textoDoArquivo && 
+                        strlen(trim($textoDoArquivo)) > 50 && 
+                        !preg_match('/^[\s;*\\\\-]+$/', $textoDoArquivo)) {
+                        
+                        $conteudoProcessado = $textoDoArquivo;
+                        \Log::info("✅ Conteúdo atualizado extraído do arquivo");
+                    } else {
+                        \Log::info("⚠️ Extração do arquivo falhou, mantendo conteúdo original");
+                    }
+                } catch (\Exception $e) {
+                    \Log::info('⚠️ Erro ao extrair texto do arquivo: ' . $e->getMessage());
+                }
+            }
+            
+            // Retornar dados atualizados
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'id' => $proposicao->id,
+                    'tipo' => $proposicao->tipo_formatado,
+                    'ementa' => $ementaExtraida ?: 'Ementa a ser definida',
+                    'conteudo' => $proposicao->conteudo,
+                    'conteudo_processado' => $conteudoProcessado,
+                    'arquivo_path' => $proposicao->arquivo_path,
+                    'ultima_modificacao' => $proposicao->ultima_modificacao ? $proposicao->ultima_modificacao->format('d/m/Y H:i') : null,
+                    'status' => $proposicao->status,
+                    'status_label' => $proposicao->status_label,
+                    'autor' => $proposicao->autor ? $proposicao->autor->name : 'Desconhecido'
+                ]
+            ]);
+            
+        } catch (\Exception $e) {
+            \Log::error('Erro ao buscar dados atualizados da proposição: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'error' => 'Erro ao buscar dados atualizados'
+            ], 500);
+        }
+    }
+
+    /**
+     * Extrair ementa inteligente do conteúdo editado
+     */
+    private function extrairEmentaDoConteudo(string $conteudoProcessado, ?string $ementaOriginal): string
+    {
+        // Limpar o conteúdo de tags HTML e caracteres de formatação
+        $textoLimpo = strip_tags($conteudoProcessado);
+        $textoLimpo = html_entity_decode($textoLimpo);
+        $textoLimpo = preg_replace('/\s+/', ' ', $textoLimpo);
+        $textoLimpo = trim($textoLimpo);
+        
+        // Se o conteúdo está corrompido ou muito pequeno, manter ementa original
+        if (strlen($textoLimpo) < 50 || preg_match('/[\\\\*-]+/', $textoLimpo)) {
+            return $ementaOriginal ?: 'Ementa a ser definida';
+        }
+        
+        // Procurar por padrões de ementa
+        $padroes = [
+            '/EMENTA:\s*([^.]+\.)/i',
+            '/Ementa:\s*([^.]+\.)/i',
+            '/^([^.]+\.)/m',  // Primeira frase que termina com ponto
+        ];
+        
+        foreach ($padroes as $padrao) {
+            if (preg_match($padrao, $textoLimpo, $matches)) {
+                $ementaEncontrada = trim($matches[1]);
+                if (strlen($ementaEncontrada) > 20 && strlen($ementaEncontrada) < 500) {
+                    return $ementaEncontrada;
+                }
+            }
+        }
+        
+        // Se não encontrou padrão específico, extrair informação significativa
+        $linhas = explode("\n", $textoLimpo);
+        $linhas = array_filter($linhas, function($linha) {
+            $linha = trim($linha);
+            // Ignorar linhas muito curtas, títulos genéricos, ou apenas pontuação
+            return strlen($linha) > 15 && 
+                   !preg_match('/^(What|Why|How|Onde|Como|Quando|Por que)/i', $linha) &&
+                   !preg_match('/^[\s\p{P}]*$/u', $linha);
+        });
+        
+        if (count($linhas) > 0) {
+            $linhasValidas = array_values($linhas); // Re-indexar
+            $primeiraLinha = trim($linhasValidas[0]);
+            
+            // Se a primeira linha parece ser uma pergunta ou título, tentar a próxima
+            if (preg_match('/\?$/', $primeiraLinha) && count($linhasValidas) > 1) {
+                $primeiraLinha = trim($linhasValidas[1]);
+            }
+            
+            // Se a primeira linha é muito curta, tentar adicionar contexto
+            if (strlen($primeiraLinha) < 80 && count($linhasValidas) > 1) {
+                $segundaLinha = trim($linhasValidas[1]);
+                if (strlen($segundaLinha) > 15 && !preg_match('/\?$/', $segundaLinha)) {
+                    // Adicionar segunda linha se não for uma pergunta
+                    $primeiraLinha .= '. ' . $segundaLinha;
+                }
+            }
+            
+            // Limitar tamanho da ementa
+            if (strlen($primeiraLinha) > 250) {
+                // Tentar cortar em uma frase completa
+                $corte = strrpos(substr($primeiraLinha, 0, 247), '.');
+                if ($corte > 100) {
+                    $primeiraLinha = substr($primeiraLinha, 0, $corte + 1);
+                } else {
+                    $primeiraLinha = substr($primeiraLinha, 0, 247) . '...';
+                }
+            }
+            
+            // Verificar se é uma ementa válida
+            if (strlen($primeiraLinha) > 20 && !preg_match('/^[\s\p{P}]*$/u', $primeiraLinha)) {
+                return $primeiraLinha;
+            }
+        }
+        
+        // Fallback: manter ementa original
+        return $ementaOriginal ?: 'Ementa a ser definida';
     }
 }

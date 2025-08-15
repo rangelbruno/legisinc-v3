@@ -22,6 +22,9 @@ Route::get('/camaras/buscar', function() {
 // API Routes para busca de parlamentares (sem CSRF protection)
 Route::get('/parlamentares/buscar', [App\Http\Controllers\Parlamentar\ParlamentarController::class, 'apiSearch'])->name('api.parlamentares.buscar');
 
+// API para buscar dados atualizados de proposição (usado após fechar OnlyOffice)
+Route::get('/proposicoes/{proposicao}/dados-atualizados', [App\Http\Controllers\ProposicaoController::class, 'getDadosAtualizados'])->name('api.proposicoes.dados-atualizados');
+
 Route::post('/camaras/buscar-completa', function() {
     return app(App\Http\Controllers\Api\CamaraInfoController::class)->buscarCompleta(request());
 })->name('api.camaras.buscar-completa');

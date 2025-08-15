@@ -305,26 +305,6 @@
                         
                         <!--begin::Card body-->
                         <div class="card-body pt-0">
-                            @if(config('app.debug'))
-                            <!-- Debug Information -->
-                            <div class="alert alert-secondary mb-4">
-                                <strong>Debug Info:</strong><br>
-                                arquivo_pdf_path: {{ $proposicao->arquivo_pdf_path ?? 'null' }}<br>
-                                arquivo_path: {{ $proposicao->arquivo_path ?? 'null' }}<br>
-                                PDF exists (Storage): {{ $proposicao->arquivo_pdf_path ? (\Storage::exists($proposicao->arquivo_pdf_path) ? 'true' : 'false') : 'n/a' }}<br>
-                                PDF exists (file_exists): {{ $proposicao->arquivo_pdf_path ? (file_exists(storage_path('app/' . $proposicao->arquivo_pdf_path)) ? 'true' : 'false') : 'n/a' }}<br>
-                                PDF Route: {{ route('proposicoes.serve-pdf', $proposicao) }}<br>
-                                Full PDF Path: {{ $proposicao->arquivo_pdf_path ? storage_path('app/' . $proposicao->arquivo_pdf_path) : 'n/a' }}
-                                <br><br>
-                                <strong>Test PDF Access:</strong><br>
-                                <a href="{{ route('proposicoes.serve-pdf', $proposicao) }}" target="_blank" class="btn btn-sm btn-info">
-                                    <i class="fas fa-external-link-alt me-1"></i>Test PDF Route
-                                </a>
-                                <button onclick="forceHideLoading()" class="btn btn-sm btn-warning ms-2">
-                                    <i class="fas fa-eye-slash me-1"></i>Force Hide Loading
-                                </button>
-                            </div>
-                            @endif
                             
                             @if($proposicao->arquivo_pdf_path)
                             <!-- PDF Viewer -->

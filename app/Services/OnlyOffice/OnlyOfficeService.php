@@ -3150,4 +3150,134 @@ Status: " . ucfirst(str_replace('_', ' ', $proposicao->status)) . "\par
             default => "Unknown status: {$status}"
         };
     }
+    
+    /**
+     * Extrai texto simples de um arquivo RTF ou DOCX salvo
+     * Usado para mostrar conteúdo atualizado após edição no OnlyOffice
+     */
+    public function extrairTextoDoArquivo(\App\Models\Proposicao $proposicao): ?string
+    {
+        if (!$proposicao->arquivo_path) {
+            return null;
+        }
+        
+        // Determinar o caminho completo do arquivo
+        $caminhoCompleto = null;
+        
+        // Tentar encontrar o arquivo em diferentes locais
+        $possiveisCaminhos = [
+            storage_path('app/' . $proposicao->arquivo_path),
+            storage_path('app/private/' . $proposicao->arquivo_path),
+            storage_path('app/public/' . $proposicao->arquivo_path)
+        ];
+        
+        foreach ($possiveisCaminhos as $caminho) {
+            if (file_exists($caminho)) {
+                $caminhoCompleto = $caminho;
+                break;
+            }
+        }
+        
+        if (!$caminhoCompleto) {
+            Log::warning('Arquivo não encontrado para extração de texto', [
+                'proposicao_id' => $proposicao->id,
+                'arquivo_path' => $proposicao->arquivo_path
+            ]);
+            return null;
+        }
+        
+        try {
+            $extensao = strtolower(pathinfo($caminhoCompleto, PATHINFO_EXTENSION));
+            
+            if ($extensao === 'rtf') {
+                // Extrair texto básico de RTF com melhor processamento
+                $conteudo = file_get_contents($caminhoCompleto);
+                
+                // Remover comandos RTF comuns mais agressivamente
+                $texto = $conteudo;
+                
+                // Remover cabeçalho RTF completo
+                $texto = preg_replace('/^\\{\\\\rtf1[^}]*}/', '', $texto);
+                
+                // Remover todos os comandos RTF (backslash seguido de palavra e números opcionais)
+                $texto = preg_replace('/\\\\[a-zA-Z]+[0-9]*\s?/', ' ', $texto);
+                
+                // Remover caracteres de controle RTF
+                $texto = preg_replace('/\\\\[^a-zA-Z]/', '', $texto);
+                
+                // Remover chaves
+                $texto = preg_replace('/[{}]/', '', $texto);
+                
+                // Remover sequências hexadecimais RTF
+                $texto = preg_replace('/\\\\\'[0-9a-f]{2}/i', '', $texto);
+                
+                // Remover caracteres não imprimíveis e símbolos estranhos
+                $texto = preg_replace('/[^\w\s\p{L}\p{P}]/u', ' ', $texto);
+                
+                // Limpar múltiplos espaços e quebras de linha
+                $texto = preg_replace('/\s+/', ' ', $texto);
+                $texto = trim($texto);
+                
+                // Se o texto ainda está muito corrompido, tentar extrair apenas texto em português/inglês
+                if (preg_match_all('/[a-zA-ZÀ-ÿ\s,.!?;:()]{20,}/u', $texto, $matches)) {
+                    $textoLimpo = implode(' ', $matches[0]);
+                    if (strlen($textoLimpo) > 50) {
+                        $texto = $textoLimpo;
+                    }
+                }
+                
+                // Limitar o tamanho do texto retornado
+                if (strlen($texto) > 5000) {
+                    $texto = substr($texto, 0, 5000) . '...';
+                }
+                
+                return $texto;
+                
+            } elseif ($extensao === 'docx') {
+                // Para DOCX, extrair texto do XML
+                $zip = new \ZipArchive();
+                if ($zip->open($caminhoCompleto) === true) {
+                    $content = $zip->getFromName('word/document.xml');
+                    $zip->close();
+                    
+                    if ($content) {
+                        // Extrair texto do XML
+                        $xml = new \SimpleXMLElement($content);
+                        $xml->registerXPathNamespace('w', 'http://schemas.openxmlformats.org/wordprocessingml/2006/main');
+                        
+                        $paragraphs = $xml->xpath('//w:p');
+                        $texto = '';
+                        
+                        foreach ($paragraphs as $paragraph) {
+                            $texts = $paragraph->xpath('.//w:t');
+                            foreach ($texts as $text) {
+                                $texto .= (string)$text . ' ';
+                            }
+                            $texto .= "\n";
+                        }
+                        
+                        $texto = trim($texto);
+                        
+                        // Limitar o tamanho
+                        if (strlen($texto) > 5000) {
+                            $texto = substr($texto, 0, 5000) . '...';
+                        }
+                        
+                        return nl2br(htmlspecialchars($texto));
+                    }
+                }
+            }
+            
+            // Se não conseguir extrair, retornar indicação
+            return '<em>Conteúdo do arquivo não pode ser exibido. Abra no editor para visualizar.</em>';
+            
+        } catch (\Exception $e) {
+            Log::error('Erro ao extrair texto do arquivo', [
+                'proposicao_id' => $proposicao->id,
+                'arquivo_path' => $caminhoCompleto,
+                'erro' => $e->getMessage()
+            ]);
+            return '<em>Erro ao processar conteúdo do arquivo.</em>';
+        }
+    }
 }

@@ -400,6 +400,58 @@ $(document).ready(function() {
             $('#form-edicao').trigger('submit');
         }
     }, 120000);
+    
+    // =========================================================================
+    // ATUALIZAÇÃO AUTOMÁTICA AO RETORNAR DO EDITOR ONLYOFFICE
+    // =========================================================================
+    
+    // Verificar se voltamos do editor OnlyOffice
+    const editorFechado = localStorage.getItem('onlyoffice_editor_fechado');
+    const destinoEsperado = localStorage.getItem('onlyoffice_destino');
+    const urlAtual = window.location.href.split('?')[0]; // Remove query parameters
+    
+    if (editorFechado === 'true' && destinoEsperado) {
+        // Verificar se estamos na página de destino correta
+        const destinoLimpo = destinoEsperado.split('?')[0]; // Remove query parameters
+        
+        if (urlAtual === destinoLimpo) {
+            console.log('🔄 Retornando do editor OnlyOffice - atualizando página Legislativo...');
+            
+            // Limpar flags do localStorage
+            localStorage.removeItem('onlyoffice_editor_fechado');
+            localStorage.removeItem('onlyoffice_destino');
+            
+            // Mostrar toast informativo
+            if (typeof Swal !== 'undefined') {
+                const Toast = Swal.mixin({
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 3000,
+                    timerProgressBar: true
+                });
+                
+                Toast.fire({
+                    icon: 'success',
+                    title: 'Documento atualizado',
+                    text: 'As alterações do editor foram salvas'
+                });
+            }
+            
+            // Forçar atualização da página após pequeno delay
+            setTimeout(() => {
+                if (!window.location.href.includes('_refresh=')) {
+                    window.location.reload(true);
+                }
+            }, 1000);
+        }
+    }
+    
+    // Limpar parâmetros de refresh da URL
+    if (window.location.href.includes('_refresh=')) {
+        const urlLimpa = window.location.href.replace(/[?&]_refresh=\d+/, '');
+        window.history.replaceState({}, document.title, urlLimpa);
+    }
 });
 </script>
 @endpush

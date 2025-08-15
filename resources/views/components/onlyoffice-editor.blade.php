@@ -662,12 +662,24 @@
                         cancelButtonText: 'Cancelar'
                     }).then((result) => {
                         if (result.isConfirmed) {
-                            window.location.href = backRoute;
+                            this.navegarParaDestino(backRoute);
                         }
                     });
                 } else {
-                    window.location.href = backRoute;
+                    this.navegarParaDestino(backRoute);
                 }
+            },
+            
+            navegarParaDestino: function(backRoute) {
+                // Marcar que o editor foi fechado para forçar atualização da página de destino
+                localStorage.setItem('onlyoffice_editor_fechado', 'true');
+                localStorage.setItem('onlyoffice_destino', backRoute);
+                
+                // Adicionar timestamp para garantir que a página seja atualizada
+                const separator = backRoute.includes('?') ? '&' : '?';
+                const urlComTimestamp = backRoute + separator + '_refresh=' + Date.now();
+                
+                window.location.href = urlComTimestamp;
             },
             
             togglePanel: function() {

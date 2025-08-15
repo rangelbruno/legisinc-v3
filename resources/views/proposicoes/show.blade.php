@@ -103,7 +103,7 @@
 
                     <div class="mb-3">
                         <label class="form-label fw-bold">Ementa:</label>
-                        <div class="p-3 bg-light rounded">
+                        <div id="ementa-container" class="p-3 bg-light rounded">
                             @if($proposicao->ementa)
                                 @if(str_contains($proposicao->ementa, 'a ser definid') || str_contains($proposicao->ementa, 'em elaboração') || str_contains($proposicao->ementa, 'serem definidos') || str_contains($proposicao->ementa, 'definidos'))
                                     <div class="d-flex align-items-center">
@@ -182,6 +182,7 @@
                     </h5>
                 </div>
                 <div class="card-body">
+                    <div id="conteudo-container">
                     @if(!empty($proposicao->conteudo))
                         <div class="documento-content">
                             {!! $proposicao->conteudo !!}
@@ -231,6 +232,7 @@
                             @endif
                         </div>
                     @endif
+                    </div> <!-- end conteudo-container -->
                 </div>
             </div>
         </div>
@@ -2457,5 +2459,149 @@ function retornarParaParlamentar(proposicaoId) {
         }
     });
 }
+
+// =========================================================================
+// ATUALIZAÇÃO AUTOMÁTICA AO RETORNAR DO EDITOR ONLYOFFICE
+// =========================================================================
+
+// Função para atualizar dinamicamente a ementa e conteúdo
+function atualizarDadosProposicao(proposicaoId) {
+    console.log('🔄 Buscando dados atualizados da proposição...');
+    
+    // Mostrar indicador de carregamento
+    const ementaElement = document.querySelector('.card-body p:contains("Ementa:")');
+    const conteudoCard = document.querySelector('.documento-content');
+    
+    // Fazer requisição AJAX para buscar dados atualizados
+    $.ajax({
+        url: `/api/proposicoes/${proposicaoId}/dados-atualizados`,
+        method: 'GET',
+        success: function(response) {
+            if (response.success && response.data) {
+                console.log('✅ Dados atualizados recebidos:', response.data);
+                
+                // Atualizar Ementa usando o ID específico
+                const ementaContainer = document.getElementById('ementa-container');
+                if (ementaContainer) {
+                    let ementaHtml = '';
+                    if (response.data.ementa && response.data.ementa !== 'Ementa a ser definida') {
+                        ementaHtml = response.data.ementa;
+                    } else {
+                        ementaHtml = `
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-exclamation-triangle text-muted me-2"></i>
+                                <span class="text-muted">Ementa não informada</span>
+                            </div>
+                        `;
+                    }
+                    ementaContainer.innerHTML = ementaHtml;
+                }
+                
+                // Atualizar Conteúdo usando o ID específico
+                const conteudoContainer = document.getElementById('conteudo-container');
+                if (conteudoContainer) {
+                    let novoConteudo = '';
+                    
+                    if (response.data.conteudo_processado) {
+                        // Se houver conteúdo processado do arquivo
+                        novoConteudo = `
+                            <div class="documento-content">
+                                <div class="alert alert-success mb-3">
+                                    <i class="fas fa-check-circle me-2"></i>
+                                    <strong>Documento atualizado do OnlyOffice</strong>
+                                </div>
+                                <div class="p-3 border rounded bg-light">
+                                    ${response.data.conteudo_processado}
+                                </div>
+                            </div>
+                        `;
+                    } else if (response.data.conteudo) {
+                        // Se houver conteúdo normal
+                        novoConteudo = `
+                            <div class="documento-content">
+                                ${response.data.conteudo}
+                            </div>
+                        `;
+                    } else {
+                        novoConteudo = `
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                Conteúdo em elaboração
+                            </div>
+                        `;
+                    }
+                    
+                    conteudoContainer.innerHTML = novoConteudo;
+                }
+                
+                // Atualizar última modificação se existir elemento
+                const ultimaModElement = document.querySelector('.text-muted small:contains("Última modificação:")');
+                if (ultimaModElement && response.data.ultima_modificacao) {
+                    ultimaModElement.textContent = `Última modificação: ${response.data.ultima_modificacao}`;
+                }
+                
+                // Mostrar toast de sucesso
+                if (typeof Swal !== 'undefined') {
+                    const Toast = Swal.mixin({
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false,
+                        timer: 4000,
+                        timerProgressBar: true
+                    });
+                    
+                    Toast.fire({
+                        icon: 'success',
+                        title: 'Documento atualizado',
+                        text: 'A ementa e conteúdo foram atualizados com sucesso'
+                    });
+                }
+            }
+        },
+        error: function(xhr) {
+            console.error('❌ Erro ao buscar dados atualizados:', xhr);
+            
+            // Em caso de erro, fazer reload completo como fallback
+            setTimeout(() => {
+                window.location.reload(true);
+            }, 1000);
+        }
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Verificar se voltamos do editor OnlyOffice
+    const editorFechado = localStorage.getItem('onlyoffice_editor_fechado');
+    const destinoEsperado = localStorage.getItem('onlyoffice_destino');
+    const urlAtual = window.location.href.split('?')[0]; // Remove query parameters
+    
+    if (editorFechado === 'true' && destinoEsperado) {
+        // Verificar se estamos na página de destino correta
+        const destinoLimpo = destinoEsperado.split('?')[0]; // Remove query parameters
+        
+        if (urlAtual === destinoLimpo) {
+            console.log('🔄 Retornando do editor OnlyOffice - atualizando dados...');
+            
+            // Limpar flags do localStorage
+            localStorage.removeItem('onlyoffice_editor_fechado');
+            localStorage.removeItem('onlyoffice_destino');
+            
+            // Extrair ID da proposição da URL
+            const urlParts = urlAtual.split('/');
+            const proposicaoId = urlParts[urlParts.length - 1];
+            
+            // Aguardar um pouco para garantir que o callback do OnlyOffice foi processado
+            setTimeout(() => {
+                atualizarDadosProposicao(proposicaoId);
+            }, 2000);
+        }
+    }
+    
+    // Limpar parâmetros de refresh da URL sem recarregar a página
+    if (window.location.href.includes('_refresh=')) {
+        const urlLimpa = window.location.href.replace(/[?&]_refresh=\d+/, '');
+        window.history.replaceState({}, document.title, urlLimpa);
+    }
+});
 </script>
 @endpush
