@@ -83,14 +83,70 @@
         }
         
         .signature-area {
-            margin-top: 80px;
+            margin-top: 50px;
+            position: relative;
+            height: 200px;
+        }
+        
+        .signature-vertical {
+            position: absolute;
+            right: 20px;
+            top: 0;
+            width: 150px;
+            height: 180px;
+            border: 2px solid #003366;
+            border-radius: 8px;
+            padding: 10px;
+            font-size: 9px;
+            background-color: #f8f9fa;
+        }
+        
+        .signature-vertical h4 {
+            margin: 0 0 10px 0;
+            font-size: 10px;
+            color: #003366;
             text-align: center;
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 5px;
+        }
+        
+        .signature-info {
+            margin-bottom: 8px;
+            line-height: 1.2;
         }
         
         .signature-line {
             border-top: 1px solid #333;
-            width: 300px;
-            margin: 50px auto 10px auto;
+            margin: 10px 0 5px 0;
+        }
+        
+        .qr-code-area {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 80px;
+            height: 80px;
+            border: 1px solid #ccc;
+            padding: 5px;
+            background-color: white;
+            text-align: center;
+        }
+        
+        .qr-placeholder {
+            width: 100%;
+            height: 60px;
+            background: linear-gradient(45deg, #000 25%, transparent 25%), 
+                        linear-gradient(-45deg, #000 25%, transparent 25%), 
+                        linear-gradient(45deg, transparent 75%, #000 75%), 
+                        linear-gradient(-45deg, transparent 75%, #000 75%);
+            background-size: 4px 4px;
+            background-position: 0 0, 0 2px, 2px -2px, -2px 0px;
+            margin-bottom: 2px;
+        }
+        
+        .qr-text {
+            font-size: 6px;
+            color: #666;
         }
         
         .watermark {
@@ -110,20 +166,43 @@
     </style>
 </head>
 <body>
-    <!-- Marca d'água -->
-    <div class="watermark">PARA ASSINATURA</div>
+    <!-- Marca d'água dinâmica -->
+    <div class="watermark">
+        @if($proposicao->status == 'protocolado')
+            DOCUMENTO OFICIAL
+        @elseif($proposicao->assinatura_digital)
+            DOCUMENTO ASSINADO
+        @else
+            PARA ASSINATURA
+        @endif
+    </div>
     
     <!-- Cabeçalho -->
     <div class="header">
-        <h1>{{ strtoupper($proposicao->tipo ?? 'Proposição') }}</h1>
+        <h1>{{ strtoupper($proposicao->tipo ?? 'Proposição') }}
+            @if($proposicao->numero_protocolo)
+                Nº {{ $proposicao->numero_protocolo }}
+            @endif
+        </h1>
         <h2>Sistema Legislativo Municipal</h2>
+        @if($proposicao->status == 'protocolado' && $proposicao->data_protocolo)
+            <p style="margin: 5px 0; font-size: 12px; color: #003366;">
+                <strong>Protocolado em:</strong> {{ \Carbon\Carbon::parse($proposicao->data_protocolo)->format('d/m/Y H:i') }}
+            </p>
+        @endif
     </div>
     
     <!-- Informações da Proposição -->
     <div class="info-box">
         <div class="info-row">
             <div class="info-label">Proposição:</div>
-            <div class="info-value">#{{ $proposicao->id }}</div>
+            <div class="info-value">
+                @if($proposicao->numero_protocolo)
+                    {{ $proposicao->numero_protocolo }}
+                @else
+                    #{{ $proposicao->id }} (Aguardando Protocolo)
+                @endif
+            </div>
         </div>
         <div class="info-row">
             <div class="info-label">Tipo:</div>
@@ -163,10 +242,54 @@
     
     <!-- Área de Assinatura -->
     <div class="signature-area">
-        <div class="signature-line"></div>
-        <p><strong>{{ $proposicao->autor?->name ?? 'Autor da Proposição' }}</strong></p>
-        <p>Assinatura Digital</p>
-        <p><small>Data: _____ / _____ / _____</small></p>
+        <!-- Assinatura Vertical na Lateral -->
+        <div class="signature-vertical">
+            <h4>ASSINATURA DIGITAL</h4>
+            
+            <div class="signature-info">
+                <strong>Autor:</strong><br>
+                {{ $proposicao->autor?->name ?? 'Autor da Proposição' }}
+            </div>
+            
+            <div class="signature-info">
+                <strong>Cargo:</strong><br>
+                {{ $proposicao->autor?->cargo ?? 'Parlamentar' }}
+            </div>
+            
+            @if($proposicao->data_assinatura)
+            <div class="signature-info">
+                <strong>Assinado em:</strong><br>
+                {{ \Carbon\Carbon::parse($proposicao->data_assinatura)->format('d/m/Y H:i') }}
+            </div>
+            @else
+            <div class="signature-info">
+                <strong>Status:</strong><br>
+                Aguardando Assinatura
+            </div>
+            @endif
+            
+            @if($proposicao->assinatura_digital)
+            <div class="signature-info">
+                <strong>Hash:</strong><br>
+                <small style="font-size: 7px; word-break: break-all;">{{ substr($proposicao->assinatura_digital, 0, 20) }}...</small>
+            </div>
+            @endif
+            
+            <div class="signature-line"></div>
+            <div style="text-align: center; font-size: 8px; color: #666;">
+                Documento Válido
+            </div>
+        </div>
+        
+        <!-- QR Code para Consulta -->
+        <div class="qr-code-area">
+            @php
+                $qrService = app(\App\Services\QRCodeService::class);
+                $qrUrl = $qrService->gerarQRCodeProposicao($proposicao->id, 70);
+            @endphp
+            <img src="{{ $qrUrl }}" alt="QR Code" style="width: 70px; height: 70px; margin-bottom: 2px;">
+            <div class="qr-text">Consulta: ID {{ $proposicao->id }}</div>
+        </div>
     </div>
     
     <!-- Rodapé -->

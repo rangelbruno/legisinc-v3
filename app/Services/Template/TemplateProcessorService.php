@@ -328,8 +328,10 @@ class TemplateProcessorService
             'hora_atual' => $agora->format('H:i'),
             'data_criacao' => $proposicao->created_at?->format('d/m/Y') ?? $agora->format('d/m/Y'),
             
-            // Mês por extenso em português
+            // Mês por extenso em português - CORRIGIR MAPEAMENTO
             'mes_extenso' => $this->obterMesExtenso($agora->format('n')),
+            '08_extenso' => $this->obterMesExtenso($agora->format('n')), // Fix para templates existentes
+            '2025_atual' => $agora->format('Y'), // Fix para templates existentes
             
             // Proposição
             'numero_proposicao' => $this->gerarNumeroProposicao($proposicao),

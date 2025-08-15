@@ -1253,3 +1253,8 @@ Route::middleware(['auth'])->group(function () {
         return view('test-aside-debug');
     })->name('test-aside-debug');
 });
+
+// Consulta pública de proposições (acesso sem autenticação)
+Route::get('/consulta/proposicao/{id}', [ProposicaoController::class, 'consultaPublica'])
+    ->name('proposicoes.consulta.publica')
+    ->where('id', '[0-9]+');

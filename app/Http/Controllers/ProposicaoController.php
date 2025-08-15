@@ -5812,4 +5812,54 @@ ${texto}
         // Fallback: manter ementa original
         return $ementaOriginal ?: 'Ementa a ser definida';
     }
+    
+    /**
+     * Consulta pública de proposição (sem autenticação)
+     * Permite consultar status e informações básicas através do QR Code
+     */
+    public function consultaPublica($id)
+    {
+        $proposicao = Proposicao::with(['autor', 'template'])
+            ->where('id', $id)
+            ->first();
+        
+        if (!$proposicao) {
+            return view('proposicoes.consulta.nao-encontrada');
+        }
+        
+        // Apenas mostrar informações públicas
+        $informacoesPublicas = [
+            'id' => $proposicao->id,
+            'tipo' => $proposicao->tipo,
+            'ementa' => $proposicao->ementa,
+            'numero_protocolo' => $proposicao->numero_protocolo,
+            'status' => $this->traduzirStatus($proposicao->status),
+            'data_criacao' => $proposicao->created_at?->format('d/m/Y'),
+            'data_protocolo' => $proposicao->data_protocolo?->format('d/m/Y H:i'),
+            'autor_nome' => $proposicao->autor?->name,
+            'assinado' => !empty($proposicao->assinatura_digital),
+            'data_assinatura' => $proposicao->data_assinatura?->format('d/m/Y H:i')
+        ];
+        
+        return view('proposicoes.consulta.publica', compact('informacoesPublicas'));
+    }
+    
+    /**
+     * Traduzir status para linguagem amigável ao público
+     */
+    private function traduzirStatus(string $status): string
+    {
+        $statusMap = [
+            'rascunho' => 'Em Elaboração',
+            'enviado_legislativo' => 'Em Análise Legislativa', 
+            'aprovado_assinatura' => 'Aprovado - Aguardando Assinatura',
+            'assinado' => 'Assinado Digitalmente',
+            'enviado_protocolo' => 'Enviado para Protocolo',
+            'protocolado' => 'Protocolado - Tramitação Iniciada',
+            'devolvido_correcao' => 'Devolvido para Correções',
+            'retornado_legislativo' => 'Retornado ao Legislativo'
+        ];
+        
+        return $statusMap[$status] ?? ucfirst(str_replace('_', ' ', $status));
+    }
 }
