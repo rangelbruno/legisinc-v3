@@ -535,9 +535,9 @@
                     event_type: event?.type,
                     message: event?.message,
                     full_event: event,
-                    document_url: self.config?.document?.url,
-                    callback_url: self.config?.editorConfig?.callbackUrl,
-                    document_key: self.config?.document?.key
+                    document_url: this.config?.document?.url,
+                    callback_url: this.config?.editorConfig?.callbackUrl,
+                    document_key: this.config?.document?.key
                 });
                 
                 let errorMessage = 'Erro no editor';

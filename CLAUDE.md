@@ -129,12 +129,22 @@ Vereador
 
 ## 🚀 Como Testar
 
+### **Teste Básico de Templates**
 1. Execute: `docker exec -it legisinc-app php artisan migrate:fresh --seed`
 2. Acesse: http://localhost:8001
-3. Login: jessica@sistema.gov.br / 123456
+3. Login: jessica@sistema.gov.br / 123456 (Parlamentar)
 4. Crie uma moção
 5. Abra no editor OnlyOffice
 6. Verifique se template está aplicado com variáveis substituídas
+
+### **Teste de Salvamento do Legislativo**
+7. Faça logout e login: joao@sistema.gov.br / 123456 (Legislativo)
+8. Acesse a proposição criada pelo Parlamentar
+9. Abra no editor OnlyOffice
+10. **Verifique**: Documento carrega com conteúdo do Parlamentar (não template)
+11. Faça alterações e salve
+12. Reabra o documento
+13. **Confirme**: Suas alterações foram preservadas ✅
 
 ## 📝 Nota Importante sobre Templates Admin
 
@@ -177,8 +187,55 @@ Isso processa a variável `${imagem_cabecalho}` para RTF em todos os templates, 
 
 ---
 
+## 🔧 CORREÇÕES IMPLEMENTADAS: Salvamento do Legislativo
+
+### ✅ **PROBLEMA RESOLVIDO**: Usuário Legislativo pode salvar alterações
+
+**Situação Anterior**: Legislativo não conseguia salvar edições no OnlyOffice (erro 403 ou arquivos não carregando)
+
+**Correções Aplicadas**:
+
+#### 1. **Lógica de Detecção de Conteúdo IA** (`OnlyOfficeService.php:1847-1856`)
+- ❌ **Antes**: Qualquer conteúdo > 200 caracteres era flagado como "IA"
+- ✅ **Agora**: Apenas conteúdo com palavras-chave específicas E sem arquivo salvo
+- ✅ **Resultado**: Arquivos salvos têm prioridade absoluta sobre templates
+
+#### 2. **Storage Disk Unificado** (`OnlyOfficeService.php:2927-2931`)
+- ❌ **Antes**: Callbacks salvavam em disk "private", download buscava em "local"
+- ✅ **Agora**: Ambos usam disk "local" consistentemente
+- ✅ **Resultado**: Salvamento e carregamento funcionam corretamente
+
+#### 3. **Busca Robusta de Arquivos** (`OnlyOfficeService.php:1898-1914`)
+- ❌ **Antes**: Buscava apenas em 2 localizações
+- ✅ **Agora**: Verifica 3 localizações (local/private/public)
+- ✅ **Resultado**: Encontra arquivos independente de onde foram salvos
+
+### 🎯 **Fluxo Operacional Garantido**
+
+1. **Parlamentar** cria proposição → Template aplicado ✅
+2. **OnlyOffice** callback salva arquivo → Arquivo em `storage/app/proposicoes/` ✅
+3. **Legislativo** acessa documento → Carrega arquivo salvo (não template) ✅
+4. **Legislativo** faz alterações → Callback salva alterações ✅
+5. **Próximo acesso** → Carrega arquivo alterado pelo Legislativo ✅
+
+### 📊 **Evidências de Funcionamento**
+
+- **Log Correto**: `"Usando arquivo salvo da proposição" {"tem_conteudo_ia":false}`
+- **Download Funcionando**: Arquivos RTF/DOCX editados sendo retornados
+- **Callbacks Operacionais**: `"Arquivo atualizado sem modificar conteúdo original"`
+- **Colaboração Ativa**: Legislativo pode editar proposições de Parlamentares
+
+### 🔄 **Compatibilidade com migrate:fresh --seed**
+
+Todas as correções estão no código-fonte e são preservadas automaticamente:
+- ✅ `OnlyOfficeService.php` - Lógica principal corrigida
+- ✅ Nenhuma configuração de banco necessária
+- ✅ Funciona imediatamente após o comando
+
+---
+
 **🎊 CONFIGURAÇÃO 100% PRESERVADA APÓS `migrate:fresh --seed`** ✅
 
-**Última atualização**: 14/08/2025
-**Versão estável**: v1.1
+**Última atualização**: 15/08/2025
+**Versão estável**: v1.2
 **Status**: PRODUÇÃO

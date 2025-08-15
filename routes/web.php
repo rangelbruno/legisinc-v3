@@ -26,7 +26,13 @@ Route::middleware('guest')->group(function () {
     Route::post('/register', [AuthController::class, 'register'])->name('register');
 });
 
-// Logout route - apenas para usuários autenticados
+// Logout routes - GET para redirecionamento de sessão expirada, POST para logout normal
+Route::get('/logout', function () {
+    Auth::logout();
+    request()->session()->invalidate();
+    request()->session()->regenerateToken();
+    return redirect('/login')->with('info', 'Sua sessão expirou. Por favor, faça login novamente.');
+})->name('logout.get');
 Route::post('/logout', [AuthController::class, 'logout'])->name('auth.logout')->middleware('auth');
 
 // Progress route (public)

@@ -472,7 +472,7 @@
                                             </div>
                                             <!--end::Menu item-->
                                             @endif
-                                            @if(auth()->user()->isLegislativo() && in_array($proposicao->status, ['enviado_legislativo', 'em_revisao', 'devolvido_correcao']))
+                                            @if(auth()->user()->isAssessorJuridico() && in_array($proposicao->status, ['enviado_legislativo', 'em_revisao', 'devolvido_correcao']))
                                             <!--begin::Menu item-->
                                             <div class="menu-item px-3">
                                                 <a href="{{ route('proposicoes.revisar.show', $proposicao) }}" class="menu-link px-3">

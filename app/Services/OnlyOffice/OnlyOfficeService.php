@@ -1840,19 +1840,25 @@ ${texto}
             //     'autor_nome' => $proposicao->autor->name ?? 'SEM AUTOR'
         // ]);
 
-        // Verificar se tem conteúdo de IA que precisa de template específico
-        $temConteudoIA = !empty($proposicao->conteudo) && 
-                        $proposicao->conteudo !== 'Conteúdo a ser definido' &&
-                        (str_contains($proposicao->conteudo, 'PODER LEGISLATIVO') || 
-                         str_contains($proposicao->conteudo, 'CÂMARA MUNICIPAL') ||
-                         str_contains($proposicao->conteudo, 'Art.') ||
-                         strlen($proposicao->conteudo) > 200);
-
-        // PRIMEIRO: Se não tem conteúdo de IA, verificar arquivo salvo
+        // PRIMEIRO: Sempre verificar se existe arquivo salvo
+        // Se existe arquivo salvo, usar ele (independente do conteúdo original)
         $arquivoSalvo = null;
-        if (!$temConteudoIA) {
+        
+        // Verificar se tem conteúdo de IA que precisa de template específico
+        // APENAS se NÃO existir arquivo salvo
+        $temConteudoIA = false;
+        if (empty($proposicao->arquivo_path)) {
+            $temConteudoIA = !empty($proposicao->conteudo) && 
+                            $proposicao->conteudo !== 'Conteúdo a ser definido' &&
+                            (str_contains($proposicao->conteudo, 'PODER LEGISLATIVO') || 
+                             str_contains($proposicao->conteudo, 'CÂMARA MUNICIPAL') ||
+                             str_contains($proposicao->conteudo, 'Art.'));
+        }
+
+        // Se tem arquivo salvo, sempre usar ele
+        if (!empty($proposicao->arquivo_path)) {
             // Verificar se tem arquivo_path definido
-            if ($proposicao->arquivo_path && Storage::exists($proposicao->arquivo_path)) {
+            if ($proposicao->arquivo_path && Storage::disk('local')->exists($proposicao->arquivo_path)) {
                 $arquivoSalvo = $proposicao->arquivo_path;
             }
             
@@ -1880,22 +1886,34 @@ ${texto}
             }
             
             if ($arquivoSalvo) {
-                Log::info('Usando arquivo salvo da proposição (sem conteúdo IA)', [
+                Log::info('Usando arquivo salvo da proposição', [
                     'proposicao_id' => $proposicao->id,
-                    'arquivo_path' => $arquivoSalvo
+                    'arquivo_path' => $arquivoSalvo,
+                    'tem_conteudo_ia' => $temConteudoIA
                 ]);
                 
-                // Determinar o caminho completo baseado no storage usado
-                $caminhoCompleto = $arquivoSalvo;
-                if (strpos($arquivoSalvo, 'proposicoes/') === 0) {
-                    // Arquivo está no storage public
-                    $caminhoCompleto = storage_path('app/public/' . $arquivoSalvo);
+                // Determinar o caminho completo - tentar todos os storages
+                $caminhoCompleto = null;
+                
+                // Primeiro tentar storage local (onde o callback agora salva)
+                $caminhoLocal = storage_path('app/' . $arquivoSalvo);
+                if (file_exists($caminhoLocal)) {
+                    $caminhoCompleto = $caminhoLocal;
                 } else {
-                    // Arquivo está no storage padrão
-                    $caminhoCompleto = storage_path('app/' . $arquivoSalvo);
+                    // Tentar storage private (onde alguns callbacks salvaram antes)
+                    $caminhoPrivate = storage_path('app/private/' . $arquivoSalvo);
+                    if (file_exists($caminhoPrivate)) {
+                        $caminhoCompleto = $caminhoPrivate;
+                    } else {
+                        // Se não encontrar, tentar storage public
+                        $caminhoPublic = storage_path('app/public/' . $arquivoSalvo);
+                        if (file_exists($caminhoPublic)) {
+                            $caminhoCompleto = $caminhoPublic;
+                        }
+                    }
                 }
                 
-                if (file_exists($caminhoCompleto)) {
+                if ($caminhoCompleto) {
                     $extensao = pathinfo($arquivoSalvo, PATHINFO_EXTENSION);
                     $nomeArquivo = "proposicao_{$proposicao->id}.{$extensao}";
                     
@@ -1904,12 +1922,6 @@ ${texto}
                     ]);
                 }
             }
-        } else {
-            Log::info('Ignorando arquivo salvo para regenerar com template específico', [
-                'proposicao_id' => $proposicao->id,
-                'tem_conteudo_ia' => true,
-                'arquivo_existente' => $proposicao->arquivo_path
-            ]);
         }
         
         // PULAR a lógica de forçar ABNT - sempre tentar usar template primeiro
@@ -2914,15 +2926,15 @@ Status: " . ucfirst(str_replace('_', ' ', $proposicao->status)) . "\par
                     return ['error' => 1];
                 }
 
-                // Salvar arquivo completo na storage
+                // Salvar arquivo completo na storage (local disk, não private)
                 $nomeArquivo = "proposicoes/proposicao_{$proposicao->id}_" . time() . ".rtf";
                 
                 // Garantir que o diretório existe
-                if (!Storage::exists('proposicoes')) {
-                    Storage::makeDirectory('proposicoes');
+                if (!Storage::disk('local')->exists('proposicoes')) {
+                    Storage::disk('local')->makeDirectory('proposicoes');
                 }
                 
-                Storage::put($nomeArquivo, $response->body());
+                Storage::disk('local')->put($nomeArquivo, $response->body());
                 
                 // Atualizar proposição - preservar conteúdo original, salvar apenas arquivo editado
                 $proposicao->update([
