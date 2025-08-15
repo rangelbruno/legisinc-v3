@@ -22,6 +22,111 @@
     {{-- Scripts adicionais específicos para o parlamentar --}}
     @push('scripts')
     <script>
+        // OTIMIZAÇÃO: Auto-refresh com menos frequência e smart polling
+        let lastModified = null;
+        let refreshCheckInterval = null;
+        let consecutiveErrors = 0;
+        let pollInterval = 10000; // Começar com 10 segundos
+        
+        // Função otimizada para verificar atualizações
+        function checkForUpdates() {
+            // Usar AbortController para cancelar requisições antigas
+            const controller = new AbortController();
+            
+            fetch('/proposicoes/{{ $proposicao->id }}/onlyoffice/status', {
+                signal: controller.signal,
+                headers: {
+                    'Cache-Control': 'no-cache',
+                    'Pragma': 'no-cache'
+                }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    consecutiveErrors = 0; // Reset error count
+                    
+                    if (lastModified && data.ultima_modificacao !== lastModified) {
+                        console.log('🔄 Documento atualizado, notificando usuário...');
+                        showUpdateNotification();
+                        
+                        // Parar verificação temporariamente
+                        if (refreshCheckInterval) {
+                            clearInterval(refreshCheckInterval);
+                        }
+                    } else {
+                        // Aumentar intervalo se não há mudanças (performance)
+                        pollInterval = Math.min(pollInterval * 1.1, 30000); // Máx 30s
+                    }
+                    lastModified = data.ultima_modificacao;
+                })
+                .catch(err => {
+                    if (err.name !== 'AbortError') {
+                        consecutiveErrors++;
+                        console.warn('Erro ao verificar atualizações:', err);
+                        
+                        // Reduzir frequência se há muitos erros
+                        if (consecutiveErrors > 3) {
+                            pollInterval = Math.min(pollInterval * 2, 60000); // Máx 1 min
+                        }
+                    }
+                });
+        }
+        
+        // Mostrar notificação de documento atualizado
+        function showUpdateNotification() {
+            Swal.fire({
+                title: '📄 Documento Atualizado',
+                text: 'Suas alterações foram salvas! Recarregando documento...',
+                icon: 'success',
+                timer: 2000,
+                timerProgressBar: true,
+                position: 'top-end',
+                toast: true,
+                showConfirmButton: false
+            });
+            
+            // Marcar como salvo no status
+            const statusElement = document.getElementById('statusTexto');
+            const statusBadge = document.getElementById('statusSalvamento');
+            if (statusElement && statusBadge) {
+                statusElement.textContent = 'Salvo';
+                statusBadge.className = 'badge badge-success px-3 py-2';
+            }
+            
+            // Forçar reload da página para carregar nova versão do documento
+            setTimeout(() => {
+                console.log('🔄 Recarregando página para mostrar versão atualizada...');
+                window.location.reload();
+            }, 2500);
+        }
+        
+        // Iniciar verificação otimizada de atualizações
+        document.addEventListener('DOMContentLoaded', function() {
+            // Aguardar OnlyOffice carregar
+            setTimeout(() => {
+                checkForUpdates(); // Verificação inicial
+                
+                // OTIMIZAÇÃO: Usar intervalo dinâmico baseado em atividade
+                function startSmartPolling() {
+                    if (refreshCheckInterval) clearInterval(refreshCheckInterval);
+                    refreshCheckInterval = setInterval(checkForUpdates, pollInterval);
+                }
+                
+                startSmartPolling();
+                
+                // Reduzir polling quando janela não está visível
+                document.addEventListener('visibilitychange', function() {
+                    if (document.hidden) {
+                        pollInterval = 30000; // 30s quando não visível
+                    } else {
+                        pollInterval = 10000; // 10s quando visível
+                    }
+                    startSmartPolling();
+                });
+            }, 2000);
+        });
+        
+    </script>
+    <script>
         // Função para enviar para o legislativo
         function enviarParaLegislativo() {
             Swal.fire({

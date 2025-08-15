@@ -918,6 +918,7 @@ Route::prefix('images')->name('images.')->middleware('auth')->group(function () 
 
 // OnlyOffice download route for Legislativo (sem autenticação para acesso do servidor OnlyOffice)
 Route::get('/proposicoes/{proposicao}/onlyoffice/download', [App\Http\Controllers\OnlyOfficeController::class, 'download'])->name('proposicoes.onlyoffice.download');
+Route::get('/proposicoes/{proposicao}/onlyoffice/status', [App\Http\Controllers\OnlyOfficeController::class, 'getUpdateStatus'])->name('proposicoes.onlyoffice.status');
 
 // ROTAS DO EXPEDIENTE
 Route::prefix('expediente')->name('expediente.')->middleware(['auth', 'check.screen.permission'])->group(function () {

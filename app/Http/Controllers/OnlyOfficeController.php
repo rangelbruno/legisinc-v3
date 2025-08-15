@@ -7,6 +7,7 @@ use App\Services\OnlyOffice\OnlyOfficeService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 class OnlyOfficeController extends Controller
 {
@@ -41,8 +42,13 @@ class OnlyOfficeController extends Controller
                 ->with('error', 'Esta proposição não está disponível para edição. Status atual: ' . $proposicao->status);
         }
 
-        // Carregar relacionamentos necessários
-        $proposicao->load('autor');
+        // OTIMIZAÇÃO: Carregar relacionamentos de forma mais eficiente
+        if (!$proposicao->relationLoaded('autor')) {
+            $proposicao->load('autor');
+        }
+        if (!$proposicao->relationLoaded('template') && $proposicao->template_id) {
+            $proposicao->load('template');
+        }
         
         // Usar OnlyOfficeService para gerar configuração consistente
         if ($proposicao->template_id && $proposicao->template) {
@@ -65,17 +71,22 @@ class OnlyOfficeController extends Controller
      */
     private function generateOnlyOfficeConfig(Proposicao $proposicao)
     {
-        // Gerar key único para o documento (incluir timestamp e random para evitar cache)
-        $documentKey = $proposicao->id . '_' . time() . '_' . bin2hex(random_bytes(4));
+        // OTIMIZAÇÃO: Document key mais simples e deterministic para melhor cache
+        $lastModified = $proposicao->ultima_modificacao ? 
+                       $proposicao->ultima_modificacao->timestamp : 
+                       $proposicao->updated_at->timestamp;
+        
+        // Usar hash mais simples - sem random_bytes para permitir cache
+        $documentKey = $proposicao->id . '_' . $lastModified . '_' . substr(md5($proposicao->id . $lastModified), 0, 8);
 
-        // URL base do OnlyOffice (usando nome do container conforme DOCKER.md)
-        // Esta variável não é mais necessária pois usamos config na view
-
-        // URL do documento - adicionar token para acesso sem autenticação
-        $token = base64_encode($proposicao->id . '|' . time());
+        // OTIMIZAÇÃO: Token mais eficiente
+        $version = $lastModified;
+        $token = base64_encode($proposicao->id . '|' . $lastModified); // Usar lastModified em vez de time()
         $documentUrl = route('proposicoes.onlyoffice.download', [
             'proposicao' => $proposicao,
-            'token' => $token
+            'token' => $token,
+            'v' => $version,
+            '_' => $lastModified // Cache buster baseado em modificação, não time atual
         ]);
         
         // Se estiver em ambiente local/docker, ajustar URL para comunicação entre containers
@@ -347,15 +358,26 @@ class OnlyOfficeController extends Controller
                 ->with('error', 'Esta proposição não está disponível para edição no momento.');
         }
 
-        // Carregar relacionamentos necessários
-        $proposicao->load('autor');
+        // OTIMIZAÇÃO: Carregar relacionamentos de forma mais eficiente
+        if (!$proposicao->relationLoaded('autor')) {
+            $proposicao->load('autor');
+        }
+        if (!$proposicao->relationLoaded('template') && $proposicao->template_id) {
+            $proposicao->load('template');
+        }
         
-        // Se há conteúdo de IA ou texto manual, forçar regeneração do documento
+        // Verificar se já existe arquivo salvo do OnlyOffice
+        $temArquivoSalvo = !empty($proposicao->arquivo_path) && 
+                          Storage::disk('local')->exists($proposicao->arquivo_path);
+        
+        // Se há conteúdo de IA ou texto manual E NÃO existe arquivo salvo, forçar regeneração do documento
         $temConteudoValido = !empty($proposicao->conteudo) && 
                            $proposicao->conteudo !== 'Conteúdo a ser definido' && 
                            $proposicao->template_id === null;
                            
-        if ($request->has('ai_content') || $request->has('manual_content') || $temConteudoValido) {
+        $forcarRegeneracao = ($request->has('ai_content') || $request->has('manual_content') || $temConteudoValido) && !$temArquivoSalvo;
+                           
+        if ($forcarRegeneracao) {
             // Limpar arquivo_path para forçar regeneração com conteúdo personalizado
             $proposicao->update([
                 'status' => 'em_edicao',
@@ -367,16 +389,18 @@ class OnlyOfficeController extends Controller
                 'ai_content_param' => $request->has('ai_content'),
                 'manual_content_param' => $request->has('manual_content'),
                 'tem_conteudo_valido' => $temConteudoValido,
+                'tem_arquivo_salvo' => $temArquivoSalvo,
                 'template_id' => $proposicao->template_id,
                 'arquivo_path_anterior' => $proposicao->arquivo_path
             ]);
         } else {
-            Log::info('Não forçando regeneração - conteúdo é placeholder ou tem template', [
+            Log::info('Não forçando regeneração - usando arquivo salvo ou template', [
                 'proposicao_id' => $proposicao->id,
-                'conteudo_atual' => $proposicao->conteudo,
+                'conteudo_atual' => substr($proposicao->conteudo ?? '', 0, 100),
                 'eh_placeholder' => $proposicao->conteudo === 'Conteúdo a ser definido',
                 'template_id' => $proposicao->template_id,
-                'arquivo_path_existente' => $proposicao->arquivo_path
+                'arquivo_path_existente' => $proposicao->arquivo_path,
+                'tem_arquivo_salvo' => $temArquivoSalvo
             ]);
         }
         
@@ -395,5 +419,21 @@ class OnlyOfficeController extends Controller
 
         // Usar view específica para parlamentares
         return view('proposicoes.parlamentar.onlyoffice-editor', compact('proposicao', 'config'));
+    }
+    
+    /**
+     * Verificar status de atualização da proposição
+     */
+    public function getUpdateStatus(Proposicao $proposicao)
+    {
+        return response()->json([
+            'id' => $proposicao->id,
+            'ultima_modificacao' => $proposicao->ultima_modificacao ? 
+                                   $proposicao->ultima_modificacao->toISOString() : 
+                                   $proposicao->updated_at->toISOString(),
+            'arquivo_path' => $proposicao->arquivo_path,
+            'conteudo_length' => strlen($proposicao->conteudo ?? ''),
+            'status' => $proposicao->status
+        ]);
     }
 }

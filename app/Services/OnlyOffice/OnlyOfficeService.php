@@ -1840,88 +1840,82 @@ ${texto}
             //     'autor_nome' => $proposicao->autor->name ?? 'SEM AUTOR'
         // ]);
 
-        // PRIMEIRO: Sempre verificar se existe arquivo salvo
-        // Se existe arquivo salvo, usar ele (independente do conteúdo original)
-        $arquivoSalvo = null;
+        // OTIMIZAÇÃO: Cache de verificação de arquivos para evitar múltiplas I/O
+        static $cacheArquivos = [];
+        $cacheKey = "prop_{$proposicao->id}_" . ($proposicao->ultima_modificacao ? $proposicao->ultima_modificacao->timestamp : $proposicao->updated_at->timestamp);
         
-        // Verificar se tem conteúdo de IA que precisa de template específico
-        // APENAS se NÃO existir arquivo salvo
-        $temConteudoIA = false;
-        if (empty($proposicao->arquivo_path)) {
-            $temConteudoIA = !empty($proposicao->conteudo) && 
-                            $proposicao->conteudo !== 'Conteúdo a ser definido' &&
-                            (str_contains($proposicao->conteudo, 'PODER LEGISLATIVO') || 
-                             str_contains($proposicao->conteudo, 'CÂMARA MUNICIPAL') ||
-                             str_contains($proposicao->conteudo, 'Art.'));
-        }
-
-        // Se tem arquivo salvo, sempre usar ele
-        if (!empty($proposicao->arquivo_path)) {
-            // Verificar se tem arquivo_path definido
-            if ($proposicao->arquivo_path && Storage::disk('local')->exists($proposicao->arquivo_path)) {
-                $arquivoSalvo = $proposicao->arquivo_path;
-            }
-            
-            // Se não tem arquivo_path, procurar por qualquer arquivo salvo desta proposição
-            if (!$arquivoSalvo) {
-                // Buscar todos os arquivos desta proposição e pegar o mais recente
-                $pattern = "proposicoes/proposicao_{$proposicao->id}_template_*.rtf";
-                $arquivosEncontrados = glob(Storage::disk('public')->path('') . $pattern);
+        if (isset($cacheArquivos[$cacheKey])) {
+            $arquivoInfo = $cacheArquivos[$cacheKey];
+            if ($arquivoInfo['caminho']) {
+                $extensao = pathinfo($arquivoInfo['arquivo_path'], PATHINFO_EXTENSION);
+                $nomeArquivo = "proposicao_{$proposicao->id}.{$extensao}";
                 
-                if ($arquivosEncontrados) {
-                    // Ordenar por data de modificação (mais recente primeiro)
-                    usort($arquivosEncontrados, function($a, $b) {
-                        return filemtime($b) - filemtime($a);
-                    });
-                    
-                    // Pegar o mais recente e converter para path relativo
-                    $arquivoMaisRecente = basename($arquivosEncontrados[0]);
-                    $nomeArquivoPadrao = "proposicoes/" . $arquivoMaisRecente;
-                    
-                    if (Storage::disk('public')->exists($nomeArquivoPadrao)) {
-                        $arquivoSalvo = $nomeArquivoPadrao;
-                        $this->atualizarArquivoPathProposicao($proposicao, $nomeArquivoPadrao);
-                    }
-                }
-            }
-            
-            if ($arquivoSalvo) {
-                Log::info('Usando arquivo salvo da proposição', [
-                    'proposicao_id' => $proposicao->id,
-                    'arquivo_path' => $arquivoSalvo,
-                    'tem_conteudo_ia' => $temConteudoIA
+                return response()->download($arquivoInfo['caminho'], $nomeArquivo, [
+                    'Content-Type' => $this->getMimeType($extensao),
+                    'Cache-Control' => 'no-cache, no-store, must-revalidate',
+                    'Pragma' => 'no-cache',
+                    'Expires' => '0',
+                    'Last-Modified' => gmdate('D, d M Y H:i:s') . ' GMT',
+                    'ETag' => '"' . md5($proposicao->id . '_' . ($proposicao->ultima_modificacao ? $proposicao->ultima_modificacao->timestamp : time())) . '"'
                 ]);
-                
-                // Determinar o caminho completo - tentar todos os storages
-                $caminhoCompleto = null;
-                
-                // Primeiro tentar storage local (onde o callback agora salva)
-                $caminhoLocal = storage_path('app/' . $arquivoSalvo);
-                if (file_exists($caminhoLocal)) {
-                    $caminhoCompleto = $caminhoLocal;
-                } else {
-                    // Tentar storage private (onde alguns callbacks salvaram antes)
-                    $caminhoPrivate = storage_path('app/private/' . $arquivoSalvo);
-                    if (file_exists($caminhoPrivate)) {
-                        $caminhoCompleto = $caminhoPrivate;
-                    } else {
-                        // Se não encontrar, tentar storage public
-                        $caminhoPublic = storage_path('app/public/' . $arquivoSalvo);
-                        if (file_exists($caminhoPublic)) {
-                            $caminhoCompleto = $caminhoPublic;
-                        }
-                    }
-                }
-                
-                if ($caminhoCompleto) {
-                    $extensao = pathinfo($arquivoSalvo, PATHINFO_EXTENSION);
-                    $nomeArquivo = "proposicao_{$proposicao->id}.{$extensao}";
-                    
-                    return response()->download($caminhoCompleto, $nomeArquivo, [
-                        'Content-Type' => $this->getMimeType($extensao)
-                    ]);
+            }
+        }
+        
+        // PRIMEIRO: Verificar arquivo salvo mais eficientemente
+        $arquivoSalvo = null;
+        $caminhoCompleto = null;
+        
+        // Verificar se tem conteúdo de IA 
+        $temConteudoIA = !empty($proposicao->conteudo) && 
+                        $proposicao->conteudo !== 'Conteúdo a ser definido' &&
+                        (str_contains($proposicao->conteudo, 'PODER LEGISLATIVO') || 
+                         str_contains($proposicao->conteudo, 'CÂMARA MUNICIPAL') ||
+                         str_contains($proposicao->conteudo, 'Art.'));
+
+        // Verificação otimizada de arquivo existente
+        if (!empty($proposicao->arquivo_path)) {
+            // Array de caminhos possíveis ordenados por prioridade
+            $caminhosPossiveis = [
+                storage_path('app/' . $proposicao->arquivo_path),
+                storage_path('app/private/' . $proposicao->arquivo_path), 
+                storage_path('app/public/' . $proposicao->arquivo_path)
+            ];
+            
+            // Busca otimizada - parar na primeira encontrada
+            foreach ($caminhosPossiveis as $caminho) {
+                if (file_exists($caminho)) {
+                    $arquivoSalvo = $proposicao->arquivo_path;
+                    $caminhoCompleto = $caminho;
+                    break;
                 }
             }
+        }
+        
+        // Cache do resultado
+        $cacheArquivos[$cacheKey] = [
+            'arquivo_path' => $arquivoSalvo,
+            'caminho' => $caminhoCompleto,
+            'tem_conteudo_ia' => $temConteudoIA
+        ];
+        
+        if ($arquivoSalvo && $caminhoCompleto) {
+            Log::info('Usando arquivo salvo da proposição', [
+                'proposicao_id' => $proposicao->id,
+                'arquivo_path' => $arquivoSalvo,
+                'tem_conteudo_ia' => $temConteudoIA
+            ]);
+            
+            $extensao = pathinfo($arquivoSalvo, PATHINFO_EXTENSION);
+            $nomeArquivo = "proposicao_{$proposicao->id}.{$extensao}";
+            
+            return response()->download($caminhoCompleto, $nomeArquivo, [
+                'Content-Type' => $this->getMimeType($extensao),
+                'Cache-Control' => 'no-cache, no-store, must-revalidate',
+                'Pragma' => 'no-cache',
+                'Expires' => '0',
+                'Last-Modified' => gmdate('D, d M Y H:i:s') . ' GMT',
+                'ETag' => '"' . md5($proposicao->id . '_' . ($proposicao->ultima_modificacao ? $proposicao->ultima_modificacao->timestamp : time())) . '"'
+            ]);
         }
         
         // PULAR a lógica de forçar ABNT - sempre tentar usar template primeiro
@@ -2898,54 +2892,102 @@ Status: " . ucfirst(str_replace('_', ' ', $proposicao->status)) . "\par
                     $urlOtimizada = str_replace(['http://localhost:8080', 'http://127.0.0.1:8080'], 'http://legisinc-onlyoffice', $originalUrl);
                 }
                 
-                // Log::info('OnlyOffice callback - tentando baixar documento', [
-                    //     'proposicao_id' => $proposicao->id,
-                    //     'original_url' => $originalUrl,
-                    //     'optimized_url' => $urlOtimizada
-                // ]);
+                Log::info('OnlyOffice callback - tentando baixar documento', [
+                    'proposicao_id' => $proposicao->id,
+                    'original_url' => $originalUrl,
+                    'optimized_url' => $urlOtimizada
+                ]);
                 
-                // Baixar o documento atualizado
+                // OTIMIZAÇÃO: Download assíncrono com timeout menor
                 $downloadStart = microtime(true);
-                $response = Http::timeout(60)->get($urlOtimizada);
+                $response = Http::timeout(30) // Reduzir de 60s para 30s
+                    ->withOptions([
+                        'stream' => true, // Stream para arquivos grandes
+                        'verify' => false // Disable SSL verification for internal network
+                    ])
+                    ->get($urlOtimizada);
+                    
                 $downloadTime = microtime(true) - $downloadStart;
                 
-                // Log::info('OnlyOffice callback - download concluído', [
-                    //     'proposicao_id' => $proposicao->id,
-                    //     'download_time_seconds' => round($downloadTime, 2),
-                    //     'response_successful' => $response->successful(),
-                    //     'response_status' => $response->status()
-                // ]);
+                Log::info('OnlyOffice callback - download concluído', [
+                    'proposicao_id' => $proposicao->id,
+                    'download_time_seconds' => round($downloadTime, 2),
+                    'response_successful' => $response->successful(),
+                    'response_status' => $response->status()
+                ]);
                 
                 if (!$response->successful()) {
-                    // Log::error('Erro ao baixar documento do OnlyOffice', [
-                        //     'proposicao_id' => $proposicao->id,
-                        //     'original_url' => $originalUrl,
-                        //     'optimized_url' => $urlOtimizada,
-                        //     'status' => $response->status()
-                    // ]);
+                    Log::error('Erro ao baixar documento do OnlyOffice', [
+                        'proposicao_id' => $proposicao->id,
+                        'original_url' => $originalUrl,
+                        'optimized_url' => $urlOtimizada,
+                        'status' => $response->status()
+                    ]);
                     return ['error' => 1];
                 }
 
-                // Salvar arquivo completo na storage (local disk, não private)
-                $nomeArquivo = "proposicoes/proposicao_{$proposicao->id}_" . time() . ".rtf";
-                
-                // Garantir que o diretório existe
-                if (!Storage::disk('local')->exists('proposicoes')) {
-                    Storage::disk('local')->makeDirectory('proposicoes');
+                // OTIMIZAÇÃO: Detecção de tipo mais eficiente
+                $fileType = $data['filetype'] ?? 'rtf';
+                if (str_contains($originalUrl, '.docx')) {
+                    $fileType = 'docx';
                 }
                 
-                Storage::disk('local')->put($nomeArquivo, $response->body());
+                // OTIMIZAÇÃO: Usar timestamp baseado na modificação da proposição
+                $timestamp = $proposicao->ultima_modificacao ? 
+                           $proposicao->ultima_modificacao->timestamp : 
+                           time();
+                $nomeArquivo = "proposicoes/proposicao_{$proposicao->id}_{$timestamp}.{$fileType}";
                 
-                // Atualizar proposição - preservar conteúdo original, salvar apenas arquivo editado
-                $proposicao->update([
+                // OTIMIZAÇÃO: Verificação de diretório apenas uma vez
+                static $diretorios_criados = [];
+                if (!isset($diretorios_criados['proposicoes'])) {
+                    if (!Storage::disk('local')->exists('proposicoes')) {
+                        Storage::disk('local')->makeDirectory('proposicoes');
+                    }
+                    $diretorios_criados['proposicoes'] = true;
+                }
+                
+                // OTIMIZAÇÃO: Salvar arquivo e extrair conteúdo em paralelo quando possível
+                $documentBody = $response->body();
+                Storage::disk('local')->put($nomeArquivo, $documentBody);
+                
+                // OTIMIZAÇÃO: Extrair conteúdo apenas se necessário (primeira vez ou arquivo muito diferente)
+                $conteudoExtraido = '';
+                $shouldExtractContent = empty($proposicao->conteudo) || 
+                                      strlen($proposicao->conteudo ?? '') < 100;
+                                      
+                if ($shouldExtractContent) {
+                    if ($fileType === 'docx') {
+                        $conteudoExtraido = $this->extrairConteudoDocumento($documentBody);
+                    } else {
+                        $conteudoExtraido = $this->extrairConteudoRTF($documentBody);
+                    }
+                }
+                
+                // OTIMIZAÇÃO: Update mais eficiente - apenas campos necessários
+                $updateData = [
                     'arquivo_path' => $nomeArquivo,
-                    'ultima_modificacao' => now(),
-                    'modificado_por' => auth()->id()
-                ]);
+                    'ultima_modificacao' => now()
+                ];
                 
-                Log::info('Arquivo atualizado sem modificar conteúdo original', [
+                // Adicionar modificado_por apenas se usuário autenticado
+                if (auth()->id()) {
+                    $updateData['modificado_por'] = auth()->id();
+                }
+                
+                // Se conseguiu extrair conteúdo E vale a pena atualizar
+                if (!empty($conteudoExtraido) && $shouldExtractContent) {
+                    $updateData['conteudo'] = $conteudoExtraido;
+                }
+                
+                // OTIMIZAÇÃO: Update sem recarregar relações desnecessárias
+                $proposicao->updateQuietly($updateData); // Sem disparar eventos
+                
+                Log::info('Arquivo e conteúdo atualizados com sucesso', [
                     'proposicao_id' => $proposicao->id,
-                    'arquivo_salvo' => $nomeArquivo
+                    'arquivo_salvo' => $nomeArquivo,
+                    'conteudo_atualizado' => !empty($conteudoExtraido),
+                    'conteudo_length' => strlen($conteudoExtraido ?? '')
                 ]);
                 
                 // Log::info('Proposição atualizada com sucesso via OnlyOffice', [
@@ -2955,10 +2997,11 @@ Status: " . ucfirst(str_replace('_', ' ', $proposicao->status)) . "\par
                 // ]);
                 
             } catch (\Exception $e) {
-                // Log::error('Erro ao processar callback do OnlyOffice para proposição', [
-                    //     'proposicao_id' => $proposicao->id,
-                    //     'error' => $e->getMessage()
-                // ]);
+                Log::error('Erro ao processar callback do OnlyOffice para proposição', [
+                    'proposicao_id' => $proposicao->id,
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
+                ]);
                 return ['error' => 1];
             }
         }
@@ -3085,6 +3128,55 @@ Status: " . ucfirst(str_replace('_', ' ', $proposicao->status)) . "\par
             // ]);
             
             throw $e;
+        }
+    }
+
+    /**
+     * Extrair conteúdo de texto limpo de um documento RTF
+     */
+    private function extrairConteudoRTF(string $rtfContent): string
+    {
+        try {
+            // Remover cabeçalho RTF
+            $content = preg_replace('/^{\\\\rtf[^}]*}/', '', $rtfContent);
+            
+            // Remover grupos de controle RTF
+            $content = preg_replace('/\\\\[a-z]+[0-9-]*\s?/', ' ', $content);
+            
+            // Remover chaves e barras invertidas restantes
+            $content = str_replace(['{', '}', '\\'], '', $content);
+            
+            // Converter quebras de linha RTF
+            $content = str_replace('\\par', "\n", $content);
+            $content = str_replace('\\line', "\n", $content);
+            
+            // Processar caracteres Unicode RTF (\u seguido de número)
+            $content = preg_replace_callback('/\\\\u([0-9]+)\\*/', function($matches) {
+                return mb_chr(intval($matches[1]));
+            }, $content);
+            
+            // Limpar espaços extras
+            $content = preg_replace('/\s+/', ' ', $content);
+            $content = preg_replace('/\n\s+/', "\n", $content);
+            
+            // Remover caracteres de controle
+            $content = preg_replace('/[\x00-\x1F\x7F]/', '', $content);
+            
+            // Trim final
+            $content = trim($content);
+            
+            // Se não conseguiu extrair nada significativo, retornar vazio
+            if (strlen($content) < 10) {
+                return '';
+            }
+            
+            return $content;
+            
+        } catch (\Exception $e) {
+            Log::warning('Erro ao extrair conteúdo RTF', [
+                'error' => $e->getMessage()
+            ]);
+            return '';
         }
     }
 

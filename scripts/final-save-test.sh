@@ -1,0 +1,40 @@
+#!/bin/bash
+
+echo "=== TESTE FINAL - Salvamento OnlyOffice Sem Duplicação ==="
+echo ""
+
+echo "✅ CORREÇÕES IMPLEMENTADAS:"
+echo "1. Salvamento de arquivo DOCX + conteúdo no banco"
+echo "2. Prevenção de duplicação ao reabrir documento"
+echo "3. Logs detalhados para debug"
+echo "4. Detecção correta de arquivos já salvos"
+echo ""
+
+echo "📋 PROPOSIÇÕES DISPONÍVEIS PARA TESTE:"
+docker exec legisinc-postgres psql -U postgres -d legisinc -c "SELECT id, tipo, ementa, COALESCE(arquivo_path, 'sem arquivo') as arquivo_status FROM proposicoes ORDER BY id;"
+
+echo ""
+echo "🧪 INSTRUÇÕES DE TESTE:"
+echo ""
+echo "TESTE COM PROPOSIÇÃO NOVA (ID: 3):"
+echo "1. Acesse: http://localhost:8001"
+echo "2. Login: jessica@sistema.gov.br / 123456"
+echo "3. Vá em 'Minhas Proposições'"
+echo "4. Abra a proposição ID 3 'Teste Limpo'"
+echo "5. Clique em 'Continuar Edição no OnlyOffice'"
+echo "6. Deve carregar template normal SEM duplicação"
+echo "7. Adicione texto: 'TESTE SALVAMENTO $(date +%H:%M:%S)'"
+echo "8. Salve (Ctrl+S)"
+echo "9. Feche e reabra - deve preservar o conteúdo SEM duplicar"
+echo ""
+echo "RESULTADO ESPERADO:"
+echo "- ✅ Template aplicado uma vez só"
+echo "- ✅ Conteúdo salvo no banco e arquivo"
+echo "- ✅ Reabertura sem duplicação"
+echo "- ✅ Edições preservadas"
+echo ""
+
+read -p "Pressione ENTER para monitorar logs durante o teste..."
+echo "Monitorando... (Ctrl+C para parar)"
+
+tail -f /home/bruno/legisinc/storage/logs/laravel.log | grep -E "regeneração|arquivo.*salvo|tem_arquivo_salvo|callback.*status.*2"

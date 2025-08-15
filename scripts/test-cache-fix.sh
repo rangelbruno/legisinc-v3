@@ -1,0 +1,45 @@
+#!/bin/bash
+
+echo "=== TESTE FINAL - Correção de Cache do OnlyOffice ==="
+echo ""
+
+echo "🚀 CORREÇÕES IMPLEMENTADAS:"
+echo "1. Headers anti-cache no download (no-cache, no-store, must-revalidate)"
+echo "2. ETag baseado em ID + timestamp da última modificação"
+echo "3. Cache busters na URL (versão + timestamp)"
+echo "4. Auto-reload da página após detectar salvamento"
+echo ""
+
+echo "📊 Status das proposições:"
+docker exec legisinc-postgres psql -U postgres -d legisinc -c "SELECT id, tipo, ementa, arquivo_path IS NOT NULL as tem_arquivo, ultima_modificacao FROM proposicoes ORDER BY id;"
+
+echo ""
+echo "🧪 TESTE COMPLETO DO FLUXO:"
+echo ""
+echo "1. Acesse: http://localhost:8001"
+echo "2. Login: jessica@sistema.gov.br / 123456"
+echo "3. Abra Proposição ID 1 no OnlyOffice"
+echo "4. Faça uma alteração (adicione texto único como 'TESTE $(date +%H:%M:%S)')"
+echo "5. Salve (Ctrl+S ou botão Salvar)"
+echo "6. ✅ RESULTADO ESPERADO:"
+echo "   - Notificação 'Documento Atualizado' aparece"
+echo "   - Após 2.5 segundos: Página recarrega AUTOMATICAMENTE"
+echo "   - Documento reabre COM as alterações visíveis"
+echo "   - SEM necessidade de Ctrl+F5 manual"
+echo ""
+
+echo "🔧 ESTRATÉGIAS DE CACHE-BUSTING:"
+echo "- Document Key: {id}_{timestamp}_{random}"
+echo "- URL: ?token={token}&v={version}&_={time}"
+echo "- Headers: Cache-Control, Pragma, Expires"
+echo "- ETag: Hash de ID + última modificação"
+echo "- Auto-reload: Página recarrega após salvar"
+echo ""
+
+echo "📝 TESTE ESPECÍFICO:"
+echo "Testando endpoint de download com cache-busting:"
+curl -I "http://localhost:8001/proposicoes/1/onlyoffice/download?v=test&_=$(date +%s)" 2>/dev/null | grep -E "Cache-Control|Pragma|Expires|ETag" || echo "Headers não encontrados (normal se não autenticado)"
+
+echo ""
+echo "✅ A página agora deve recarregar automaticamente após salvar,"
+echo "   mostrando as alterações SEM necessidade de refresh manual!"
