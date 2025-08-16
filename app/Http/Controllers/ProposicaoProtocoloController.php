@@ -29,7 +29,7 @@ class ProposicaoProtocoloController extends Controller
     }
 
     /**
-     * Tela de protocolação da proposição
+     * Tela de protocolação da proposição (versão simplificada)
      */
     public function protocolar(Proposicao $proposicao)
     {
@@ -37,25 +37,7 @@ class ProposicaoProtocoloController extends Controller
             abort(403, 'Proposição não está disponível para protocolo.');
         }
 
-        // Configurações de numeração
-        $configuracoes = $this->numeroProcessoService->obterConfiguracoes();
-        
-        // Próximos números disponíveis
-        $proximosNumeros = $this->numeroProcessoService->preverProximosNumeros();
-
-        // Comissões disponíveis (simulado - implementar conforme necessário)
-        $comissoes = $this->obterComissoes($proposicao->tipo);
-
-        // Verificações automáticas
-        $verificacoes = $this->realizarVerificacoes($proposicao);
-
-        return view('proposicoes.protocolo.protocolar', compact(
-            'proposicao', 
-            'comissoes', 
-            'verificacoes',
-            'configuracoes',
-            'proximosNumeros'
-        ));
+        return view('proposicoes.protocolo.protocolar-simples', compact('proposicao'));
     }
 
     /**
@@ -113,12 +95,12 @@ class ProposicaoProtocoloController extends Controller
 
         // Regenerar PDF com número de protocolo
         try {
-            $onlyOfficeService = app(\App\Services\OnlyOffice\OnlyOfficeService::class);
-            $onlyOfficeService->regenerarPDFComProtocolo($proposicao);
+            $assinaturaController = app(\App\Http\Controllers\ProposicaoAssinaturaController::class);
+            $assinaturaController->regenerarPDFAtualizado($proposicao->fresh());
         } catch (\Exception $e) {
             // Log::warning('Falha ao regenerar PDF com número de protocolo', [
                 //     'proposicao_id' => $proposicao->id,
-                //     'numero_protocolo' => $numeroProtocolo,
+                //     'numero_protocolo' => $numeroProcesso,
                 //     'error' => $e->getMessage()
             // ]);
         }
@@ -233,6 +215,31 @@ class ProposicaoProtocoloController extends Controller
 
         return $comissoes;
     }
+    
+    /**
+     * Obter comissões automáticas baseadas no tipo (versão simplificada)
+     */
+    private function obterComissoesAutomaticas(string $tipo): array
+    {
+        $comissoes = ['Comissão de Constituição e Justiça']; // Sempre obrigatória
+        
+        // Adicionar comissões específicas por tipo
+        switch ($tipo) {
+            case 'PL':
+            case 'PLP':
+            case 'mocao':
+                $comissoes[] = 'Comissão de Legislação';
+                break;
+            case 'PEC':
+                $comissoes[] = 'Comissão de Reforma Constitucional';
+                break;
+            case 'PDC':
+                $comissoes[] = 'Comissão de Administração Pública';
+                break;
+        }
+        
+        return $comissoes;
+    }
 
     /**
      * Realizar verificações automáticas
@@ -253,27 +260,14 @@ class ProposicaoProtocoloController extends Controller
     }
 
     /**
-     * Atribuir número de processo a uma proposição
+     * Atribuir número de processo a uma proposição (versão simplificada e automática)
      */
     public function atribuirNumeroProcesso(Request $request, Proposicao $proposicao)
     {
-        $configuracoes = $this->numeroProcessoService->obterConfiguracoes();
-        
-        $rules = [
-            'tipo_numeracao' => 'required|in:automatico,manual',
-        ];
-        
-        // Só validar número manual se configurado para permitir
-        if ($configuracoes['permitir_manual']) {
-            $rules['numero_protocolo'] = 'required_if:tipo_numeracao,manual|string|nullable';
-        }
-        
-        $request->validate($rules);
-
         if (!in_array($proposicao->status, ['enviado_protocolo', 'assinado'])) {
             return response()->json([
                 'success' => false,
-                'message' => 'Proposição deve estar assinada ou enviada para protocolo para receber número.'
+                'message' => 'Proposição deve estar assinada para receber número de protocolo.'
             ], 400);
         }
 
@@ -285,26 +279,36 @@ class ProposicaoProtocoloController extends Controller
         }
 
         try {
-            if ($request->tipo_numeracao === 'manual' && !$configuracoes['permitir_manual']) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'A configuração atual não permite números manuais.'
-                ], 400);
-            }
-            
-            $numeroManual = $request->tipo_numeracao === 'manual' ? $request->numero_protocolo : null;
-            $numeroProcesso = $this->numeroProcessoService->atribuirNumeroProcesso($proposicao, $numeroManual);
+            // SEMPRE automático - sistema decide o número
+            $numeroProcesso = $this->numeroProcessoService->atribuirNumeroProcesso($proposicao, null);
 
-            // Atualizar status para protocolado
+            // Atualizar status e dados de protocolo
             $proposicao->update([
-                'status' => 'protocolado'
+                'status' => 'protocolado',
+                'data_protocolo' => now(),
+                'funcionario_protocolo_id' => Auth::id(),
+                // Definir comissões padrão baseadas no tipo
+                'comissoes_destino' => $this->obterComissoesAutomaticas($proposicao->tipo),
+                'observacoes_protocolo' => 'Protocolado automaticamente pelo sistema'
             ]);
+
+            // Regenerar PDF com número de protocolo atribuído
+            try {
+                $assinaturaController = app(\App\Http\Controllers\ProposicaoAssinaturaController::class);
+                $assinaturaController->regenerarPDFAtualizado($proposicao->fresh());
+            } catch (\Exception $e) {
+                // Log::warning('Falha ao regenerar PDF após atribuir número de protocolo', [
+                //     'proposicao_id' => $proposicao->id,
+                //     'numero_protocolo' => $numeroProcesso,
+                //     'error' => $e->getMessage()
+                // ]);
+            }
 
             return response()->json([
                 'success' => true,
-                'numero_protocolo' => $numeroProcesso, // Mantém compatibilidade
+                'numero_protocolo' => $numeroProcesso,
                 'data_protocolo' => $proposicao->fresh()->data_protocolo->format('d/m/Y H:i'),
-                'message' => 'Número de processo atribuído com sucesso!'
+                'message' => 'Proposição protocolada com sucesso!'
             ]);
 
         } catch (\Exception $e) {

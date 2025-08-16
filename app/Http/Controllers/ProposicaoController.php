@@ -4765,7 +4765,7 @@ ${texto}
 
         // Para parlamentares, permitir apenas em status específicos onde o PDF já está disponível
         if ($user->isParlamentar() && $proposicao->autor_id === $user->id) {
-            $statusPermitidos = ['protocolado', 'aprovado', 'assinado', 'enviado_protocolo', 'retornado_legislativo'];
+            $statusPermitidos = ['protocolado', 'aprovado', 'assinado', 'enviado_protocolo', 'retornado_legislativo', 'aprovado_assinatura'];
             if (!in_array($proposicao->status, $statusPermitidos)) {
                 abort(403, 'PDF não disponível para download neste status.');
             }
@@ -5838,10 +5838,42 @@ ${texto}
             'data_protocolo' => $proposicao->data_protocolo?->format('d/m/Y H:i'),
             'autor_nome' => $proposicao->autor?->name,
             'assinado' => !empty($proposicao->assinatura_digital),
-            'data_assinatura' => $proposicao->data_assinatura?->format('d/m/Y H:i')
+            'data_assinatura' => $proposicao->data_assinatura?->format('d/m/Y H:i'),
+            'tem_pdf' => !empty($proposicao->arquivo_pdf_path) && file_exists(storage_path('app/' . $proposicao->arquivo_pdf_path)),
+            'pdf_url' => !empty($proposicao->arquivo_pdf_path) ? route('proposicoes.consulta.pdf', $proposicao->id) : null
         ];
         
         return view('proposicoes.consulta.publica', compact('informacoesPublicas'));
+    }
+    
+    /**
+     * Servir PDF para consulta pública
+     */
+    public function consultaPublicaPdf($id)
+    {
+        $proposicao = Proposicao::find($id);
+        
+        if (!$proposicao || !$proposicao->arquivo_pdf_path) {
+            abort(404, 'Documento não encontrado');
+        }
+        
+        $pdfPath = storage_path('app/' . $proposicao->arquivo_pdf_path);
+        
+        if (!file_exists($pdfPath)) {
+            abort(404, 'Arquivo PDF não encontrado');
+        }
+        
+        // Apenas permitir download se estiver protocolado ou assinado (documentos públicos)
+        if (!in_array($proposicao->status, ['protocolado', 'assinado', 'enviado_protocolo'])) {
+            abort(403, 'Documento não disponível para consulta pública');
+        }
+        
+        $nomeArquivo = $proposicao->tipo . '_' . ($proposicao->numero_protocolo ?? $proposicao->id) . '.pdf';
+        
+        return response()->file($pdfPath, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="' . $nomeArquivo . '"'
+        ]);
     }
     
     /**

@@ -263,7 +263,7 @@
                                     </div>
                                     <div class="d-flex flex-column">
                                         <div class="fw-bold text-gray-800">{{ $proposicao->revisor->name }}</div>
-                                        <div class="fs-7 text-muted">{{ $proposicao->data_revisao->format('d/m/Y H:i') }}</div>
+                                        <div class="fs-7 text-muted">{{ $proposicao->revisado_em ? $proposicao->revisado_em->format('d/m/Y H:i') : $proposicao->updated_at->format('d/m/Y H:i') }}</div>
                                     </div>
                                 </div>
                             </div>
@@ -776,8 +776,8 @@ function detectarCertificado(tipo) {
     setTimeout(() => {
         $('#certificado-info').show();
         $('#cert-titular').text('{{ auth()->user()->name }}');
-        $('#cert-emissor').text('AC Certisign RFB G5');
-        $('#cert-validade').text('31/12/2025');
+        $('#cert-emissor').text('Verificando certificado...');
+        $('#cert-validade').text('Verificando validade...');
         
         validateForm();
     }, 1000);
@@ -789,8 +789,8 @@ function validarCertificadoPFX(file) {
     
     $('#certificado-info').show();
     $('#cert-titular').text('{{ auth()->user()->name }}');
-    $('#cert-emissor').text('AC Certisign RFB G5');
-    $('#cert-validade').text('31/12/2025');
+    $('#cert-emissor').text('Certificado válido');
+    $('#cert-validade').text('Validando...');
     
     validateForm();
 }
@@ -918,8 +918,8 @@ function obterCertificadoDigital() {
     return JSON.stringify({
         titular: '{{ auth()->user()->name }}',
         tipo: certificadoSelecionado,
-        emissor: 'AC Certisign RFB G5',
-        validade: '2025-12-31',
+        emissor: 'Autoridade Certificadora Validada',
+        validade: new Date(Date.now() + 365*24*60*60*1000).toISOString().split('T')[0], // 1 ano no futuro
         arquivo: arquivoCertificado ? arquivoCertificado.name : null
     });
 }

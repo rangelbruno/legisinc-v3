@@ -1255,6 +1255,11 @@ Route::middleware(['auth'])->group(function () {
 });
 
 // Consulta pública de proposições (acesso sem autenticação)
-Route::get('/consulta/proposicao/{id}', [ProposicaoController::class, 'consultaPublica'])
+Route::get('/consulta/proposicao/{id}', [\App\Http\Controllers\ProposicaoController::class, 'consultaPublica'])
     ->name('proposicoes.consulta.publica')
+    ->where('id', '[0-9]+');
+
+// Download do PDF para consulta pública
+Route::get('/consulta/proposicao/{id}/pdf', [\App\Http\Controllers\ProposicaoController::class, 'consultaPublicaPdf'])
+    ->name('proposicoes.consulta.pdf')
     ->where('id', '[0-9]+');

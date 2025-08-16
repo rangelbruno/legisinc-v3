@@ -76,6 +76,7 @@ class DatabaseSeeder extends Seeder
         \Artisan::call('templates:process-images');
         $this->command->info('✅ Imagens dos templates processadas!');
 
+
         $this->command->info('');
         $this->command->info('🎉 ===============================================');
         $this->command->info('✅ SISTEMA LEGISINC CONFIGURADO COM SUCESSO!');

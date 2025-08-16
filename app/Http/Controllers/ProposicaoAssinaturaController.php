@@ -34,17 +34,20 @@ class ProposicaoAssinaturaController extends Controller
             abort(403, 'Proposição não está disponível para assinatura.');
         }
 
-        // Verificar se precisa gerar PDF
-        $pdfPath = $proposicao->arquivo_pdf_path ? storage_path('app/' . $proposicao->arquivo_pdf_path) : null;
-        if (!$proposicao->arquivo_pdf_path || !file_exists($pdfPath)) {
-            try {
-                $this->gerarPDFParaAssinatura($proposicao);
-            } catch (\Exception $e) {
-                // Log::warning('Não foi possível gerar PDF para assinatura', [
-                    //     'proposicao_id' => $proposicao->id,
-                    //     'error' => $e->getMessage()
-                // ]);
+        // SEMPRE regenerar PDF para assinatura para garantir dados corretos
+        try {
+            $this->gerarPDFParaAssinatura($proposicao);
+        } catch (\Exception $e) {
+            // Se falhar, tentar usar PDF existente como fallback
+            $pdfPath = $proposicao->arquivo_pdf_path ? storage_path('app/' . $proposicao->arquivo_pdf_path) : null;
+            if (!$proposicao->arquivo_pdf_path || !file_exists($pdfPath)) {
+                // Se nem o PDF existente serve, mostrar erro
+                return back()->withErrors(['pdf' => 'Não foi possível gerar o PDF para assinatura: ' . $e->getMessage()]);
             }
+            // Log::warning('Usando PDF existente após falha na regeneração', [
+                //     'proposicao_id' => $proposicao->id,
+                //     'error' => $e->getMessage()
+            // ]);
         }
 
         return view('proposicoes.assinatura.assinar', compact('proposicao'));
@@ -114,6 +117,16 @@ class ProposicaoAssinaturaController extends Controller
         //     'aprovado_assinatura',
         //     'assinado'
         // );
+
+        // Regenerar PDF com assinatura digital
+        try {
+            $this->regenerarPDFAtualizado($proposicao);
+        } catch (\Exception $e) {
+            // Log::warning('Falha ao regenerar PDF após assinatura', [
+            //     'proposicao_id' => $proposicao->id,
+            //     'error' => $e->getMessage()
+            // ]);
+        }
 
         // Enviar automaticamente para protocolo após assinatura
         $proposicao->update([
@@ -306,76 +319,15 @@ class ProposicaoAssinaturaController extends Controller
             mkdir(dirname($caminhoPdfAbsoluto), 0755, true);
         }
 
-        // Se não existe arquivo físico, usar conteúdo do banco de dados
-        if (!$proposicao->arquivo_path || !\Storage::exists($proposicao->arquivo_path)) {
-            // Log::info('Arquivo original não encontrado, gerando PDF do conteúdo do banco', [
-                //     'proposicao_id' => $proposicao->id,
-                //     'arquivo_path' => $proposicao->arquivo_path,
-                //     'has_content' => !empty($proposicao->conteudo)
-            // ]);
-            
-            // Usar DomPDF diretamente
-            $this->criarPDFExemplo($caminhoPdfAbsoluto, $proposicao);
-            
-            // Atualizar proposição com caminho do PDF
-            $proposicao->arquivo_pdf_path = $caminhoPdfRelativo;
-            $proposicao->save();
-            
-            return;
-        }
-
-        $caminhoArquivo = storage_path('app/' . $proposicao->arquivo_path);
+        // SEMPRE usar o método que prioriza arquivo editado pelo Legislativo
+        // (remove verificação de arquivo para garantir regeneração)
+        $this->criarPDFDoArquivoEditado($caminhoPdfAbsoluto, $proposicao);
         
-        // Log::info('Gerando PDF para assinatura a partir de arquivo físico', [
-            //     'proposicao_id' => $proposicao->id,
-            //     'arquivo_path' => $proposicao->arquivo_path,
-            //     'caminho_absoluto' => $caminhoArquivo
-        // ]);
-
-        // Verificar se LibreOffice está disponível
-        if (!$this->libreOfficeDisponivel()) {
-            // Fallback: Criar um PDF de exemplo para demonstração
-            // Log::warning('LibreOffice não disponível, criando PDF de exemplo');
-            $this->criarPDFExemplo($caminhoPdfAbsoluto, $proposicao);
-        } else {
-            // Converter para PDF usando LibreOffice
-            $comando = sprintf(
-                'libreoffice --headless --convert-to pdf --outdir %s %s 2>&1',
-                escapeshellarg(dirname($caminhoPdfAbsoluto)),
-                escapeshellarg($caminhoArquivo)
-            );
-
-            // Log::info('Executando comando LibreOffice para assinatura', [
-                //     'comando' => $comando
-            // ]);
-
-            exec($comando, $output, $returnCode);
-
-            // Log::info('Resultado comando LibreOffice para assinatura', [
-                //     'return_code' => $returnCode,
-                //     'output' => $output,
-                //     'pdf_existe' => file_exists($caminhoPdfAbsoluto)
-            // ]);
-
-            if ($returnCode !== 0) {
-                throw new \Exception('Erro na conversão para PDF. Código: ' . $returnCode . '. Output: ' . implode(', ', $output));
-            }
-
-            // Verificar se o PDF foi criado
-            if (!file_exists($caminhoPdfAbsoluto)) {
-                throw new \Exception('PDF não foi criado após conversão');
-            }
-        }
-
         // Atualizar proposição com caminho do PDF
         $proposicao->arquivo_pdf_path = $caminhoPdfRelativo;
         $proposicao->save();
-
-        // Log::info('PDF gerado com sucesso para assinatura', [
-            //     'proposicao_id' => $proposicao->id,
-            //     'arquivo_pdf_path' => $caminhoPdfRelativo,
-            //     'tamanho_arquivo' => filesize($caminhoPdfAbsoluto)
-        // ]);
+        
+        return;
     }
 
     /**
@@ -388,45 +340,242 @@ class ProposicaoAssinaturaController extends Controller
     }
 
     /**
-     * Criar PDF de exemplo quando LibreOffice não está disponível
+     * Criar PDF prioritariamente do arquivo editado pelo Legislativo
      */
-    private function criarPDFExemplo(string $caminhoPdfAbsoluto, Proposicao $proposicao): void
+    private function criarPDFDoArquivoEditado(string $caminhoPdfAbsoluto, Proposicao $proposicao): void
     {
         try {
-            // Ler conteúdo do arquivo original
-            $conteudoOriginal = '';
-            if ($proposicao->arquivo_path && \Storage::exists($proposicao->arquivo_path)) {
-                $conteudoOriginal = \Storage::get($proposicao->arquivo_path);
-                // Remover tags RTF básicas se for RTF
-                $conteudoOriginal = strip_tags($conteudoOriginal);
-                $conteudoOriginal = preg_replace('/\{[^}]*\}/', '', $conteudoOriginal);
-                $conteudoOriginal = trim($conteudoOriginal);
+            // PRIORIDADE 1: Converter DOCX editado pelo Legislativo diretamente para PDF (mantém formatação)
+            // Para proposições aprovadas para assinatura, SEMPRE priorizar arquivo editado
+            if ($proposicao->arquivo_path && in_array($proposicao->status, ['aprovado_assinatura', 'retornado_legislativo'])) {
+                $arquivoPath = $proposicao->arquivo_path;
+                
+                // Buscar arquivo em múltiplos locais (resolver problema do disk)
+                $locaisParaBuscar = [
+                    storage_path('app/' . $arquivoPath),              // local disk
+                    storage_path('app/private/' . $arquivoPath),       // private disk
+                    storage_path('app/public/' . $arquivoPath),        // public disk
+                    '/var/www/html/storage/app/' . $arquivoPath,       // container path
+                    '/var/www/html/storage/app/private/' . $arquivoPath, // container private
+                    '/var/www/html/storage/app/public/' . $arquivoPath   // container public
+                ];
+                
+                $arquivoEncontrado = null;
+                foreach ($locaisParaBuscar as $caminho) {
+                    if (file_exists($caminho)) {
+                        $arquivoEncontrado = $caminho;
+                        break;
+                    }
+                }
+                
+                // Log para debug
+                if ($arquivoEncontrado) {
+                    error_log("PDF Assinatura: Arquivo encontrado para proposição {$proposicao->id}: $arquivoEncontrado");
+                } else {
+                    error_log("PDF Assinatura: ARQUIVO NÃO ENCONTRADO para proposição {$proposicao->id} em {$arquivoPath}");
+                }
+                
+                // Se encontrou arquivo DOCX, tentar converter diretamente com LibreOffice
+                if ($arquivoEncontrado && str_contains($arquivoPath, '.docx') && $this->libreOfficeDisponivel()) {
+                    try {
+                        // Criar arquivo temporário se necessário para garantir localização correta
+                        $tempDir = sys_get_temp_dir();
+                        $tempFile = $tempDir . '/proposicao_' . $proposicao->id . '_temp.docx';
+                        copy($arquivoEncontrado, $tempFile);
+                        
+                        // Comando LibreOffice para conversão direta DOCX -> PDF (mantém formatação)
+                        $comando = sprintf(
+                            'libreoffice --headless --invisible --nodefault --nolockcheck --nologo --norestore --convert-to pdf --outdir %s %s 2>/dev/null',
+                            escapeshellarg(dirname($caminhoPdfAbsoluto)),
+                            escapeshellarg($tempFile)
+                        );
+                        
+                        exec($comando, $output, $returnCode);
+                        
+                        // Verificar se PDF foi criado
+                        $expectedPdfPath = dirname($caminhoPdfAbsoluto) . '/' . pathinfo($tempFile, PATHINFO_FILENAME) . '.pdf';
+                        
+                        if ($returnCode === 0 && file_exists($expectedPdfPath)) {
+                            // Mover PDF para localização final
+                            rename($expectedPdfPath, $caminhoPdfAbsoluto);
+                            
+                            // Limpar arquivo temporário
+                            if (file_exists($tempFile)) {
+                                unlink($tempFile);
+                            }
+                            
+                            error_log("PDF Assinatura: PDF criado com SUCESSO do DOCX editado pelo Legislativo! Proposição {$proposicao->id}, tamanho: " . filesize($caminhoPdfAbsoluto));
+                            
+                            return; // Sucesso! PDF criado com formatação preservada
+                        } else {
+                            error_log("PDF Assinatura: FALHA na conversão LibreOffice. ReturnCode: $returnCode, Expected: $expectedPdfPath");
+                        }
+                        
+                        // Limpar arquivo temporário em caso de erro
+                        if (file_exists($tempFile)) {
+                            unlink($tempFile);
+                        }
+                        
+                    } catch (\Exception $e) {
+                        // Log::warning('Falha na conversão direta DOCX->PDF, usando método fallback', [
+                        //     'proposicao_id' => $proposicao->id,
+                        //     'arquivo_path' => $arquivoEncontrado,
+                        //     'error' => $e->getMessage()
+                        // ]);
+                    }
+                }
             }
-
-            // Criar HTML para o PDF
-            $html = view('proposicoes.pdf.template', [
-                'proposicao' => $proposicao,
-                'conteudo' => $conteudoOriginal ?: $proposicao->conteudo
-            ])->render();
-
-            // Usar Dompdf para gerar PDF
-            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($html);
-            $pdf->setPaper('A4', 'portrait');
             
-            // Salvar PDF
-            file_put_contents($caminhoPdfAbsoluto, $pdf->output());
-
-            // Log::info('PDF de exemplo criado com sucesso', [
-                //     'proposicao_id' => $proposicao->id,
-                //     'caminho' => $caminhoPdfAbsoluto,
-                //     'tamanho' => filesize($caminhoPdfAbsoluto)
-            // ]);
+            // FALLBACK: Se conversão direta falhou, usar método anterior (extração de texto)
+            error_log("PDF Assinatura: Usando método FALLBACK para proposição {$proposicao->id}");
+            $this->criarPDFFallback($caminhoPdfAbsoluto, $proposicao);
 
         } catch (\Exception $e) {
-            // Log::error('Erro ao criar PDF de exemplo', [
+            // Log::error('Erro ao criar PDF', [
                 //     'proposicao_id' => $proposicao->id,
                 //     'error' => $e->getMessage()
             // ]);
+            throw $e;
+        }
+    }
+    
+    /**
+     * Método fallback para criar PDF quando conversão direta falha
+     */
+    private function criarPDFFallback(string $caminhoPdfAbsoluto, Proposicao $proposicao): void
+    {
+        $conteudoFinal = '';
+        
+        // Extrair conteúdo do arquivo DOCX editado pelo Legislativo
+        if ($proposicao->arquivo_path) {
+            $arquivoPath = $proposicao->arquivo_path;
+            
+            // Buscar arquivo em múltiplos locais
+            $locaisParaBuscar = [
+                storage_path('app/' . $arquivoPath),
+                storage_path('app/private/' . $arquivoPath),
+                storage_path('app/public/' . $arquivoPath),
+                '/var/www/html/storage/app/' . $arquivoPath,
+                '/var/www/html/storage/app/private/' . $arquivoPath,
+                '/var/www/html/storage/app/public/' . $arquivoPath
+            ];
+            
+            $arquivoEncontrado = null;
+            foreach ($locaisParaBuscar as $caminho) {
+                if (file_exists($caminho)) {
+                    $arquivoEncontrado = $caminho;
+                    break;
+                }
+            }
+            
+            if ($arquivoEncontrado && str_contains($arquivoPath, '.docx')) {
+                $extractionService = app(\App\Services\DocumentExtractionService::class);
+                
+                try {
+                    $conteudoExtraido = $extractionService->extractTextFromDocxFile($arquivoEncontrado);
+                    
+                    if (!empty($conteudoExtraido) && strlen($conteudoExtraido) > 50) {
+                        if ($proposicao->status === 'aprovado_assinatura' || $proposicao->status === 'retornado_legislativo') {
+                            $conteudoFinal = $conteudoExtraido;
+                        } else {
+                            $conteudoFinal = $this->substituirPlaceholders($conteudoExtraido, $proposicao);
+                        }
+                    }
+                } catch (\Exception $e) {
+                    // Silently fail and use database content
+                }
+            }
+        }
+        
+        // Usar conteúdo do banco se extração falhou
+        if (empty($conteudoFinal)) {
+            $conteudoFinal = $proposicao->conteudo;
+        }
+        
+        // Fallback final
+        if (empty($conteudoFinal)) {
+            $conteudoFinal = $proposicao->ementa ?: 'Conteúdo não disponível no momento.';
+        }
+
+        // Criar HTML para o PDF
+        $html = view('proposicoes.pdf.template', [
+            'proposicao' => $proposicao,
+            'conteudo' => $conteudoFinal
+        ])->render();
+
+        // Usar Dompdf para gerar PDF
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($html);
+        $pdf->setPaper('A4', 'portrait');
+        
+        // Salvar PDF
+        file_put_contents($caminhoPdfAbsoluto, $pdf->output());
+    }
+    
+    /**
+     * Substituir placeholders no conteúdo extraído com valores reais
+     */
+    private function substituirPlaceholders(string $conteudo, Proposicao $proposicao): string
+    {
+        // Substituir número de protocolo
+        if ($proposicao->numero_protocolo) {
+            $conteudo = str_replace('[AGUARDANDO PROTOCOLO]', $proposicao->numero_protocolo, $conteudo);
+        }
+        
+        // Substituir outras variáveis comuns
+        $substituicoes = [
+            '${numero_proposicao}' => $proposicao->numero_protocolo ?: '[AGUARDANDO PROTOCOLO]',
+            '${ementa}' => $proposicao->ementa,
+            '${texto}' => $proposicao->conteudo,
+            '${autor_nome}' => $proposicao->autor->name ?? 'N/A',
+            '${autor_cargo}' => $proposicao->autor->cargo_atual ?? 'Parlamentar',
+            '${municipio}' => 'Caraguatatuba',
+            '${dia}' => now()->format('d'),
+            '${mes_extenso}' => $this->getMesExtenso(now()->month),
+            '${ano_atual}' => now()->format('Y'),
+        ];
+        
+        foreach ($substituicoes as $placeholder => $valor) {
+            $conteudo = str_replace($placeholder, $valor, $conteudo);
+        }
+        
+        return $conteudo;
+    }
+    
+    /**
+     * Obter nome do mês por extenso
+     */
+    private function getMesExtenso(int $mes): string
+    {
+        $meses = [
+            1 => 'janeiro', 2 => 'fevereiro', 3 => 'março', 4 => 'abril',
+            5 => 'maio', 6 => 'junho', 7 => 'julho', 8 => 'agosto',
+            9 => 'setembro', 10 => 'outubro', 11 => 'novembro', 12 => 'dezembro'
+        ];
+        
+        return $meses[$mes] ?? 'indefinido';
+    }
+
+    /**
+     * Regenerar PDF com dados atualizados (protocolo, assinatura, etc.)
+     * Método público para ser usado após atribuir protocolo ou assinar
+     */
+    public function regenerarPDFAtualizado(Proposicao $proposicao): void
+    {
+        try {
+            $this->gerarPDFParaAssinatura($proposicao);
+            
+            // Log::info('PDF regenerado com dados atualizados', [
+            //     'proposicao_id' => $proposicao->id,
+            //     'numero_protocolo' => $proposicao->numero_protocolo,
+            //     'assinada' => !empty($proposicao->assinatura_digital)
+            // ]);
+            
+        } catch (\Exception $e) {
+            // Log::error('Erro ao regenerar PDF atualizado', [
+            //     'proposicao_id' => $proposicao->id,
+            //     'error' => $e->getMessage()
+            // ]);
+            
             throw $e;
         }
     }

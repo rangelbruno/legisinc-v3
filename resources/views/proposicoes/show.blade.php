@@ -93,6 +93,9 @@
                                         @case('enviado_protocolo')
                                             <span class="badge badge-info fs-6">Enviado para Protocolo</span>
                                             @break
+                                        @case('aprovado_assinatura')
+                                            <span class="badge badge-warning fs-6">Pronto para Assinatura</span>
+                                            @break
                                         @default
                                             <span class="badge badge-secondary fs-6">{{ ucfirst(str_replace('_', ' ', $proposicao->status)) }}</span>
                                     @endswitch
@@ -618,6 +621,32 @@
                                 <i class="fas fa-search me-2"></i>Consultar Protocolo
                             </button>
                         </div>
+                    @elseif($proposicao->status === 'aprovado_assinatura')
+                        <div class="alert alert-warning mb-3">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-signature fs-2 text-warning me-3"></i>
+                                <div>
+                                    <h6 class="alert-heading mb-1">Pronto para Assinatura</h6>
+                                    <p class="mb-0 small">Sua proposição foi aprovada pelo Legislativo e está pronta para assinatura digital.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="d-grid gap-2">
+                            <a href="{{ route('proposicoes.assinar', $proposicao->id) }}" class="btn btn-success">
+                                <i class="fas fa-signature me-2"></i>Assinar Documento
+                            </a>
+                            @if($proposicao->arquivo_pdf_path)
+                            <a href="{{ route('proposicoes.serve-pdf', $proposicao) }}" target="_blank" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-file-pdf me-2"></i>Visualizar PDF
+                            </a>
+                            @endif
+                            <button class="btn btn-outline-info btn-sm" onclick="consultarStatus()">
+                                <i class="fas fa-info-circle me-2"></i>Ver Detalhes
+                            </button>
+                            <button class="btn btn-outline-warning btn-sm" onclick="devolverParaLegislativo()">
+                                <i class="fas fa-arrow-left me-2"></i>Devolver para Legislativo
+                            </button>
+                        </div>
                     @else
                         <div class="alert alert-secondary">
                             <i class="fas fa-question-circle me-2"></i>
@@ -752,7 +781,7 @@
                                 <!--end::Timeline content-->
                             </div>
                             <!--end::Timeline item-->
-                        @elseif(in_array($proposicao->status, ['enviado_legislativo', 'em_revisao', 'analise']))
+                        @elseif(in_array($proposicao->status, ['enviado_legislativo', 'em_revisao', 'analise', 'aprovado_assinatura']))
                             <!--begin::Timeline item-->
                             <div class="timeline-item">
                                 <!--begin::Timeline line-->
@@ -979,6 +1008,73 @@
                                                             <span class="path3"></span>
                                                         </i>
                                                         Proposição rejeitada pelo legislativo
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <!--end::Timeline details-->
+                                </div>
+                                <!--end::Timeline content-->
+                            </div>
+                            <!--end::Timeline item-->
+                        @endif
+
+                        @if($proposicao->status === 'aprovado_assinatura')
+                            <!--begin::Timeline item-->
+                            <div class="timeline-item">
+                                <!--begin::Timeline line-->
+                                <div class="timeline-line w-40px"></div>
+                                <!--end::Timeline line-->
+
+                                <!--begin::Timeline icon-->
+                                <div class="timeline-icon symbol symbol-circle symbol-40px">
+                                    <div class="symbol-label bg-light-warning">
+                                        <i class="ki-duotone ki-document fs-2 text-warning">
+                                            <span class="path1"></span>
+                                            <span class="path2"></span>
+                                        </i>
+                                    </div>
+                                </div>
+                                <!--end::Timeline icon-->
+
+                                <!--begin::Timeline content-->
+                                <div class="timeline-content mb-10 mt-n2">
+                                    <!--begin::Timeline heading-->
+                                    <div class="overflow-auto pe-3">
+                                        <!--begin::Title-->
+                                        <div class="fs-5 fw-semibold mb-2">Aprovado para Assinatura</div>
+                                        <!--end::Title-->
+
+                                        <!--begin::Description-->
+                                        <div class="d-flex align-items-center mt-1 fs-6">
+                                            <!--begin::Info-->
+                                            <div class="text-muted me-2 fs-7">{{ $proposicao->revisado_em ? date('d/m/Y H:i', strtotime($proposicao->revisado_em)) : date('d/m/Y H:i', strtotime($proposicao->updated_at)) }}</div>
+                                            <!--end::Info-->
+
+                                            <!--begin::User-->
+                                            @if($proposicao->revisor)
+                                            <div class="text-muted me-2 fs-7">
+                                                <i class="ki-duotone ki-profile-circle fs-6 text-muted me-1">
+                                                    <span class="path1"></span>
+                                                    <span class="path2"></span>
+                                                    <span class="path3"></span>
+                                                </i>{{ $proposicao->revisor->name }}
+                                            </div>
+                                            @endif
+                                            <!--end::User-->
+                                        </div>
+                                        <!--end::Description-->
+                                    </div>
+                                    <!--end::Timeline heading-->
+
+                                    <!--begin::Timeline details-->
+                                    <div class="overflow-auto pb-5">
+                                        <div class="notice d-flex bg-light-warning rounded border-warning border border-dashed p-4">
+                                            <div class="d-flex flex-stack flex-grow-1">
+                                                <div class="fw-semibold">
+                                                    <div class="fs-6 text-gray-700">
+                                                        Proposição aprovada pelo Legislativo e liberada para assinatura digital pelo parlamentar
                                                     </div>
                                                 </div>
                                             </div>
@@ -2603,5 +2699,76 @@ document.addEventListener('DOMContentLoaded', function() {
         window.history.replaceState({}, document.title, urlLimpa);
     }
 });
+
+function devolverParaLegislativo() {
+    console.log('Abrindo modal de devolução para o Legislativo');
+    
+    // Abordagem super simples: prompt nativo do browser
+    const observacoes = prompt(
+        "DEVOLVER PARA O LEGISLATIVO\n\n" +
+        "Você está prestes a devolver esta proposição para o Legislativo com solicitação de alterações.\n\n" +
+        "Observações (obrigatório):\n" +
+        "Descreva as alterações ou correções necessárias..."
+    );
+    
+    // Se cancelou ou não escreveu nada
+    if (!observacoes || observacoes.trim() === '') {
+        console.log('Devolução cancelada pelo usuário');
+        return;
+    }
+    
+    // Confirmação final
+    const confirmacao = confirm(
+        "CONFIRMAR DEVOLUÇÃO?\n\n" +
+        "A proposição será devolvida para o Legislativo com suas observações.\n\n" +
+        "Observações: " + observacoes.trim() + "\n\n" +
+        "Confirma a devolução?"
+    );
+    
+    if (!confirmacao) {
+        console.log('Devolução cancelada na confirmação');
+        return;
+    }
+    
+    // Enviar para o servidor
+    console.log('Enviando devolução para o servidor...');
+    
+    // Mostrar loading
+    const loadingAlert = document.createElement('div');
+    loadingAlert.style.cssText = `
+        position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+        background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        z-index: 10000; text-align: center; min-width: 200px;
+    `;
+    loadingAlert.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
+    document.body.appendChild(loadingAlert);
+    
+    fetch(`/proposicoes/{{ $proposicao->id }}/devolver-legislativo`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+        },
+        body: JSON.stringify({
+            observacoes: observacoes.trim()
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        document.body.removeChild(loadingAlert);
+        
+        if (data.success) {
+            alert('✅ Proposição devolvida com sucesso!\n\nO Legislativo foi notificado sobre suas solicitações.');
+            window.location.reload();
+        } else {
+            alert('❌ Erro: ' + (data.message || 'Não foi possível devolver a proposição.'));
+        }
+    })
+    .catch(error => {
+        document.body.removeChild(loadingAlert);
+        console.error('Erro na devolução:', error);
+        alert('❌ Erro de comunicação. Tente novamente.');
+    });
+}
 </script>
 @endpush

@@ -240,7 +240,8 @@
         @endif
     </div>
     
-    <!-- Área de Assinatura -->
+    <!-- Área de Assinatura - apenas mostrar se documento já foi assinado ou está protocolado -->
+    @if($proposicao->assinatura_digital || $proposicao->status == 'protocolado')
     <div class="signature-area">
         <!-- Assinatura Vertical na Lateral -->
         <div class="signature-vertical">
@@ -291,6 +292,7 @@
             <div class="qr-text">Consulta: ID {{ $proposicao->id }}</div>
         </div>
     </div>
+    @endif
     
     <!-- Rodapé -->
     <div class="footer">

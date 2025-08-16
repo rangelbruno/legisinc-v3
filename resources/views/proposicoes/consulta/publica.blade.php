@@ -126,6 +126,30 @@
                     @endif
                 </div>
 
+                <!-- Download do Documento -->
+                @if($informacoesPublicas['tem_pdf'])
+                <div class="info-card">
+                    <h4 class="text-primary mb-3">
+                        <i>📄</i> Documento Oficial
+                    </h4>
+                    <p class="mb-3">O documento oficial com assinatura digital e protocolo está disponível para visualização:</p>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <a href="{{ $informacoesPublicas['pdf_url'] }}" 
+                           target="_blank" 
+                           class="btn btn-primary btn-lg">
+                            <i>👁️</i> Visualizar PDF
+                        </a>
+                        <a href="{{ $informacoesPublicas['pdf_url'] }}?download=1" 
+                           class="btn btn-outline-primary btn-lg">
+                            <i>⬇️</i> Baixar PDF
+                        </a>
+                    </div>
+                    <small class="text-muted d-block mt-2">
+                        O documento contém assinatura digital e QR Code para verificação de autenticidade.
+                    </small>
+                </div>
+                @endif
+
                 <!-- Informações sobre Transparência -->
                 <div class="info-card">
                     <h4 class="text-success mb-3">

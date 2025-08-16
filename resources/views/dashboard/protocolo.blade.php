@@ -210,7 +210,7 @@
                                 <span class="text-muted fw-semibold fs-7">Aguardando numeração</span>
                             </h3>
                             <div class="card-toolbar">
-                                <a href="{{ route('proposicoes.legislativo.index') }}" class="btn btn-sm btn-light btn-active-primary">
+                                <a href="{{ route('proposicoes.protocolar') }}" class="btn btn-sm btn-light btn-active-primary">
                                     Ver Todas
                                 </a>
                             </div>
@@ -260,7 +260,10 @@
                                                     <span class="text-muted fw-semibold">{{ $proposicao->data_assinatura ? $proposicao->data_assinatura->format('d/m/Y') : 'N/A' }}</span>
                                                 </td>
                                                 <td class="text-end">
-                                                    <span class="badge badge-light fw-bold">Protocolar</span>
+                                                    <a href="{{ route('proposicoes.protocolar.show', $proposicao) }}" 
+                                                       class="btn btn-sm btn-light-primary">
+                                                        Protocolar
+                                                    </a>
                                                 </td>
                                             </tr>
                                             @endforeach
