@@ -615,33 +615,7 @@ Route::post('/parametros-templates-marca-dagua', function() {
 
 Route::get('/test-criar-docx', [App\Http\Controllers\ProposicaoController::class, 'criarArquivoTesteDOCX'])->name('test.criar.docx');
 
-Route::get('/parametros-templates-texto-padrao', function() {
-    // Auto-login se não estiver logado
-    if (!Auth::check()) {
-        $user = new \App\Models\User();
-        $user->id = 5;
-        $user->name = 'Bruno Administrador';
-        $user->email = 'bruno@sistema.gov.br';
-        $user->exists = true;
-        Auth::login($user);
-    }
-    
-    return app(App\Http\Controllers\TemplateDefaultTextController::class)->index();
-})->name('parametros.templates.texto-padrao');
-
-Route::post('/parametros-templates-texto-padrao', function() {
-    // Auto-login se não estiver logado
-    if (!Auth::check()) {
-        $user = new \App\Models\User();
-        $user->id = 5;
-        $user->name = 'Bruno Administrador';
-        $user->email = 'bruno@sistema.gov.br';
-        $user->exists = true;
-        Auth::login($user);
-    }
-    
-    return app(App\Http\Controllers\TemplateDefaultTextController::class)->store(request());
-})->name('parametros.templates.texto-padrao.store');
+// Rotas do template padrão removidas - sistema usa apenas templates específicos por tipo de proposição
 Route::get('/parametros-templates-rodape', function() {
     // Auto-login se não estiver logado
     if (!Auth::check()) {

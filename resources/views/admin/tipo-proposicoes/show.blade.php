@@ -128,7 +128,7 @@
 
                                 @if($tipoProposicao->template_padrao)
                                 <!--begin::Details item-->
-                                <div class="fw-bold mt-5">Template Padrão</div>
+                                <div class="fw-bold mt-5">Template do Tipo</div>
                                 <div class="text-gray-600">{{ $tipoProposicao->template_padrao }}</div>
                                 <!--begin::Details item-->
                                 @endif

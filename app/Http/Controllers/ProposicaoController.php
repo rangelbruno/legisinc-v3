@@ -8,7 +8,6 @@ use App\Models\DocumentoTemplate;
 use App\Services\Template\TemplateProcessorService;
 use App\Services\Template\TemplateInstanceService;
 use App\Services\Template\TemplateParametrosService;
-use App\Services\Template\TemplatePadraoABNTService;
 use App\Services\Template\ABNTValidationService;
 use App\Services\TemplateVariablesService;
 use App\Models\TipoProposicaoTemplate;
@@ -190,18 +189,8 @@ class ProposicaoController extends Controller
                 ];
             }
             
-            // Sempre adicionar template padrão ABNT como primeira opção
-            array_unshift($modelosArray, [
-                'id' => 'template_abnt_padrao',
-                'nome' => 'Template Padrão ABNT',
-                'descricao' => 'Template único padronizado seguindo normas ABNT NBR 14724:2023 e NBR 6022:2018',
-                'is_template' => true,
-                'template_id' => 'abnt_padrao',
-                'is_recommended' => true
-            ]);
-            
             // Se não há templates específicos, adicionar opção em branco
-            if (count($modelosArray) === 1) { // Só tem o template ABNT
+            if (count($modelosArray) === 0) {
                 // Log::info('Nenhum template específico encontrado, adicionando opção em branco');
                 $modelosArray[] = [
                     'id' => 'template_blank',
@@ -339,11 +328,6 @@ class ProposicaoController extends Controller
         
         if (str_starts_with($modeloId, 'template_')) {
             $templateId = str_replace('template_', '', $modeloId);
-            
-            // Verificar se é o template padrão ABNT
-            if ($modeloId === 'template_abnt_padrao') {
-                return $this->processarTemplatePadraoABNT($proposicao);
-            }
             
             // Primeiro, tentar buscar como DocumentoModelo
             $documentoModelo = \App\Models\Documento\DocumentoModelo::where('template_id', $templateId)
@@ -5413,75 +5397,6 @@ ${texto}
         return $ementa ?? null;
     }
 
-    /**
-     * Processar proposição usando Template Padrão ABNT
-     */
-    protected function processarTemplatePadraoABNT(Proposicao $proposicao)
-    {
-        try {
-            $templatePadraoService = app(TemplatePadraoABNTService::class);
-            $abntValidationService = app(ABNTValidationService::class);
-            
-            // Preparar dados da proposição
-            $dadosProposicao = [
-                'tipo' => $proposicao->tipo,
-                'ementa' => $proposicao->ementa,
-                'conteudo' => $proposicao->conteudo,
-                'texto' => $proposicao->conteudo, // Alias para compatibilidade
-                'numero' => $proposicao->numero,
-                'status' => $proposicao->status,
-                'created_at' => $proposicao->created_at,
-                'autor_nome' => $proposicao->autor->name ?? '',
-                'nome_parlamentar' => $proposicao->autor->name ?? '',
-                'cargo_parlamentar' => 'Vereador(a)', // Padrão
-                'email_parlamentar' => $proposicao->autor->email ?? '',
-                'partido_parlamentar' => '' // Pode ser obtido de relacionamento se existir
-            ];
-            
-            // Gerar documento usando template ABNT
-            $resultado = $templatePadraoService->gerarDocumento($dadosProposicao);
-            
-            if (!$resultado['success']) {
-                // Log::error('Erro ao gerar documento ABNT', [
-                    //     'proposicao_id' => $proposicao->id,
-                    //     'error' => $resultado['message']
-                // ]);
-                
-                return redirect()->back()
-                    ->with('error', 'Erro ao processar template ABNT: ' . $resultado['message']);
-            }
-            
-            // Salvar resultado na proposição
-            $proposicao->update([
-                'conteudo_processado' => $resultado['documento_html'],
-                'status' => 'em_edicao',
-                'template_usado' => 'Template Padrão ABNT',
-                'validacao_abnt' => json_encode($resultado['validacao_abnt'])
-            ]);
-            
-            // Log::info('Documento ABNT gerado com sucesso', [
-                //     'proposicao_id' => $proposicao->id,
-                //     'score_abnt' => $resultado['validacao_abnt']['score_geral']['percentual'] ?? 0,
-                //     'template_usado' => $resultado['template_usado']
-            // ]);
-            
-            // Redirecionar para visualização com relatório ABNT
-            return redirect()->route('proposicoes.show', $proposicao->id)
-                ->with('success', 'Documento gerado com sucesso usando Template Padrão ABNT!')
-                ->with('abnt_score', $resultado['validacao_abnt']['score_geral']['percentual'] ?? 0)
-                ->with('abnt_status', $resultado['validacao_abnt']['score_geral']['status'] ?? 'desconhecido');
-                
-        } catch (\Exception $e) {
-            // Log::error('Erro no processamento do template ABNT', [
-                //     'proposicao_id' => $proposicao->id,
-                //     'error' => $e->getMessage(),
-                //     'trace' => $e->getTraceAsString()
-            // ]);
-            
-            return redirect()->back()
-                ->with('error', 'Erro interno ao processar template ABNT. Tente novamente.');
-        }
-    }
     
     /**
      * Carrega valores existentes de diferentes fontes para pré-preencher campos

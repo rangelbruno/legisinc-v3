@@ -136,7 +136,6 @@
                         <!--begin::Select2-->
                         <select class="form-select mb-2" data-kt-ecommerce-catalog-add-category="template" data-placeholder="Selecione um template" name="template_padrao">
                             <option></option>
-                            <option value="template_padrao" {{ $tipoProposicao->template_padrao == 'template_padrao' ? 'selected' : '' }}>Template Padrão</option>
                             <option value="template_lei" {{ $tipoProposicao->template_padrao == 'template_lei' ? 'selected' : '' }}>Template de Lei</option>
                             <option value="template_requerimento" {{ $tipoProposicao->template_padrao == 'template_requerimento' ? 'selected' : '' }}>Template de Requerimento</option>
                         </select>

@@ -69,7 +69,6 @@ class ParametroController extends Controller
         return match($nome) {
             'Cabeçalho' => 'ki-document',
             'Marca D\'água' => 'ki-water',
-            'Texto Padrão' => 'ki-text',
             'Rodapé' => 'ki-scroll-down',
             'Variáveis Dinâmicas' => 'ki-code',
             default => 'ki-setting-2'
@@ -80,8 +79,7 @@ class ParametroController extends Controller
     {
         return match($nome) {
             'Cabeçalho' => 'parametros.templates.cabecalho',
-            'Marca D\'água' => 'parametros.templates.marca-dagua', 
-            'Texto Padrão' => 'parametros.templates.texto-padrao',
+            'Marca D\'água' => 'parametros.templates.marca-dagua',
             'Rodapé' => 'parametros.templates.rodape',
             'Variáveis Dinâmicas' => 'parametros.variaveis-dinamicas',
             default => 'parametros.index'

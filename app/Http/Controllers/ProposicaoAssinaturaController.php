@@ -370,9 +370,9 @@ class ProposicaoAssinaturaController extends Controller
                 
                 // Log para debug
                 if ($arquivoEncontrado) {
-                    error_log("PDF Assinatura: Arquivo encontrado para proposição {$proposicao->id}: $arquivoEncontrado");
+                    // Log::info("PDF Assinatura: Arquivo encontrado para proposição {$proposicao->id}: $arquivoEncontrado");
                 } else {
-                    error_log("PDF Assinatura: ARQUIVO NÃO ENCONTRADO para proposição {$proposicao->id} em {$arquivoPath}");
+                    // Log::warning("PDF Assinatura: ARQUIVO NÃO ENCONTRADO para proposição {$proposicao->id} em {$arquivoPath}");
                 }
                 
                 // Se encontrou arquivo DOCX, tentar converter diretamente com LibreOffice
@@ -395,6 +395,9 @@ class ProposicaoAssinaturaController extends Controller
                         // Verificar se PDF foi criado
                         $expectedPdfPath = dirname($caminhoPdfAbsoluto) . '/' . pathinfo($tempFile, PATHINFO_FILENAME) . '.pdf';
                         
+                        // Log::info("PDF Assinatura: Comando executado: $comando");
+                        // Log::info("PDF Assinatura: Return code: $returnCode");
+                        
                         if ($returnCode === 0 && file_exists($expectedPdfPath)) {
                             // Mover PDF para localização final
                             rename($expectedPdfPath, $caminhoPdfAbsoluto);
@@ -404,11 +407,11 @@ class ProposicaoAssinaturaController extends Controller
                                 unlink($tempFile);
                             }
                             
-                            error_log("PDF Assinatura: PDF criado com SUCESSO do DOCX editado pelo Legislativo! Proposição {$proposicao->id}, tamanho: " . filesize($caminhoPdfAbsoluto));
+                            // Log::info("PDF Assinatura: PDF criado com SUCESSO do DOCX editado pelo Legislativo! Proposição {$proposicao->id}");
                             
                             return; // Sucesso! PDF criado com formatação preservada
                         } else {
-                            error_log("PDF Assinatura: FALHA na conversão LibreOffice. ReturnCode: $returnCode, Expected: $expectedPdfPath");
+                            // Log::warning("PDF Assinatura: FALHA na conversão LibreOffice. ReturnCode: $returnCode");
                         }
                         
                         // Limpar arquivo temporário em caso de erro
@@ -441,74 +444,83 @@ class ProposicaoAssinaturaController extends Controller
     
     /**
      * Método fallback para criar PDF quando conversão direta falha
+     * CORRIGIDO: Usa mesma lógica do ProposicaoController para manter consistência
      */
     private function criarPDFFallback(string $caminhoPdfAbsoluto, Proposicao $proposicao): void
     {
-        $conteudoFinal = '';
-        
-        // Extrair conteúdo do arquivo DOCX editado pelo Legislativo
-        if ($proposicao->arquivo_path) {
-            $arquivoPath = $proposicao->arquivo_path;
+        try {
+            // USAR MESMA LÓGICA DO ProposicaoController::criarPDFComDomPDF
+            // Para manter consistência e evitar template genérico
             
-            // Buscar arquivo em múltiplos locais
-            $locaisParaBuscar = [
-                storage_path('app/' . $arquivoPath),
-                storage_path('app/private/' . $arquivoPath),
-                storage_path('app/public/' . $arquivoPath),
-                '/var/www/html/storage/app/' . $arquivoPath,
-                '/var/www/html/storage/app/private/' . $arquivoPath,
-                '/var/www/html/storage/app/public/' . $arquivoPath
-            ];
+            $conteudo = '';
             
-            $arquivoEncontrado = null;
-            foreach ($locaisParaBuscar as $caminho) {
-                if (file_exists($caminho)) {
-                    $arquivoEncontrado = $caminho;
-                    break;
-                }
-            }
-            
-            if ($arquivoEncontrado && str_contains($arquivoPath, '.docx')) {
-                $extractionService = app(\App\Services\DocumentExtractionService::class);
+            // 1. Verificar se existe arquivo editado pelo Legislativo
+            if ($proposicao->arquivo_path) {
+                $caminhoArquivo = null;
                 
-                try {
-                    $conteudoExtraido = $extractionService->extractTextFromDocxFile($arquivoEncontrado);
-                    
-                    if (!empty($conteudoExtraido) && strlen($conteudoExtraido) > 50) {
-                        if ($proposicao->status === 'aprovado_assinatura' || $proposicao->status === 'retornado_legislativo') {
-                            $conteudoFinal = $conteudoExtraido;
-                        } else {
-                            $conteudoFinal = $this->substituirPlaceholders($conteudoExtraido, $proposicao);
+                // Tentar encontrar o arquivo editado (RTF/DOCX do OnlyOffice)
+                $possiveisCaminhos = [
+                    storage_path('app/' . $proposicao->arquivo_path),
+                    storage_path('app/private/' . $proposicao->arquivo_path),
+                    storage_path('app/proposicoes/' . basename($proposicao->arquivo_path)),
+                    '/var/www/html/storage/app/' . $proposicao->arquivo_path,
+                    '/var/www/html/storage/app/private/' . $proposicao->arquivo_path
+                ];
+                
+                foreach ($possiveisCaminhos as $caminho) {
+                    if (file_exists($caminho)) {
+                        $caminhoArquivo = $caminho;
+                        break;
+                    }
+                }
+                
+                // Se encontrou arquivo RTF/DOCX editado, extrair conteúdo real
+                if ($caminhoArquivo) {
+                    if (str_contains($proposicao->arquivo_path, '.rtf')) {
+                        // Arquivo RTF do OnlyOffice - extrair texto real
+                        $rtfContent = file_get_contents($caminhoArquivo);
+                        $conteudo = $this->converterRTFParaTexto($rtfContent);
+                        error_log("PDF Assinatura: Conteúdo extraído do RTF editado: " . strlen($conteudo) . " caracteres");
+                    } elseif (str_contains($proposicao->arquivo_path, '.docx')) {
+                        // Arquivo DOCX - usar DocumentExtractionService
+                        $extractionService = app(\App\Services\DocumentExtractionService::class);
+                        try {
+                            $conteudo = $extractionService->extractTextFromDocxFile($caminhoArquivo);
+                            error_log("PDF Assinatura: Conteúdo extraído do DOCX: " . strlen($conteudo) . " caracteres");
+                        } catch (\Exception $e) {
+                            error_log("PDF Assinatura: Erro ao extrair DOCX: " . $e->getMessage());
                         }
                     }
-                } catch (\Exception $e) {
-                    // Silently fail and use database content
                 }
             }
-        }
-        
-        // Usar conteúdo do banco se extração falhou
-        if (empty($conteudoFinal)) {
-            $conteudoFinal = $proposicao->conteudo;
-        }
-        
-        // Fallback final
-        if (empty($conteudoFinal)) {
-            $conteudoFinal = $proposicao->ementa ?: 'Conteúdo não disponível no momento.';
-        }
+            
+            // 2. Se não conseguiu extrair do arquivo, usar conteúdo do banco
+            if (empty($conteudo) || strlen($conteudo) < 50) {
+                if (!empty($proposicao->conteudo)) {
+                    $conteudo = $proposicao->conteudo;
+                    error_log("PDF Assinatura: Usando conteúdo do banco de dados");
+                } else {
+                    $conteudo = $proposicao->ementa ?: 'Conteúdo não disponível';
+                    error_log("PDF Assinatura: Usando ementa como fallback");
+                }
+            }
 
-        // Criar HTML para o PDF
-        $html = view('proposicoes.pdf.template', [
-            'proposicao' => $proposicao,
-            'conteudo' => $conteudoFinal
-        ])->render();
+            // 3. Criar HTML usando mesmo método do ProposicaoController
+            $html = $this->gerarHTMLParaPDF($proposicao, $conteudo);
 
-        // Usar Dompdf para gerar PDF
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($html);
-        $pdf->setPaper('A4', 'portrait');
-        
-        // Salvar PDF
-        file_put_contents($caminhoPdfAbsoluto, $pdf->output());
+            // 4. Usar DomPDF para gerar PDF
+            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($html);
+            $pdf->setPaper('A4', 'portrait');
+            
+            // 5. Salvar PDF
+            file_put_contents($caminhoPdfAbsoluto, $pdf->output());
+            
+            error_log("PDF Assinatura: PDF criado com sucesso! Tamanho: " . filesize($caminhoPdfAbsoluto) . " bytes");
+
+        } catch (\Exception $e) {
+            error_log("PDF Assinatura: Erro ao criar PDF fallback: " . $e->getMessage());
+            throw $e;
+        }
     }
     
     /**
@@ -578,5 +590,103 @@ class ProposicaoAssinaturaController extends Controller
             
             throw $e;
         }
+    }
+    
+    /**
+     * Converter RTF para texto limpo removendo códigos RTF
+     * ADICIONADO: Método copiado do ProposicaoController para manter consistência
+     */
+    private function converterRTFParaTexto(string $rtfContent): string
+    {
+        // Se não é RTF, retornar como está
+        if (!str_contains($rtfContent, '{\rtf')) {
+            return $rtfContent;
+        }
+        
+        // Para RTF muito complexo como do OnlyOffice, usar abordagem simplificada:
+        // Buscar por texto real entre códigos RTF usando padrões específicos
+        
+        $textosEncontrados = [];
+        
+        // 1. Buscar texto em português comum (frases)
+        preg_match_all('/(?:[A-ZÁÉÍÓÚÂÊÎÔÛÃÕÀÈÌÒÙÇ][a-záéíóúâêîôûãõàèìòùç\s,.-]{15,})/u', $rtfContent, $matches);
+        if (!empty($matches[0])) {
+            foreach ($matches[0] as $match) {
+                // Limpar RTF restante
+                $clean = preg_replace('/\\\\\w+\d*\s*/', ' ', $match);
+                $clean = preg_replace('/[{}\\\\]/', '', $clean);
+                $clean = trim($clean);
+                if (strlen($clean) > 10) {
+                    $textosEncontrados[] = $clean;
+                }
+            }
+        }
+        
+        // 2. Se achou textos válidos, juntar e retornar
+        if (!empty($textosEncontrados)) {
+            $textoFinal = implode("\n\n", $textosEncontrados);
+            // Limpar caracteres especiais restantes
+            $textoFinal = preg_replace('/\s+/', ' ', $textoFinal);
+            return trim($textoFinal);
+        }
+        
+        // 3. Fallback: busca mais agressiva por qualquer texto legível
+        preg_match_all('/[A-Za-záéíóúâêîôûãõàèìòùç\s]{10,}/', $rtfContent, $fallbackMatches);
+        if (!empty($fallbackMatches[0])) {
+            $texto = implode(' ', $fallbackMatches[0]);
+            return trim(preg_replace('/\s+/', ' ', $texto));
+        }
+        
+        return '';
+    }
+    
+    /**
+     * Gerar HTML para PDF usando mesmo layout do ProposicaoController
+     * ADICIONADO: Para manter consistência visual
+     */
+    private function gerarHTMLParaPDF(Proposicao $proposicao, string $conteudo): string
+    {
+        return "
+        <!DOCTYPE html>
+        <html lang='pt-BR'>
+        <head>
+            <meta charset='UTF-8'>
+            <title>Proposição {$proposicao->id}</title>
+            <style>
+                body { font-family: Arial, sans-serif; margin: 40px; line-height: 1.6; }
+                .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 20px; }
+                .title { font-size: 18px; font-weight: bold; margin: 10px 0; }
+                .info { font-size: 12px; color: #666; margin: 5px 0; }
+                .content { margin-top: 30px; text-align: justify; }
+                .ementa { background: #f5f5f5; padding: 15px; margin: 20px 0; border-left: 4px solid #007bff; }
+                .signature-area { margin-top: 50px; text-align: right; }
+                .signature-line { border-top: 1px solid #333; margin-top: 50px; width: 300px; display: inline-block; }
+            </style>
+        </head>
+        <body>
+            <div class='header'>
+                <h1>CÂMARA MUNICIPAL DE CARAGUATATUBA</h1>
+                <div class='title'>" . strtoupper($proposicao->tipo) . 
+                ($proposicao->numero_protocolo ? " Nº {$proposicao->numero_protocolo}" : " #" . $proposicao->id . " (Aguardando Protocolo)") . "</div>
+                <div class='info'>Autor: " . ($proposicao->autor->name ?? 'N/A') . "</div>
+                <div class='info'>Data: " . $proposicao->created_at->format('d/m/Y') . "</div>
+            </div>
+            
+            <div class='ementa'>
+                <strong>EMENTA:</strong><br>
+                " . nl2br(htmlspecialchars($proposicao->ementa)) . "
+            </div>
+            
+            <div class='content'>
+                " . nl2br(htmlspecialchars($conteudo ?: 'Conteúdo não disponível')) . "
+            </div>
+            
+            <div class='signature-area'>
+                <p>Caraguatatuba, " . now()->format('d') . " de " . $this->getMesExtenso(now()->month) . " de " . now()->format('Y') . ".</p>
+                <div class='signature-line'></div>
+                <p>" . ($proposicao->autor->name ?? 'Autor da Proposição') . "<br>" . ($proposicao->autor->cargo_atual ?? 'Vereador') . "</p>
+            </div>
+        </body>
+        </html>";
     }
 }
