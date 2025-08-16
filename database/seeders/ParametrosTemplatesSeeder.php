@@ -93,6 +93,23 @@ class ParametrosTemplatesSeeder extends Seeder
 
         // Campos de Formatação
         $this->criarCamposFormatacao($submoduloFormatacao);
+
+        // Submódulo Assinatura e QR Code
+        $submoduloAssinatura = ParametroSubmodulo::updateOrCreate(
+            [
+                'modulo_id' => $moduloTemplates->id,
+                'nome' => 'Assinatura e QR Code'
+            ],
+            [
+                'descricao' => 'Configurações de posicionamento da assinatura digital e QR Code',
+                'tipo' => 'form',
+                'ordem' => 5,
+                'ativo' => true
+            ]
+        );
+
+        // Campos de Assinatura e QR Code
+        $this->criarCamposAssinaturaQR($submoduloAssinatura);
     }
 
     private function criarCamposCabecalho($submodulo)
@@ -386,6 +403,181 @@ class ParametrosTemplatesSeeder extends Seeder
         $this->definirValor($campoTamanhoFonte, '12');
         $this->definirValor($campoEspacamento, '1.5');
         $this->definirValor($campoMargens, '2.5, 2.5, 3, 2');
+    }
+
+    private function criarCamposAssinaturaQR($submodulo)
+    {
+        // Posição da Assinatura Digital
+        $campoPosicaoAssinatura = ParametroCampo::updateOrCreate(
+            [
+                'submodulo_id' => $submodulo->id,
+                'nome' => 'assinatura_posicao'
+            ],
+            [
+                'label' => 'Posição da Assinatura Digital',
+                'tipo_campo' => 'select',
+                'descricao' => 'Define onde a assinatura digital será posicionada no documento',
+                'obrigatorio' => true,
+                'valor_padrao' => 'rodape_direita',
+                'opcoes' => [
+                    'rodape_esquerda' => 'Rodapé - Esquerda',
+                    'rodape_centro' => 'Rodapé - Centro',
+                    'rodape_direita' => 'Rodapé - Direita',
+                    'final_documento_esquerda' => 'Final do Documento - Esquerda',
+                    'final_documento_centro' => 'Final do Documento - Centro',
+                    'final_documento_direita' => 'Final do Documento - Direita',
+                    'pagina_separada' => 'Página Separada'
+                ],
+                'ordem' => 1,
+                'ativo' => true
+            ]
+        );
+
+        // Texto da Assinatura Digital
+        $campoTextoAssinatura = ParametroCampo::updateOrCreate(
+            [
+                'submodulo_id' => $submodulo->id,
+                'nome' => 'assinatura_texto'
+            ],
+            [
+                'label' => 'Texto da Assinatura Digital',
+                'tipo_campo' => 'textarea',
+                'descricao' => 'Texto que acompanha a assinatura digital',
+                'obrigatorio' => false,
+                'valor_padrao' => "Documento assinado digitalmente por:\n{autor_nome}\n{autor_cargo}\nEm {data_assinatura}",
+                'placeholder' => 'Use {autor_nome}, {autor_cargo}, {data_assinatura} como variáveis',
+                'ordem' => 2,
+                'ativo' => true
+            ]
+        );
+
+        // Posição do QR Code
+        $campoPosicaoQR = ParametroCampo::updateOrCreate(
+            [
+                'submodulo_id' => $submodulo->id,
+                'nome' => 'qrcode_posicao'
+            ],
+            [
+                'label' => 'Posição do QR Code',
+                'tipo_campo' => 'select',
+                'descricao' => 'Define onde o QR Code será posicionado no documento',
+                'obrigatorio' => true,
+                'valor_padrao' => 'rodape_esquerda',
+                'opcoes' => [
+                    'rodape_esquerda' => 'Rodapé - Esquerda',
+                    'rodape_centro' => 'Rodapé - Centro',
+                    'rodape_direita' => 'Rodapé - Direita',
+                    'cabecalho_esquerda' => 'Cabeçalho - Esquerda',
+                    'cabecalho_direita' => 'Cabeçalho - Direita',
+                    'final_documento_esquerda' => 'Final do Documento - Esquerda',
+                    'final_documento_centro' => 'Final do Documento - Centro',
+                    'final_documento_direita' => 'Final do Documento - Direita',
+                    'lateral_direita' => 'Lateral Direita (Margem)',
+                    'desabilitado' => 'Não Exibir QR Code'
+                ],
+                'ordem' => 3,
+                'ativo' => true
+            ]
+        );
+
+        // Tamanho do QR Code
+        $campoTamanhoQR = ParametroCampo::updateOrCreate(
+            [
+                'submodulo_id' => $submodulo->id,
+                'nome' => 'qrcode_tamanho'
+            ],
+            [
+                'label' => 'Tamanho do QR Code (pixels)',
+                'tipo_campo' => 'number',
+                'descricao' => 'Tamanho do QR Code em pixels',
+                'obrigatorio' => true,
+                'valor_padrao' => '100',
+                'validacao' => ['min' => 50, 'max' => 300],
+                'placeholder' => 'Ex: 100',
+                'ordem' => 4,
+                'ativo' => true
+            ]
+        );
+
+        // Texto do QR Code
+        $campoTextoQR = ParametroCampo::updateOrCreate(
+            [
+                'submodulo_id' => $submodulo->id,
+                'nome' => 'qrcode_texto'
+            ],
+            [
+                'label' => 'Texto do QR Code',
+                'tipo_campo' => 'textarea',
+                'descricao' => 'Texto explicativo que acompanha o QR Code',
+                'obrigatorio' => false,
+                'valor_padrao' => "Consulte este documento online:\nProtocolo: {numero_protocolo}",
+                'placeholder' => 'Use {numero_protocolo}, {numero_proposicao} como variáveis',
+                'ordem' => 5,
+                'ativo' => true
+            ]
+        );
+
+        // Formato da URL do QR Code
+        $campoURLQR = ParametroCampo::updateOrCreate(
+            [
+                'submodulo_id' => $submodulo->id,
+                'nome' => 'qrcode_url_formato'
+            ],
+            [
+                'label' => 'Formato da URL do QR Code',
+                'tipo_campo' => 'text',
+                'descricao' => 'Formato da URL que será codificada no QR Code',
+                'obrigatorio' => true,
+                'valor_padrao' => '{base_url}/proposicoes/consulta/{numero_protocolo}',
+                'placeholder' => 'Use {base_url}, {numero_protocolo}, {numero_proposicao}',
+                'ordem' => 6,
+                'ativo' => true
+            ]
+        );
+
+        // Mostrar Assinatura Apenas Após Protocolo
+        $campoAssinaturaAposProtocolo = ParametroCampo::updateOrCreate(
+            [
+                'submodulo_id' => $submodulo->id,
+                'nome' => 'assinatura_apenas_protocolo'
+            ],
+            [
+                'label' => 'Mostrar Assinatura Apenas Após Protocolo',
+                'tipo_campo' => 'checkbox',
+                'descricao' => 'A assinatura digital só aparece no documento após ser protocolado',
+                'obrigatorio' => false,
+                'valor_padrao' => '1',
+                'ordem' => 7,
+                'ativo' => true
+            ]
+        );
+
+        // Mostrar QR Code Apenas Após Protocolo
+        $campoQRAposProtocolo = ParametroCampo::updateOrCreate(
+            [
+                'submodulo_id' => $submodulo->id,
+                'nome' => 'qrcode_apenas_protocolo'
+            ],
+            [
+                'label' => 'Mostrar QR Code Apenas Após Protocolo',
+                'tipo_campo' => 'checkbox',
+                'descricao' => 'O QR Code só aparece no documento após ser protocolado',
+                'obrigatorio' => false,
+                'valor_padrao' => '1',
+                'ordem' => 8,
+                'ativo' => true
+            ]
+        );
+
+        // Definir valores padrão
+        $this->definirValor($campoPosicaoAssinatura, 'rodape_direita');
+        $this->definirValor($campoTextoAssinatura, "Documento assinado digitalmente por:\n{autor_nome}\n{autor_cargo}\nEm {data_assinatura}");
+        $this->definirValor($campoPosicaoQR, 'rodape_esquerda');
+        $this->definirValor($campoTamanhoQR, '100');
+        $this->definirValor($campoTextoQR, "Consulte este documento online:\nProtocolo: {numero_protocolo}");
+        $this->definirValor($campoURLQR, '{base_url}/proposicoes/consulta/{numero_protocolo}');
+        $this->definirValor($campoAssinaturaAposProtocolo, '1', 'boolean');
+        $this->definirValor($campoQRAposProtocolo, '1', 'boolean');
     }
 
     private function definirValor($campo, $valor, $tipo = 'string')

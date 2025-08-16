@@ -317,6 +317,51 @@
         </div>
     </div>
     
+    {{-- ASSINATURA DIGITAL & QR CODE --}}
+    <div class="variable-category">
+        <div class="variable-category-title">
+            <i class="ki-duotone ki-security-user fs-5">
+                <span class="path1"></span>
+                <span class="path2"></span>
+            </i>
+            ASSINATURA DIGITAL & QR CODE
+        </div>
+        <div class="variable-items">
+            <button type="button" onclick="onlyofficeEditor.inserirVariavel('${assinatura_digital_info}')" class="btn variable-btn bg-light-primary">
+                <span class="var-name">${assinatura_digital_info}</span>
+                <span class="var-desc">Bloco completo da assinatura digital</span>
+            </button>
+            <button type="button" onclick="onlyofficeEditor.inserirVariavel('${qrcode_html}')" class="btn variable-btn bg-light-primary">
+                <span class="var-name">${qrcode_html}</span>
+                <span class="var-desc">QR Code para consulta do documento</span>
+            </button>
+            <button type="button" onclick="onlyofficeEditor.inserirVariavel('${assinatura_posicao}')" class="btn variable-btn">
+                <span class="var-name">${assinatura_posicao}</span>
+                <span class="var-desc">Posição da assinatura (centro, direita, esquerda)</span>
+            </button>
+            <button type="button" onclick="onlyofficeEditor.inserirVariavel('${assinatura_texto}')" class="btn variable-btn">
+                <span class="var-name">${assinatura_texto}</span>
+                <span class="var-desc">Texto da assinatura digital</span>
+            </button>
+            <button type="button" onclick="onlyofficeEditor.inserirVariavel('${qrcode_posicao}')" class="btn variable-btn">
+                <span class="var-name">${qrcode_posicao}</span>
+                <span class="var-desc">Posição do QR Code (centro, direita, esquerda)</span>
+            </button>
+            <button type="button" onclick="onlyofficeEditor.inserirVariavel('${qrcode_texto}')" class="btn variable-btn">
+                <span class="var-name">${qrcode_texto}</span>
+                <span class="var-desc">Texto do QR Code</span>
+            </button>
+            <button type="button" onclick="onlyofficeEditor.inserirVariavel('${qrcode_tamanho}')" class="btn variable-btn">
+                <span class="var-name">${qrcode_tamanho}</span>
+                <span class="var-desc">Tamanho do QR Code em pixels</span>
+            </button>
+            <button type="button" onclick="onlyofficeEditor.inserirVariavel('${qrcode_url_formato}')" class="btn variable-btn">
+                <span class="var-name">${qrcode_url_formato}</span>
+                <span class="var-desc">URL de consulta formatada</span>
+            </button>
+        </div>
+    </div>
+    
     {{-- CAMPOS ESPECIAIS --}}
     <div class="variable-category">
         <div class="variable-category-title">

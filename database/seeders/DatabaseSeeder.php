@@ -91,6 +91,7 @@ class DatabaseSeeder extends Seeder
         $this->command->info('🔧 ===== CONFIGURAÇÕES DISPONÍVEIS =====');
         $this->command->info('📊 Dados Gerais: /parametros-dados-gerais-camara');
         $this->command->info('📝 Templates: /admin/templates');
+        $this->command->info('✍️ Assinatura & QR Code: /parametros-templates-assinatura-qrcode');
         $this->command->info('⚙️ Parâmetros Avançados: /parametros');
         $this->command->info('');
         $this->command->info('👥 ===== USUÁRIOS DO SISTEMA =====');
@@ -117,6 +118,8 @@ class DatabaseSeeder extends Seeder
         $this->command->info('✅ Cabeçalho com imagem automática');
         $this->command->info('✅ Acentuação portuguesa funcionando');
         $this->command->info('✅ OnlyOffice integrado e operacional');
+        $this->command->info('✅ Sistema de Assinatura Digital e QR Code configurado');
+        $this->command->info('✅ Variáveis de assinatura disponíveis no editor de templates');
         $this->command->info('');
         $this->command->info('🚀 Sistema pronto para uso! Acesse: http://localhost:8001');
         $this->command->info('');

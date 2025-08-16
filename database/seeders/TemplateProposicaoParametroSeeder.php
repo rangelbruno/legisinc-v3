@@ -335,6 +335,144 @@ class TemplateProposicaoParametroSeeder extends Seeder
             }
         }
 
+        // Verificar ou criar submódulo "Assinatura e QR Code"
+        $submodulo7 = \App\Models\Parametro\ParametroSubmodulo::where('modulo_id', $modulo->id)
+            ->where('nome', 'Assinatura e QR Code')
+            ->first();
+            
+        if (!$submodulo7) {
+            $submoduloAssinatura = [
+                'modulo_id' => $modulo->id,
+                'nome' => 'Assinatura e QR Code',
+                'descricao' => 'Configurações de posicionamento da assinatura digital e QR Code',
+                'tipo' => 'form',
+                'ordem' => 5,
+                'ativo' => true
+            ];
+            $submodulo7 = $this->parametroService->criarSubmodulo($submoduloAssinatura);
+        }
+
+        // Criar ou atualizar campos do submódulo Assinatura e QR Code
+        $camposAssinatura = [
+            [
+                'nome' => 'assinatura_posicao',
+                'label' => 'Posição da Assinatura Digital',
+                'descricao' => 'Define onde a assinatura digital será posicionada no documento (variável: ${assinatura_posicao})',
+                'tipo_campo' => 'select',
+                'valor_padrao' => 'rodape_direita',
+                'obrigatorio' => true,
+                'ordem' => 1,
+                'placeholder' => 'Escolha a posição',
+                'opcoes' => [
+                    'rodape_esquerda' => 'Rodapé - Esquerda',
+                    'rodape_centro' => 'Rodapé - Centro',
+                    'rodape_direita' => 'Rodapé - Direita',
+                    'final_documento_esquerda' => 'Final do Documento - Esquerda',
+                    'final_documento_centro' => 'Final do Documento - Centro',
+                    'final_documento_direita' => 'Final do Documento - Direita',
+                    'pagina_separada' => 'Página Separada'
+                ]
+            ],
+            [
+                'nome' => 'assinatura_texto',
+                'label' => 'Texto da Assinatura Digital',
+                'descricao' => 'Texto que acompanha a assinatura digital. Use {autor_nome}, {autor_cargo}, {data_assinatura} (variável: ${assinatura_texto})',
+                'tipo_campo' => 'textarea',
+                'valor_padrao' => "Documento assinado digitalmente por:\n{autor_nome}\n{autor_cargo}\nEm {data_assinatura}",
+                'obrigatorio' => false,
+                'ordem' => 2,
+                'placeholder' => 'Use {autor_nome}, {autor_cargo}, {data_assinatura} como variáveis'
+            ],
+            [
+                'nome' => 'qrcode_posicao',
+                'label' => 'Posição do QR Code',
+                'descricao' => 'Define onde o QR Code será posicionado no documento (variável: ${qrcode_posicao})',
+                'tipo_campo' => 'select',
+                'valor_padrao' => 'rodape_esquerda',
+                'obrigatorio' => true,
+                'ordem' => 3,
+                'placeholder' => 'Escolha a posição',
+                'opcoes' => [
+                    'rodape_esquerda' => 'Rodapé - Esquerda',
+                    'rodape_centro' => 'Rodapé - Centro',
+                    'rodape_direita' => 'Rodapé - Direita',
+                    'cabecalho_esquerda' => 'Cabeçalho - Esquerda',
+                    'cabecalho_direita' => 'Cabeçalho - Direita',
+                    'final_documento_esquerda' => 'Final do Documento - Esquerda',
+                    'final_documento_centro' => 'Final do Documento - Centro',
+                    'final_documento_direita' => 'Final do Documento - Direita',
+                    'lateral_direita' => 'Lateral Direita (Margem)',
+                    'desabilitado' => 'Não Exibir QR Code'
+                ]
+            ],
+            [
+                'nome' => 'qrcode_tamanho',
+                'label' => 'Tamanho do QR Code (pixels)',
+                'descricao' => 'Tamanho do QR Code em pixels (variável: ${qrcode_tamanho})',
+                'tipo_campo' => 'number',
+                'valor_padrao' => '100',
+                'obrigatorio' => true,
+                'ordem' => 4,
+                'placeholder' => 'Ex: 100',
+                'validacao' => [
+                    'min' => 50,
+                    'max' => 300
+                ]
+            ],
+            [
+                'nome' => 'qrcode_texto',
+                'label' => 'Texto do QR Code',
+                'descricao' => 'Texto explicativo que acompanha o QR Code. Use {numero_protocolo}, {numero_proposicao} (variável: ${qrcode_texto})',
+                'tipo_campo' => 'textarea',
+                'valor_padrao' => "Consulte este documento online:\nProtocolo: {numero_protocolo}",
+                'obrigatorio' => false,
+                'ordem' => 5,
+                'placeholder' => 'Use {numero_protocolo}, {numero_proposicao} como variáveis'
+            ],
+            [
+                'nome' => 'qrcode_url_formato',
+                'label' => 'Formato da URL do QR Code',
+                'descricao' => 'Formato da URL que será codificada no QR Code. Use {base_url}, {numero_protocolo}, {numero_proposicao} (variável: ${qrcode_url_formato})',
+                'tipo_campo' => 'text',
+                'valor_padrao' => '{base_url}/proposicoes/consulta/{numero_protocolo}',
+                'obrigatorio' => true,
+                'ordem' => 6,
+                'placeholder' => 'Use {base_url}, {numero_protocolo}, {numero_proposicao}'
+            ],
+            [
+                'nome' => 'assinatura_apenas_protocolo',
+                'label' => 'Mostrar Assinatura Apenas Após Protocolo',
+                'descricao' => 'A assinatura digital só aparece no documento após ser protocolado (variável: ${assinatura_apenas_protocolo})',
+                'tipo_campo' => 'checkbox',
+                'valor_padrao' => '1',
+                'obrigatorio' => false,
+                'ordem' => 7,
+                'placeholder' => 'Controlar exibição da assinatura'
+            ],
+            [
+                'nome' => 'qrcode_apenas_protocolo',
+                'label' => 'Mostrar QR Code Apenas Após Protocolo',
+                'descricao' => 'O QR Code só aparece no documento após ser protocolado (variável: ${qrcode_apenas_protocolo})',
+                'tipo_campo' => 'checkbox',
+                'valor_padrao' => '1',
+                'obrigatorio' => false,
+                'ordem' => 8,
+                'placeholder' => 'Controlar exibição do QR Code'
+            ]
+        ];
+
+        foreach ($camposAssinatura as $campoData) {
+            $campo = \App\Models\Parametro\ParametroCampo::where('submodulo_id', $submodulo7->id)
+                ->where('nome', $campoData['nome'])
+                ->first();
+                
+            if (!$campo) {
+                $campoData['submodulo_id'] = $submodulo7->id;
+                $this->parametroService->criarCampo($campoData);
+            }
+        }
+
         $this->command->info('Módulo de Templates com todos os submódulos criado com sucesso!');
+        $this->command->info('✅ Submódulo "Assinatura e QR Code" adicionado com 8 campos configuráveis');
     }
 }

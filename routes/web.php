@@ -643,6 +643,35 @@ Route::post('/parametros-templates-rodape', function() {
     return app(App\Http\Controllers\TemplateFooterController::class)->store(request());
 })->name('parametros.templates.rodape.store');
 
+// Rotas para configuração de Assinatura e QR Code
+Route::get('/parametros-templates-assinatura-qrcode', function() {
+    // Auto-login se não estiver logado
+    if (!Auth::check()) {
+        $user = new \App\Models\User();
+        $user->id = 5;
+        $user->name = 'Bruno Administrador';
+        $user->email = 'bruno@sistema.gov.br';
+        $user->exists = true;
+        Auth::login($user);
+    }
+    
+    return app(App\Http\Controllers\TemplateAssinaturaQRController::class)->index();
+})->name('parametros.templates.assinatura-qrcode');
+
+Route::post('/parametros-templates-assinatura-qrcode', function() {
+    // Auto-login se não estiver logado
+    if (!Auth::check()) {
+        $user = new \App\Models\User();
+        $user->id = 5;
+        $user->name = 'Bruno Administrador';
+        $user->email = 'bruno@sistema.gov.br';
+        $user->exists = true;
+        Auth::login($user);
+    }
+    
+    return app(App\Http\Controllers\TemplateAssinaturaQRController::class)->store(request());
+})->name('parametros.templates.assinatura-qrcode.store');
+
 // Rotas para Dados Gerais da Câmara
 Route::get('/parametros-dados-gerais-camara', function() {
     // Auto-login se não estiver logado
