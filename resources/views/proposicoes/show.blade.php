@@ -163,6 +163,20 @@
     margin-bottom: 0;
 }
 </style>
+<style>
+
+
+.d-grid .btn-assinatura:last-child {
+    margin-bottom: 0;
+}
+</style>
+<style>
+
+
+.d-grid .btn-assinatura:last-child {
+    margin-bottom: 0;
+}
+</style>
 
 <style>
 
