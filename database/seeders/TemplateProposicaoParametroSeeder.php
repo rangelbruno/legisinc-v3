@@ -71,44 +71,24 @@ class TemplateProposicaoParametroSeeder extends Seeder
                 ]
             ],
             [
-                'nome' => 'cabecalho_nome_camara',
-                'label' => 'Nome da Câmara',
-                'descricao' => 'Nome completo da câmara municipal (variável: ${cabecalho_nome_camara})',
-                'tipo_campo' => 'text',
-                'valor_padrao' => 'CÂMARA MUNICIPAL',
-                'obrigatorio' => true,
+                'nome' => 'assinatura_digital_info',
+                'label' => 'Informações da Assinatura Digital',
+                'descricao' => 'Informações da assinatura digital posicionadas horizontalmente no lado direito (variável: ${assinatura_digital_info})',
+                'tipo_campo' => 'textarea',
+                'valor_padrao' => 'Documento assinado digitalmente',
+                'obrigatorio' => false,
                 'ordem' => 2,
-                'placeholder' => 'Ex: CÂMARA MUNICIPAL DE SÃO PAULO'
+                'placeholder' => 'Texto horizontal da assinatura digital'
             ],
             [
-                'nome' => 'cabecalho_endereco',
-                'label' => 'Endereço',
-                'descricao' => 'Endereço completo da câmara (variável: ${cabecalho_endereco})',
+                'nome' => 'qrcode_html',
+                'label' => 'QR Code HTML',
+                'descricao' => 'QR Code em formato HTML posicionado no canto inferior direito (variável: ${qrcode_html})',
                 'tipo_campo' => 'textarea',
                 'valor_padrao' => '',
                 'obrigatorio' => false,
                 'ordem' => 3,
-                'placeholder' => 'Endereço completo com CEP'
-            ],
-            [
-                'nome' => 'cabecalho_telefone',
-                'label' => 'Telefone',
-                'descricao' => 'Telefone de contato (variável: ${cabecalho_telefone})',
-                'tipo_campo' => 'text',
-                'valor_padrao' => '',
-                'obrigatorio' => false,
-                'ordem' => 4,
-                'placeholder' => '(00) 0000-0000'
-            ],
-            [
-                'nome' => 'cabecalho_website',
-                'label' => 'Website',
-                'descricao' => 'Site da câmara (variável: ${cabecalho_website})',
-                'tipo_campo' => 'text',
-                'valor_padrao' => '',
-                'obrigatorio' => false,
-                'ordem' => 5,
-                'placeholder' => 'www.camara.gov.br'
+                'placeholder' => 'QR Code no canto inferior direito'
             ]
         ];
 

@@ -16,10 +16,7 @@ class TipoProposicaoTemplatesSeeder extends Seeder
      * 
      * === CABEÇALHO ===
      * ${imagem_cabecalho}           - Imagem do cabeçalho (se configurada)
-     * ${cabecalho_nome_camara}      - Nome oficial da Câmara
-     * ${cabecalho_endereco}         - Endereço completo da Câmara
-     * ${cabecalho_telefone}         - Telefone oficial
-     * ${cabecalho_website}          - Website oficial
+     * ${assinatura_digital_info}    - Informações da assinatura digital (lado direito)
      * 
      * === PROPOSIÇÃO ===
      * ${numero_proposicao}          - Número da proposição
@@ -40,7 +37,7 @@ class TipoProposicaoTemplatesSeeder extends Seeder
      * ${data_protocolo}             - Data do protocolo
      * ${dia}                        - Dia atual
      * ${mes}                        - Mês atual
-     * ${ano_atual}                  - Ano atual
+     * ${ano}                        - Ano atual
      * ${mes_extenso}                - Mês por extenso
      * 
      * === INSTITUIÇÃO ===
@@ -53,6 +50,7 @@ class TipoProposicaoTemplatesSeeder extends Seeder
      * 
      * === RODAPÉ ===
      * ${assinatura_padrao}          - Área de assinatura padrão
+     * ${qrcode_html}                - QR Code HTML (canto inferior direito)
      * ${rodape_texto}               - Texto do rodapé institucional
      */
     public function run(): void
@@ -180,7 +178,7 @@ class TipoProposicaoTemplatesSeeder extends Seeder
             [
                 'codigo' => 'mocao',
                 'nome' => 'Moção',
-                'epigrafe' => 'MOÇÃO Nº ${numero_proposicao}/${ano_atual}',
+                'epigrafe' => 'MOÇÃO Nº ${numero_proposicao}',
                 'ementa' => '${ementa}',
                 'preambulo' => 'A Câmara Municipal manifesta:',
                 'articulado' => [
@@ -395,10 +393,8 @@ class TipoProposicaoTemplatesSeeder extends Seeder
         // A variável ${imagem_cabecalho} será processada pelo TemplateProcessorService
         // que irá converter a imagem para o formato RTF correto
         $rtf .= '${imagem_cabecalho}\par ';
-        $rtf .= '\qc\b ${cabecalho_nome_camara}\b0\par ';
-        $rtf .= '\qc ${cabecalho_endereco}\par ';
-        $rtf .= '\qc ${cabecalho_telefone}\par ';
-        $rtf .= '\qc ${cabecalho_website}\par \par \ql ';
+        $rtf .= '\qr ${assinatura_digital_info}\par ';
+        $rtf .= '\par \ql ';
         
         // Epígrafe com variáveis atualizadas
         $epigrafe = str_replace('${ano}', '${ano_atual}', $template['epigrafe']);
@@ -421,12 +417,15 @@ class TipoProposicaoTemplatesSeeder extends Seeder
         
         // RODAPÉ COMPLETO com todas as variáveis disponíveis
         $rtf .= '\par ';
-        $rtf .= '\qr ${municipio}, ${dia} de ${mes_extenso} de ${ano_atual}.\par \par ';
+        $rtf .= '\qr ${municipio}, ${dia} de ${mes_extenso} de ${ano}.\par \par ';
         
         // Área de assinatura com dados do autor
         $rtf .= '\qr ${assinatura_padrao}\par ';
         $rtf .= '\qr ${autor_nome}\par ';
         $rtf .= '\qr ${autor_cargo}\par \par ';
+        
+        // QR Code no canto inferior direito
+        $rtf .= '\qr ${qrcode_html}\par ';
         
         // Rodapé institucional
         $rtf .= '\qc\fs18 ${rodape_texto}\fs24\par ';

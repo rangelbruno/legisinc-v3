@@ -131,81 +131,46 @@ class ParametrosTemplatesSeeder extends Seeder
             ]
         );
 
-        // Nome da Câmara
-        $campoNomeCamara = ParametroCampo::updateOrCreate(
+        // Informações da Assinatura Digital
+        $campoAssinaturaInfo = ParametroCampo::updateOrCreate(
             [
                 'submodulo_id' => $submodulo->id,
-                'nome' => 'cabecalho_nome_camara'
+                'nome' => 'assinatura_digital_info'
             ],
             [
-                'label' => 'Nome da Câmara',
-                'tipo_campo' => 'text',
-                'descricao' => 'Nome completo da câmara municipal',
-                'obrigatorio' => true,
-                'valor_padrao' => 'CÂMARA MUNICIPAL',
-                'placeholder' => 'Ex: CÂMARA MUNICIPAL DE SÃO PAULO',
+                'label' => 'Informações da Assinatura Digital',
+                'tipo_campo' => 'textarea',
+                'descricao' => 'Informações da assinatura digital posicionadas horizontalmente no lado direito',
+                'obrigatorio' => false,
+                'valor_padrao' => 'Documento assinado digitalmente',
+                'placeholder' => 'Texto horizontal da assinatura digital',
                 'ordem' => 2,
                 'ativo' => true
             ]
         );
 
-        // Endereço
-        $campoEndereco = ParametroCampo::updateOrCreate(
+        // QR Code HTML
+        $campoQRCodeHTML = ParametroCampo::updateOrCreate(
             [
                 'submodulo_id' => $submodulo->id,
-                'nome' => 'cabecalho_endereco'
+                'nome' => 'qrcode_html'
             ],
             [
-                'label' => 'Endereço',
+                'label' => 'QR Code HTML',
                 'tipo_campo' => 'textarea',
-                'descricao' => 'Endereço completo da câmara',
+                'descricao' => 'QR Code em formato HTML posicionado no canto inferior direito',
                 'obrigatorio' => false,
-                'placeholder' => 'Rua, número, bairro, cidade, estado, CEP',
+                'valor_padrao' => '',
+                'placeholder' => 'QR Code no canto inferior direito',
                 'ordem' => 3,
                 'ativo' => true
             ]
         );
 
-        // Telefone
-        $campoTelefone = ParametroCampo::updateOrCreate(
-            [
-                'submodulo_id' => $submodulo->id,
-                'nome' => 'cabecalho_telefone'
-            ],
-            [
-                'label' => 'Telefone',
-                'tipo_campo' => 'text',
-                'descricao' => 'Telefone de contato',
-                'obrigatorio' => false,
-                'placeholder' => '(00) 0000-0000',
-                'ordem' => 4,
-                'ativo' => true
-            ]
-        );
-
-        // Website
-        $campoWebsite = ParametroCampo::updateOrCreate(
-            [
-                'submodulo_id' => $submodulo->id,
-                'nome' => 'cabecalho_website'
-            ],
-            [
-                'label' => 'Website',
-                'tipo_campo' => 'text',
-                'descricao' => 'Site da câmara',
-                'obrigatorio' => false,
-                'placeholder' => 'www.camara.gov.br',
-                'ordem' => 5,
-                'ativo' => true
-            ]
-        );
-
-        // Definir valores padrão usando dados de Caraguatatuba
+        // Definir valores padrão
         $this->definirValor($campoLogo, 'template/cabecalho.png');
-        $this->definirValor($campoNomeCamara, 'CÂMARA MUNICIPAL DE CARAGUATATUBA');
-        $this->definirValor($campoEndereco, "Praça da República, 40\nCentro - Caraguatatuba/SP\nCEP: 11660-020");
-        $this->definirValor($campoTelefone, '(12) 3882-5588');
-        $this->definirValor($campoWebsite, 'www.camaracaraguatatuba.sp.gov.br');
+        $this->definirValor($campoAssinaturaInfo, 'Documento assinado digitalmente');
+        $this->definirValor($campoQRCodeHTML, '');
     }
 
     private function criarCamposRodape($submodulo)
