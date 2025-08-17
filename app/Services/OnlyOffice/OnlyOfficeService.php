@@ -342,8 +342,11 @@ class OnlyOfficeService
                 'localhost:8080'
             ], 'legisinc-onlyoffice', $url);
             
-            // Se a URL ainda contém localhost, substituir pela URL interna
+            // Se a URL ainda contém localhost (qualquer porta), substituir para funcionar entre containers
             if (strpos($urlCorrigida, 'localhost') !== false) {
+                // localhost:8001 (aplicação Laravel) → legisinc-app
+                $urlCorrigida = str_replace('http://localhost:8001', 'http://legisinc-app', $urlCorrigida);
+                // localhost:8080 (OnlyOffice) → legisinc-onlyoffice  
                 $urlCorrigida = str_replace('http://localhost:8080', 'http://legisinc-onlyoffice', $urlCorrigida);
             }
             
@@ -354,9 +357,22 @@ class OnlyOfficeService
             // ]);
             
             // Download do conteúdo com timeout aumentado
-            $response = Http::timeout(60)->get($urlCorrigida);
+            try {
+                $response = Http::timeout(60)->get($urlCorrigida);
+                
+                // Log::info('OnlyOffice download response', [
+                    //     'success' => $response->successful(),
+                    //     'status' => $response->status()
+                // ]);
+            } catch (\Exception $downloadException) {
+                // Log::error('OnlyOffice download exception', [
+                    //     'url' => $urlCorrigida,
+                    //     'exception' => $downloadException->getMessage()
+                // ]);
+                $response = null;
+            }
             
-            if (!$response->successful()) {
+            if (!$response || !$response->successful()) {
                 // Fallback tentando outras variações de URL
                 $urlsFallback = [
                     str_replace('http://localhost:8080', 'http://127.0.0.1:8080', $url),
@@ -2882,6 +2898,13 @@ Status: " . ucfirst(str_replace('_', ' ', $proposicao->status)) . "\par
 
         // Status 2 = documento salvo e pronto para download
         if ($status == 2 && isset($data['url'])) {
+            // AUDITORIA: Capturar estado anterior para histórico
+            $estadoAnterior = [
+                'arquivo_path' => $proposicao->arquivo_path,
+                'conteudo' => $proposicao->conteudo,
+                'ultima_modificacao' => $proposicao->ultima_modificacao
+            ];
+            
             try {
                 $originalUrl = $data['url'];
                 
@@ -2982,6 +3005,38 @@ Status: " . ucfirst(str_replace('_', ' ', $proposicao->status)) . "\par
                 
                 // OTIMIZAÇÃO: Update sem recarregar relações desnecessárias
                 $proposicao->updateQuietly($updateData); // Sem disparar eventos
+                
+                // AUDITORIA: Registrar histórico da alteração
+                try {
+                    \App\Models\ProposicaoHistorico::registrarCallbackOnlyOffice(
+                        $proposicao,
+                        $estadoAnterior['arquivo_path'],
+                        $nomeArquivo,
+                        $estadoAnterior['conteudo'],
+                        $conteudoExtraido ?: $proposicao->conteudo,
+                        [
+                            'document_key' => $documentKey,
+                            'callback_status' => $status,
+                            'original_url' => $originalUrl,
+                            'file_type' => $fileType,
+                            'download_time_seconds' => round($downloadTime, 2),
+                            'should_extract_content' => $shouldExtractContent,
+                            'content_extracted' => !empty($conteudoExtraido)
+                        ]
+                    );
+                    
+                    Log::info('Histórico de alteração registrado', [
+                        'proposicao_id' => $proposicao->id,
+                        'arquivo_anterior' => $estadoAnterior['arquivo_path'],
+                        'arquivo_novo' => $nomeArquivo
+                    ]);
+                } catch (\Exception $historicoException) {
+                    // Não bloquear o callback por erro no histórico
+                    Log::warning('Erro ao registrar histórico de alteração', [
+                        'proposicao_id' => $proposicao->id,
+                        'error' => $historicoException->getMessage()
+                    ]);
+                }
                 
                 Log::info('Arquivo e conteúdo atualizados com sucesso', [
                     'proposicao_id' => $proposicao->id,

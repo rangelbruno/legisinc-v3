@@ -28,6 +28,62 @@ class TestController extends Controller
         return view('tests.processes');
     }
 
+    // Métodos para servir arquivos HTML de visualização
+    public function visualizationCenter()
+    {
+        $filePath = base_path('tests/processes/index.html');
+        
+        if (!file_exists($filePath)) {
+            abort(404, 'Centro de Visualização não encontrado');
+        }
+        
+        return response()->file($filePath);
+    }
+
+    public function fluxoVisualizer()
+    {
+        $filePath = base_path('tests/processes/fluxo-visualizer.html');
+        
+        if (!file_exists($filePath)) {
+            abort(404, 'Visualizador básico não encontrado');
+        }
+        
+        return response()->file($filePath);
+    }
+
+    public function fluxoDashboard()
+    {
+        $filePath = base_path('tests/processes/fluxo-dashboard.html');
+        
+        if (!file_exists($filePath)) {
+            abort(404, 'Dashboard avançado não encontrado');
+        }
+        
+        return response()->file($filePath);
+    }
+
+    public function networkFlow()
+    {
+        $filePath = base_path('tests/processes/network-flow.html');
+        
+        if (!file_exists($filePath)) {
+            abort(404, 'Mapa de rede não encontrado');
+        }
+        
+        return response()->file($filePath);
+    }
+
+    public function animatedFlow()
+    {
+        $filePath = base_path('tests/processes/animated-flow.html');
+        
+        if (!file_exists($filePath)) {
+            abort(404, 'Fluxo animado não encontrado');
+        }
+        
+        return response()->file($filePath);
+    }
+
     public function apiIndex()
     {
         return view('tests.api');

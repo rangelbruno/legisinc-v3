@@ -46,6 +46,23 @@ Route::get('/docs', [DocumentationController::class, 'index'])->name('documentat
 Route::get('/docs/{docId}', [DocumentationController::class, 'show'])->name('documentation.show');
 Route::get('/docs/search', [DocumentationController::class, 'search'])->name('documentation.search');
 Route::get('/docs/statistics', [DocumentationController::class, 'statistics'])->name('documentation.statistics');
+
+// Processo Completo Analysis routes
+Route::get('/tests/processo-completo', [\App\Http\Controllers\ProcessoCompletoController::class, 'index'])->name('tests.processo-completo');
+
+// API routes for processo completo testing
+Route::prefix('api')->group(function () {
+    Route::get('/templates/check', [\App\Http\Controllers\ProcessoCompletoController::class, 'checkTemplates']);
+    Route::post('/proposicoes/create-test', [\App\Http\Controllers\ProcessoCompletoController::class, 'createTestProposicao']);
+    Route::post('/proposicoes/{proposicao}/simulate-edit', [\App\Http\Controllers\ProcessoCompletoController::class, 'simulateEdit']);
+    Route::post('/proposicoes/{proposicao}/enviar-legislativo', [\App\Http\Controllers\ProcessoCompletoController::class, 'enviarLegislativo']);
+    Route::post('/proposicoes/{proposicao}/simulate-legislativo-edit', [\App\Http\Controllers\ProcessoCompletoController::class, 'simulateLegislativoEdit']);
+    Route::post('/proposicoes/{proposicao}/retornar-parlamentar', [\App\Http\Controllers\ProcessoCompletoController::class, 'retornarParlamentar']);
+    Route::post('/proposicoes/{proposicao}/simulate-assinatura', [\App\Http\Controllers\ProcessoCompletoController::class, 'simulateAssinatura']);
+    Route::post('/proposicoes/{proposicao}/simulate-protocolo', [\App\Http\Controllers\ProcessoCompletoController::class, 'simulateProtocolo']);
+    Route::get('/proposicoes/{proposicao}/status', [\App\Http\Controllers\ProcessoCompletoController::class, 'getProposicaoStatus']);
+    Route::delete('/tests/limpar-dados', [\App\Http\Controllers\ProcessoCompletoController::class, 'limparDadosTeste']);
+});
 Route::get('/docs/test', function() {
     $cssExists = file_exists(public_path('css/documentation.css'));
     $cssSize = $cssExists ? filesize(public_path('css/documentation.css')) : 0;
@@ -896,6 +913,12 @@ Route::prefix('proposicoes')->name('proposicoes.')->middleware(['auth', 'check.s
     Route::get('/{proposicao}/status', [App\Http\Controllers\ProposicaoController::class, 'statusTramitacao'])->name('status-tramitacao');
     Route::get('/notificacoes', [App\Http\Controllers\ProposicaoController::class, 'buscarNotificacoes'])->name('notificacoes');
     Route::get('/{proposicao}/pdf', [App\Http\Controllers\ProposicaoController::class, 'servePDF'])->name('serve-pdf');
+    
+    // ===== HISTÓRICO DE ALTERAÇÕES =====
+    Route::get('/{proposicao}/historico', [App\Http\Controllers\ProposicaoHistoricoController::class, 'index'])->name('historico.index');
+    Route::get('/{proposicao}/historico/view', [App\Http\Controllers\ProposicaoHistoricoController::class, 'webView'])->name('historico.view');
+    Route::get('/{proposicao}/historico/{historico}', [App\Http\Controllers\ProposicaoHistoricoController::class, 'show'])->name('historico.show');
+    
     Route::get('/{proposicao}', [App\Http\Controllers\ProposicaoController::class, 'show'])->name('show');
     Route::delete('/{proposicao}', [App\Http\Controllers\ProposicaoController::class, 'destroy'])->name('destroy');
 });
@@ -995,6 +1018,9 @@ Route::prefix('admin/tipo-proposicoes')->name('admin.tipo-proposicoes.')->middle
     Route::get('/ajax/dropdown', [App\Http\Controllers\Admin\TipoProposicaoController::class, 'getParaDropdown'])->name('ajax.dropdown');
     Route::get('/ajax/validar-codigo', [App\Http\Controllers\Admin\TipoProposicaoController::class, 'validarCodigo'])->name('ajax.validar-codigo');
     Route::get('/ajax/buscar-sugestoes', [App\Http\Controllers\Admin\TipoProposicaoController::class, 'buscarSugestoes'])->name('ajax.buscar-sugestoes');
+    
+    // ===== RELATÓRIOS DE AUDITORIA =====
+    Route::get('/auditoria/relatorio', [App\Http\Controllers\ProposicaoHistoricoController::class, 'relatorioAuditoria'])->name('auditoria.relatorio');
 });
 
 // Rotas de autenticação por token (para AJAX)
@@ -1210,6 +1236,13 @@ Route::prefix('tests')->name('tests.')->middleware('auth')->group(function () {
     Route::get('/processes', [App\Http\Controllers\TestController::class, 'processesIndex'])->name('processes');
     Route::post('/run-process-tests', [App\Http\Controllers\TestController::class, 'runProcessTests'])->name('run-process-tests');
     Route::post('/run-pest-tests', [App\Http\Controllers\TestController::class, 'runPestTests'])->name('run-pest-tests');
+    
+    // Visualization HTML Files
+    Route::get('/processes/index.html', [App\Http\Controllers\TestController::class, 'visualizationCenter'])->name('processes.visualization-center');
+    Route::get('/processes/fluxo-visualizer.html', [App\Http\Controllers\TestController::class, 'fluxoVisualizer'])->name('processes.fluxo-visualizer');
+    Route::get('/processes/fluxo-dashboard.html', [App\Http\Controllers\TestController::class, 'fluxoDashboard'])->name('processes.fluxo-dashboard');
+    Route::get('/processes/network-flow.html', [App\Http\Controllers\TestController::class, 'networkFlow'])->name('processes.network-flow');
+    Route::get('/processes/animated-flow.html', [App\Http\Controllers\TestController::class, 'animatedFlow'])->name('processes.animated-flow');
     
     // Interactive Process Test Routes
     Route::get('/get-tipos-proposicao', [App\Http\Controllers\TestController::class, 'getTiposProposicao'])->name('get-tipos-proposicao');

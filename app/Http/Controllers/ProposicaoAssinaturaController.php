@@ -346,8 +346,8 @@ class ProposicaoAssinaturaController extends Controller
     {
         try {
             // PRIORIDADE 1: Converter DOCX editado pelo Legislativo diretamente para PDF (mantém formatação)
-            // Para proposições aprovadas para assinatura, SEMPRE priorizar arquivo editado
-            if ($proposicao->arquivo_path && in_array($proposicao->status, ['aprovado_assinatura', 'retornado_legislativo'])) {
+            // Para proposições com arquivo editado, SEMPRE priorizar arquivo editado
+            if ($proposicao->arquivo_path && in_array($proposicao->status, ['aprovado_assinatura', 'retornado_legislativo', 'enviado_protocolo', 'assinado'])) {
                 $arquivoPath = $proposicao->arquivo_path;
                 
                 // Buscar arquivo em múltiplos locais (resolver problema do disk)
@@ -375,63 +375,24 @@ class ProposicaoAssinaturaController extends Controller
                     // Log::warning("PDF Assinatura: ARQUIVO NÃO ENCONTRADO para proposição {$proposicao->id} em {$arquivoPath}");
                 }
                 
-                // Se encontrou arquivo DOCX, tentar converter diretamente com LibreOffice
+                // NOVA ABORDAGEM: Converter DOCX → HTML para preservar formatação do OnlyOffice
                 if ($arquivoEncontrado && str_contains($arquivoPath, '.docx') && $this->libreOfficeDisponivel()) {
                     try {
-                        // Criar arquivo temporário se necessário para garantir localização correta
-                        $tempDir = sys_get_temp_dir();
-                        $tempFile = $tempDir . '/proposicao_' . $proposicao->id . '_temp.docx';
-                        copy($arquivoEncontrado, $tempFile);
-                        
-                        // Comando LibreOffice para conversão direta DOCX -> PDF (mantém formatação)
-                        $comando = sprintf(
-                            'libreoffice --headless --invisible --nodefault --nolockcheck --nologo --norestore --convert-to pdf --outdir %s %s 2>/dev/null',
-                            escapeshellarg(dirname($caminhoPdfAbsoluto)),
-                            escapeshellarg($tempFile)
-                        );
-                        
-                        exec($comando, $output, $returnCode);
-                        
-                        // Verificar se PDF foi criado
-                        $expectedPdfPath = dirname($caminhoPdfAbsoluto) . '/' . pathinfo($tempFile, PATHINFO_FILENAME) . '.pdf';
-                        
-                        // Log::info("PDF Assinatura: Comando executado: $comando");
-                        // Log::info("PDF Assinatura: Return code: $returnCode");
-                        
-                        if ($returnCode === 0 && file_exists($expectedPdfPath)) {
-                            // Mover PDF para localização final
-                            rename($expectedPdfPath, $caminhoPdfAbsoluto);
-                            
-                            // Limpar arquivo temporário
-                            if (file_exists($tempFile)) {
-                                unlink($tempFile);
-                            }
-                            
-                            // Log::info("PDF Assinatura: PDF criado com SUCESSO do DOCX editado pelo Legislativo! Proposição {$proposicao->id}");
-                            
-                            return; // Sucesso! PDF criado com formatação preservada
-                        } else {
-                            // Log::warning("PDF Assinatura: FALHA na conversão LibreOffice. ReturnCode: $returnCode");
-                        }
-                        
-                        // Limpar arquivo temporário em caso de erro
-                        if (file_exists($tempFile)) {
-                            unlink($tempFile);
-                        }
-                        
+                        error_log("PDF Assinatura: Convertendo DOCX → HTML para preservar formatação OnlyOffice");
+                        $this->criarPDFComFormatacaoOnlyOffice($caminhoPdfAbsoluto, $proposicao, $arquivoEncontrado);
+                        return; // Sucesso! PDF criado com formatação preservada
                     } catch (\Exception $e) {
-                        // Log::warning('Falha na conversão direta DOCX->PDF, usando método fallback', [
-                        //     'proposicao_id' => $proposicao->id,
-                        //     'arquivo_path' => $arquivoEncontrado,
-                        //     'error' => $e->getMessage()
-                        // ]);
+                        error_log("PDF Assinatura: Falha na conversão HTML, usando extração de texto: " . $e->getMessage());
+                        // Continua para método de extração de texto como fallback
                     }
                 }
+                
+                // FALLBACK: Extrair apenas texto se conversão HTML falhou
             }
             
-            // FALLBACK: Se conversão direta falhou, usar método anterior (extração de texto)
-            error_log("PDF Assinatura: Usando método FALLBACK para proposição {$proposicao->id}");
-            $this->criarPDFFallback($caminhoPdfAbsoluto, $proposicao);
+            // Método principal: Extrair conteúdo e gerar PDF com assinatura digital
+            error_log("PDF Assinatura: Extraindo conteúdo do DOCX editado para proposição {$proposicao->id}");
+            $this->criarPDFComConteudoExtraido($caminhoPdfAbsoluto, $proposicao);
 
         } catch (\Exception $e) {
             // Log::error('Erro ao criar PDF', [
@@ -443,10 +404,10 @@ class ProposicaoAssinaturaController extends Controller
     }
     
     /**
-     * Método fallback para criar PDF quando conversão direta falha
-     * CORRIGIDO: Usa mesma lógica do ProposicaoController para manter consistência
+     * Criar PDF extraindo conteúdo do DOCX editado e adicionando assinatura digital
+     * Mantém formatação próxima ao OnlyOffice mas permite modificar conteúdo
      */
-    private function criarPDFFallback(string $caminhoPdfAbsoluto, Proposicao $proposicao): void
+    private function criarPDFComConteudoExtraido(string $caminhoPdfAbsoluto, Proposicao $proposicao): void
     {
         try {
             // USAR MESMA LÓGICA DO ProposicaoController::criarPDFComDomPDF
@@ -505,14 +466,17 @@ class ProposicaoAssinaturaController extends Controller
                 }
             }
 
-            // 3. Criar HTML usando mesmo método do ProposicaoController
+            // 3. Substituir placeholders no conteúdo (incluindo assinatura digital)
+            $conteudo = $this->substituirPlaceholders($conteudo, $proposicao);
+
+            // 4. Criar HTML usando mesmo método do ProposicaoController
             $html = $this->gerarHTMLParaPDF($proposicao, $conteudo);
 
-            // 4. Usar DomPDF para gerar PDF
+            // 5. Usar DomPDF para gerar PDF
             $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($html);
             $pdf->setPaper('A4', 'portrait');
             
-            // 5. Salvar PDF
+            // 6. Salvar PDF
             file_put_contents($caminhoPdfAbsoluto, $pdf->output());
             
             error_log("PDF Assinatura: PDF criado com sucesso! Tamanho: " . filesize($caminhoPdfAbsoluto) . " bytes");
@@ -533,17 +497,41 @@ class ProposicaoAssinaturaController extends Controller
             $conteudo = str_replace('[AGUARDANDO PROTOCOLO]', $proposicao->numero_protocolo, $conteudo);
         }
         
-        // Substituir outras variáveis comuns
+        // A assinatura digital será processada separadamente no HTML final
+        // Não inserir HTML no conteúdo de texto
+        
+        // Substituir outras variáveis comuns (suporta ambos os formatos: ${var} e var)
         $substituicoes = [
             '${numero_proposicao}' => $proposicao->numero_protocolo ?: '[AGUARDANDO PROTOCOLO]',
+            'numero_proposicao' => $proposicao->numero_protocolo ?: '[AGUARDANDO PROTOCOLO]',
             '${ementa}' => $proposicao->ementa,
+            'ementa' => $proposicao->ementa,
             '${texto}' => $proposicao->conteudo,
+            'texto' => $proposicao->conteudo,
             '${autor_nome}' => $proposicao->autor->name ?? 'N/A',
+            'autor_nome' => $proposicao->autor->name ?? 'N/A',
             '${autor_cargo}' => $proposicao->autor->cargo_atual ?? 'Parlamentar',
+            'autor_cargo' => $proposicao->autor->cargo_atual ?? 'Parlamentar',
             '${municipio}' => 'Caraguatatuba',
+            'municipio' => 'Caraguatatuba',
             '${dia}' => now()->format('d'),
+            'dia' => now()->format('d'),
             '${mes_extenso}' => $this->getMesExtenso(now()->month),
+            'mes_extenso' => $this->getMesExtenso(now()->month),
+            '08_extenso' => $this->getMesExtenso(now()->month), // Formato específico do template
             '${ano_atual}' => now()->format('Y'),
+            'ano_atual' => now()->format('Y'),
+            '2025_atual' => now()->format('Y'), // Formato específico do template
+            '${assinatura_digital_info}' => '', // Remover placeholder, será adicionado como HTML
+            'assinatura_digital_info' => '', // Remover placeholder, será adicionado como HTML
+            '${qrcode_html}' => '', // QR Code não implementado ainda
+            'qrcode_html' => '', // QR Code não implementado ainda
+            '${data_assinatura}' => $proposicao->data_assinatura ? $proposicao->data_assinatura->format('d/m/Y H:i:s') : '',
+            'data_assinatura' => $proposicao->data_assinatura ? $proposicao->data_assinatura->format('d/m/Y H:i:s') : '',
+            '${certificado_digital}' => $proposicao->certificado_digital ?: '',
+            'certificado_digital' => $proposicao->certificado_digital ?: '',
+            '${ip_assinatura}' => $proposicao->ip_assinatura ?: '',
+            'ip_assinatura' => $proposicao->ip_assinatura ?: '',
         ];
         
         foreach ($substituicoes as $placeholder => $valor) {
@@ -641,11 +629,70 @@ class ProposicaoAssinaturaController extends Controller
     }
     
     /**
-     * Gerar HTML para PDF usando mesmo layout do ProposicaoController
-     * ADICIONADO: Para manter consistência visual
+     * Gerar HTML para PDF preservando aparência do documento OnlyOffice
+     * Remove elementos de "template padrão" para parecer com documento editado
      */
     private function gerarHTMLParaPDF(Proposicao $proposicao, string $conteudo): string
     {
+        // Gerar cabeçalho com dados da câmara e número da proposição
+        $templateVariableService = app(\App\Services\Template\TemplateVariableService::class);
+        $variables = $templateVariableService->getTemplateVariables();
+        
+        // Obter número da proposição (com protocolo ou aguardando)
+        $numeroProposicao = $proposicao->numero_protocolo ?: '[AGUARDANDO PROTOCOLO]';
+        
+        // Gerar cabeçalho com imagem se disponível
+        $headerHTML = '';
+        if (!empty($variables['cabecalho_imagem'])) {
+            $imagePath = public_path($variables['cabecalho_imagem']);
+            if (file_exists($imagePath)) {
+                $imageData = base64_encode(file_get_contents($imagePath));
+                $mimeType = mime_content_type($imagePath);
+                $headerHTML = '<div style="text-align: center; margin-bottom: 20px;">
+                    <img src="data:' . $mimeType . ';base64,' . $imageData . '" 
+                         style="max-width: 200px; height: auto;" alt="Cabeçalho" />
+                </div>';
+            }
+        }
+        
+        // Cabeçalho da câmara
+        $cabeçalhoTexto = "
+        <div style='text-align: center; margin-bottom: 20px;'>
+            <strong>{$variables['cabecalho_nome_camara']}</strong><br>
+            {$variables['cabecalho_endereco']}<br>
+            {$variables['cabecalho_telefone']}<br>
+            {$variables['cabecalho_website']}
+        </div>";
+        
+        // Título do documento com número da proposição
+        $tipoUppercase = strtoupper($proposicao->tipo);
+        $tituloHTML = "
+        <div style='text-align: center; margin: 20px 0;'>
+            <strong>{$tipoUppercase} Nº {$numeroProposicao}</strong>
+        </div>";
+        
+        // Ementa se disponível
+        $ementaHTML = '';
+        if ($proposicao->ementa) {
+            $ementaHTML = "
+            <div style='margin: 20px 0;'>
+                <strong>EMENTA:</strong> {$proposicao->ementa}
+            </div>";
+        }
+        
+        // Gerar informações da assinatura digital se disponível
+        $assinaturaDigitalHTML = '';
+        if ($proposicao->assinatura_digital && $proposicao->data_assinatura) {
+            $assinaturaQRService = app(\App\Services\Template\AssinaturaQRService::class);
+            $assinaturaDigitalHTML = $assinaturaQRService->gerarHTMLAssinatura($proposicao) ?: '';
+        }
+        
+        // Separar conteúdo de texto puro da assinatura HTML
+        $conteudoTexto = $conteudo ?: 'Conteúdo não disponível';
+        
+        // Limpar restos de placeholders e HTML que possam estar no conteúdo
+        $conteudoTexto = $this->limparConteudoParaPDF($conteudoTexto);
+        
         return "
         <!DOCTYPE html>
         <html lang='pt-BR'>
@@ -653,40 +700,408 @@ class ProposicaoAssinaturaController extends Controller
             <meta charset='UTF-8'>
             <title>Proposição {$proposicao->id}</title>
             <style>
-                body { font-family: Arial, sans-serif; margin: 40px; line-height: 1.6; }
-                .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 20px; }
-                .title { font-size: 18px; font-weight: bold; margin: 10px 0; }
-                .info { font-size: 12px; color: #666; margin: 5px 0; }
-                .content { margin-top: 30px; text-align: justify; }
-                .ementa { background: #f5f5f5; padding: 15px; margin: 20px 0; border-left: 4px solid #007bff; }
-                .signature-area { margin-top: 50px; text-align: right; }
-                .signature-line { border-top: 1px solid #333; margin-top: 50px; width: 300px; display: inline-block; }
+                body { 
+                    font-family: 'Times New Roman', serif; 
+                    margin: 2.5cm 2cm 2cm 2cm; 
+                    line-height: 1.8; 
+                    font-size: 12pt;
+                    color: #000;
+                    text-align: justify;
+                }
+                .header { 
+                    text-align: center; 
+                    margin-bottom: 30px; 
+                }
+                .document-content { 
+                    white-space: pre-wrap; 
+                    margin: 20px 0; 
+                    padding: 0;
+                }
+                .assinatura-digital { 
+                    border: 1px solid #28a745; 
+                    padding: 10px; 
+                    margin: 20px 0; 
+                    background-color: #f8f9fa;
+                    font-family: Arial, sans-serif;
+                    font-size: 10pt;
+                }
+                .assinatura-digital h6 { 
+                    color: #28a745; 
+                    margin-bottom: 5px; 
+                    font-size: 11pt;
+                }
+                .assinatura-digital div { 
+                    font-size: 10pt; 
+                    line-height: 1.4; 
+                }
+                .digital-signature-section {
+                    margin-top: 30px;
+                    page-break-inside: avoid;
+                }
             </style>
         </head>
         <body>
-            <div class='header'>
-                <h1>CÂMARA MUNICIPAL DE CARAGUATATUBA</h1>
-                <div class='title'>" . strtoupper($proposicao->tipo) . 
-                ($proposicao->numero_protocolo ? " Nº {$proposicao->numero_protocolo}" : " #" . $proposicao->id . " (Aguardando Protocolo)") . "</div>
-                <div class='info'>Autor: " . ($proposicao->autor->name ?? 'N/A') . "</div>
-                <div class='info'>Data: " . $proposicao->created_at->format('d/m/Y') . "</div>
-            </div>
-            
-            <div class='ementa'>
-                <strong>EMENTA:</strong><br>
-                " . nl2br(htmlspecialchars($proposicao->ementa)) . "
-            </div>
-            
-            <div class='content'>
-                " . nl2br(htmlspecialchars($conteudo ?: 'Conteúdo não disponível')) . "
-            </div>
-            
-            <div class='signature-area'>
-                <p>Caraguatatuba, " . now()->format('d') . " de " . $this->getMesExtenso(now()->month) . " de " . now()->format('Y') . ".</p>
-                <div class='signature-line'></div>
-                <p>" . ($proposicao->autor->name ?? 'Autor da Proposição') . "<br>" . ($proposicao->autor->cargo_atual ?? 'Vereador') . "</p>
-            </div>
+            {$headerHTML}
+            {$cabeçalhoTexto}
+            {$tituloHTML}
+            {$ementaHTML}
+            <div class='document-content'>" . nl2br(htmlspecialchars($conteudoTexto)) . "</div>
+            " . ($assinaturaDigitalHTML ? "<div class='digital-signature-section'>" . $assinaturaDigitalHTML . "</div>" : "") . "
         </body>
         </html>";
+    }
+    
+    /**
+     * Limpar conteúdo para PDF removendo placeholders e restos de HTML
+     */
+    private function limparConteudoParaPDF(string $conteudo): string
+    {
+        // Remover tags HTML que possam estar como texto
+        $conteudo = preg_replace('/<[^>]*>/', '', $conteudo);
+        
+        // Remover placeholders vazios restantes
+        $conteudo = str_replace(['${', '}'], '', $conteudo);
+        
+        // Remover espaços extras e quebras de linha desnecessárias
+        $conteudo = preg_replace('/\s+/', ' ', $conteudo);
+        $conteudo = trim($conteudo);
+        
+        return $conteudo;
+    }
+    
+    /**
+     * Criar PDF preservando formatação do OnlyOffice via conversão DOCX → HTML → PDF
+     */
+    private function criarPDFComFormatacaoOnlyOffice(string $caminhoPdfAbsoluto, Proposicao $proposicao, string $arquivoPath): void
+    {
+        try {
+            // 1. Converter DOCX → HTML usando LibreOffice (preserva formatação)
+            $tempDir = sys_get_temp_dir();
+            $tempFile = $tempDir . '/proposicao_' . $proposicao->id . '_html.docx';
+            $outputDir = $tempDir . '/html_output_' . $proposicao->id;
+            
+            // Criar diretório de saída
+            if (!is_dir($outputDir)) {
+                mkdir($outputDir, 0755, true);
+            }
+            
+            // Copiar arquivo DOCX
+            copy($arquivoPath, $tempFile);
+            
+            // Comando LibreOffice para conversão DOCX → HTML
+            $comando = sprintf(
+                'libreoffice --headless --invisible --nodefault --nolockcheck --nologo --norestore --convert-to html --outdir %s %s 2>/dev/null',
+                escapeshellarg($outputDir),
+                escapeshellarg($tempFile)
+            );
+            
+            exec($comando, $output, $returnCode);
+            
+            $htmlPath = $outputDir . '/' . pathinfo($tempFile, PATHINFO_FILENAME) . '.html';
+            
+            error_log("PDF Assinatura: LibreOffice HTML conversion - return code: {$returnCode}, HTML exists: " . (file_exists($htmlPath) ? 'YES' : 'NO'));
+            
+            if ($returnCode !== 0 || !file_exists($htmlPath)) {
+                error_log("PDF Assinatura: LibreOffice HTML conversion failed - return code: {$returnCode}, output: " . implode(", ", $output));
+                throw new \Exception("LibreOffice HTML conversion failed: return code {$returnCode}");
+            }
+            
+            // 2. Ler HTML gerado e fazer correção inicial de números duplicados
+            $htmlContent = file_get_contents($htmlPath);
+            
+            // Correção prévia de números duplicados que podem vir do template OnlyOffice
+            if ($proposicao->numero_protocolo) {
+                // Se tem protocolo, substituir [AGUARDANDO PROTOCOLO] pelo número
+                $htmlContent = str_replace('[AGUARDANDO PROTOCOLO]', $proposicao->numero_protocolo, $htmlContent);
+                // Corrigir qualquer duplicação de ano que possa ter sido criada
+                // Padrão específico: mocao/2025/0001/2025 → mocao/2025/0001
+                $htmlContent = preg_replace('/(mocao\/\d{4}\/\d{4})\/\d{4}/', '$1', $htmlContent);
+                // Padrão genérico: 001/2025/2025 → 001/2025
+                $htmlContent = preg_replace('/(\d{3,4}\/\d{4})\/\d{4}/', '$1', $htmlContent);
+                // Correção específica para o problema atual
+                $htmlContent = str_replace('mocao/2025/0001/2025', 'mocao/2025/0001', $htmlContent);
+            } else {
+                // Se não tem protocolo, corrigir padrão "[AGUARDANDO PROTOCOLO]/2025" para só "[AGUARDANDO PROTOCOLO]"
+                $htmlContent = str_replace('[AGUARDANDO PROTOCOLO]/2025', '[AGUARDANDO PROTOCOLO]', $htmlContent);
+                $htmlContent = str_replace('[AGUARDANDO PROTOCOLO]/' . date('Y'), '[AGUARDANDO PROTOCOLO]', $htmlContent);
+            }
+            
+            $htmlContent = $this->otimizarHTMLParaDomPDF($htmlContent);
+            $htmlContent = $this->adicionarAssinaturaAoHTML($htmlContent, $proposicao);
+            
+            // 3. Processar variáveis no HTML
+            $htmlContent = $this->substituirVariaveisNoHTML($htmlContent, $proposicao);
+            
+            // 4. CORREÇÃO FINAL GLOBAL: Limpar qualquer duplicação restante
+            $htmlContent = str_replace('mocao/2025/0001/2025', 'mocao/2025/0001', $htmlContent);
+            $htmlContent = preg_replace('/(\w+\/\d{4}\/\d{4})\/\d{4}/', '$1', $htmlContent);
+            
+            // 5. Converter HTML → PDF usando DomPDF
+            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($htmlContent);
+            $pdf->setPaper('A4', 'portrait');
+            
+            // 5. Garantir que diretório de destino existe
+            if (!is_dir(dirname($caminhoPdfAbsoluto))) {
+                mkdir(dirname($caminhoPdfAbsoluto), 0755, true);
+            }
+            
+            // 6. Salvar PDF
+            file_put_contents($caminhoPdfAbsoluto, $pdf->output());
+            
+            error_log("PDF Assinatura: PDF criado com formatação OnlyOffice preservada! Tamanho: " . filesize($caminhoPdfAbsoluto) . " bytes");
+            
+            // Limpeza
+            if (file_exists($tempFile)) unlink($tempFile);
+            if (file_exists($htmlPath)) unlink($htmlPath);
+            // Tentar remover diretório (pode falhar se não vazio, mas não é crítico)
+            if (is_dir($outputDir)) @rmdir($outputDir);
+            
+        } catch (\Exception $e) {
+            // Limpeza em caso de erro (usar @ para suprimir warnings)
+            if (isset($tempFile) && file_exists($tempFile)) @unlink($tempFile);
+            if (isset($htmlPath) && file_exists($htmlPath)) @unlink($htmlPath);
+            if (isset($outputDir) && is_dir($outputDir)) @rmdir($outputDir);
+            
+            throw $e;
+        }
+    }
+    
+    /**
+     * Adicionar assinatura digital ao HTML preservando formatação original
+     */
+    private function adicionarAssinaturaAoHTML(string $htmlContent, Proposicao $proposicao): string
+    {
+        // Processar imagem do cabeçalho se estiver faltando
+        if (!str_contains($htmlContent, '<img') || !str_contains($htmlContent, 'cabecalho')) {
+            // Adicionar imagem do cabeçalho no início do documento se não existir
+            $templateVariableService = app(\App\Services\Template\TemplateVariableService::class);
+            $variables = $templateVariableService->getTemplateVariables();
+            
+            if (!empty($variables['cabecalho_imagem'])) {
+                $imagePath = public_path($variables['cabecalho_imagem']);
+                if (file_exists($imagePath)) {
+                    $imageData = base64_encode(file_get_contents($imagePath));
+                    $mimeType = mime_content_type($imagePath);
+                    $headerImage = '<div style="text-align: center; margin-bottom: 20px;">
+                        <img src="data:' . $mimeType . ';base64,' . $imageData . '" 
+                             style="max-width: 200px; height: auto;" alt="Cabeçalho" />
+                    </div>';
+                    
+                    // Adicionar após <body> ou no início
+                    if (strpos($htmlContent, '<body') !== false) {
+                        $htmlContent = preg_replace('/(<body[^>]*>)/i', '$1' . $headerImage, $htmlContent);
+                    } else {
+                        $htmlContent = $headerImage . $htmlContent;
+                    }
+                }
+            }
+        }
+        
+        // Gerar HTML da assinatura digital
+        $assinaturaHTML = '';
+        if ($proposicao->assinatura_digital && $proposicao->data_assinatura) {
+            $assinaturaQRService = app(\App\Services\Template\AssinaturaQRService::class);
+            $assinaturaHTML = $assinaturaQRService->gerarHTMLAssinatura($proposicao) ?: '';
+        }
+        
+        if (empty($assinaturaHTML)) {
+            return $htmlContent;
+        }
+        
+        // Adicionar assinatura antes do fechamento do body
+        $assinaturaSection = "\n<div class='digital-signature-section' style='margin-top: 30px; page-break-inside: avoid;'>{$assinaturaHTML}</div>\n";
+        
+        if (strpos($htmlContent, '</body>') !== false) {
+            $htmlContent = str_replace('</body>', $assinaturaSection . '</body>', $htmlContent);
+        } else {
+            // Se não tem </body>, adicionar no final
+            $htmlContent .= $assinaturaSection;
+        }
+        
+        return $htmlContent;
+    }
+    
+    /**
+     * Substituir variáveis específicas no HTML (como numero_protocolo)
+     */
+    private function substituirVariaveisNoHTML(string $htmlContent, Proposicao $proposicao): string
+    {
+        // Buscar padrões de números de proposição no formato "MOÇÃO Nº XXXX/2025" ou similar
+        // Se não houver protocolo, substituir por [AGUARDANDO PROTOCOLO]
+        if (!$proposicao->numero_protocolo) {
+            // Substituir diferentes formatos de número de proposição
+            $patterns = [
+                '/(\w+\s+Nº\s+)(\d+\/\d{4})/i' => '$1[AGUARDANDO PROTOCOLO]',
+                '/(\w+\s+N°\s+)(\d+\/\d{4})/i' => '$1[AGUARDANDO PROTOCOLO]',
+                '/(\w+\s+nº\s+)(\d+\/\d{4})/i' => '$1[AGUARDANDO PROTOCOLO]',
+                '/(\w+\s+n°\s+)(\d+\/\d{4})/i' => '$1[AGUARDANDO PROTOCOLO]',
+            ];
+            
+            foreach ($patterns as $pattern => $replacement) {
+                $htmlContent = preg_replace($pattern, $replacement, $htmlContent);
+            }
+        } else {
+            // Se houver protocolo, garantir que não há duplicação do ano
+            $currentYear = date('Y');
+            
+            // Corrigir padrão específico do número atual: mocao/2025/0001/2025
+            $htmlContent = str_replace($proposicao->numero_protocolo . '/' . $currentYear, $proposicao->numero_protocolo, $htmlContent);
+            
+            // Corrigir outros formatos de duplicação  
+            $htmlContent = preg_replace('/(mocao\/\d{4}\/\d{4})\/\d{4}/', '$1', $htmlContent);
+            $htmlContent = preg_replace('/(\d{3,4}\/\d{4})\/\d{4}/', '$1', $htmlContent);
+            
+            // Correções específicas
+            $htmlContent = str_replace('mocao/2025/0001/2025', 'mocao/2025/0001', $htmlContent);
+            $htmlContent = str_replace('001/2025/2025', '001/2025', $htmlContent);
+        }
+        
+        // Processar assinatura digital e QR Code
+        $assinaturaHTML = '';
+        $qrcodeHTML = '';
+        
+        if ($proposicao->assinatura_digital && $proposicao->data_assinatura) {
+            $assinaturaQRService = app(\App\Services\Template\AssinaturaQRService::class);
+            $assinaturaHTML = $assinaturaQRService->gerarHTMLAssinatura($proposicao) ?: '';
+            $qrcodeHTML = $assinaturaQRService->gerarHTMLQRCode($proposicao) ?: '';
+        }
+        
+        // Preparar número da proposição para diferentes contextos
+        $numeroCompleto = $proposicao->numero_protocolo ?: '[AGUARDANDO PROTOCOLO]';
+        $numeroSemAno = $proposicao->numero_protocolo ? 
+            (str_contains($proposicao->numero_protocolo, '/') ? 
+                explode('/', $proposicao->numero_protocolo)[0] : 
+                $proposicao->numero_protocolo) 
+            : '[AGUARDANDO PROTOCOLO]';
+        
+        // Substituições diretas de variáveis
+        $substituicoes = [
+            '[AGUARDANDO PROTOCOLO]' => $numeroCompleto,
+            '${numero_proposicao}' => $numeroCompleto,
+            '${numero_sequencial}' => $numeroSemAno, // Apenas o número sem o ano
+            '${autor_nome}' => $proposicao->autor->name ?? 'N/A',
+            '${autor_cargo}' => $proposicao->autor->cargo_atual ?? 'Vereador',
+            '${data_assinatura}' => $proposicao->data_assinatura ? $proposicao->data_assinatura->format('d/m/Y H:i:s') : '',
+            'assinatura_digital_info' => $assinaturaHTML,
+            '${assinatura_digital_info}' => $assinaturaHTML,
+            'qrcode_html' => $qrcodeHTML,
+            '${qrcode_html}' => $qrcodeHTML,
+        ];
+        
+        // Substituir variáveis de data
+        $meses = ['', 'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 
+                 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+        $substituicoes['${mes_extenso}'] = $meses[(int)now()->format('n')];
+        $substituicoes['${dia}'] = now()->format('d');
+        $substituicoes['${ano_atual}'] = now()->format('Y');
+        $substituicoes['${municipio}'] = 'Caraguatatuba';
+        
+        foreach ($substituicoes as $placeholder => $valor) {
+            // Se for HTML (assinatura/qrcode), não escapar
+            if (in_array($placeholder, ['assinatura_digital_info', '${assinatura_digital_info}', 'qrcode_html', '${qrcode_html}']) && !empty($valor)) {
+                // Substituir diretamente sem escapar
+                $htmlContent = str_replace($placeholder, $valor, $htmlContent);
+            } else {
+                // Para texto normal, fazer substituição simples
+                $htmlContent = str_replace($placeholder, $valor, $htmlContent);
+            }
+        }
+        
+        // CORREÇÃO FINAL: Remover qualquer duplicação restante do ano
+        if ($proposicao->numero_protocolo) {
+            $htmlContent = str_replace($proposicao->numero_protocolo . '/' . date('Y'), $proposicao->numero_protocolo, $htmlContent);
+            $htmlContent = str_replace('mocao/2025/0001/2025', 'mocao/2025/0001', $htmlContent);
+        }
+        
+        return $htmlContent;
+    }
+    
+    /**
+     * Otimizar HTML do LibreOffice para melhor compatibilidade com DomPDF
+     */
+    private function otimizarHTMLParaDomPDF(string $htmlContent): string
+    {
+        try {
+            // 1. Otimizar CSS para DomPDF
+            $htmlContent = preg_replace_callback(
+                '/<style type="text\/css">(.*?)<\/style>/s',
+                function($matches) {
+                    $css = $matches[1];
+                    
+                    // Converter unidades problemáticas
+                    $css = str_replace('1.18in', '85pt', $css);  // margin-left
+                    $css = str_replace('0.59in', '42pt', $css);  // margin-right
+                    $css = str_replace('0.5in', '36pt', $css);   // margin-top
+                    $css = str_replace('0.25in', '18pt', $css);  // margin-bottom
+                    $css = str_replace('0.1in', '7pt', $css);    // margin-bottom
+                    
+                    // Simplificar regras @page para DomPDF
+                    $css = preg_replace(
+                        '/@page\s*\{[^}]*\}/',
+                        '@page { size: A4; margin: 36pt 42pt 18pt 85pt; }',
+                        $css
+                    );
+                    
+                    // Remover propriedades problemáticas
+                    $css = preg_replace('/widows:\s*\d+;?/', '', $css);
+                    $css = preg_replace('/orphans:\s*\d+;?/', '', $css);
+                    $css = preg_replace('/direction:\s*ltr;?/', '', $css);
+                    
+                    // Simplificar fontes
+                    $css = str_replace('"Arial", serif', 'Arial, sans-serif', $css);
+                    
+                    return '<style type="text/css">' . $css . '</style>';
+                },
+                $htmlContent
+            );
+            
+            // 2. Remover elementos problemáticos
+            $htmlContent = preg_replace('/<div title="header">.*?<\/div>/s', '', $htmlContent);
+            
+            // 3. Simplificar tags desnecessárias mantendo conteúdo
+            $htmlContent = preg_replace('/<(p|div)([^>]*?)style="[^"]*margin-bottom:\s*0in[^"]*"([^>]*?)>/i', '<$1$2$3>', $htmlContent);
+            
+            // 4. Processar imagens - converter caminhos relativos para absolutos
+            $htmlContent = preg_replace_callback(
+                '/<img([^>]*?)src="([^"]*)"([^>]*?)>/i',
+                function($matches) {
+                    $src = $matches[2];
+                    
+                    // Se for caminho relativo, converter para absoluto
+                    if (!str_starts_with($src, 'http') && !str_starts_with($src, 'data:')) {
+                        // Tentar encontrar a imagem em diferentes localizações
+                        $possiveisCaminhos = [
+                            public_path($src),
+                            public_path('template/' . basename($src)),
+                            storage_path('app/public/' . $src),
+                            base_path($src)
+                        ];
+                        
+                        foreach ($possiveisCaminhos as $caminho) {
+                            if (file_exists($caminho)) {
+                                // Converter imagem para base64 para embedar no HTML
+                                $imageData = base64_encode(file_get_contents($caminho));
+                                $mimeType = mime_content_type($caminho);
+                                $src = "data:$mimeType;base64,$imageData";
+                                break;
+                            }
+                        }
+                    }
+                    
+                    return '<img' . $matches[1] . 'src="' . $src . '"' . $matches[3] . '>';
+                },
+                $htmlContent
+            );
+            
+            // 5. Simplificar classes CSS desnecessárias mantendo essenciais
+            $htmlContent = preg_replace('/class="(western|cjk|ctl)"/', '', $htmlContent);
+            
+            return $htmlContent;
+            
+        } catch (\Exception $e) {
+            error_log("PDF Assinatura: Erro ao otimizar HTML: " . $e->getMessage());
+            // Retornar HTML original em caso de erro
+            return $htmlContent;
+        }
     }
 }

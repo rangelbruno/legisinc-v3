@@ -251,7 +251,7 @@ class ProposicaoProtocoloController extends Controller
             'texto_completo' => !empty($proposicao->conteudo),
             'formato_adequado' => strlen($proposicao->conteudo) > 100, // Mínimo de caracteres
             'metadados_completos' => !empty($proposicao->ementa) && !empty($proposicao->tipo),
-            'revisao_aprovada' => $proposicao->status === 'enviado_protocolo',
+            'revisao_aprovada' => in_array($proposicao->status, ['enviado_protocolo', 'assinado']),
         ];
 
         $verificacoes['todas_aprovadas'] = !in_array(false, $verificacoes, true);
