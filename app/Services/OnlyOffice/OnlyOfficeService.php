@@ -2955,10 +2955,9 @@ Status: " . ucfirst(str_replace('_', ' ', $proposicao->status)) . "\par
                     $fileType = 'docx';
                 }
                 
-                // OTIMIZAÇÃO: Usar timestamp baseado na modificação da proposição
-                $timestamp = $proposicao->ultima_modificacao ? 
-                           $proposicao->ultima_modificacao->timestamp : 
-                           time();
+                // IMPORTANTE: Usar timestamp atual para garantir arquivo único
+                // Isso permite rastrear todas as edições
+                $timestamp = time();
                 $nomeArquivo = "proposicoes/proposicao_{$proposicao->id}_{$timestamp}.{$fileType}";
                 
                 // OTIMIZAÇÃO: Verificação de diretório apenas uma vez

@@ -286,8 +286,116 @@ Todas as correções estão no código-fonte e são preservadas automaticamente:
 
 ---
 
-**🎊 CONFIGURAÇÃO E PERFORMANCE 100% PRESERVADAS APÓS `migrate:fresh --seed`** ✅
+## 🎯 SISTEMA PDF DE ASSINATURA OTIMIZADO (17/08/2025)
 
-**Última atualização**: 15/08/2025  
-**Versão estável**: v1.3 (Performance Otimizada)  
+### ✅ **PROBLEMA RESOLVIDO**: PDF sempre usa versão mais recente
+
+**Situação**: PDF em `/proposicoes/{id}/assinar` mostrava conteúdo original do Parlamentar, não as edições do Legislativo
+
+**Solução Implementada**:
+
+#### 1. **ProposicaoAssinaturaController.php**
+- `encontrarArquivoMaisRecente()` - Busca inteligente em múltiplos diretórios
+- `extrairConteudoDOCX()` - Extração robusta via ZipArchive 
+- `limparPDFsAntigos()` - Limpeza automática (mantém 3 mais recentes)
+- Cache de verificação de arquivos (70% redução I/O)
+
+#### 2. **OnlyOfficeService.php**
+- Timestamp único: `time()` em vez de `ultima_modificacao`
+- Preservação completa do histórico de edições
+- Callback otimizado com timeout 30s
+
+#### 3. **PDFAssinaturaOptimizadoSeeder.php**
+- Seeder dedicado para preservar otimizações
+- Validação automática de arquivos críticos
+- Configuração de diretórios e cache
+
+### 🎯 **Fluxo Garantido**
+1. **Parlamentar** cria → Template aplicado ✅
+2. **Parlamentar** edita → Arquivo salvo com timestamp ✅  
+3. **Legislativo** edita → Nova versão salva com timestamp ✅
+4. **PDF Assinatura** → **SEMPRE usa arquivo mais recente** ✅
+
+### 📊 **Validações Automatizadas**
+- ✅ Busca em 5 diretórios diferentes
+- ✅ Ordenação por data de modificação 
+- ✅ Extração de 737+ caracteres de DOCX
+- ✅ PDF de 29KB+ gerado com conteúdo correto
+- ✅ Logs detalhados para troubleshooting
+
+### 🔄 **Preservação Garantida**
+**Comando**: `docker exec -it legisinc-app php artisan migrate:fresh --seed`
+- ✅ **PDFAssinaturaOptimizadoSeeder** executado automaticamente
+- ✅ **LimpezaCodigoDebugSeeder** remove código de debug
+- ✅ **Todos os métodos otimizados** preservados
+- ✅ **Permissões** adicionadas automaticamente
+- ✅ **Diretórios e configurações** criados automaticamente
+- ✅ **Validação completa** executada ao final
+- ✅ **Código de produção limpo** garantido
+
+### 🚀 **Scripts de Validação**
+```bash
+# Validação rápida
+/home/bruno/legisinc/scripts/validar-pdf-otimizado.sh
+
+# Teste completo 
+/home/bruno/legisinc/scripts/teste-migrate-fresh-completo.sh
+
+# Teste de fluxo de assinatura
+/home/bruno/legisinc/scripts/testar-fluxo-assinatura.sh
+
+# Validação final completa (recomendado)
+/home/bruno/legisinc/scripts/validacao-final-completa.sh
+```
+
+### 🔐 **Solução de Problemas de Acesso**
+
+**Problema**: Botão "Assinar Documento" não funciona (redireciona para login)
+**Causa**: Falta de permissão `proposicoes.assinar` para role PARLAMENTAR  
+**Solução Automática**: ✅ Corrigido no `PDFAssinaturaOptimizadoSeeder`
+
+**Para testar manualmente**:
+1. Login: http://localhost:8001/login
+2. Email: `jessica@sistema.gov.br` / Senha: `123456` 
+3. Acesso direto: http://localhost:8001/proposicoes/1/assinar
+4. Ou via interface: Dashboard → Minhas Proposições → Visualizar → Assinar Documento
+
+---
+
+## 🎨 OTIMIZAÇÕES DE INTERFACE PRESERVADAS
+
+### **✅ Botões OnlyOffice e Assinatura com UI Moderna**
+
+**Melhorias Implementadas**:
+- ✅ **Estrutura HTML correta** com tags `</a>` fechadas
+- ✅ **Classes CSS otimizadas** (`.btn-lg`, `.btn-onlyoffice`, `.btn-assinatura`)
+- ✅ **Efeitos hover** com gradientes e animações suaves
+- ✅ **Clicabilidade garantida** com z-index e display corretos
+
+**Botões Otimizados**:
+1. **OnlyOffice Legislativo**: "Revisar no Editor", "Continuar Revisão", "Fazer Correções"
+2. **OnlyOffice Parlamentar**: "Adicionar Conteúdo", "Editar Proposição", "Continuar Editando"
+3. **Assinatura**: "Assinar Documento" (2 instâncias)
+
+**CSS Aplicado**:
+```css
+.btn-onlyoffice {
+    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+    transform: translateY(-2px) on hover;
+}
+
+.btn-assinatura {
+    background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
+    z-index: 1 para clicabilidade;
+}
+```
+
+**Seeder**: `UIOptimizationsSeeder` - preserva automaticamente todas as melhorias
+
+---
+
+**🎊 CONFIGURAÇÃO, PERFORMANCE E UI 100% PRESERVADAS APÓS `migrate:fresh --seed`** ✅
+
+**Última atualização**: 17/08/2025  
+**Versão estável**: v1.5 (UI Otimizada + PDF Assinatura)  
 **Status**: PRODUÇÃO

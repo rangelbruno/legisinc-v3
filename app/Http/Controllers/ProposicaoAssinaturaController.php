@@ -304,12 +304,12 @@ class ProposicaoAssinaturaController extends Controller
     }
 
     /**
-     * Gerar PDF para assinatura se não existir
+     * Gerar PDF para assinatura sempre com a versão mais recente
      */
     private function gerarPDFParaAssinatura(Proposicao $proposicao): void
     {
-        // Determinar nome do PDF
-        $nomePdf = 'proposicao_' . $proposicao->id . '.pdf';
+        // IMPORTANTE: Sempre regenerar PDF para garantir versão mais recente
+        $nomePdf = 'proposicao_' . $proposicao->id . '_assinatura_' . time() . '.pdf';
         $diretorioPdf = 'proposicoes/pdfs/' . $proposicao->id;
         $caminhoPdfRelativo = $diretorioPdf . '/' . $nomePdf;
         $caminhoPdfAbsoluto = storage_path('app/' . $caminhoPdfRelativo);
@@ -319,13 +319,20 @@ class ProposicaoAssinaturaController extends Controller
             mkdir(dirname($caminhoPdfAbsoluto), 0755, true);
         }
 
-        // SEMPRE usar o método que prioriza arquivo editado pelo Legislativo
-        // (remove verificação de arquivo para garantir regeneração)
-        $this->criarPDFDoArquivoEditado($caminhoPdfAbsoluto, $proposicao);
+        // Log para debug
+        error_log("PDF Assinatura: Iniciando geração de PDF para proposição {$proposicao->id}");
+        error_log("PDF Assinatura: Status atual: {$proposicao->status}");
+        error_log("PDF Assinatura: Arquivo path no banco: " . ($proposicao->arquivo_path ?: 'NULL'));
+        
+        // SEMPRE buscar a versão mais recente do arquivo
+        $this->criarPDFDoArquivoMaisRecente($caminhoPdfAbsoluto, $proposicao);
         
         // Atualizar proposição com caminho do PDF
         $proposicao->arquivo_pdf_path = $caminhoPdfRelativo;
         $proposicao->save();
+        
+        // Limpar PDFs antigos (manter apenas os 3 mais recentes)
+        $this->limparPDFsAntigos($proposicao->id);
         
         return;
     }
@@ -340,39 +347,42 @@ class ProposicaoAssinaturaController extends Controller
     }
 
     /**
-     * Criar PDF prioritariamente do arquivo editado pelo Legislativo
+     * Criar PDF sempre com a versão mais recente do documento
+     * Busca nos diretórios de storage por ordem de prioridade
      */
-    private function criarPDFDoArquivoEditado(string $caminhoPdfAbsoluto, Proposicao $proposicao): void
+    private function criarPDFDoArquivoMaisRecente(string $caminhoPdfAbsoluto, Proposicao $proposicao): void
     {
         try {
-            // PRIORIDADE 1: Converter DOCX editado pelo Legislativo diretamente para PDF (mantém formatação)
-            // Para proposições com arquivo editado, SEMPRE priorizar arquivo editado
-            if ($proposicao->arquivo_path && in_array($proposicao->status, ['aprovado_assinatura', 'retornado_legislativo', 'enviado_protocolo', 'assinado'])) {
-                $arquivoPath = $proposicao->arquivo_path;
+            // ESTRATÉGIA MELHORADA: Buscar SEMPRE o arquivo mais recente
+            $arquivoMaisRecente = $this->encontrarArquivoMaisRecente($proposicao);
+            
+            if ($arquivoMaisRecente) {
+                error_log("PDF Assinatura: Arquivo mais recente encontrado: {$arquivoMaisRecente['path']}");
+                error_log("PDF Assinatura: Modificado em: {$arquivoMaisRecente['modified']}");
+                error_log("PDF Assinatura: Tamanho: {$arquivoMaisRecente['size']} bytes");
                 
-                // Buscar arquivo em múltiplos locais (resolver problema do disk)
-                $locaisParaBuscar = [
-                    storage_path('app/' . $arquivoPath),              // local disk
-                    storage_path('app/private/' . $arquivoPath),       // private disk
-                    storage_path('app/public/' . $arquivoPath),        // public disk
-                    '/var/www/html/storage/app/' . $arquivoPath,       // container path
-                    '/var/www/html/storage/app/private/' . $arquivoPath, // container private
-                    '/var/www/html/storage/app/public/' . $arquivoPath   // container public
-                ];
+                $arquivoEncontrado = $arquivoMaisRecente['path'];
+                $arquivoPath = $arquivoMaisRecente['relative_path'];
                 
-                $arquivoEncontrado = null;
-                foreach ($locaisParaBuscar as $caminho) {
-                    if (file_exists($caminho)) {
-                        $arquivoEncontrado = $caminho;
-                        break;
+                // Extrair conteúdo do arquivo mais recente
+                if (str_contains($arquivoEncontrado, '.docx')) {
+                    try {
+                        $conteudo = $this->extrairConteudoDOCX($arquivoEncontrado);
+                        error_log("PDF Assinatura: Conteúdo extraído do arquivo mais recente: " . strlen($conteudo) . " caracteres");
+                        if (!empty($conteudo) && strlen($conteudo) > 50) {
+                            error_log("PDF Assinatura: Primeiros 200 chars: " . substr($conteudo, 0, 200));
+                        }
+                    } catch (\Exception $e) {
+                        error_log("PDF Assinatura: Erro ao extrair do arquivo mais recente: " . $e->getMessage());
                     }
-                }
-                
-                // Log para debug
-                if ($arquivoEncontrado) {
-                    // Log::info("PDF Assinatura: Arquivo encontrado para proposição {$proposicao->id}: $arquivoEncontrado");
-                } else {
-                    // Log::warning("PDF Assinatura: ARQUIVO NÃO ENCONTRADO para proposição {$proposicao->id} em {$arquivoPath}");
+                } elseif (str_contains($arquivoEncontrado, '.rtf')) {
+                    try {
+                        $rtfContent = file_get_contents($arquivoEncontrado);
+                        $conteudo = $this->converterRTFParaTexto($rtfContent);
+                        error_log("PDF Assinatura: Conteúdo extraído do RTF mais recente: " . strlen($conteudo) . " caracteres");
+                    } catch (\Exception $e) {
+                        error_log("PDF Assinatura: Erro ao extrair RTF: " . $e->getMessage());
+                    }
                 }
                 
                 // NOVA ABORDAGEM: Converter DOCX → HTML para preservar formatação do OnlyOffice
@@ -388,6 +398,8 @@ class ProposicaoAssinaturaController extends Controller
                 }
                 
                 // FALLBACK: Extrair apenas texto se conversão HTML falhou
+            } else {
+                error_log("PDF Assinatura: Nenhum arquivo encontrado, usando conteúdo do banco de dados");
             }
             
             // Método principal: Extrair conteúdo e gerar PDF com assinatura digital
@@ -443,11 +455,13 @@ class ProposicaoAssinaturaController extends Controller
                         $conteudo = $this->converterRTFParaTexto($rtfContent);
                         error_log("PDF Assinatura: Conteúdo extraído do RTF editado: " . strlen($conteudo) . " caracteres");
                     } elseif (str_contains($proposicao->arquivo_path, '.docx')) {
-                        // Arquivo DOCX - usar DocumentExtractionService
-                        $extractionService = app(\App\Services\DocumentExtractionService::class);
+                        // Arquivo DOCX - usar método direto mais robusto
                         try {
-                            $conteudo = $extractionService->extractTextFromDocxFile($caminhoArquivo);
+                            $conteudo = $this->extrairConteudoDOCX($caminhoArquivo);
                             error_log("PDF Assinatura: Conteúdo extraído do DOCX: " . strlen($conteudo) . " caracteres");
+                            if (!empty($conteudo)) {
+                                error_log("PDF Assinatura: Primeiros 200 chars: " . substr($conteudo, 0, 200));
+                            }
                         } catch (\Exception $e) {
                             error_log("PDF Assinatura: Erro ao extrair DOCX: " . $e->getMessage());
                         }
@@ -455,15 +469,19 @@ class ProposicaoAssinaturaController extends Controller
                 }
             }
             
-            // 2. Se não conseguiu extrair do arquivo, usar conteúdo do banco
+            // 2. Se não conseguiu extrair do arquivo ou conteúdo muito pequeno, usar conteúdo do banco
             if (empty($conteudo) || strlen($conteudo) < 50) {
+                error_log("PDF Assinatura: Conteúdo extraído insuficiente (" . strlen($conteudo) . " chars), tentando banco de dados");
+                
                 if (!empty($proposicao->conteudo)) {
                     $conteudo = $proposicao->conteudo;
-                    error_log("PDF Assinatura: Usando conteúdo do banco de dados");
+                    error_log("PDF Assinatura: Usando conteúdo do banco de dados (" . strlen($conteudo) . " chars)");
                 } else {
                     $conteudo = $proposicao->ementa ?: 'Conteúdo não disponível';
                     error_log("PDF Assinatura: Usando ementa como fallback");
                 }
+            } else {
+                error_log("PDF Assinatura: Usando conteúdo extraído do arquivo (" . strlen($conteudo) . " chars)");
             }
 
             // 3. Substituir placeholders no conteúdo (incluindo assinatura digital)
@@ -1014,6 +1032,200 @@ class ProposicaoAssinaturaController extends Controller
         }
         
         return $htmlContent;
+    }
+    
+    /**
+     * Encontrar o arquivo mais recente da proposição
+     * Busca em todos os diretórios possíveis e retorna o mais recente
+     */
+    private function encontrarArquivoMaisRecente(Proposicao $proposicao): ?array
+    {
+        $arquivosEncontrados = [];
+        
+        // Padrões de busca para arquivos da proposição
+        $padroes = [
+            "proposicao_{$proposicao->id}_*.docx",
+            "proposicao_{$proposicao->id}_*.rtf",
+            "proposicao_{$proposicao->id}.docx",
+            "proposicao_{$proposicao->id}.rtf"
+        ];
+        
+        // Diretórios onde buscar
+        $diretorios = [
+            storage_path('app/proposicoes'),
+            storage_path('app/private/proposicoes'),
+            storage_path('app/public/proposicoes'),
+            storage_path('app'), // Raiz do storage
+            '/var/www/html/storage/app/proposicoes',
+            '/var/www/html/storage/app/private/proposicoes'
+        ];
+        
+        // Buscar arquivos em cada diretório
+        foreach ($diretorios as $dir) {
+            if (!is_dir($dir)) {
+                continue;
+            }
+            
+            foreach ($padroes as $padrao) {
+                $arquivos = glob($dir . '/' . $padrao);
+                foreach ($arquivos as $arquivo) {
+                    if (file_exists($arquivo)) {
+                        $mtime = filemtime($arquivo);
+                        $arquivosEncontrados[] = [
+                            'path' => $arquivo,
+                            'relative_path' => str_replace(storage_path('app/'), '', $arquivo),
+                            'modified' => date('Y-m-d H:i:s', $mtime),
+                            'timestamp' => $mtime,
+                            'size' => filesize($arquivo),
+                            'type' => pathinfo($arquivo, PATHINFO_EXTENSION)
+                        ];
+                    }
+                }
+            }
+        }
+        
+        // Se também tiver arquivo_path definido, incluir na busca
+        if ($proposicao->arquivo_path) {
+            $caminhosPossiveis = [
+                storage_path('app/' . $proposicao->arquivo_path),
+                storage_path('app/private/' . $proposicao->arquivo_path),
+                storage_path('app/public/' . $proposicao->arquivo_path),
+                storage_path('app/private/' . ltrim($proposicao->arquivo_path, 'private/')),
+                '/var/www/html/storage/app/' . $proposicao->arquivo_path,
+                '/var/www/html/storage/app/private/' . $proposicao->arquivo_path
+            ];
+            
+            foreach ($caminhosPossiveis as $caminho) {
+                if (file_exists($caminho) && !$this->arquivoJaIncluido($caminho, $arquivosEncontrados)) {
+                    $mtime = filemtime($caminho);
+                    $arquivosEncontrados[] = [
+                        'path' => $caminho,
+                        'relative_path' => $proposicao->arquivo_path,
+                        'modified' => date('Y-m-d H:i:s', $mtime),
+                        'timestamp' => $mtime,
+                        'size' => filesize($caminho),
+                        'type' => pathinfo($caminho, PATHINFO_EXTENSION)
+                    ];
+                }
+            }
+        }
+        
+        // Ordenar por data de modificação (mais recente primeiro)
+        usort($arquivosEncontrados, function($a, $b) {
+            return $b['timestamp'] - $a['timestamp'];
+        });
+        
+        // Log para debug
+        if (!empty($arquivosEncontrados)) {
+            error_log("PDF Assinatura: Encontrados " . count($arquivosEncontrados) . " arquivos para proposição {$proposicao->id}");
+            foreach (array_slice($arquivosEncontrados, 0, 3) as $idx => $arquivo) {
+                error_log("  " . ($idx + 1) . ". {$arquivo['relative_path']} - Modificado: {$arquivo['modified']} - Tamanho: {$arquivo['size']} bytes");
+            }
+        } else {
+            error_log("PDF Assinatura: Nenhum arquivo encontrado para proposição {$proposicao->id}");
+        }
+        
+        // Retornar o mais recente
+        return !empty($arquivosEncontrados) ? $arquivosEncontrados[0] : null;
+    }
+    
+    /**
+     * Verificar se arquivo já está incluído na lista
+     */
+    private function arquivoJaIncluido(string $caminho, array $arquivos): bool
+    {
+        foreach ($arquivos as $arquivo) {
+            if (realpath($arquivo['path']) === realpath($caminho)) {
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    /**
+     * Limpar PDFs antigos mantendo apenas os N mais recentes
+     */
+    private function limparPDFsAntigos(int $proposicaoId, int $manterQuantos = 3): void
+    {
+        $diretorioPdf = storage_path("app/proposicoes/pdfs/{$proposicaoId}");
+        
+        if (!is_dir($diretorioPdf)) {
+            return;
+        }
+        
+        $pdfs = glob($diretorioPdf . '/*.pdf');
+        if (count($pdfs) <= $manterQuantos) {
+            return;
+        }
+        
+        // Ordenar por data de modificação (mais recente primeiro)
+        usort($pdfs, function($a, $b) {
+            return filemtime($b) - filemtime($a);
+        });
+        
+        // Remover PDFs antigos
+        $paraRemover = array_slice($pdfs, $manterQuantos);
+        foreach ($paraRemover as $pdf) {
+            unlink($pdf);
+            error_log("PDF Assinatura: Removido PDF antigo: " . basename($pdf));
+        }
+    }
+    
+    /**
+     * Extrair conteúdo de arquivo DOCX de forma robusta
+     * Método otimizado baseado no que funciona no teste
+     */
+    private function extrairConteudoDOCX(string $caminhoArquivo): string
+    {
+        if (!file_exists($caminhoArquivo)) {
+            error_log("PDF Assinatura: Arquivo DOCX não encontrado: $caminhoArquivo");
+            return '';
+        }
+        
+        try {
+            $zip = new \ZipArchive();
+            if ($zip->open($caminhoArquivo) === TRUE) {
+                // Extrair o document.xml que contém o texto principal
+                $documentXml = $zip->getFromName('word/document.xml');
+                $zip->close();
+                
+                if ($documentXml) {
+                    // Extrair texto das tags <w:t>
+                    preg_match_all('/<w:t[^>]*>(.*?)<\/w:t>/is', $documentXml, $matches);
+                    
+                    if (isset($matches[1]) && !empty($matches[1])) {
+                        $texto = implode(' ', $matches[1]);
+                        
+                        // Decodificar entidades XML
+                        $texto = html_entity_decode($texto, ENT_QUOTES | ENT_XML1);
+                        
+                        // Limpar espaços excessivos mas manter estrutura
+                        $texto = preg_replace('/\s+/', ' ', $texto);
+                        $texto = trim($texto);
+                        
+                        // Adicionar quebras de linha em pontos apropriados
+                        $texto = str_replace('. ', ".\n", $texto);
+                        $texto = str_replace('EMENTA:', "\n\nEMENTA:", $texto);
+                        $texto = str_replace('A Câmara Municipal manifesta:', "\n\nA Câmara Municipal manifesta:\n\n", $texto);
+                        $texto = str_replace('Resolve dirigir', "\n\nResolve dirigir", $texto);
+                        
+                        error_log("PDF Assinatura: Texto extraído com sucesso do DOCX");
+                        return $texto;
+                    }
+                }
+                
+                error_log("PDF Assinatura: Não foi possível extrair document.xml do DOCX");
+                return '';
+                
+            } else {
+                error_log("PDF Assinatura: Não foi possível abrir arquivo DOCX como ZIP");
+                return '';
+            }
+            
+        } catch (\Exception $e) {
+            error_log("PDF Assinatura: Erro ao processar DOCX: " . $e->getMessage());
+            return '';
+        }
     }
     
     /**

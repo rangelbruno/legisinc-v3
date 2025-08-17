@@ -70,6 +70,26 @@ class DatabaseSeeder extends Seeder
             OptimizedMenuPermissionsSeeder::class,
         ]);
 
+        // NOVO: Seeder de PDF de Assinatura Otimizado
+        $this->call([
+            PDFAssinaturaOptimizadoSeeder::class,
+        ]);
+        
+        // UI: Otimizações de interface do usuário
+        $this->call([
+            UIOptimizationsSeeder::class,
+        ]);
+        
+        // UI: Correções de botões OnlyOffice (previne captura incorreta de cliques)
+        $this->call([
+            UIButtonsFixSeeder::class,
+        ]);
+        
+        // FINAL: Limpeza de código debug (deve ser executado por último)
+        $this->call([
+            LimpezaCodigoDebugSeeder::class,
+        ]);
+
         // Processar imagens dos templates admin
         $this->command->info('');
         $this->command->info('🖼️ Processando imagens dos templates admin...');
@@ -87,6 +107,9 @@ class DatabaseSeeder extends Seeder
         $this->command->info('📝 Templates de Proposições: 23 tipos criados com LC 95/1998');
         $this->command->info('🖼️ Sistema de Imagens RTF: Configurado e funcional');
         $this->command->info('🔤 Codificação UTF-8: Acentuação portuguesa corrigida');
+        $this->command->info('🎯 PDF de Assinatura: Sistema otimizado com extração robusta de DOCX');
+        $this->command->info('🎨 Interface Otimizada: Botões OnlyOffice e Assinatura com UI moderna');
+        $this->command->info('🧹 Código Debug: Automaticamente removido - versão de produção limpa');
         $this->command->info('');
         $this->command->info('🔧 ===== CONFIGURAÇÕES DISPONÍVEIS =====');
         $this->command->info('📊 Dados Gerais: /parametros-dados-gerais-camara');

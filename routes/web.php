@@ -127,7 +127,6 @@ Route::get('/auto-login-admin', function () {
     return redirect()->route('dashboard')->with('success', 'Logado como administrador (modo demo)');
 })->name('auto-login-admin');
 
-
 // User API routes (protected)
 Route::prefix('user-api')->name('user-api.')->group(function () {
     Route::get('/', [UserApiController::class, 'index'])->name('index');
@@ -223,8 +222,6 @@ Route::prefix('usuarios')->name('usuarios.')->middleware('auth')->group(function
     Route::post('/exportar', [UserManagementController::class, 'exportar'])->name('exportar');
     Route::post('/importar', [UserManagementController::class, 'importar'])->name('importar');
 });
-
-
 
 // Sessões routes (protected with permissions)
 Route::prefix('admin/sessions')->name('admin.sessions.')->middleware(['auth', 'check.screen.permission'])->group(function () {
@@ -359,7 +356,6 @@ Route::prefix('admin/parametros')->name('parametros.')->middleware(['auth', 'che
         Route::post('/usage', [App\Http\Controllers\AI\AIConfigController::class, 'recordTokenUsage'])->name('usage')->middleware('check.permission:parametros.edit');
     });
 
-    
         // Rota específica para configurar Dados Gerais
     Route::get('/dados-gerais', function() {
         return app(App\Http\Controllers\Parametro\ParametroController::class)->configurar('Dados Gerais');
@@ -775,12 +771,10 @@ Route::post('/parametros-variaveis-dinamicas', function() {
 
 // Registration functionality working correctly
 
-
 // Demo do Editor Jurídico
 Route::get('/editor-demo', function () {
     return view('editor.demo');
 })->name('editor.demo');
-
 
 // Rota de teste para verificar se o editor TipTap está funcionando
 Route::get('/test-editor-funcionando', function () {
@@ -1084,7 +1078,6 @@ Route::prefix('admin/documentos')->name('documentos.')->middleware(['auth', 'che
 
 });
 
-
 // ===== ONLYOFFICE INTEGRATION ROUTES =====
 Route::prefix('onlyoffice')->name('onlyoffice.')->group(function () {
     
@@ -1119,7 +1112,6 @@ Route::prefix('onlyoffice-standalone')->name('onlyoffice.standalone.')->middlewa
     // Force save routes
     Route::post('/force-save/modelo/{modelo}', [App\Http\Controllers\OnlyOffice\OnlyOfficeController::class, 'forceSaveModelo'])->name('force-save.modelo');
 });
-
 
 // Debug route - remove after testing
 Route::get('/debug-user', function () {
@@ -1264,8 +1256,7 @@ Route::prefix('tests')->name('tests.')->middleware('auth')->group(function () {
     
     // Performance Tests
     Route::get('/performance', [App\Http\Controllers\TestController::class, 'performanceIndex'])->name('performance');
-    
-    
+
     // Security Tests
     Route::get('/security', [App\Http\Controllers\TestController::class, 'securityIndex'])->name('security');
 });

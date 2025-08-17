@@ -3,6 +3,175 @@
 @section('title', 'Visualizar Proposição')
 
 @section('content')
+<style>
+/* Estilos otimizados para botões OnlyOffice */
+.btn-onlyoffice {
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    border-radius: 8px;
+    font-weight: 600;
+    padding: 12px 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.btn-onlyoffice:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.btn-onlyoffice .fas {
+    transition: transform 0.3s ease;
+}
+
+.btn-onlyoffice:hover .fas {
+    transform: scale(1.1);
+}
+
+/* Variações de cores para diferentes contextos */
+.btn-onlyoffice.btn-primary {
+    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+    border: none;
+}
+
+.btn-onlyoffice.btn-outline-primary {
+    border: 2px solid #007bff;
+    background: rgba(0, 123, 255, 0.05);
+}
+
+.btn-onlyoffice.btn-outline-primary:hover {
+    background: #007bff;
+    color: white;
+}
+
+.btn-onlyoffice.btn-outline-warning {
+    border: 2px solid #ffc107;
+    background: rgba(255, 193, 7, 0.05);
+}
+
+.btn-onlyoffice.btn-outline-warning:hover {
+    background: #ffc107;
+    color: #212529;
+}
+
+/* Espaçamento melhorado para botões em grid */
+.d-grid .btn-onlyoffice {
+    margin-bottom: 8px;
+}
+
+.d-grid .btn-onlyoffice:last-child {
+    margin-bottom: 0;
+}
+
+/* Estilos otimizados para botão de assinatura */
+.btn-assinatura {
+    font-weight: 600;
+    padding: 12px 20px;
+    border-radius: 8px;
+}
+
+.btn-assinatura:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.btn-assinatura .fas {
+    /* Removido animações que podem interferir com o clique */
+}
+
+/* Estilo específico para botão de assinatura success */
+.btn-assinatura.btn-success {
+    background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
+    border: none;
+}
+
+.btn-assinatura.btn-success:hover {
+    background: linear-gradient(135deg, #218838 0%, #1c7430 100%);
+}
+
+/* Espaçamento melhorado para botões de assinatura em grid */
+.d-grid .btn-assinatura {
+    margin-bottom: 8px;
+    position: relative;
+    z-index: 1;
+    display: inline-block;
+}
+
+.d-grid .btn-assinatura:last-child {
+    margin-bottom: 0;
+}
+</style>
+<style>
+
+
+.d-grid .btn-assinatura:last-child {
+    margin-bottom: 0;
+}
+</style>
+<style>
+
+
+.d-grid .btn-assinatura:last-child {
+    margin-bottom: 0;
+}
+</style>
+<style>
+
+
+.d-grid .btn-assinatura:last-child {
+    margin-bottom: 0;
+}
+</style>
+<style>
+
+
+.d-grid .btn-assinatura:last-child {
+    margin-bottom: 0;
+}
+</style>
+<style>
+
+
+.d-grid .btn-assinatura:last-child {
+    margin-bottom: 0;
+}
+</style>
+<style>
+
+
+.d-grid .btn-assinatura:last-child {
+    margin-bottom: 0;
+}
+</style>
+<style>
+
+
+.d-grid .btn-assinatura:last-child {
+    margin-bottom: 0;
+}
+</style>
+<style>
+
+
+.d-grid .btn-assinatura:last-child {
+    margin-bottom: 0;
+}
+</style>
+<style>
+
+
+.d-grid .btn-assinatura:last-child {
+    margin-bottom: 0;
+}
+</style>
+
+<style>
+
+
+.d-grid .btn-assinatura:last-child {
+    margin-bottom: 0;
+}
+</style>
+
 <div class="container-fluid">
     <!-- Header -->
     <div class="d-flex align-items-center justify-content-between flex-wrap mb-5">
@@ -12,17 +181,14 @@
         </div>
         <div>
             <a href="{{ route('proposicoes.minhas-proposicoes') }}" class="btn btn-outline-secondary">
-                <i class="fas fa-arrow-left me-2"></i>Voltar
-            </a>
+                <i class="fas fa-arrow-left me-2"></i>Voltar</a>
             @if($proposicao->status === 'rascunho')
                 @if($proposicao->template_id)
                     <a href="{{ route('proposicoes.editar-onlyoffice', ['proposicao' => $proposicao->id, 'template' => $proposicao->template_id]) }}" class="btn btn-primary ms-2">
-                        <i class="fas fa-file-word me-2"></i>Editar
-                    </a>
+                        <i class="fas fa-file-word me-2"></i>Editar</a>
                 @else
                     <a href="{{ route('proposicoes.onlyoffice.editor-parlamentar', $proposicao->id) }}" class="btn btn-primary ms-2">
-                        <i class="fas fa-file-word me-2"></i>Editar no OnlyOffice
-                    </a>
+                        <i class="fas fa-file-word me-2"></i>Editar no OnlyOffice</a>
                 @endif
             @endif
         </div>
@@ -226,11 +392,11 @@
                                 @if($proposicao->template_id)
                                     <a href="{{ route('proposicoes.editar-onlyoffice', ['proposicao' => $proposicao->id, 'template' => $proposicao->template_id]) }}" class="btn btn-primary">
                                         <i class="fas fa-file-word me-2"></i>Adicionar Conteúdo
-                                    </a>
+        
                                 @else
-                                    <a href="{{ route('proposicoes.onlyoffice.editor-parlamentar', $proposicao->id) }}" class="btn btn-primary">
+                                    <a href="{{ route('proposicoes.onlyoffice.editor-parlamentar', $proposicao->id) }}" class="btn btn-primary btn-lg btn-onlyoffice">
                                         <i class="fas fa-file-word me-2"></i>Adicionar Conteúdo no OnlyOffice
-                                    </a>
+        
                                 @endif
                             @endif
                         </div>
@@ -256,21 +422,23 @@
                             @if($proposicao->template_id)
                                 <a href="{{ route('proposicoes.editar-onlyoffice', ['proposicao' => $proposicao->id, 'template' => $proposicao->template_id]) }}" class="btn btn-primary">
                                     <i class="fas fa-file-word me-2"></i>Editar Proposição
-                                </a>
+    
                                 <!-- Botão para preencher/repreencher template -->
                                 @if(str_contains($proposicao->ementa ?? '', 'a ser definid') || str_contains($proposicao->ementa ?? '', 'em elaboração') || str_contains($proposicao->ementa ?? '', 'serem definidos') || str_contains($proposicao->ementa ?? '', 'definidos') || empty($proposicao->ementa))
                                     <a href="{{ route('proposicoes.preencher-modelo', ['proposicao' => $proposicao->id, 'modeloId' => $proposicao->template_id]) }}" class="btn btn-outline-info">
-                                        <i class="fas fa-form me-2"></i>Preencher Campos do Template
-                                    </a>
+                                        <i class="fas fa-form me-2"></i>Preencher Campos do Template</a>
+        
+        
                                     <small class="text-muted d-block mt-1">
                                         <i class="fas fa-lightbulb me-1"></i>
                                         Complete os campos para gerar uma ementa específica
                                     </small>
                                 @endif
                             @else
-                                <a href="{{ route('proposicoes.onlyoffice.editor-parlamentar', $proposicao->id) }}" class="btn btn-primary">
-                                    <i class="fas fa-file-word me-2"></i>Editar Proposição no OnlyOffice
-                                </a>
+                                <a href="{{ route('proposicoes.onlyoffice.editor-parlamentar', $proposicao->id) }}" class="btn btn-primary btn-lg btn-onlyoffice">
+                                    <i class="fas fa-file-word me-2"></i>Editar Proposição no OnlyOffice</a>
+    
+    
                             @endif
                             @if($podeEnviarLegislativo)
                                 <button class="btn btn-success" onclick="enviarParaLegislativo()">
@@ -300,10 +468,8 @@
                                     <i class="fas fa-paper-plane me-2"></i>Enviar para Legislativo
                                 </button>
                             @endif
-                            <a href="{{ route('proposicoes.onlyoffice.editor-parlamentar', $proposicao->id) }}" class="btn btn-outline-primary">
-                                <i class="fas fa-file-word me-2"></i>Continuar Editando no OnlyOffice
-                            </a>
-                            <button type="button" class="btn btn-outline-danger" onclick="excluirProposicao()">
+                            <a href="{{ route('proposicoes.onlyoffice.editor-parlamentar', $proposicao->id) }}" class="btn btn-outline-primary btn-lg btn-onlyoffice">
+                                <i class="fas fa-file-word me-2"></i>Continuar Editando no OnlyOffice</a><button type="button" class="btn btn-outline-danger" onclick="excluirProposicao()">
                                 <i class="fas fa-trash me-2"></i>Excluir Proposição
                             </button>
                         </div>
@@ -319,14 +485,13 @@
                                 </div>
                             </div>
                             <div class="d-grid gap-2">
-                                <a href="{{ route('proposicoes.onlyoffice.editor', $proposicao->id) }}" class="btn btn-primary">
-                                    <i class="fas fa-file-word me-2"></i>Revisar no Editor
-                                </a>
+                                <a href="{{ route('proposicoes.onlyoffice.editor', $proposicao->id) }}" class="btn btn-primary btn-lg btn-onlyoffice">
+                                    <i class="fas fa-file-word me-2"></i>Revisar no Editor</a>
+    
+    
                                 @if(Auth::user()->isAssessorJuridico())
                                 <a href="{{ route('proposicoes.revisar.show', $proposicao->id) }}" class="btn btn-outline-secondary">
-                                    <i class="fas fa-clipboard-check me-2"></i>Análise Técnica
-                                </a>
-                                @endif
+                                    <i class="fas fa-clipboard-check me-2"></i>Análise Técnica</a>@endif
                                 <button onclick="devolverParaParlamentar({{ $proposicao->id }})" class="btn btn-success">
                                     <i class="fas fa-arrow-left me-2"></i>Devolver para Parlamentar
                                 </button>
@@ -357,9 +522,9 @@
                                     Aceitar Edições
                                 @endif
                             </button>
-                            <a href="{{ route('proposicoes.onlyoffice.editor-parlamentar', $proposicao->id) }}" class="btn btn-outline-warning">
+                            <a href="{{ route('proposicoes.onlyoffice.editor-parlamentar', $proposicao->id) }}" class="btn btn-outline-warning btn-lg btn-onlyoffice">
                                 <i class="fas fa-file-word me-2"></i>Fazer Novas Edições no OnlyOffice
-                            </a>
+
                             <button class="btn btn-outline-info btn-sm" onclick="verHistoricoEdicoes()">
                                 <i class="fas fa-history me-2"></i>Ver Histórico
                             </button>
@@ -367,15 +532,13 @@
                     @elseif($proposicao->status === 'em_edicao')
                         <div class="d-grid gap-2">
                             <!-- Sempre usar OnlyOffice para edição -->
-                            <a href="{{ route('proposicoes.onlyoffice.editor-parlamentar', $proposicao->id) }}" class="btn btn-primary">
-                                <i class="fas fa-file-word me-2"></i>Continuar Edição no OnlyOffice
-                            </a>
-
-                            <!-- Botão para preencher template apenas se houver template_id -->
+                            <a href="{{ route('proposicoes.onlyoffice.editor-parlamentar', $proposicao->id) }}" class="btn btn-primary btn-lg btn-onlyoffice">
+                                <i class="fas fa-file-word me-2"></i>Continuar Edição no OnlyOffice</a><!-- Botão para preencher template apenas se houver template_id -->
                             @if($proposicao->template_id && (str_contains($proposicao->ementa ?? '', 'a ser definid') || str_contains($proposicao->ementa ?? '', 'em elaboração') || str_contains($proposicao->ementa ?? '', 'serem definidos') || str_contains($proposicao->ementa ?? '', 'definidos') || empty($proposicao->ementa)))
                                 <a href="{{ route('proposicoes.preencher-modelo', ['proposicao' => $proposicao->id, 'modeloId' => $proposicao->template_id]) }}" class="btn btn-outline-info">
-                                    <i class="fas fa-form me-2"></i>Preencher Campos do Template
-                                </a>
+                                    <i class="fas fa-form me-2"></i>Preencher Campos do Template</a>
+    
+    
                                 <small class="text-muted d-block mt-1">
                                     <i class="fas fa-lightbulb me-1"></i>
                                     Complete os campos para gerar uma ementa específica
@@ -406,14 +569,13 @@
                                 </div>
                             </div>
                             <div class="d-grid gap-2">
-                                <a href="{{ route('proposicoes.onlyoffice.editor', $proposicao->id) }}" class="btn btn-primary">
-                                    <i class="fas fa-file-word me-2"></i>Continuar Revisão no Editor
-                                </a>
+                                <a href="{{ route('proposicoes.onlyoffice.editor', $proposicao->id) }}" class="btn btn-primary btn-lg btn-onlyoffice">
+                                    <i class="fas fa-file-word me-2"></i>Continuar Revisão no Editor</a>
+    
+    
                                 @if(Auth::user()->isAssessorJuridico())
                                 <a href="{{ route('proposicoes.revisar.show', $proposicao->id) }}" class="btn btn-outline-secondary">
-                                    <i class="fas fa-clipboard-check me-2"></i>Análise Técnica
-                                </a>
-                                @endif
+                                    <i class="fas fa-clipboard-check me-2"></i>Análise Técnica</a>@endif
                                 <button onclick="devolverParaParlamentar({{ $proposicao->id }})" class="btn btn-success">
                                     <i class="fas fa-arrow-left me-2"></i>Devolver para Parlamentar
                                 </button>
@@ -456,9 +618,10 @@
                             <strong>Retornado do Legislativo:</strong> Proposição aprovada pelo Legislativo e pronta para assinatura digital.
                         </div>
                         <div class="d-grid gap-2">
-                            <a href="{{ route('proposicoes.assinar', $proposicao->id) }}" class="btn btn-success">
-                                <i class="fas fa-signature me-2"></i>Assinar Documento
-                            </a>
+                            <a href="{{ route('proposicoes.assinar', $proposicao->id) }}" class="btn btn-success btn-lg btn-assinatura">
+                                <i class="fas fa-signature me-2"></i>Assinar Documento</a>
+
+
                             <button class="btn btn-outline-primary btn-sm" onclick="consultarStatus()">
                                 <i class="fas fa-info-circle me-2"></i>Ver Detalhes
                             </button>
@@ -511,16 +674,15 @@
                                 @if(!$proposicao->numero_protocolo)
                                     <a href="{{ route('proposicoes.protocolar.show', $proposicao) }}" class="btn btn-primary">
                                         <i class="fas fa-file-signature me-2"></i>Protocolar
-                                    </a>
+        
+
                                     <button class="btn btn-outline-success" onclick="atribuirNumeroProtocolo()">
-                                        <i class="fas fa-hashtag me-2"></i>Atribuir Número de Protocolo
-                                    </button>
+                                        <i class="fas fa-hashtag me-2"></i>Atribuir Número de Protocolo</button>
                                     <hr class="my-2">
                                 @endif
                             @endif
                             <button class="btn btn-outline-info btn-sm" onclick="consultarProtocolo()">
-                                <i class="fas fa-search me-2"></i>Consultar Protocolo
-                            </button>
+                                <i class="fas fa-search me-2"></i>Consultar Protocolo</button>
                             <button class="btn btn-outline-primary btn-sm" onclick="baixarDocumento()">
                                 <i class="fas fa-download me-2"></i>Baixar Documento Final
                             </button>
@@ -552,17 +714,16 @@
                             </div>
                             @endif
                             <div class="d-grid gap-2">
-                                <a href="{{ route('proposicoes.onlyoffice.editor', $proposicao->id) }}" class="btn btn-primary">
-                                    <i class="fas fa-file-word me-2"></i>Fazer Correções no Editor
-                                </a>
+                                <a href="{{ route('proposicoes.onlyoffice.editor', $proposicao->id) }}" class="btn btn-primary btn-lg btn-onlyoffice">
+                                    <i class="fas fa-file-word me-2"></i>Fazer Correções no Editor</a>
+    
+    
                                 <button onclick="retornarParaParlamentar({{ $proposicao->id }})" class="btn btn-success">
                                     <i class="fas fa-arrow-right me-2"></i>Retornar para Parlamentar
                                 </button>
                                 @if(Auth::user()->isAssessorJuridico())
                                 <a href="{{ route('proposicoes.revisar.show', $proposicao->id) }}" class="btn btn-outline-secondary">
-                                    <i class="fas fa-clipboard-check me-2"></i>Análise Técnica
-                                </a>
-                                @endif
+                                    <i class="fas fa-clipboard-check me-2"></i>Análise Técnica</a>@endif
                             </div>
                         @else
                             <div class="alert alert-warning mb-3">
@@ -614,8 +775,9 @@
                         <div class="d-grid gap-2">
                             @if(Auth::user()->isParlamentar())
                                 <a href="{{ route('proposicoes.serve-pdf', $proposicao->id) }}" class="btn btn-primary" target="_blank">
-                                    <i class="fas fa-file-pdf me-2"></i>Baixar PDF
-                                </a>
+                                    <i class="fas fa-file-pdf me-2"></i>Baixar PDF</a>
+    
+    
                             @endif
                             <button class="btn btn-outline-info btn-sm" onclick="consultarProtocolo()">
                                 <i class="fas fa-search me-2"></i>Consultar Protocolo
@@ -632,13 +794,15 @@
                             </div>
                         </div>
                         <div class="d-grid gap-2">
-                            <a href="{{ route('proposicoes.assinar', $proposicao->id) }}" class="btn btn-success">
-                                <i class="fas fa-signature me-2"></i>Assinar Documento
-                            </a>
+                            <a href="{{ route('proposicoes.assinar', $proposicao->id) }}" class="btn btn-success btn-lg btn-assinatura">
+                                <i class="fas fa-signature me-2"></i>Assinar Documento</a>
+
+
                             @if($proposicao->arquivo_pdf_path)
                             <a href="{{ route('proposicoes.serve-pdf', $proposicao) }}" target="_blank" class="btn btn-outline-primary btn-sm">
                                 <i class="fas fa-file-pdf me-2"></i>Visualizar PDF
-                            </a>
+
+
                             @endif
                             <button class="btn btn-outline-info btn-sm" onclick="consultarStatus()">
                                 <i class="fas fa-info-circle me-2"></i>Ver Detalhes
@@ -1756,9 +1920,7 @@ function consultarStatus() {
 }
 
 function atualizarStatus() {
-    const proposicaoId = {{ $proposicao->id }};
-    
-    // Desabilitar botão e mostrar loading
+    const proposicaoId = {{ $proposicao->id }}; // Desabilitar botão e mostrar loading
     const btn = document.querySelector('#modalConsultarStatus .btn-primary');
     const originalText = btn.innerHTML;
     btn.disabled = true;

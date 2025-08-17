@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Teste Debug Assinar</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-result { padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .success { background-color: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
+        .error { background-color: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
+        .info { background-color: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Debug: Botão Assinar Documento</h1>
+    
+    <div class="test-result info">
+        <strong>URL de Teste:</strong> http://localhost:8001/proposicoes/1/assinar
+    </div>
+    
+    <h2>Teste 1: Link Direto</h2>
+    <a href="http://localhost:8001/proposicoes/1/assinar" target="_blank" style="display: inline-block; padding: 10px 20px; background: #28a745; color: white; text-decoration: none; border-radius: 5px;">
+        🔗 Teste Link Direto
+    </a>
+    
+    <h2>Teste 2: Botão com JavaScript</h2>
+    <button onclick="testarNavegacao()" style="padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer;">
+        🔍 Teste JavaScript
+    </button>
+    <div id="js-result"></div>
+    
+    <h2>Teste 3: Fetch para verificar resposta</h2>
+    <button onclick="testarFetch()" style="padding: 10px 20px; background: #6c757d; color: white; border: none; border-radius: 5px; cursor: pointer;">
+        📡 Teste Fetch
+    </button>
+    <div id="fetch-result"></div>
+    
+    <h2>Teste 4: Simulação do botão original</h2>
+    <div style="border: 2px dashed #ccc; padding: 15px; margin: 10px 0;">
+        <a href="http://localhost:8001/proposicoes/1/assinar" class="btn btn-success btn-lg btn-assinatura" style="display: inline-block; padding: 12px 20px; background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%); color: white; text-decoration: none; border-radius: 8px; font-weight: 600;">
+            <i style="margin-right: 8px;">🖊️</i>Assinar Documento
+        </a>
+    </div>
+    
+    <script>
+        function testarNavegacao() {
+            const result = document.getElementById('js-result');
+            result.innerHTML = '<div class="test-result info">Tentando navegar...</div>';
+            
+            try {
+                window.location.href = 'http://localhost:8001/proposicoes/1/assinar';
+            } catch (e) {
+                result.innerHTML = '<div class="test-result error">Erro JavaScript: ' + e.message + '</div>';
+            }
+        }
+        
+        function testarFetch() {
+            const result = document.getElementById('fetch-result');
+            result.innerHTML = '<div class="test-result info">Fazendo requisição...</div>';
+            
+            fetch('http://localhost:8001/proposicoes/1/assinar', {
+                method: 'GET',
+                credentials: 'include'
+            })
+            .then(response => {
+                result.innerHTML = `
+                    <div class="test-result ${response.ok ? 'success' : 'error'}">
+                        <strong>Status:</strong> ${response.status} ${response.statusText}<br>
+                        <strong>URL:</strong> ${response.url}<br>
+                        <strong>Redirected:</strong> ${response.redirected ? 'Sim' : 'Não'}
+                    </div>
+                `;
+            })
+            .catch(error => {
+                result.innerHTML = '<div class="test-result error">Erro Fetch: ' + error.message + '</div>';
+            });
+        }
+        
+        // Log detalhado de cliques
+        document.addEventListener('click', function(e) {
+            if (e.target.tagName === 'A') {
+                console.log('🔍 Click no link:', {
+                    href: e.target.href,
+                    target: e.target.target,
+                    text: e.target.textContent,
+                    defaultPrevented: e.defaultPrevented
+                });
+            }
+        });
+    </script>
+</body>
+</html>
