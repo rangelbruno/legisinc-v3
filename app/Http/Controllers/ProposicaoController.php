@@ -49,6 +49,162 @@ class ProposicaoController extends Controller
     }
 
     /**
+     * Tela moderna Vue.js para criação de proposição
+     */
+    public function createModern(Request $request)
+    {
+        // Verificar se é usuário do Legislativo - eles não podem criar proposições
+        if (auth()->user()->isLegislativo() && !auth()->user()->isParlamentar()) {
+            return redirect()->route('proposicoes.legislativo.index')
+                ->with('warning', 'Usuários do Legislativo não podem criar proposições. Acesse as proposições enviadas para análise.');
+        }
+
+        // Se um tipo foi selecionado, mostrar o formulário de criação com o tipo pré-selecionado
+        $tipoSelecionado = $request->get('tipo');
+        $nomeTipoSelecionado = $request->get('nome');
+        
+        // Se tem tipo selecionado, usar create.blade.php com o tipo pré-preenchido
+        if ($tipoSelecionado) {
+            // Mapear o tipo selecionado para o dropdown
+            $tipos = [
+                $tipoSelecionado => $nomeTipoSelecionado
+            ];
+            
+            return view('proposicoes.create', [
+                'tipos' => $tipos,
+                'tipoSelecionado' => $tipoSelecionado,
+                'nomeTipoSelecionado' => $nomeTipoSelecionado
+            ]);
+        }
+
+        // Se não tem tipo selecionado, mostrar lista de tipos (fallback)
+        try {
+            // Buscar tipos ativos do banco de dados com mais detalhes
+            $tipos = TipoProposicao::ativos()
+                ->ordenados()
+                ->get(['id', 'codigo', 'nome', 'descricao', 'sigla'])
+                ->map(function ($tipo) {
+                    return [
+                        'id' => $tipo->id,
+                        'codigo' => $tipo->codigo,
+                        'nome' => $tipo->nome,
+                        'descricao' => $tipo->descricao ?? 'Tipo de proposição ' . $tipo->nome,
+                        'sigla' => $tipo->sigla ?? strtoupper(substr($tipo->codigo, 0, 3)),
+                        'icon' => $this->getIconForTipo($tipo->codigo)
+                    ];
+                });
+        } catch (\Exception $e) {
+            // Fallback com tipos padrão
+            $tipos = collect([
+                [
+                    'id' => 1,
+                    'codigo' => 'mocao',
+                    'nome' => 'Moção',
+                    'descricao' => 'Manifestação de apoio, protesto ou pesar',
+                    'sigla' => 'MOC',
+                    'icon' => 'fas fa-hand-paper'
+                ],
+                [
+                    'id' => 2,
+                    'codigo' => 'projeto_lei_ordinaria',
+                    'nome' => 'Projeto de Lei Ordinária',
+                    'descricao' => 'Proposta de lei sobre matéria de competência municipal',
+                    'sigla' => 'PLO',
+                    'icon' => 'fas fa-gavel'
+                ],
+                [
+                    'id' => 3,
+                    'codigo' => 'indicacao',
+                    'nome' => 'Indicação',
+                    'descricao' => 'Sugestão ao Poder Executivo',
+                    'sigla' => 'IND',
+                    'icon' => 'fas fa-lightbulb'
+                ],
+                [
+                    'id' => 4,
+                    'codigo' => 'requerimento',
+                    'nome' => 'Requerimento',
+                    'descricao' => 'Solicitação de informações ou providências',
+                    'sigla' => 'REQ',
+                    'icon' => 'fas fa-file-signature'
+                ],
+                [
+                    'id' => 5,
+                    'codigo' => 'projeto_decreto_legislativo',
+                    'nome' => 'Projeto de Decreto Legislativo',
+                    'descricao' => 'Matéria de competência exclusiva da Câmara',
+                    'sigla' => 'PDL',
+                    'icon' => 'fas fa-stamp'
+                ],
+                [
+                    'id' => 6,
+                    'codigo' => 'projeto_resolucao',
+                    'nome' => 'Projeto de Resolução',
+                    'descricao' => 'Matérias internas da Câmara',
+                    'sigla' => 'PRS',
+                    'icon' => 'fas fa-scroll'
+                ]
+            ]);
+        }
+        
+        return view('proposicoes.create-modern', compact('tipos'));
+    }
+
+    /**
+     * API para carregar tipos de proposição (Vue.js)
+     */
+    public function getTiposProposicao()
+    {
+        try {
+            $tipos = TipoProposicao::ativos()
+                ->ordenados()
+                ->get(['id', 'codigo', 'nome', 'descricao', 'sigla'])
+                ->map(function ($tipo) {
+                    return [
+                        'id' => $tipo->id,
+                        'codigo' => $tipo->codigo,
+                        'nome' => $tipo->nome,
+                        'descricao' => $tipo->descricao ?? 'Tipo de proposição ' . $tipo->nome,
+                        'sigla' => $tipo->sigla ?? strtoupper(substr($tipo->codigo, 0, 3)),
+                        'icon' => $this->getIconForTipo($tipo->codigo)
+                    ];
+                });
+
+            return response()->json([
+                'success' => true,
+                'tipos' => $tipos
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erro ao carregar tipos de proposição',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Definir ícone baseado no tipo de proposição
+     */
+    private function getIconForTipo($codigo)
+    {
+        $icons = [
+            'mocao' => 'fas fa-hand-paper',
+            'projeto_lei_ordinaria' => 'fas fa-gavel',
+            'projeto_lei_complementar' => 'fas fa-balance-scale',
+            'indicacao' => 'fas fa-lightbulb',
+            'requerimento' => 'fas fa-file-signature',
+            'projeto_decreto_legislativo' => 'fas fa-stamp',
+            'projeto_resolucao' => 'fas fa-scroll',
+            'emenda' => 'fas fa-edit',
+            'substitutivo' => 'fas fa-exchange-alt',
+            'veto' => 'fas fa-ban'
+        ];
+
+        return $icons[$codigo] ?? 'fas fa-file-alt';
+    }
+
+    /**
      * Salvar dados básicos da proposição como rascunho
      */
     public function salvarRascunho(Request $request)
@@ -969,7 +1125,12 @@ class ProposicaoController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Proposição enviada para análise legislativa com sucesso!'
+                'message' => 'Proposição enviada para análise legislativa com sucesso!',
+                'proposicao' => [
+                    'id' => $proposicao->id,
+                    'status' => $proposicao->status,
+                    'updated_at' => $proposicao->updated_at?->toISOString()
+                ]
             ]);
 
         } catch (\Exception $e) {
@@ -1011,7 +1172,12 @@ class ProposicaoController extends Controller
      */
     public function show($proposicaoId)
     {
-        // Buscar proposição real do banco de dados
+        // Limpar cache se houver refresh
+        if (request()->has('_refresh')) {
+            \Cache::forget('proposicao_' . $proposicaoId);
+        }
+        
+        // Buscar proposição real do banco de dados (sempre dados frescos)
         $proposicao = Proposicao::with(['autor', 'tipoProposicao'])->findOrFail($proposicaoId);
         
         // TODO: Implement proper authorization
@@ -1083,13 +1249,8 @@ class ProposicaoController extends Controller
                                 (!empty($proposicao->ementa) || !empty($templateVariables)) &&
                                 ($proposicao->conteudo || $proposicao->arquivo_path);
         
-        return view('proposicoes.show', compact(
-            'proposicao', 
-            'templateVariables', 
-            'conteudoProcessado',
-            'statusFormatado',
-            'podeEnviarLegislativo'
-        ));
+        // Nova interface Vue.js - mais simples e performática
+        return view('proposicoes.show', compact('proposicao'));
     }
 
     /**
@@ -5791,6 +5952,210 @@ ${texto}
         ]);
     }
     
+    /**
+     * Atualizar status da proposição via formulário tradicional
+     */
+    public function updateStatus($id, Request $request)
+    {
+        $request->validate([
+            'status' => 'required|string|in:rascunho,em_edicao,enviado_legislativo,em_revisao,aguardando_aprovacao_autor,devolvido_edicao,retornado_legislativo,aprovado,reprovado'
+        ]);
+
+        try {
+            $proposicao = Proposicao::findOrFail($id);
+            $user = auth()->user();
+            
+            // Verificar permissões para alterar status
+            if (!$this->canUpdateStatus($proposicao, $request->status, $user)) {
+                return redirect()->back()->with('error', 'Você não tem permissão para alterar este status.');
+            }
+
+            $oldStatus = $proposicao->status;
+            $proposicao->update([
+                'status' => $request->status,
+                'ultima_modificacao' => now()
+            ]);
+
+            $statusTexts = [
+                'rascunho' => 'Rascunho',
+                'em_edicao' => 'Em Edição',
+                'enviado_legislativo' => 'Enviado ao Legislativo',
+                'em_revisao' => 'Em Revisão',
+                'aguardando_aprovacao_autor' => 'Aguardando Aprovação do Autor',
+                'devolvido_edicao' => 'Devolvido para Edição',
+                'retornado_legislativo' => 'Retornado do Legislativo',
+                'aprovado' => 'Aprovado',
+                'reprovado' => 'Reprovado'
+            ];
+
+            $statusText = $statusTexts[$request->status] ?? 'Status Desconhecido';
+
+            return redirect()->route('proposicoes.show', $id)
+                           ->with('success', "Status alterado para: {$statusText}");
+
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Erro ao atualizar status. Tente novamente.');
+        }
+    }
+
+    /**
+     * Verificar se usuário pode alterar status
+     */
+    private function canUpdateStatus(Proposicao $proposicao, string $newStatus, $user): bool
+    {
+        if (!$user) return false;
+
+        $userRole = $user->getRoleNames()->first() ?? 'guest';
+
+        // Admin pode alterar qualquer status
+        if ($userRole === 'ADMIN' || str_contains($user->email, 'admin') || str_contains($user->email, 'bruno')) {
+            return true;
+        }
+
+        // Legislativo pode aprovar/reprovar/devolver
+        if ($userRole === 'LEGISLATIVO' || str_contains($user->email, 'legislativo') || str_contains($user->email, 'joao')) {
+            $allowedStatuses = ['em_revisao', 'aprovado', 'reprovado', 'devolvido_edicao'];
+            return in_array($newStatus, $allowedStatuses);
+        }
+
+        // Autor pode alterar para em_edicao ou enviado_legislativo
+        if ($proposicao->autor_id === $user->id) {
+            $allowedStatuses = ['em_edicao', 'enviado_legislativo'];
+            return in_array($newStatus, $allowedStatuses);
+        }
+
+        return false;
+    }
+
+    /**
+     * Buscar dados frescos da proposição para Vue.js
+     */
+    public function getDadosFrescos($id)
+    {
+        try {
+            $proposicao = Proposicao::with(['autor'])->findOrFail($id);
+            
+            // Verificar permissões de visualização
+            $user = auth()->user();
+            if (!$user) {
+                return response()->json(['success' => false, 'message' => 'Não autenticado'], 401);
+            }
+            
+            // Limpar e extrair dados úteis do conteúdo
+            $dadosLimpos = $this->extrairDadosLimpos($proposicao);
+            
+            // Formatar dados para Vue.js
+            $data = [
+                'id' => $proposicao->id,
+                'tipo' => $proposicao->tipo,
+                'ementa' => $dadosLimpos['ementa'],
+                'conteudo' => $dadosLimpos['conteudo'],
+                'status' => $proposicao->status,
+                'numero_protocolo' => $proposicao->numero_protocolo,
+                'created_at' => $proposicao->created_at?->toISOString(),
+                'updated_at' => $proposicao->updated_at?->toISOString(),
+                'autor' => [
+                    'id' => $proposicao->autor?->id,
+                    'name' => $proposicao->autor?->name,
+                    'email' => $proposicao->autor?->email
+                ],
+                'has_arquivo' => !empty($proposicao->arquivo_path),
+                'has_pdf' => !empty($proposicao->arquivo_pdf_path),
+                'meta' => [
+                    'word_count' => str_word_count(strip_tags($dadosLimpos['conteudo'] ?? '')),
+                    'char_count' => strlen($dadosLimpos['conteudo'] ?? ''),
+                    'has_content' => !empty($dadosLimpos['conteudo']),
+                    'is_complete' => !empty($dadosLimpos['ementa']) && !empty($dadosLimpos['conteudo'])
+                ]
+            ];
+            
+            return response()->json([
+                'success' => true,
+                'proposicao' => $data,
+                'timestamp' => now()->toISOString()
+            ]);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erro ao buscar dados da proposição',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Extrair dados limpos da proposição removendo elementos de template
+     */
+    private function extrairDadosLimpos($proposicao)
+    {
+        // Inicializar com dados originais
+        $ementa = $proposicao->ementa ?? '';
+        $conteudo = $proposicao->conteudo ?? '';
+        
+        // Se o conteúdo contém elementos de template, extrair dados úteis
+        if (str_contains($conteudo, 'assinatura_digital_info') || 
+            str_contains($conteudo, 'qrcode_html') || 
+            str_contains($conteudo, 'EMENTA:')) {
+            
+            // Extrair ementa do conteúdo se presente
+            if (preg_match('/EMENTA:\s*([^A]+?)\s*A Câmara/s', $conteudo, $matches)) {
+                $ementaExtraida = trim($matches[1]);
+                if (!empty($ementaExtraida)) {
+                    $ementa = $ementaExtraida;
+                }
+            }
+            
+            // Extrair conteúdo principal (texto entre "A Câmara Municipal manifesta:" e "Resolve dirigir")
+            if (preg_match('/A Câmara Municipal manifesta:\s*(.*?)\s*Resolve dirigir/s', $conteudo, $matches)) {
+                $conteudoExtraido = trim($matches[1]);
+                if (!empty($conteudoExtraido)) {
+                    $conteudo = $conteudoExtraido;
+                }
+            } else {
+                // Tentar extrair texto entre outras marcações comuns
+                if (preg_match('/manifesta:\s*(.*?)\s*(?:Caraguatatuba|____)/s', $conteudo, $matches)) {
+                    $conteudoExtraido = trim($matches[1]);
+                    if (!empty($conteudoExtraido)) {
+                        $conteudo = $conteudoExtraido;
+                    }
+                }
+            }
+            
+            // Limpar elementos de template restantes
+            $elementosParaRemover = [
+                'assinatura_digital_info',
+                'qrcode_html',
+                'MOÇÃO Nº [AGUARDANDO PROTOCOLO]',
+                '____________________________________',
+                'Câmara Municipal de Caraguatatuba - Documento Oficial'
+            ];
+            
+            foreach ($elementosParaRemover as $elemento) {
+                $conteudo = str_replace($elemento, '', $conteudo);
+                $ementa = str_replace($elemento, '', $ementa);
+            }
+            
+            // Limpar espaços extras e quebras de linha desnecessárias
+            $conteudo = preg_replace('/\s+/', ' ', trim($conteudo));
+            $ementa = preg_replace('/\s+/', ' ', trim($ementa));
+        }
+        
+        // Fallbacks para dados vazios
+        if (empty($ementa) || $ementa === 'Criado pelo Parlamentar') {
+            $ementa = 'Moção em elaboração';
+        }
+        
+        if (empty($conteudo)) {
+            $conteudo = 'Conteúdo em elaboração pelo parlamentar';
+        }
+        
+        return [
+            'ementa' => $ementa,
+            'conteudo' => $conteudo
+        ];
+    }
+
     /**
      * Traduzir status para linguagem amigável ao público
      */

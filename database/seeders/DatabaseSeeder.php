@@ -85,9 +85,24 @@ class DatabaseSeeder extends Seeder
             UIButtonsFixSeeder::class,
         ]);
         
-        // FINAL: Limpeza de código debug (deve ser executado por último)
+        // FINAL: Limpeza de código debug
         $this->call([
             LimpezaCodigoDebugSeeder::class,
+        ]);
+        
+        // Correção do botão Assinar Documento
+        $this->call([
+            ButtonAssinaturaFixSeeder::class,
+        ]);
+        
+        // ÚLTIMO: Correções HTML de estrutura de botões (DEVE ser executado POR ÚLTIMO)
+        $this->call([
+            HTMLButtonsFixSeeder::class,
+        ]);
+        
+        // Interface Vue.js para proposições (performance e tempo real)
+        $this->call([
+            VueInterfaceSeeder::class,
         ]);
 
         // Processar imagens dos templates admin

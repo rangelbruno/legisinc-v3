@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demo - Interface Vue.js da Proposição</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+</head>
+<body>
+    <div class="container-fluid" id="demo-app">
+        <div class="row">
+            <div class="col-12">
+                <div class="alert alert-info" role="alert">
+                    <h4><i class="fas fa-rocket"></i> Demo - Nova Interface Vue.js para Proposições</h4>
+                    <p>Esta é uma demonstração da nova interface Vue.js implementada para visualização de proposições com dados dinâmicos e atualizações em tempo real.</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Component Demo -->
+        <proposicao-demo></proposicao-demo>
+    </div>
+
+    <script>
+    const { createApp } = Vue;
+
+    // Componente de demonstração
+    const ProposicaoDemo = {
+        data() {
+            return {
+                proposicao: {
+                    id: 1,
+                    tipo: 'Moção',
+                    ementa: 'Demonstração da nova interface Vue.js com dados dinâmicos',
+                    conteudo: 'Esta é uma demonstração do componente Vue.js para visualização de proposições. O componente oferece:\n\n• Atualizações em tempo real\n• Interface responsiva\n• Cache otimizado\n• Polling inteligente\n• Notificações automáticas\n• Performance otimizada',
+                    status: 'em_edicao',
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString(),
+                    autor: {
+                        name: 'Jessica Silva',
+                        email: 'jessica@sistema.gov.br'
+                    },
+                    tipo_proposicao: {
+                        nome: 'Moção',
+                        codigo: 'mocao',
+                        descricao: 'Proposição para manifestação da Câmara'
+                    }
+                },
+                loading: false,
+                lastUpdate: new Date(),
+                statusOptions: [
+                    { value: 'rascunho', label: 'Rascunho', class: 'warning' },
+                    { value: 'em_edicao', label: 'Em Edição', class: 'warning' },
+                    { value: 'enviado_legislativo', label: 'Enviado ao Legislativo', class: 'secondary' },
+                    { value: 'em_revisao', label: 'Em Revisão', class: 'primary' },
+                    { value: 'aprovado', label: 'Aprovado', class: 'success' },
+                    { value: 'reprovado', label: 'Reprovado', class: 'danger' }
+                ],
+                showFullContent: false,
+                updateCount: 0
+            }
+        },
+        computed: {
+            statusInfo() {
+                return this.statusOptions.find(s => s.value === this.proposicao.status) || 
+                       { value: this.proposicao.status, label: 'Status Desconhecido', class: 'secondary' };
+            },
+            shortContent() {
+                return this.proposicao.conteudo.length > 300 
+                    ? this.proposicao.conteudo.substring(0, 300) + '...'
+                    : this.proposicao.conteudo;
+            }
+        },
+        methods: {
+            simulateUpdate() {
+                this.loading = true;
+                setTimeout(() => {
+                    this.updateCount++;
+                    this.lastUpdate = new Date();
+                    this.proposicao.updated_at = new Date().toISOString();
+                    this.loading = false;
+                    this.showNotification('Dados atualizados!', 'success');
+                }, 1000);
+            },
+            
+            changeStatus(newStatus) {
+                const oldStatus = this.proposicao.status;
+                this.proposicao.status = newStatus;
+                this.proposicao.updated_at = new Date().toISOString();
+                this.lastUpdate = new Date();
+                this.updateCount++;
+                
+                const oldInfo = this.statusOptions.find(s => s.value === oldStatus);
+                const newInfo = this.statusOptions.find(s => s.value === newStatus);
+                this.showNotification(
+                    `Status alterado de "${oldInfo?.label}" para "${newInfo?.label}"`, 
+                    'info'
+                );
+            },
+            
+            toggleContent() {
+                this.showFullContent = !this.showFullContent;
+            },
+            
+            showNotification(message, type = 'info') {
+                const colors = {
+                    success: 'bg-success',
+                    error: 'bg-danger',
+                    info: 'bg-primary',
+                    warning: 'bg-warning'
+                };
+                
+                const toastHtml = `
+                    <div class="toast align-items-center text-white ${colors[type]} border-0" role="alert">
+                        <div class="d-flex">
+                            <div class="toast-body">${message}</div>
+                            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                        </div>
+                    </div>
+                `;
+                
+                let toastContainer = document.querySelector('.toast-container');
+                if (!toastContainer) {
+                    toastContainer = document.createElement('div');
+                    toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+                    document.body.appendChild(toastContainer);
+                }
+                
+                toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+                const toastElement = toastContainer.lastElementChild;
+                
+                // Simular Bootstrap toast
+                setTimeout(() => toastElement.style.display = 'block', 10);
+                setTimeout(() => {
+                    toastElement.style.opacity = '0';
+                    setTimeout(() => toastElement.remove(), 300);
+                }, 3000);
+            },
+            
+            formatDate(date) {
+                return new Date(date).toLocaleString('pt-BR');
+            }
+        },
+        
+        mounted() {
+            // Simular polling de atualizações
+            setInterval(() => {
+                if (Math.random() > 0.8) { // 20% chance de simular update
+                    this.updateCount++;
+                    this.lastUpdate = new Date();
+                    this.showNotification('Nova atualização detectada!', 'info');
+                }
+            }, 10000);
+        },
+        
+        template: `
+            <div class="row">
+                <!-- Header Card -->
+                <div class="col-12 mb-4">
+                    <div class="card shadow-sm">
+                        <div class="card-header d-flex justify-content-between align-items-center bg-primary text-white">
+                            <div>
+                                <h4 class="mb-0">
+                                    <i class="fas fa-file-alt me-2"></i>
+                                    {{ proposicao.tipo }} #{{ proposicao.id }}
+                                </h4>
+                                <small class="opacity-75">Criada em {{ formatDate(proposicao.created_at) }}</small>
+                            </div>
+                            <div>
+                                <span :class="'badge fs-6 px-3 py-2 bg-' + statusInfo.class" style="animation: pulse 2s infinite;">
+                                    {{ statusInfo.label }}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <h5><i class="fas fa-quote-left me-2"></i>Ementa</h5>
+                                    <p class="lead">{{ proposicao.ementa }}</p>
+                                </div>
+                                <div class="col-md-4">
+                                    <h6><i class="fas fa-info-circle me-2"></i>Informações</h6>
+                                    <ul class="list-unstyled">
+                                        <li><strong>Autor:</strong> {{ proposicao.autor.name }}</li>
+                                        <li><strong>Tipo:</strong> {{ proposicao.tipo_proposicao.nome }}</li>
+                                        <li><strong>Última atualização:</strong> {{ formatDate(proposicao.updated_at) }}</li>
+                                        <li><strong>Updates recebidos:</strong> {{ updateCount }}</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Content Card -->
+                <div class="col-lg-8">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0"><i class="fas fa-document me-2"></i>Conteúdo da Proposição</h5>
+                            <button 
+                                @click="toggleContent()" 
+                                class="btn btn-outline-primary btn-sm">
+                                <i :class="showFullContent ? 'fas fa-compress' : 'fas fa-expand'"></i>
+                                {{ showFullContent ? 'Mostrar Menos' : 'Mostrar Mais' }}
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <transition name="fade" mode="out-in">
+                                <div 
+                                    :key="showFullContent" 
+                                    class="content-area border p-3 rounded bg-light"
+                                    style="min-height: 200px; white-space: pre-line;">
+                                    {{ showFullContent ? proposicao.conteudo : shortContent }}
+                                </div>
+                            </transition>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Actions Card -->
+                <div class="col-lg-4">
+                    <div class="card shadow-sm">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="fas fa-cogs me-2"></i>Ações</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-grid gap-2">
+                                <button 
+                                    @click="simulateUpdate()"
+                                    :disabled="loading"
+                                    class="btn btn-primary">
+                                    <i :class="loading ? 'fas fa-spinner fa-spin' : 'fas fa-sync'"></i>
+                                    {{ loading ? 'Atualizando...' : 'Simular Atualização' }}
+                                </button>
+                                
+                                <hr>
+                                
+                                <h6>Alterar Status:</h6>
+                                <div class="btn-group-vertical" role="group">
+                                    <button 
+                                        v-for="status in statusOptions.slice(0, 4)" 
+                                        :key="status.value"
+                                        @click="changeStatus(status.value)"
+                                        :class="'btn btn-outline-' + status.class"
+                                        :disabled="proposicao.status === status.value">
+                                        {{ status.label }}
+                                        <i v-if="proposicao.status === status.value" class="fas fa-check ms-2"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Real-time Updates -->
+                    <div class="card shadow-sm mt-3">
+                        <div class="card-header">
+                            <h6 class="mb-0"><i class="fas fa-broadcast-tower me-2"></i>Tempo Real</h6>
+                        </div>
+                        <div class="card-body">
+                            <small class="text-muted">
+                                <i class="fas fa-clock me-1"></i>
+                                Última atualização: {{ formatDate(lastUpdate) }}
+                            </small>
+                            <div class="mt-2">
+                                <div class="progress" style="height: 5px;">
+                                    <div class="progress-bar bg-success" style="width: 100%; animation: pulse 2s infinite;"></div>
+                                </div>
+                                <small class="text-success">
+                                    <i class="fas fa-wifi me-1"></i>
+                                    Conectado - Polling ativo
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Features List -->
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="mb-0"><i class="fas fa-star me-2"></i>Recursos Implementados</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <ul class="list-group list-group-flush">
+                                        <li class="list-group-item">
+                                            <i class="fas fa-check text-success me-2"></i>
+                                            <strong>Componente Vue.js Reativo</strong>
+                                        </li>
+                                        <li class="list-group-item">
+                                            <i class="fas fa-check text-success me-2"></i>
+                                            <strong>API RESTful para dados dinâmicos</strong>
+                                        </li>
+                                        <li class="list-group-item">
+                                            <i class="fas fa-check text-success me-2"></i>
+                                            <strong>Polling inteligente (30s)</strong>
+                                        </li>
+                                        <li class="list-group-item">
+                                            <i class="fas fa-check text-success me-2"></i>
+                                            <strong>Cache otimizado com timestamps</strong>
+                                        </li>
+                                    </ul>
+                                </div>
+                                <div class="col-md-6">
+                                    <ul class="list-group list-group-flush">
+                                        <li class="list-group-item">
+                                            <i class="fas fa-check text-success me-2"></i>
+                                            <strong>Notificações em tempo real</strong>
+                                        </li>
+                                        <li class="list-group-item">
+                                            <i class="fas fa-check text-success me-2"></i>
+                                            <strong>Interface responsiva</strong>
+                                        </li>
+                                        <li class="list-group-item">
+                                            <i class="fas fa-check text-success me-2"></i>
+                                            <strong>Permissões por perfil de usuário</strong>
+                                        </li>
+                                        <li class="list-group-item">
+                                            <i class="fas fa-check text-success me-2"></i>
+                                            <strong>Performance otimizada</strong>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <style>
+            .fade-enter-active, .fade-leave-active {
+                transition: opacity 0.5s ease;
+            }
+            .fade-enter-from, .fade-leave-to {
+                opacity: 0;
+            }
+            @keyframes pulse {
+                0% { transform: scale(1); }
+                50% { transform: scale(1.05); }
+                100% { transform: scale(1); }
+            }
+            .card {
+                transition: transform 0.2s ease-in-out;
+            }
+            .card:hover {
+                transform: translateY(-2px);
+            }
+            </style>
+        `
+    };
+
+    // Inicializar aplicação Vue
+    createApp({
+        components: {
+            ProposicaoDemo
+        }
+    }).mount('#demo-app');
+    </script>
+</body>
+</html>

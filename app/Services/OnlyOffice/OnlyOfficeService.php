@@ -2973,18 +2973,22 @@ Status: " . ucfirst(str_replace('_', ' ', $proposicao->status)) . "\par
                 $documentBody = $response->body();
                 Storage::disk('local')->put($nomeArquivo, $documentBody);
                 
-                // OTIMIZAÇÃO: Extrair conteúdo apenas se necessário (primeira vez ou arquivo muito diferente)
+                // OTIMIZAÇÃO: Sempre extrair conteúdo para manter sincronização
                 $conteudoExtraido = '';
-                $shouldExtractContent = empty($proposicao->conteudo) || 
-                                      strlen($proposicao->conteudo ?? '') < 100;
-                                      
-                if ($shouldExtractContent) {
-                    if ($fileType === 'docx') {
-                        $conteudoExtraido = $this->extrairConteudoDocumento($documentBody);
-                    } else {
-                        $conteudoExtraido = $this->extrairConteudoRTF($documentBody);
-                    }
+                
+                // Sempre extrair conteúdo quando há um novo arquivo do OnlyOffice
+                if ($fileType === 'docx') {
+                    $conteudoExtraido = $this->extrairConteudoDocumento($documentBody);
+                } else {
+                    $conteudoExtraido = $this->extrairConteudoRTF($documentBody);
                 }
+                
+                Log::info('Conteúdo extraído do documento', [
+                    'proposicao_id' => $proposicao->id,
+                    'file_type' => $fileType,
+                    'content_length' => strlen($conteudoExtraido),
+                    'content_preview' => substr($conteudoExtraido, 0, 100)
+                ]);
                 
                 // OTIMIZAÇÃO: Update mais eficiente - apenas campos necessários
                 $updateData = [
@@ -2997,9 +3001,13 @@ Status: " . ucfirst(str_replace('_', ' ', $proposicao->status)) . "\par
                     $updateData['modificado_por'] = auth()->id();
                 }
                 
-                // Se conseguiu extrair conteúdo E vale a pena atualizar
-                if (!empty($conteudoExtraido) && $shouldExtractContent) {
+                // Se conseguiu extrair conteúdo, sempre atualizar
+                if (!empty($conteudoExtraido)) {
                     $updateData['conteudo'] = $conteudoExtraido;
+                    Log::info('Conteúdo será atualizado na proposição', [
+                        'proposicao_id' => $proposicao->id,
+                        'content_length' => strlen($conteudoExtraido)
+                    ]);
                 }
                 
                 // OTIMIZAÇÃO: Update sem recarregar relações desnecessárias
@@ -3019,7 +3027,7 @@ Status: " . ucfirst(str_replace('_', ' ', $proposicao->status)) . "\par
                             'original_url' => $originalUrl,
                             'file_type' => $fileType,
                             'download_time_seconds' => round($downloadTime, 2),
-                            'should_extract_content' => $shouldExtractContent,
+                            'should_extract_content' => true, // Sempre extraindo agora
                             'content_extracted' => !empty($conteudoExtraido)
                         ]
                     );

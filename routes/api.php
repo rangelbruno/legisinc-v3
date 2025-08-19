@@ -221,7 +221,16 @@ Route::prefix('ai')->name('api.ai.')->middleware(['web', 'auth'])->group(functio
     Route::post('/testar-conexao', [App\Http\Controllers\Api\AIController::class, 'testarConexao'])->name('testar-conexao');
 });
 
+// ===== PROPOSIÇÕES API ROUTES =====
+Route::middleware(['web', 'auth'])->prefix('proposicoes')->name('api.proposicoes.')->group(function () {
+    Route::get('/{id}', [App\Http\Controllers\Api\ProposicaoApiController::class, 'show'])->name('show');
+    Route::patch('/{id}/status', [App\Http\Controllers\Api\ProposicaoApiController::class, 'updateStatus'])->name('update-status');
+    Route::get('/{id}/updates', [App\Http\Controllers\Api\ProposicaoApiController::class, 'updates'])->name('updates');
+    Route::get('/{id}/history', [App\Http\Controllers\Api\ProposicaoApiController::class, 'statusHistory'])->name('history');
+});
+
 // ===== NOTIFICATIONS API ROUTES =====
 Route::middleware(['web', 'auth'])->group(function () {
     Route::get('/notifications', [App\Http\Controllers\Api\NotificationController::class, 'index'])->name('api.notifications.index');
 });
+

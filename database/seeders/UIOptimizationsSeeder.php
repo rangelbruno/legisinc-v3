@@ -108,30 +108,37 @@ class UIOptimizationsSeeder extends Seeder
             }
         }
         
-        // CORREÇÕES ROBUSTAS para botões Assinar Documento
-        $assinaturaCorrections = [
-            // Padrão 1: Botão sem btn-lg e sem btn-assinatura
-            [
-                'search' => 'proposicoes.assinar\', $proposicao->id) }}" class="btn btn-success">',
-                'replace' => 'proposicoes.assinar\', $proposicao->id) }}" class="btn btn-success btn-lg btn-assinatura">'
-            ],
-            // Padrão 2: Botão com btn-lg mas sem btn-assinatura  
-            [
-                'search' => 'proposicoes.assinar\', $proposicao->id) }}" class="btn btn-success btn-lg">',
-                'replace' => 'proposicoes.assinar\', $proposicao->id) }}" class="btn btn-success btn-lg btn-assinatura">'
-            ],
-            // Padrão 3: Botão com btn-assinatura mas sem btn-lg
-            [
-                'search' => 'proposicoes.assinar\', $proposicao->id) }}" class="btn btn-success btn-assinatura">',
-                'replace' => 'proposicoes.assinar\', $proposicao->id) }}" class="btn btn-success btn-lg btn-assinatura">'
-            ]
-        ];
-        
-        // Aplicar correções Assinatura
-        foreach ($assinaturaCorrections as $correction) {
-            if (str_contains($content, $correction['search'])) {
-                $content = str_replace($correction['search'], $correction['replace'], $content);
-                $this->command->info('      ✅ Botão Assinatura corrigido');
+        // SKIP: Correções de botões Assinar Documento - gerenciadas pelo ButtonAssinaturaFixSeeder
+        // Os botões de assinatura são convertidos para <button onclick> pelo ButtonAssinaturaFixSeeder
+        // Este seeder não deve interferir com essa conversão
+        if (str_contains($content, 'verificarAutenticacaoENavegar')) {
+            $this->command->info('      ✅ Botões Assinatura já convertidos para <button onclick> - preservando');
+        } else {
+            // Só aplicar correções se ainda não foram convertidos
+            $assinaturaCorrections = [
+                // Padrão 1: Botão sem btn-lg e sem btn-assinatura
+                [
+                    'search' => 'proposicoes.assinar\', $proposicao->id) }}" class="btn btn-success">',
+                    'replace' => 'proposicoes.assinar\', $proposicao->id) }}" class="btn btn-success btn-lg btn-assinatura">'
+                ],
+                // Padrão 2: Botão com btn-lg mas sem btn-assinatura  
+                [
+                    'search' => 'proposicoes.assinar\', $proposicao->id) }}" class="btn btn-success btn-lg">',
+                    'replace' => 'proposicoes.assinar\', $proposicao->id) }}" class="btn btn-success btn-lg btn-assinatura">'
+                ],
+                // Padrão 3: Botão com btn-assinatura mas sem btn-lg
+                [
+                    'search' => 'proposicoes.assinar\', $proposicao->id) }}" class="btn btn-success btn-assinatura">',
+                    'replace' => 'proposicoes.assinar\', $proposicao->id) }}" class="btn btn-success btn-lg btn-assinatura">'
+                ]
+            ];
+            
+            // Aplicar correções Assinatura
+            foreach ($assinaturaCorrections as $correction) {
+                if (str_contains($content, $correction['search'])) {
+                    $content = str_replace($correction['search'], $correction['replace'], $content);
+                    $this->command->info('      ✅ Botão Assinatura corrigido');
+                }
             }
         }
         

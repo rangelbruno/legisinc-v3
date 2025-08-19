@@ -812,9 +812,23 @@ Route::get('/debug-permissions', function() {
 // ROTAS DE PROPOSIÇÕES - Sistema completo conforme documentação
 Route::prefix('proposicoes')->name('proposicoes.')->middleware(['auth', 'check.screen.permission'])->group(function () {
     
-    // ===== PARLAMENTAR - CRIAÇÃO =====
-    Route::get('/criar', [App\Http\Controllers\ProposicaoController::class, 'create'])->name('criar')->middleware('check.parlamentar.access');
+    // ===== LISTAGEM DE TIPOS DE PROPOSIÇÃO =====
+    Route::get('/criar', function() {
+        return view('proposicoes.criar');
+    })->name('criar')->middleware('check.parlamentar.access');
+    
+    // ===== PARLAMENTAR - CRIAÇÃO (FORMULÁRIO DETALHADO) =====
+    Route::get('/create', [App\Http\Controllers\ProposicaoController::class, 'createModern'])->name('create')->middleware('check.parlamentar.access');
+    
+    // ===== INTERFACE ORIGINAL (BACKUP) =====
+    Route::get('/criar-original', [App\Http\Controllers\ProposicaoController::class, 'create'])->name('criar-original')->middleware('check.parlamentar.access');
+    
+    // ===== NOVA INTERFACE VUE.JS (STANDALONE) =====
+    Route::get('/criar-vue', function () {
+        return view('proposicoes.create-vue');
+    })->name('criar-vue')->middleware('check.parlamentar.access');
     Route::post('/salvar-rascunho', [App\Http\Controllers\ProposicaoController::class, 'salvarRascunho'])->name('salvar-rascunho')->middleware('check.parlamentar.access');
+    Route::get('/tipos', [App\Http\Controllers\ProposicaoController::class, 'getTiposProposicao'])->name('tipos')->middleware('check.parlamentar.access');
     Route::post('/gerar-texto-ia', [App\Http\Controllers\ProposicaoController::class, 'gerarTextoIA'])->name('gerar-texto-ia')->middleware('check.parlamentar.access');
     Route::get('/modelos/{tipo}', [App\Http\Controllers\ProposicaoController::class, 'buscarModelos'])->name('buscar-modelos')->middleware('check.parlamentar.access');
     Route::get('/{proposicao}/preencher-modelo/{modeloId}', [App\Http\Controllers\ProposicaoController::class, 'preencherModelo'])->name('preencher-modelo')->middleware('check.parlamentar.access');
@@ -912,6 +926,18 @@ Route::prefix('proposicoes')->name('proposicoes.')->middleware(['auth', 'check.s
     Route::get('/{proposicao}/historico', [App\Http\Controllers\ProposicaoHistoricoController::class, 'index'])->name('historico.index');
     Route::get('/{proposicao}/historico/view', [App\Http\Controllers\ProposicaoHistoricoController::class, 'webView'])->name('historico.view');
     Route::get('/{proposicao}/historico/{historico}', [App\Http\Controllers\ProposicaoHistoricoController::class, 'show'])->name('historico.show');
+    
+    // ===== VISUALIZAÇÃO VUE.JS (NOVA) =====
+    Route::get('/{proposicao}/vue', function ($proposicaoId) {
+        $proposicao = \App\Models\Proposicao::findOrFail($proposicaoId);
+        return view('proposicoes.show-vue', compact('proposicao'));
+    })->name('show-vue');
+    
+    // ===== ATUALIZAÇÃO DE STATUS =====
+    Route::patch('/{proposicao}/status', [App\Http\Controllers\ProposicaoController::class, 'updateStatus'])->name('update-status');
+    
+    // ===== DADOS FRESCOS PARA VUE.JS =====
+    Route::get('/{proposicao}/dados-frescos', [App\Http\Controllers\ProposicaoController::class, 'getDadosFrescos'])->name('dados-frescos');
     
     Route::get('/{proposicao}', [App\Http\Controllers\ProposicaoController::class, 'show'])->name('show');
     Route::delete('/{proposicao}', [App\Http\Controllers\ProposicaoController::class, 'destroy'])->name('destroy');
@@ -1290,3 +1316,4 @@ Route::get('/consulta/proposicao/{id}', [\App\Http\Controllers\ProposicaoControl
 Route::get('/consulta/proposicao/{id}/pdf', [\App\Http\Controllers\ProposicaoController::class, 'consultaPublicaPdf'])
     ->name('proposicoes.consulta.pdf')
     ->where('id', '[0-9]+');
+

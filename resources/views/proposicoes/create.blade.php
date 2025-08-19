@@ -82,15 +82,30 @@
                         <!-- Tipo de Proposição -->
                         <div class="mb-4">
                             <label for="tipo" class="form-label required">Tipo de Proposição</label>
-                            <select name="tipo" id="tipo" class="form-select" data-control="select2" data-placeholder="Selecione o tipo de proposição" required>
-                                <option value="">Selecione o tipo de proposição</option>
-                                @foreach($tipos as $key => $label)
-                                    <option value="{{ $key }}">{{ $label }}</option>
-                                @endforeach
-                            </select>
-                            <div class="form-text">
-                                Escolha o tipo adequado conforme a natureza da proposição.
-                            </div>
+                            @if(isset($tipoSelecionado))
+                                <!-- Tipo pré-selecionado vindo da tela de seleção -->
+                                <input type="hidden" name="tipo" id="tipo" value="{{ $tipoSelecionado }}">
+                                <div class="alert alert-info d-flex align-items-center">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    <div>
+                                        <strong>Tipo selecionado:</strong> {{ $nomeTipoSelecionado }}
+                                        <a href="{{ route('proposicoes.criar') }}" class="btn btn-sm btn-outline-info ms-3">
+                                            <i class="fas fa-exchange-alt me-1"></i>Trocar tipo
+                                        </a>
+                                    </div>
+                                </div>
+                            @else
+                                <!-- Dropdown normal de seleção -->
+                                <select name="tipo" id="tipo" class="form-select" data-control="select2" data-placeholder="Selecione o tipo de proposição" required>
+                                    <option value="">Selecione o tipo de proposição</option>
+                                    @foreach($tipos as $key => $label)
+                                        <option value="{{ $key }}">{{ $label }}</option>
+                                    @endforeach
+                                </select>
+                                <div class="form-text">
+                                    Escolha o tipo adequado conforme a natureza da proposição.
+                                </div>
+                            @endif
                         </div>
 
                         <!-- Ementa -->
@@ -139,14 +154,17 @@
                             </div>
                         </div>
 
-                        <!-- Modelo (sempre aparece quando uma opção for selecionada) -->
-                        <div class="mb-4" id="modelo-container" style="display: none;">
-                            <label for="modelo" class="form-label required">Selecionar Modelo (para formatação)</label>
-                            <select name="modelo" id="modelo" class="form-select" data-control="select2" data-placeholder="Selecione um modelo">
-                                <option value="">Carregando modelos...</option>
-                            </select>
-                            <div class="form-text">
-                                O modelo será usado para manter a formatação correta da proposição, independente de como o texto for criado.
+                        <!-- Modelo automático (hidden) -->
+                        <input type="hidden" name="modelo" id="modelo" value="">
+                        
+                        <!-- Informação sobre o template -->
+                        <div class="mb-4" id="template-info-container" style="display: none;">
+                            <div class="alert alert-success d-flex align-items-center">
+                                <i class="fas fa-check-circle me-2"></i>
+                                <div>
+                                    <strong>Template configurado:</strong> <span id="template-info-nome">Carregando...</span>
+                                    <div class="small text-muted mt-1">O documento será formatado automaticamente conforme o padrão oficial</div>
+                                </div>
                             </div>
                         </div>
 
@@ -272,6 +290,20 @@ $(document).ready(function() {
     const STORAGE_KEY = 'proposicao_form_data';
     const AI_TEXT_KEY = 'proposicao_ai_text';
     
+    // Se já tem tipo selecionado (veio da tela de seleção), processar imediatamente
+    @if(isset($tipoSelecionado))
+        const tipoPreSelecionado = '{{ $tipoSelecionado }}';
+        console.log('Tipo pré-selecionado:', tipoPreSelecionado);
+        $('#ementa-container').show();
+        $('#opcoes-preenchimento-container').show();
+        carregarModeloAutomatico(tipoPreSelecionado);
+        
+        // Simular que o select foi alterado para ativar os eventos
+        setTimeout(function() {
+            validarFormulario();
+        }, 100);
+    @endif
+    
     // Função para salvar dados no localStorage
     function salvarDadosFormulario() {
         const dados = {
@@ -319,16 +351,8 @@ $(document).ready(function() {
                 $('#ementa-container').show();
                 $('#opcoes-preenchimento-container').show();
                 
-                // Carregar modelos para o tipo selecionado
-                carregarModelos(dados.tipo);
-                
-                // Aguardar um pouco para os modelos serem carregados
-                setTimeout(() => {
-                    if (dados.modelo) {
-                        console.log('Restaurando modelo:', dados.modelo);
-                        $('#modelo').val(dados.modelo).trigger('change');
-                    }
-                }, 1000);
+                // Carregar modelo automático para o tipo selecionado
+                carregarModeloAutomatico(dados.tipo);
             }
             
             if (dados.ementa) {
@@ -378,33 +402,30 @@ $(document).ready(function() {
     // Carregar dados salvos na inicialização
     carregarDadosFormulario();
 
-    // Inicializar Select2
-    $('#tipo').select2({
-        width: '100%',
-        placeholder: 'Selecione o tipo de proposição',
-        allowClear: false,
-        minimumResultsForSearch: 3
-    });
+    // Inicializar Select2 apenas se não é tipo pré-selecionado
+    @if(!isset($tipoSelecionado))
+        $('#tipo').select2({
+            width: '100%',
+            placeholder: 'Selecione o tipo de proposição',
+            allowClear: false,
+            minimumResultsForSearch: 3
+        });
+    @endif
 
-    $('#modelo').select2({
-        width: '100%',
-        placeholder: 'Selecione um modelo',
-        allowClear: false,
-        minimumResultsForSearch: 3
-    });
+    // Não inicializar Select2 no modelo pois agora é hidden
 
-    // Carregar modelos quando tipo for selecionado
+    // Carregar modelo automático quando tipo for selecionado
     $('#tipo').on('change', function() {
         const tipo = $(this).val();
         
         if (tipo) {
             $('#ementa-container').show();
             $('#opcoes-preenchimento-container').show();
-            carregarModelos(tipo); // Carrega os modelos mas não mostra o container ainda
+            carregarModeloAutomatico(tipo); // Carrega modelo automaticamente
         } else {
             $('#ementa-container').hide();
             $('#opcoes-preenchimento-container').hide();
-            $('#modelo-container').hide();
+            $('#template-info-container').hide();
             $('#texto-manual-container').hide();
             $('#ia-container').hide();
             $('#ementa').val('');
@@ -422,15 +443,13 @@ $(document).ready(function() {
     // Gerenciar opções de preenchimento
     $('input[name="opcao_preenchimento"]').on('change', function() {
         const opcao = $(this).val();
+        console.log('Opção de preenchimento selecionada:', opcao);
         
         // Remove seleção visual de todos os cards
         $('.opcao-card').removeClass('selected');
         
         // Adiciona seleção visual ao card escolhido
         $(this).closest('.opcao-card').addClass('selected');
-        
-        // SEMPRE mostra o modelo (necessário para formatação)
-        $('#modelo-container').show();
         
         // Esconde os containers opcionais
         $('#texto-manual-container').hide();
@@ -439,9 +458,11 @@ $(document).ready(function() {
         // Mostra container adicional conforme opção
         switch(opcao) {
             case 'manual':
+                console.log('Mostrando container de texto manual');
                 $('#texto-manual-container').show();
                 break;
             case 'ia':
+                console.log('Mostrando container de IA');
                 $('#ia-container').show();
                 break;
         }
@@ -449,13 +470,21 @@ $(document).ready(function() {
         validarFormulario();
     });
 
+    // Também permitir clique no card inteiro para selecionar
+    $('.opcao-card').on('click', function() {
+        const radio = $(this).find('input[name="opcao_preenchimento"]');
+        if (radio.length && !radio.is(':checked')) {
+            radio.prop('checked', true).trigger('change');
+        }
+    });
+
     // Validação para o texto manual
     $('#texto_principal').on('input keyup', function() {
         validarFormulario();
     });
 
-    // Validar se pode continuar
-    $('#modelo, #ementa').on('change keyup', function() {
+    // Validar se pode continuar (apenas ementa, modelo é automático)
+    $('#ementa').on('change keyup', function() {
         validarFormulario();
     });
 
@@ -482,9 +511,7 @@ $(document).ready(function() {
         }, 500);
     });
     
-    $('#modelo').on('change', function() {
-        salvarDadosFormulario();
-    });
+    // Modelo é agora automático, não precisa de evento change
 
     // Auto-salvar para texto manual
     $('#texto_principal').on('input keyup blur', function() {
@@ -517,9 +544,9 @@ $(document).ready(function() {
             proposicaoId: proposicaoId
         });
         
-        // Validações específicas por opção - SEMPRE precisa de modelo para manter formatação
+        // Validações específicas por opção - modelo é carregado automaticamente
         if (!modeloId) {
-            alert('Selecione um modelo para manter a formatação correta da proposição.');
+            alert('Aguarde o template ser carregado automaticamente ou recarregue a página.');
             return;
         }
         
@@ -615,41 +642,65 @@ $(document).ready(function() {
         }
     });
 
-    function carregarModelos(tipo) {
-        $('#modelo').html('<option value="">Carregando...</option>');
+    function carregarModeloAutomatico(tipo) {
+        console.log('Carregando modelo automático para tipo:', tipo);
+        $('#template-info-nome').text('Carregando...');
+        $('#template-info-container').show();
         
         $.get(`/proposicoes/modelos/${tipo}`)
             .done(function(modelos) {
-                console.log('Dados recebidos:', modelos);
-                console.log('Tipo dos dados:', typeof modelos);
-                console.log('É array?', Array.isArray(modelos));
+                console.log('Modelos disponíveis:', modelos);
                 
-                let options = '<option value="">Selecione um modelo</option>';
-                
-                // Verificar se é um array
-                if (Array.isArray(modelos)) {
-                    modelos.forEach(function(modelo) {
-                        options += `<option value="${modelo.id}">${modelo.nome}</option>`;
+                if (Array.isArray(modelos) && modelos.length > 0) {
+                    // Usar o primeiro modelo (padrão do tipo)
+                    const modeloPadrao = modelos[0];
+                    $('#modelo').val(modeloPadrao.id);
+                    $('#template-info-nome').text(modeloPadrao.nome);
+                    
+                    console.log('Modelo automático selecionado:', {
+                        id: modeloPadrao.id,
+                        nome: modeloPadrao.nome
                     });
+                    
+                    // Atualizar status
+                    $('#template-info-container .alert')
+                        .removeClass('alert-warning')
+                        .addClass('alert-success');
+                    $('#template-info-container i')
+                        .removeClass('fa-exclamation-triangle')
+                        .addClass('fa-check-circle');
+                        
                 } else {
-                    console.error('Dados recebidos não são um array:', modelos);
-                    options = '<option value="">Erro: formato de dados inválido</option>';
+                    // Nenhum modelo disponível
+                    $('#template-info-nome').text('Nenhum template configurado para este tipo');
+                    $('#template-info-container .alert')
+                        .removeClass('alert-success')
+                        .addClass('alert-warning');
+                    $('#template-info-container i')
+                        .removeClass('fa-check-circle')
+                        .addClass('fa-exclamation-triangle');
+                    
+                    console.warn('Nenhum modelo disponível para tipo:', tipo);
                 }
                 
-                $('#modelo').html(options);
+                // Validar formulário após carregar modelo
+                setTimeout(function() {
+                    validarFormulario();
+                }, 100);
             })
             .fail(function(xhr, status, error) {
-                console.error('Erro ao carregar modelos:', xhr, status, error);
-                $('#modelo').html('<option value="">Erro ao carregar modelos</option>');
+                console.error('Erro ao carregar modelo automático:', xhr, status, error);
+                $('#template-info-nome').text('Erro ao carregar template');
+                $('#template-info-container .alert')
+                    .removeClass('alert-success')
+                    .addClass('alert-danger');
+                $('#template-info-container i')
+                    .removeClass('fa-check-circle')
+                    .addClass('fa-times-circle');
                 
-                let errorMessage = 'Erro ao carregar modelos';
-                if (xhr.responseJSON && xhr.responseJSON.message) {
-                    errorMessage += ': ' + xhr.responseJSON.message;
-                } else if (xhr.status) {
-                    errorMessage += ' (Status: ' + xhr.status + ')';
+                if (typeof toastr !== 'undefined') {
+                    toastr.error('Erro ao carregar template automático');
                 }
-                
-                toastr.error(errorMessage);
             });
     }
 
@@ -691,19 +742,57 @@ $(document).ready(function() {
         const modelo = $('#modelo').val();
         const textoManual = $('#texto_principal').val();
 
+        console.log('Validando formulário:', {
+            tipo: tipo,
+            ementa: ementa,
+            ementaLength: ementa ? ementa.length : 0,
+            opcaoPreenchimento: opcaoPreenchimento,
+            modelo: modelo,
+            textoManual: textoManual ? textoManual.substring(0, 50) + '...' : 'vazio',
+            textoManualLength: textoManual ? textoManual.length : 0,
+            textoIA: window.textoGeradoIA ? 'possui texto IA' : 'sem IA'
+        });
+
         let valido = false;
 
-        if (tipo && ementa && opcaoPreenchimento && modelo) {
+        // Debug de cada condição (modelo não é mais obrigatório para validação)
+        console.log('Verificando condições básicas:', {
+            temTipo: !!tipo,
+            temEmenta: !!ementa,
+            temOpcaoPreenchimento: !!opcaoPreenchimento,
+            temModelo: !!modelo // informativo apenas
+        });
+
+        if (tipo && ementa && opcaoPreenchimento) {
+            console.log('Condições básicas OK, verificando por opção...');
             switch(opcaoPreenchimento) {
                 case 'manual':
                     valido = textoManual && textoManual.trim().length > 10; // Mínimo 10 caracteres
+                    console.log('Validação manual:', {
+                        temTexto: !!textoManual,
+                        tamanho: textoManual ? textoManual.trim().length : 0,
+                        valido: valido
+                    });
                     break;
                 case 'ia':
                     valido = !!window.textoGeradoIA; // Deve ter texto gerado
+                    console.log('Validação IA:', {
+                        temTextoIA: !!window.textoGeradoIA,
+                        valido: valido
+                    });
                     break;
+                default:
+                    console.log('Opção de preenchimento não reconhecida:', opcaoPreenchimento);
             }
+        } else {
+            console.log('Condições básicas não atendidas - falta:', {
+                tipo: !tipo ? 'SIM' : 'OK',
+                ementa: !ementa ? 'SIM' : 'OK', 
+                opcaoPreenchimento: !opcaoPreenchimento ? 'SIM' : 'OK'
+            });
         }
 
+        console.log('Validação resultado final:', valido);
         $('#btn-continuar').prop('disabled', !valido);
     }
 

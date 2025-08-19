@@ -4,13 +4,24 @@
     "type": "module",
     "scripts": {
         "build": "vite build",
-        "dev": "vite"
+        "dev": "vite",
+        "test": "playwright test",
+        "test:headed": "playwright test --headed",
+        "test:debug": "playwright test --debug",
+        "test:ui": "playwright test --ui",
+        "test:auth": "playwright test tests/e2e/auth",
+        "test:proposicoes": "playwright test tests/e2e/proposicoes",
+        "test:onlyoffice": "playwright test tests/e2e/onlyoffice",
+        "test:install": "playwright install",
+        "test:report": "playwright show-report"
     },
     "devDependencies": {
+        "@playwright/test": "^1.54.2",
         "@tailwindcss/vite": "^4.0.0",
         "axios": "^1.8.2",
         "concurrently": "^9.0.1",
         "laravel-vite-plugin": "^1.2.0",
+        "playwright": "^1.54.2",
         "tailwindcss": "^4.0.0",
         "vite": "^6.2.4"
     },
