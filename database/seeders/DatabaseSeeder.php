@@ -114,6 +114,16 @@ class DatabaseSeeder extends Seeder
         $this->call([
             ButtonAssinaturaUISeeder::class,
         ]);
+        
+        // Interface Vue.js para tela de assinatura (performance otimizada)
+        $this->call([
+            AssinaturaVueInterfaceSeeder::class,
+        ]);
+        
+        // Correções de status e otimização de PDF
+        $this->call([
+            CorrecaoStatusPDFSeeder::class,
+        ]);
 
         // Processar imagens dos templates admin
         $this->command->info('');

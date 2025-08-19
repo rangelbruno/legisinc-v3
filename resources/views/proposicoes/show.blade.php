@@ -105,6 +105,12 @@
 .d-grid .btn-assinatura:last-child {
     margin-bottom: 0;
 }
+</style>
+<style>
+
+.d-grid .btn-assinatura:last-child {
+    margin-bottom: 0;
+}
 
 /* Estilo melhorado para botão Assinar Documento */
 .btn-assinatura-melhorado {
@@ -1262,6 +1268,10 @@ createApp({
                 'devolvido_edicao': 'badge-warning',
                 'retornado_legislativo': 'badge-info',
                 'aprovado': 'badge-success',
+                'aprovado_assinatura': 'badge-primary',
+                'assinado': 'badge-success',
+                'enviado_protocolo': 'badge-info',
+                'protocolado': 'badge-primary',
                 'reprovado': 'badge-danger'
             };
             return classes[status] || 'badge-secondary';
@@ -1292,6 +1302,10 @@ createApp({
                 'devolvido_edicao': 'Devolvido para Edição',
                 'retornado_legislativo': 'Retornado do Legislativo',
                 'aprovado': 'Aprovado',
+                'aprovado_assinatura': 'Aguardando Assinatura',
+                'assinado': 'Assinado',
+                'enviado_protocolo': 'Enviado ao Protocolo',
+                'protocolado': 'Protocolado',
                 'reprovado': 'Reprovado'
             };
             return texts[status] || 'Status Desconhecido';

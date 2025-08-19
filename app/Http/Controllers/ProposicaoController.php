@@ -1249,6 +1249,10 @@ class ProposicaoController extends Controller
                                 (!empty($proposicao->ementa) || !empty($templateVariables)) &&
                                 ($proposicao->conteudo || $proposicao->arquivo_path);
         
+        // Adicionar propriedades necessárias para Vue.js
+        $proposicao->has_pdf = !empty($proposicao->arquivo_pdf_path);
+        $proposicao->has_arquivo = !empty($proposicao->arquivo_path);
+        
         // Nova interface Vue.js - mais simples e performática
         return view('proposicoes.show', compact('proposicao'));
     }

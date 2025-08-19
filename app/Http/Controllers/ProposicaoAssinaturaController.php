@@ -34,23 +34,23 @@ class ProposicaoAssinaturaController extends Controller
             abort(403, 'Proposição não está disponível para assinatura.');
         }
 
-        // SEMPRE regenerar PDF para assinatura para garantir dados corretos
-        try {
-            $this->gerarPDFParaAssinatura($proposicao);
-        } catch (\Exception $e) {
-            // Se falhar, tentar usar PDF existente como fallback
-            $pdfPath = $proposicao->arquivo_pdf_path ? storage_path('app/' . $proposicao->arquivo_pdf_path) : null;
-            if (!$proposicao->arquivo_pdf_path || !file_exists($pdfPath)) {
-                // Se nem o PDF existente serve, mostrar erro
-                return back()->withErrors(['pdf' => 'Não foi possível gerar o PDF para assinatura: ' . $e->getMessage()]);
+        // Verificar se já existe PDF válido recente (evitar regeneração desnecessária)
+        $precisaRegerarPDF = $this->precisaRegerarPDF($proposicao);
+        
+        if ($precisaRegerarPDF) {
+            try {
+                $this->gerarPDFParaAssinatura($proposicao);
+            } catch (\Exception $e) {
+                // Se falhar, tentar usar PDF existente como fallback
+                $pdfPath = $proposicao->arquivo_pdf_path ? storage_path('app/' . $proposicao->arquivo_pdf_path) : null;
+                if (!$proposicao->arquivo_pdf_path || !file_exists($pdfPath)) {
+                    // Se nem o PDF existente serve, mostrar erro
+                    return back()->withErrors(['pdf' => 'Não foi possível gerar o PDF para assinatura: ' . $e->getMessage()]);
+                }
             }
-            // Log::warning('Usando PDF existente após falha na regeneração', [
-                //     'proposicao_id' => $proposicao->id,
-                //     'error' => $e->getMessage()
-            // ]);
         }
 
-        return view('proposicoes.assinatura.assinar', compact('proposicao'));
+        return view('proposicoes.assinatura.assinar-vue', compact('proposicao'));
     }
 
     /**
@@ -1315,5 +1315,38 @@ class ProposicaoAssinaturaController extends Controller
             // Retornar HTML original em caso de erro
             return $htmlContent;
         }
+    }
+    
+    /**
+     * Verificar se precisa regenerar PDF (otimização para evitar regeneração desnecessária)
+     */
+    private function precisaRegerarPDF(Proposicao $proposicao): bool
+    {
+        // Se não tem PDF, precisa gerar
+        if (empty($proposicao->arquivo_pdf_path)) {
+            return true;
+        }
+        
+        // Verificar se o arquivo PDF existe fisicamente
+        $pdfPath = storage_path('app/' . $proposicao->arquivo_pdf_path);
+        if (!file_exists($pdfPath)) {
+            return true;
+        }
+        
+        // Verificar se o PDF é muito antigo (mais de 30 minutos)
+        $pdfAge = time() - filemtime($pdfPath);
+        if ($pdfAge > 1800) { // 30 minutos
+            return true;
+        }
+        
+        // Se a proposição foi atualizada recentemente, regenerar
+        $proposicaoUpdateTime = $proposicao->updated_at ? $proposicao->updated_at->timestamp : 0;
+        $pdfCreationTime = filemtime($pdfPath);
+        if ($proposicaoUpdateTime > $pdfCreationTime) {
+            return true;
+        }
+        
+        // PDF válido e recente, não precisa regenerar
+        return false;
     }
 }
