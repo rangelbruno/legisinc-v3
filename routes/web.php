@@ -871,10 +871,10 @@ Route::prefix('proposicoes')->name('proposicoes.')->middleware(['auth', 'check.s
     Route::put('/{proposicao}/legislativo/enviar-parlamentar', [App\Http\Controllers\ProposicaoLegislativoController::class, 'enviarParaParlamentar'])->name('legislativo.enviar-parlamentar')->middleware('check.proposicao.permission');
     
     // OnlyOffice para Legislativo
-    Route::get('/{proposicao}/onlyoffice/editor', [App\Http\Controllers\OnlyOfficeController::class, 'editorLegislativo'])->name('onlyoffice.editor')->middleware('check.proposicao.permission');
+    Route::get('/{proposicao}/onlyoffice/editor', [App\Http\Controllers\OnlyOfficeController::class, 'editorLegislativo'])->name('onlyoffice.editor')->middleware('role.permission:onlyoffice.editor.review');
     
     // OnlyOffice para Parlamentares
-    Route::get('/{proposicao}/onlyoffice/editor-parlamentar', [App\Http\Controllers\OnlyOfficeController::class, 'editorParlamentar'])->name('onlyoffice.editor-parlamentar');
+    Route::get('/{proposicao}/onlyoffice/editor-parlamentar', [App\Http\Controllers\OnlyOfficeController::class, 'editorParlamentar'])->name('onlyoffice.editor-parlamentar')->middleware('role.permission:onlyoffice.editor.own');
     
     Route::post('/{proposicao}/onlyoffice/callback/{documentKey}', [App\Http\Controllers\OnlyOfficeController::class, 'callback'])->name('onlyoffice.callback');
     Route::get('/revisar', [App\Http\Controllers\ProposicaoLegislativoController::class, 'index'])->name('revisar');
@@ -889,16 +889,16 @@ Route::prefix('proposicoes')->name('proposicoes.')->middleware(['auth', 'check.s
     Route::get('/aguardando-protocolo', [App\Http\Controllers\ProposicaoLegislativoController::class, 'aguardandoProtocolo'])->name('aguardando-protocolo')->middleware('block.protocolo.access');
     
     // ===== PARLAMENTAR - ASSINATURA =====
-    Route::get('/assinatura', [App\Http\Controllers\ProposicaoAssinaturaController::class, 'index'])->name('assinatura');
-    Route::get('/{proposicao}/assinar', [App\Http\Controllers\ProposicaoAssinaturaController::class, 'assinar'])->name('assinar');
-    Route::get('/{proposicao}/corrigir', [App\Http\Controllers\ProposicaoAssinaturaController::class, 'corrigir'])->name('corrigir');
-    Route::post('/{proposicao}/confirmar-leitura', [App\Http\Controllers\ProposicaoAssinaturaController::class, 'confirmarLeitura'])->name('confirmar-leitura');
-    Route::post('/{proposicao}/processar-assinatura', [App\Http\Controllers\ProposicaoAssinaturaController::class, 'processarAssinatura'])->name('processar-assinatura');
-    Route::put('/{proposicao}/enviar-protocolo', [App\Http\Controllers\ProposicaoAssinaturaController::class, 'enviarProtocolo'])->name('assinatura.enviar-protocolo');
-    Route::post('/{proposicao}/salvar-correcoes', [App\Http\Controllers\ProposicaoAssinaturaController::class, 'salvarCorrecoes'])->name('salvar-correcoes');
-    Route::put('/{proposicao}/reenviar-legislativo', [App\Http\Controllers\ProposicaoAssinaturaController::class, 'reenviarLegislativo'])->name('reenviar-legislativo');
-    Route::put('/{proposicao}/devolver-legislativo', [App\Http\Controllers\ProposicaoAssinaturaController::class, 'devolverLegislativo'])->name('devolver-legislativo');
-    Route::get('/historico-assinaturas', [App\Http\Controllers\ProposicaoAssinaturaController::class, 'historico'])->name('historico-assinaturas');
+    Route::get('/assinatura', [App\Http\Controllers\ProposicaoAssinaturaController::class, 'index'])->name('assinatura')->middleware('role.permission:proposicoes.view.own');
+    Route::get('/{proposicao}/assinar', [App\Http\Controllers\ProposicaoAssinaturaController::class, 'assinar'])->name('assinar')->middleware('role.permission:proposicoes.assinar');
+    Route::get('/{proposicao}/corrigir', [App\Http\Controllers\ProposicaoAssinaturaController::class, 'corrigir'])->name('corrigir')->middleware('role.permission:proposicoes.corrigir');
+    Route::post('/{proposicao}/confirmar-leitura', [App\Http\Controllers\ProposicaoAssinaturaController::class, 'confirmarLeitura'])->name('confirmar-leitura')->middleware('role.permission:proposicoes.assinar');
+    Route::post('/{proposicao}/processar-assinatura', [App\Http\Controllers\ProposicaoAssinaturaController::class, 'processarAssinatura'])->name('processar-assinatura')->middleware('role.permission:proposicoes.assinar');
+    Route::put('/{proposicao}/enviar-protocolo', [App\Http\Controllers\ProposicaoAssinaturaController::class, 'enviarProtocolo'])->name('assinatura.enviar-protocolo')->middleware('role.permission:proposicoes.assinar');
+    Route::post('/{proposicao}/salvar-correcoes', [App\Http\Controllers\ProposicaoAssinaturaController::class, 'salvarCorrecoes'])->name('salvar-correcoes')->middleware('role.permission:proposicoes.corrigir');
+    Route::put('/{proposicao}/reenviar-legislativo', [App\Http\Controllers\ProposicaoAssinaturaController::class, 'reenviarLegislativo'])->name('reenviar-legislativo')->middleware('role.permission:proposicoes.corrigir');
+    Route::put('/{proposicao}/devolver-legislativo', [App\Http\Controllers\ProposicaoAssinaturaController::class, 'devolverLegislativo'])->name('devolver-legislativo')->middleware('role.permission:proposicoes.corrigir');
+    Route::get('/historico-assinaturas', [App\Http\Controllers\ProposicaoAssinaturaController::class, 'historico'])->name('historico-assinaturas')->middleware('role.permission:proposicoes.view.own');
     
     // Voltar proposição para parlamentar (do legislativo)
     Route::put('/{proposicao}/voltar-parlamentar', [App\Http\Controllers\ProposicaoController::class, 'voltarParaParlamentar'])->name('voltar-parlamentar');

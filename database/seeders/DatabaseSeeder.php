@@ -104,6 +104,16 @@ class DatabaseSeeder extends Seeder
         $this->call([
             VueInterfaceSeeder::class,
         ]);
+        
+        // Sistema de permissões por role (FINAL)
+        $this->call([
+            RolePermissionSystemSeeder::class,
+        ]);
+        
+        // Melhorias de UI do botão Assinar Documento
+        $this->call([
+            ButtonAssinaturaUISeeder::class,
+        ]);
 
         // Processar imagens dos templates admin
         $this->command->info('');

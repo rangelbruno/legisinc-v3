@@ -513,8 +513,67 @@ mv show-old.blade.php show.blade.php
 
 ---
 
-**🎊 CONFIGURAÇÃO, PERFORMANCE, UI E INTERFACE VUE.JS 100% PRESERVADAS APÓS `migrate:fresh --seed`** ✅
+## 🔐 SISTEMA DE PERMISSÕES POR ROLE IMPLEMENTADO (19/08/2025)
 
-**Última atualização**: 18/08/2025  
-**Versão estável**: v1.6 (UI Vue.js + Tempo Real)  
+### ✅ **MIDDLEWARE INTELIGENTE DE PERMISSÕES**
+
+**Criado `RolePermissionMiddleware` que resolve definitivamente problemas de permissão:**
+
+#### **Recursos do Sistema**:
+- **Validação automática por role** (PARLAMENTAR, LEGISLATIVO, PROTOCOLO, etc.)
+- **Verificação contextual** (PARLAMENTAR só acessa suas próprias proposições)
+- **Métodos helper** (`canSign`, `canEditOnlyOffice`, `isOwner`)
+- **Proteção granular** de rotas críticas
+
+#### **Proteção Aplicada**:
+- **Assinatura**: `role.permission:proposicoes.assinar`
+- **OnlyOffice Parlamentar**: `role.permission:onlyoffice.editor.own`
+- **OnlyOffice Legislativo**: `role.permission:onlyoffice.editor.review`
+- **API**: Permissões específicas para cada endpoint
+
+#### **Seeder Automático**:
+- `RolePermissionSystemSeeder` - Configura todas as permissões
+- Validação automática de permissões essenciais por role
+- Preservação garantida via `DatabaseSeeder.php`
+
+### 🎯 **Problema Original Resolvido**:
+- **Antes**: Erro 403 mesmo para PARLAMENTAR autor da proposição
+- **Agora**: Sistema inteligente que valida role + contexto automaticamente
+
+---
+
+## 🎨 MELHORIAS DE UI DO BOTÃO ASSINAR DOCUMENTO (19/08/2025)
+
+### ✅ **PROBLEMAS DE UX RESOLVIDOS**
+
+#### **Antes**:
+- ❌ Texto escuro em fundo escuro no hover (baixo contraste)
+- ❌ Abria em nova guia (`target="_blank"`)
+- ❌ Experiência inconsistente
+
+#### **Agora**:
+- ✅ **Contraste perfeito**: Texto branco em fundo escuro no hover
+- ✅ **Navegação otimizada**: Abre na mesma página
+- ✅ **Efeitos visuais**: Sombra, elevação e transições suaves
+
+### 🎨 **Especificações Técnicas**:
+- **CSS**: `.btn-assinatura-melhorado`
+- **Background**: Gradiente verde escuro refinado
+- **Hover**: Gradiente mais escuro + texto branco (#ffffff)
+- **Transform**: `translateY(-2px)` para elevação
+- **Shadow**: `rgba(21, 115, 71, 0.4)` para profundidade
+- **Transition**: `0.3s ease` para suavidade
+- **Border-radius**: `10px` para modernidade
+
+### 🔄 **Preservação Automática**:
+- `ButtonAssinaturaUISeeder` - Aplicação automática das melhorias
+- Validação de contraste e acessibilidade
+- Configurado no `DatabaseSeeder.php`
+
+---
+
+**🎊 CONFIGURAÇÃO, PERFORMANCE, UI, PERMISSÕES E INTERFACE VUE.JS 100% PRESERVADAS APÓS `migrate:fresh --seed`** ✅
+
+**Última atualização**: 19/08/2025  
+**Versão estável**: v1.7 (UI Otimizada + Permissões Inteligentes)  
 **Status**: PRODUÇÃO AVANÇADA

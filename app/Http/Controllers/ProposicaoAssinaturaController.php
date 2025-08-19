@@ -30,7 +30,7 @@ class ProposicaoAssinaturaController extends Controller
     {
         // $this->authorize('update', $proposicao);
         
-        if (!in_array($proposicao->status, ['aprovado_assinatura', 'retornado_legislativo'])) {
+        if (!in_array($proposicao->status, ['aprovado', 'aprovado_assinatura', 'retornado_legislativo'])) {
             abort(403, 'Proposição não está disponível para assinatura.');
         }
 

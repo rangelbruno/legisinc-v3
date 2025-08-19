@@ -24,6 +24,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'block.protocolo.access' => \App\Http\Middleware\BlockProtocoloAccess::class,
             'guest' => \App\Http\Middleware\RedirectIfAuthenticated::class,
             'prevent.back.history' => \App\Http\Middleware\PreventBackHistory::class,
+            'role.permission' => \App\Http\Middleware\RolePermissionMiddleware::class,
         ]);
         
         // Aplica middleware para prevenir navegação com botão voltar em todas as rotas autenticadas

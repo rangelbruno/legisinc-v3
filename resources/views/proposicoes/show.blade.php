@@ -105,6 +105,40 @@
 .d-grid .btn-assinatura:last-child {
     margin-bottom: 0;
 }
+
+/* Estilo melhorado para botão Assinar Documento */
+.btn-assinatura-melhorado {
+    background: linear-gradient(135deg, #198754 0%, #146c43 100%);
+    border: none;
+    border-radius: 10px;
+    transition: all 0.3s ease;
+    font-weight: 600;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-assinatura-melhorado:hover {
+    background: linear-gradient(135deg, #157347 0%, #0f5132 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(21, 115, 71, 0.4);
+}
+
+.btn-assinatura-melhorado:hover .fw-bold {
+    color: #ffffff !important;
+}
+
+.btn-assinatura-melhorado:hover .text-muted {
+    color: #e8f5e8 !important;
+}
+
+.btn-assinatura-melhorado:hover .ki-duotone {
+    color: #ffffff !important;
+}
+
+.btn-assinatura-melhorado:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 10px rgba(21, 115, 71, 0.3);
+}
 </style>
 
 <div id="proposicao-app" v-cloak>
@@ -426,6 +460,7 @@
                                     method="POST" 
                                     @submit="confirmSendToLegislative">
                                     @csrf
+                                    @method('PUT')
                                     <button 
                                         type="submit" 
                                         class="btn btn-success btn-lg w-100 d-flex align-items-center justify-content-center"
@@ -517,8 +552,7 @@
                                 <div class="separator my-3"></div>
                                 <a 
                                     :href="'/proposicoes/' + proposicao.id + '/assinar'"
-                                    target="_blank"
-                                    class="btn btn-light-success btn-lg w-100 d-flex align-items-center justify-content-center"
+                                    class="btn btn-light-success btn-lg w-100 d-flex align-items-center justify-content-center btn-assinatura-melhorado"
                                     style="min-height: 50px;">
                                     <i class="ki-duotone ki-signature fs-2 me-3">
                                         <span class="path1"></span>
@@ -995,10 +1029,27 @@ createApp({
                 // Use traditional Laravel web route to get fresh data
                 const data = await this.makeRequest(`/proposicoes/${this.proposicao.id}/dados-frescos`);
                 if (data && data.success) {
+                    // Store previous status to check for changes
+                    const previousStatus = this.proposicao.status;
+                    
                     // Update only the necessary fields to maintain reactivity
                     Object.assign(this.proposicao, data.proposicao);
                     this.lastUpdate = new Date().toISOString();
                     this.generateTimeline();
+                    
+                    // If status changed, show notification
+                    if (previousStatus !== this.proposicao.status) {
+                        this.showToast(
+                            `Status atualizado para: ${this.getStatusText(this.proposicao.status)}`, 
+                            'info', 
+                            'ki-duotone ki-information'
+                        );
+                    }
+                    
+                    // Force Vue reactivity update
+                    this.$nextTick(() => {
+                        this.$forceUpdate();
+                    });
                 }
             } catch (error) {
                 console.error('Erro ao carregar proposição:', error);
@@ -1341,8 +1392,7 @@ createApp({
         async submitToLegislative(form) {
             try {
                 const formData = new FormData(form);
-                // Garantir que o _method=PUT está presente
-                formData.append('_method', 'PUT');
+                // FormData will already include _method=PUT from @method('PUT') directive
                 
                 // Para FormData, precisamos remover o Content-Type header
                 const response = await fetch(form.action, {
@@ -1364,6 +1414,16 @@ createApp({
                 const data = await response.json();
 
                 if (data && data.success) {
+                    // Update proposição data immediately
+                    if (data.proposicao) {
+                        Object.assign(this.proposicao, data.proposicao);
+                        this.generateTimeline();
+                    } else {
+                        // If no proposicao data returned, force reload from server
+                        this.proposicao.status = 'enviado_legislativo';
+                        this.generateTimeline();
+                    }
+                    
                     // Success notification
                     await Swal.fire({
                         title: 'Sucesso!',
@@ -1376,7 +1436,7 @@ createApp({
                                     </i>
                                 </div>
                                 <p class="mb-2">Proposição enviada com sucesso para o Legislativo!</p>
-                                <small class="text-muted">O status foi atualizado para "Em Revisão"</small>
+                                <small class="text-muted">O status foi atualizado automaticamente</small>
                             </div>
                         `,
                         icon: 'success',
@@ -1388,20 +1448,22 @@ createApp({
                         buttonsStyling: false
                     });
 
-                    // Update proposição data and refresh interface
-                    if (response.proposicao) {
-                        Object.assign(this.proposicao, response.proposicao);
-                        this.generateTimeline();
-                        
-                        // Show success toast
-                        this.showToast(
-                            'Proposição enviada para análise do Legislativo', 
-                            'success', 
-                            'ki-duotone ki-send'
-                        );
-                    }
+                    // Show success toast
+                    this.showToast(
+                        'Proposição enviada para análise do Legislativo', 
+                        'success', 
+                        'ki-duotone ki-send'
+                    );
+                    
+                    // Force a complete refresh after a short delay to ensure server has processed
+                    setTimeout(async () => {
+                        await this.loadProposicao();
+                        // Force Vue to re-render the interface
+                        this.$forceUpdate();
+                    }, 500);
+                    
                 } else {
-                    throw new Error(response?.message || 'Erro ao enviar proposição');
+                    throw new Error(data?.message || 'Erro ao enviar proposição');
                 }
             } catch (error) {
                 console.error('Erro no envio:', error);
