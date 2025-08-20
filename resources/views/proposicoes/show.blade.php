@@ -106,6 +106,7 @@
     margin-bottom: 0;
 }
 </style>
+
 <style>
 
 .d-grid .btn-assinatura:last-child {
@@ -358,7 +359,7 @@
                                                     <span class="path2"></span>
                                                 </i>
                                                 Download
-                                            </a>
+                
                                             <a :href="`/proposicoes/${proposicao.id}/anexo/${index}/view`" 
                                                target="_blank"
                                                class="btn btn-sm btn-light-info"
@@ -369,7 +370,7 @@
                                                     <span class="path3"></span>
                                                 </i>
                                                 Visualizar
-                                            </a>
+                
                                         </td>
                                     </tr>
                                 </tbody>

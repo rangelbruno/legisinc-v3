@@ -161,7 +161,7 @@
                         </div>
                         <div>
                             <h5 class="card-title mb-0">Projeto de Resolução</h5>
-                            <span class="badge bg-dark">PR</span>
+                            <span class="badge bg-dark text-white">PR</span>
                         </div>
                     </div>
                     <p class="card-text text-muted small">Regula matéria de competência privativa da Câmara, de caráter político-administrativo.</p>
@@ -324,7 +324,7 @@
                         </div>
                         <div>
                             <h5 class="card-title mb-0">Relatório</h5>
-                            <span class="badge bg-dark">REL</span>
+                            <span class="badge bg-dark text-white">REL</span>
                         </div>
                     </div>
                     <p class="card-text text-muted small">Documento de CPI, comissão especial ou mista.</p>
