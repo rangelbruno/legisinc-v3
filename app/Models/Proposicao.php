@@ -16,6 +16,8 @@ class Proposicao extends Model
         'conteudo',
         'arquivo_path',
         'arquivo_pdf_path',
+        'anexos',
+        'total_anexos',
         'autor_id',
         'status',
         'ano',
@@ -67,7 +69,9 @@ class Proposicao extends Model
         'tem_parecer' => 'boolean',
         'comissoes_destino' => 'array',
         'verificacoes_realizadas' => 'array',
-        'variaveis_template' => 'array'
+        'variaveis_template' => 'array',
+        'anexos' => 'array',
+        'total_anexos' => 'integer'
     ];
 
     public function autor(): BelongsTo

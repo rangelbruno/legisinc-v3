@@ -223,7 +223,8 @@ class ProposicaoController extends Controller
             'opcao_preenchimento' => 'nullable|in:modelo,manual,ia',
             'usar_ia' => 'nullable|in:true,false,1,0',
             'texto_ia' => 'nullable|string',
-            'texto_manual' => 'nullable|string'
+            'texto_manual' => 'nullable|string',
+            'anexos.*' => 'nullable|file|mimes:pdf,doc,docx,xls,xlsx,jpg,jpeg,png|max:10240'
         ]);
 
         // Preparar dados para criação
@@ -256,10 +257,51 @@ class ProposicaoController extends Controller
         // Criar proposição no banco de dados
         $proposicao = Proposicao::create($dadosProposicao);
 
+        // Processar anexos se houver
+        if ($request->hasFile('anexos')) {
+            $anexosData = [];
+            $totalAnexos = 0;
+            
+            foreach ($request->file('anexos') as $anexo) {
+                // Gerar nome único para o arquivo
+                $nomeOriginal = $anexo->getClientOriginalName();
+                $extensao = $anexo->getClientOriginalExtension();
+                $nomeArquivo = pathinfo($nomeOriginal, PATHINFO_FILENAME);
+                $nomeUnico = $nomeArquivo . '_' . uniqid() . '.' . $extensao;
+                
+                // Salvar arquivo no storage
+                $path = $anexo->storeAs(
+                    'proposicoes/' . $proposicao->id . '/anexos',
+                    $nomeUnico,
+                    'public'
+                );
+                
+                // Adicionar informações do anexo ao array
+                $anexosData[] = [
+                    'nome_original' => $nomeOriginal,
+                    'nome_arquivo' => $nomeUnico,
+                    'caminho' => $path,
+                    'tamanho' => $anexo->getSize(),
+                    'tipo' => $anexo->getMimeType(),
+                    'extensao' => $extensao,
+                    'uploaded_at' => now()->toISOString()
+                ];
+                
+                $totalAnexos++;
+            }
+            
+            // Atualizar proposição com informações dos anexos
+            $proposicao->update([
+                'anexos' => $anexosData,
+                'total_anexos' => $totalAnexos
+            ]);
+        }
+
         return response()->json([
             'success' => true,
             'proposicao_id' => $proposicao->id,
-            'message' => 'Rascunho salvo com sucesso!'
+            'message' => 'Rascunho salvo com sucesso!',
+            'anexos_salvos' => $proposicao->total_anexos ?? 0
         ]);
     }
 

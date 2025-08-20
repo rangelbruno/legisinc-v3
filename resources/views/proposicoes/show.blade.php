@@ -315,6 +315,70 @@
                 </div>
                 <!--end::Ementa Card-->
 
+                <!--begin::Anexos Card-->
+                <div class="card shadow-sm border-0 mb-4" v-if="proposicao.anexos && proposicao.anexos.length > 0">
+                    <div class="card-header bg-light">
+                        <h3 class="card-title m-0">
+                            <i class="ki-duotone ki-paper-clip fs-2 text-info me-2">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                            </i>
+                            Anexos (@{{ proposicao.total_anexos || proposicao.anexos.length }})
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Arquivo</th>
+                                        <th>Tamanho</th>
+                                        <th>Data Upload</th>
+                                        <th class="text-end">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="(anexo, index) in proposicao.anexos" :key="index">
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <i :class="getFileIcon(anexo.extensao)" class="fs-2x me-2"></i>
+                                                <div>
+                                                    <div class="fw-bold">@{{ anexo.nome_original }}</div>
+                                                    <small class="text-muted">@{{ anexo.extensao.toUpperCase() }}</small>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>@{{ formatFileSize(anexo.tamanho) }}</td>
+                                        <td>@{{ formatDate(anexo.uploaded_at) }}</td>
+                                        <td class="text-end">
+                                            <a :href="`/proposicoes/${proposicao.id}/anexo/${index}/download`" 
+                                               class="btn btn-sm btn-light-primary me-1">
+                                                <i class="ki-duotone ki-download fs-4">
+                                                    <span class="path1"></span>
+                                                    <span class="path2"></span>
+                                                </i>
+                                                Download
+                                            </a>
+                                            <a :href="`/proposicoes/${proposicao.id}/anexo/${index}/view`" 
+                                               target="_blank"
+                                               class="btn btn-sm btn-light-info"
+                                               v-if="['pdf', 'jpg', 'jpeg', 'png'].includes(anexo.extensao.toLowerCase())">
+                                                <i class="ki-duotone ki-eye fs-4">
+                                                    <span class="path1"></span>
+                                                    <span class="path2"></span>
+                                                    <span class="path3"></span>
+                                                </i>
+                                                Visualizar
+                                            </a>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <!--end::Anexos Card-->
+
                 <!--begin::Conteúdo Card-->
                 <div class="card shadow-sm border-0">
                     <div class="card-header bg-light">
@@ -1189,6 +1253,41 @@ createApp({
         // Utility Methods
         toggleContent() {
             this.showFullContent = !this.showFullContent;
+        },
+        
+        getFileIcon(extension) {
+            const ext = (extension || '').toLowerCase();
+            const icons = {
+                'pdf': 'ki-duotone ki-file-pdf text-danger',
+                'doc': 'ki-duotone ki-file-word text-primary',
+                'docx': 'ki-duotone ki-file-word text-primary',
+                'xls': 'ki-duotone ki-file-excel text-success',
+                'xlsx': 'ki-duotone ki-file-excel text-success',
+                'jpg': 'ki-duotone ki-file-image text-info',
+                'jpeg': 'ki-duotone ki-file-image text-info',
+                'png': 'ki-duotone ki-file-image text-info'
+            };
+            return icons[ext] || 'ki-duotone ki-file text-muted';
+        },
+        
+        formatFileSize(bytes) {
+            if (!bytes || bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+        },
+        
+        formatDate(dateString) {
+            if (!dateString) return '';
+            const date = new Date(dateString);
+            return date.toLocaleDateString('pt-BR', { 
+                day: '2-digit', 
+                month: '2-digit', 
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
         },
         
         canEdit() {

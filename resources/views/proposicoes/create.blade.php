@@ -183,6 +183,202 @@
                             </div>
                         </div>
 
+                        <!-- Upload de Anexos com DropzoneJS -->
+                        <div class="mb-4" id="anexos-container">
+                            <!-- Card Container -->
+                            <div class="card shadow-sm border-0">
+                                <!-- Card Header -->
+                                <div class="card-header bg-light-info border-0">
+                                    <h5 class="card-title mb-0">
+                                        <i class="ki-duotone ki-paper-clip fs-2 text-info me-2">
+                                            <span class="path1"></span>
+                                            <span class="path2"></span>
+                                        </i>
+                                        Anexos da Proposição
+                                        <span class="badge badge-light-secondary ms-2 fs-8">Opcional</span>
+                                    </h5>
+                                </div>
+                                
+                                <!-- Card Body -->
+                                <div class="card-body p-6">
+                                    <!-- Dropzone Container -->
+                                    <div class="dropzone dropzone-queue" id="kt_dropzone_anexos">
+                                        <!-- Dropzone Config Panel -->
+                                        <div class="dropzone-panel mb-4 p-4 bg-light-primary rounded">
+                                            <div class="d-flex align-items-center flex-wrap gap-2">
+                                                <a class="dropzone-select btn btn-primary btn-sm me-2">
+                                                    <i class="ki-duotone ki-folder-up fs-5 me-1">
+                                                        <span class="path1"></span>
+                                                        <span class="path2"></span>
+                                                    </i>
+                                                    Selecionar Arquivos
+                                                </a>
+                                                <div class="ms-auto d-flex flex-column align-items-end">
+                                                    <!-- Informações de Limite -->
+                                                    <small class="text-muted mb-1">
+                                                        <i class="ki-duotone ki-information-2 fs-6 text-info me-1">
+                                                            <span class="path1"></span>
+                                                            <span class="path2"></span>
+                                                            <span class="path3"></span>
+                                                        </i>
+                                                        Máximo 5 arquivos de 10MB cada
+                                                    </small>
+                                                    
+                                                    <!-- Contador de Arquivos e Tamanho Total -->
+                                                    <div id="files-counter" class="d-flex align-items-center gap-3" style="display: none;">
+                                                        <small class="text-primary fw-bold">
+                                                            <i class="ki-duotone ki-file fs-6 me-1">
+                                                                <span class="path1"></span>
+                                                                <span class="path2"></span>
+                                                            </i>
+                                                            <span id="files-count">0</span> arquivo(s)
+                                                        </small>
+                                                        <small class="text-success fw-bold">
+                                                            <i class="ki-duotone ki-security-user fs-6 me-1">
+                                                                <span class="path1"></span>
+                                                                <span class="path2"></span>
+                                                                <span class="path3"></span>
+                                                            </i>
+                                                            Total: <span id="total-size">0 MB</span>
+                                                        </small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Dropzone Items Container -->
+                                        <div class="dropzone-items">
+                                            <div class="dropzone-item border border-dashed border-gray-300 rounded p-4 mb-3" style="display:none">
+                                                <!-- File Details -->
+                                                <div class="dropzone-file d-flex align-items-center justify-content-between">
+                                                    <div class="d-flex align-items-center">
+                                                        <div class="symbol symbol-40px me-3">
+                                                            <div class="symbol-label bg-light-info">
+                                                                <i class="ki-duotone ki-file fs-2 text-info">
+                                                                    <span class="path1"></span>
+                                                                    <span class="path2"></span>
+                                                                </i>
+                                                            </div>
+                                                        </div>
+                                                        <div>
+                                                            <div class="dropzone-filename text-gray-900 fw-semibold fs-6" title="arquivo.pdf">
+                                                                <span data-dz-name>arquivo.pdf</span>
+                                                            </div>
+                                                            <div class="text-muted fs-7">
+                                                                <span data-dz-size>120kb</span>
+                                                            </div>
+                                                            <div class="dropzone-error text-danger fs-7 mt-1" data-dz-errormessage></div>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                </div>
+                                                
+                                                <!-- Progress Bar Otimizada com Botão -->
+                                                <div class="dropzone-progress mt-2">
+                                                    <!-- Barra e Botão Alinhados -->
+                                                    <div class="d-flex align-items-center gap-3">
+                                                        <!-- Container da Barra de Progresso -->
+                                                        <div class="flex-grow-1">
+                                                            <div class="progress bg-light-primary position-relative overflow-hidden" style="height: 6px; border-radius: 8px;">
+                                                                <!-- Fundo com animação shimmer -->
+                                                                <div class="progress-shimmer"></div>
+                                                                
+                                                                <!-- Barra de progresso com loading automático -->
+                                                                <div class="progress-bar progress-bar-animated progress-bar-striped loading-animation" 
+                                                                     role="progressbar" 
+                                                                     aria-valuemin="0" 
+                                                                     aria-valuemax="100" 
+                                                                     aria-valuenow="0" 
+                                                                     data-dz-uploadprogress
+                                                                     style="background: linear-gradient(45deg, #009ef7 0%, #0066cc 50%, #004488 100%); 
+                                                                            transition: width 0.4s ease-in-out, background-color 0.3s ease;
+                                                                            border-radius: 8px;
+                                                                            box-shadow: 0 1px 6px rgba(0, 158, 247, 0.3);">
+                                                                    <!-- Brilho interno -->
+                                                                    <span class="progress-glow"></span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        <!-- Botão Remover Compacto -->
+                                                        <button class="dropzone-remove-all btn btn-light-danger btn-sm px-2 py-1" 
+                                                                style="display: none; font-size: 12px;" 
+                                                                title="Remover este arquivo">
+                                                            <i class="ki-duotone ki-trash fs-6">
+                                                                <span class="path1"></span>
+                                                                <span class="path2"></span>
+                                                                <span class="path3"></span>
+                                                                <span class="path4"></span>
+                                                                <span class="path5"></span>
+                                                            </i>
+                                                        </button>
+                                                    </div>
+                                                    
+                                                    <!-- Indicador de Status Compacto -->
+                                                    <div class="d-flex justify-content-between align-items-center mt-1">
+                                                        <small class="text-muted" style="font-size: 11px;">
+                                                            <i class="ki-duotone ki-cloud-upload fs-7 me-1 text-primary loading-icon">
+                                                                <span class="path1"></span>
+                                                                <span class="path2"></span>
+                                                            </i>
+                                                            <span class="status-text">Preparando...</span>
+                                                        </small>
+                                                        <small class="text-primary fw-bold" style="font-size: 11px;">
+                                                            <span class="progress-percentage">0%</span>
+                                                        </small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Dropzone Hint -->
+                                        <div class="dropzone-hint">
+                                            <div class="text-center py-8 border-2 border-dashed border-gray-300 rounded bg-light">
+                                                <i class="ki-duotone ki-cloud-upload fs-5x text-gray-400 mb-4">
+                                                    <span class="path1"></span>
+                                                    <span class="path2"></span>
+                                                </i>
+                                                <div class="text-gray-700 fw-semibold fs-5 mb-3">
+                                                    Arraste arquivos aqui ou clique em "Selecionar Arquivos"
+                                                </div>
+                                                <div class="text-muted fs-7 mb-4">
+                                                    Formatos aceitos: PDF, DOC, DOCX, XLS, XLSX, JPG, PNG
+                                                </div>
+                                                <div class="d-flex justify-content-center flex-wrap gap-2">
+                                                    <span class="badge badge-light-info">PDF</span>
+                                                    <span class="badge badge-light-primary">DOC/DOCX</span>
+                                                    <span class="badge badge-light-success">XLS/XLSX</span>
+                                                    <span class="badge badge-light-warning">JPG/PNG</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Card Footer -->
+                                <div class="card-footer bg-light border-0 py-3">
+                                    <div class="d-flex align-items-center text-muted">
+                                        <i class="ki-duotone ki-shield-tick fs-5 text-success me-2">
+                                            <span class="path1"></span>
+                                            <span class="path2"></span>
+                                            <span class="path3"></span>
+                                        </i>
+                                        <small>
+                                            Os anexos serão salvos junto com a proposição e ficam disponíveis durante todo o processo de tramitação.
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Hidden file input for form submission -->
+                            <input type="file" 
+                                   id="anexos" 
+                                   name="anexos[]" 
+                                   multiple 
+                                   accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
+                                   style="display: none;">
+                        </div>
+
                         <!-- Geração via IA -->
                         <div class="mb-4" id="ia-container" style="display: none;">
                             <div class="card border-info">
@@ -285,10 +481,51 @@
 <script>
 $(document).ready(function() {
     let proposicaoId = null;
+    let selectedFiles = [];
     
     // Chaves para localStorage
     const STORAGE_KEY = 'proposicao_form_data';
     const AI_TEXT_KEY = 'proposicao_ai_text';
+    
+    // Função para formatar tamanho de arquivo
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 MB';
+        const MB = bytes / (1024 * 1024);
+        return MB.toFixed(2) + ' MB';
+    }
+    
+    // Função para atualizar o contador de arquivos e tamanho total
+    function updateFilesCounter() {
+        const counter = document.getElementById('files-counter');
+        const filesCount = document.getElementById('files-count');
+        const totalSizeSpan = document.getElementById('total-size');
+        
+        if (selectedFiles.length > 0) {
+            // Calcular tamanho total
+            const totalBytes = selectedFiles.reduce((sum, file) => sum + file.size, 0);
+            
+            // Atualizar contadores
+            filesCount.textContent = selectedFiles.length;
+            totalSizeSpan.textContent = formatFileSize(totalBytes);
+            
+            // Mostrar contador
+            counter.style.display = 'flex';
+            counter.classList.remove('d-none');
+            
+            // Verificar se excede limite total (50MB = 5 * 10MB)
+            if (totalBytes > 50 * 1024 * 1024) {
+                totalSizeSpan.className = 'text-danger fw-bold';
+                totalSizeSpan.innerHTML = `⚠️ ${formatFileSize(totalBytes)} <small>(Limite excedido)</small>`;
+            } else {
+                totalSizeSpan.className = 'text-success fw-bold';
+                totalSizeSpan.textContent = formatFileSize(totalBytes);
+            }
+        } else {
+            // Esconder contador quando não há arquivos
+            counter.style.display = 'none';
+            counter.classList.add('d-none');
+        }
+    }
     
     // Se já tem tipo selecionado (veio da tela de seleção), processar imediatamente
     @if(isset($tipoSelecionado))
@@ -401,6 +638,281 @@ $(document).ready(function() {
     
     // Carregar dados salvos na inicialização
     carregarDadosFormulario();
+
+    // Configuração do DropzoneJS para Upload de Arquivos
+    let myDropzone = null;
+    
+    function initializeDropzone() {
+        // Configurar o container do dropzone
+        const id = "#kt_dropzone_anexos";
+        const dropzoneElement = document.querySelector(id);
+        
+        if (!dropzoneElement) {
+            console.warn('Dropzone element not found');
+            return;
+        }
+
+        // Configurar o template de preview
+        var previewNode = dropzoneElement.querySelector(".dropzone-item");
+        previewNode.id = "";
+        var previewTemplate = previewNode.parentNode.innerHTML;
+        previewNode.parentNode.removeChild(previewNode);
+
+        myDropzone = new Dropzone(id, {
+            url: "#", // URL temporária, vamos processar manualmente
+            parallelUploads: 5,
+            maxFilesize: 10, // MB
+            maxFiles: 5,
+            autoProcessQueue: false,
+            uploadMultiple: true,
+            previewTemplate: previewTemplate,
+            previewsContainer: id + " .dropzone-items",
+            clickable: id + " .dropzone-select",
+            acceptedFiles: ".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png",
+            
+            init: function() {
+                const dropzone = this;
+                
+                // Quando arquivo é adicionado (evento básico)
+                this.on("addedfile", function(file) {
+                    // Configurar botão de start individual se existir
+                    const startBtn = file.previewElement.querySelector(".dropzone-start");
+                    if (startBtn) {
+                        startBtn.onclick = function() {
+                            // Adicionar arquivo à lista de selecionados
+                            if (!selectedFiles.some(f => f.name === file.name && f.size === file.size)) {
+                                selectedFiles.push(file);
+                            }
+                        };
+                    }
+                    
+                    // Mostrar item de preview
+                    const dropzoneItems = dropzoneElement.querySelectorAll('.dropzone-item');
+                    dropzoneItems.forEach(item => {
+                        item.style.display = '';
+                    });
+                    
+                    // Esconder hint quando há arquivos
+                    const hint = dropzoneElement.querySelector('.dropzone-hint');
+                    if (hint) {
+                        hint.style.display = 'none';
+                    }
+                    
+                    // Adicionar à lista global e atualizar contador
+                    if (!selectedFiles.some(f => f.name === file.name && f.size === file.size)) {
+                        selectedFiles.push(file);
+                        updateFilesCounter();
+                    }
+                });
+                
+                // Quando arquivo é removido
+                this.on("removedfile", function(file) {
+                    // Remover da lista de selecionados
+                    selectedFiles = selectedFiles.filter(f => f.name !== file.name || f.size !== file.size);
+                    
+                    // Atualizar contador após remoção
+                    updateFilesCounter();
+                    
+                    // Se não há mais arquivos, mostrar hint novamente
+                    if (this.files.length === 0) {
+                        const hint = dropzoneElement.querySelector('.dropzone-hint');
+                        if (hint) {
+                            hint.style.display = 'block';
+                        }
+                    }
+                });
+                
+                // Erro de arquivo
+                this.on("error", function(file, errorMessage) {
+                    if (typeof errorMessage === 'string') {
+                        toastr.error(errorMessage);
+                    }
+                });
+                
+                // Validação adicional de arquivo
+                this.on("addedfile", function(file) {
+                    // Verificar extensão
+                    const allowedExtensions = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'jpg', 'jpeg', 'png'];
+                    const extension = file.name.split('.').pop().toLowerCase();
+                    
+                    if (!allowedExtensions.includes(extension)) {
+                        this.removeFile(file);
+                        toastr.warning(`Arquivo "${file.name}" não é permitido.`);
+                        return;
+                    }
+                    
+                    // Verificar tamanho individual
+                    if (file.size > 10 * 1024 * 1024) {
+                        this.removeFile(file);
+                        toastr.warning(`Arquivo "${file.name}" excede 10MB.`);
+                        return;
+                    }
+                    
+                    // Verificar limite total após adicionar este arquivo
+                    const currentTotalSize = selectedFiles.reduce((sum, f) => sum + f.size, 0);
+                    if (currentTotalSize + file.size > 50 * 1024 * 1024) {
+                        this.removeFile(file);
+                        toastr.warning(`Limite total de 50MB seria excedido. Total atual: ${formatFileSize(currentTotalSize)}`);
+                        return;
+                    }
+                });
+                
+                // Iniciar animação de loading automática quando arquivo é adicionado
+                this.on("addedfile", function(file) {
+                    // Buscar elementos no preview específico do arquivo
+                    const progressBar = file.previewElement ? file.previewElement.querySelector('[data-dz-uploadprogress]') : null;
+                    const statusText = file.previewElement ? file.previewElement.querySelector('.status-text') : null;
+                    const progressPercentage = file.previewElement ? file.previewElement.querySelector('.progress-percentage') : null;
+                    const removeBtn = file.previewElement ? file.previewElement.querySelector('.dropzone-remove-all') : null;
+                    
+                    // Configurar botão remover se existir
+                    if (removeBtn) {
+                        removeBtn.style.display = 'flex';
+                        removeBtn.onclick = () => {
+                            if (myDropzone) {
+                                myDropzone.removeFile(file);
+                            }
+                        };
+                    }
+                    
+                    // Iniciar loading automático
+                    if (progressBar && statusText) {
+                        progressBar.classList.add('loading-animation');
+                        statusText.textContent = 'Carregando...';
+                        
+                        // Simular progresso automático
+                        let progress = 0;
+                        const interval = setInterval(() => {
+                            progress += Math.random() * 15 + 5; // 5-20% por vez
+                            if (progress >= 95) {
+                                progress = 95;
+                                clearInterval(interval);
+                                statusText.textContent = 'Quase pronto...';
+                            }
+                            
+                            if (progressPercentage) {
+                                progressPercentage.classList.add('updating');
+                                progressPercentage.textContent = Math.round(progress) + '%';
+                                setTimeout(() => progressPercentage.classList.remove('updating'), 200);
+                            }
+                        }, 300);
+                        
+                        // Finalizar após 3 segundos
+                        setTimeout(() => {
+                            progress = 100;
+                            progressBar.classList.remove('loading-animation');
+                            progressBar.classList.add('success');
+                            statusText.innerHTML = `
+                                <i class="ki-duotone ki-check-circle fs-7 me-1 text-success">
+                                    <span class="path1"></span>
+                                    <span class="path2"></span>
+                                </i>
+                                Arquivo pronto!
+                            `;
+                            if (progressPercentage) {
+                                progressPercentage.textContent = '100%';
+                            }
+                            clearInterval(interval);
+                        }, 3200);
+                    }
+                });
+                
+                // Evento de progresso real (para uploads verdadeiros)
+                this.on("uploadprogress", function(file, progress, bytesSent) {
+                    const progressBar = file.previewElement ? file.previewElement.querySelector('[data-dz-uploadprogress]') : null;
+                    const progressPercentage = file.previewElement ? file.previewElement.querySelector('.progress-percentage') : null;
+                    
+                    if (progressBar && progressPercentage) {
+                        // Remover animação automática se houver upload real
+                        progressBar.classList.remove('loading-animation');
+                        
+                        // Atualizar com progresso real
+                        progressBar.style.width = progress + '%';
+                        progressBar.setAttribute('aria-valuenow', Math.round(progress));
+                        
+                        progressPercentage.classList.add('updating');
+                        progressPercentage.textContent = Math.round(progress) + '%';
+                        
+                        setTimeout(() => progressPercentage.classList.remove('updating'), 300);
+                        
+                        if (progress >= 95) {
+                            progressBar.classList.add('completing');
+                        }
+                    }
+                });
+                
+                // Evento de sucesso com animação
+                this.on("success", function(file, response) {
+                    const progressBar = file.previewElement ? file.previewElement.querySelector('[data-dz-uploadprogress]') : null;
+                    const progressText = file.previewElement ? file.previewElement.querySelector('.text-muted') : null;
+                    
+                    if (progressBar) {
+                        progressBar.classList.add('success');
+                        progressBar.classList.remove('completing');
+                    }
+                    
+                    if (progressText) {
+                        progressText.innerHTML = `
+                            <i class="ki-duotone ki-check-circle fs-6 me-1 text-success">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                            </i>
+                            Arquivo enviado com sucesso!
+                        `;
+                    }
+                    
+                    // Feedback de sucesso
+                    setTimeout(() => {
+                        toastr.success(`Arquivo "${file.name}" enviado com sucesso!`);
+                    }, 500);
+                });
+                
+                // Evento de erro com animação
+                this.on("error", function(file, errorMessage) {
+                    const progressBar = file.previewElement ? file.previewElement.querySelector('[data-dz-uploadprogress]') : null;
+                    const progressText = file.previewElement ? file.previewElement.querySelector('.text-muted') : null;
+                    
+                    if (progressBar) {
+                        progressBar.classList.add('error');
+                        progressBar.classList.remove('completing');
+                        progressBar.style.width = '100%';
+                    }
+                    
+                    if (progressText) {
+                        progressText.innerHTML = `
+                            <i class="ki-duotone ki-cross-circle fs-6 me-1 text-danger">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                            </i>
+                            Erro no envio do arquivo
+                        `;
+                    }
+                    
+                    // Feedback de erro
+                    if (typeof errorMessage === 'string') {
+                        toastr.error(`Erro: ${errorMessage}`);
+                    }
+                });
+            },
+            
+            // Mensagens personalizadas
+            dictDefaultMessage: "Arraste arquivos aqui ou clique para selecionar",
+            dictFallbackMessage: "Seu navegador não suporta drag and drop.",
+            dictFileTooBig: "Arquivo muito grande. Máximo: 10MB.",
+            dictInvalidFileType: "Tipo de arquivo não permitido.",
+            dictResponseError: "Erro ao processar arquivo.",
+            dictCancelUpload: "Cancelar",
+            dictCancelUploadConfirmation: "Tem certeza que deseja cancelar?",
+            dictRemoveFile: "Remover arquivo",
+            dictMaxFilesExceeded: "Você não pode adicionar mais arquivos. Máximo: 5 arquivos."
+        });
+
+    }
+    
+    // Inicializar Dropzone após DOM estar pronto
+    setTimeout(function() {
+        initializeDropzone();
+    }, 100);
 
     // Inicializar Select2 apenas se não é tipo pré-selecionado
     @if(!isset($tipoSelecionado))
@@ -595,18 +1107,29 @@ $(document).ready(function() {
             // Salvar rascunho primeiro, depois continuar
             $('#btn-continuar').prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i>Salvando...');
             
-            const dados = {
-                tipo: $('#tipo').val(),
-                ementa: $('#ementa').val() || 'Proposição em elaboração',
-                opcao_preenchimento: opcaoPreenchimento,
-                usar_ia: opcaoPreenchimento === 'ia' ? 1 : 0,
-                texto_ia: opcaoPreenchimento === 'ia' ? window.textoGeradoIA : null,
-                texto_manual: opcaoPreenchimento === 'manual' ? textoManual : null,
-                _token: $('meta[name="csrf-token"]').attr('content')
-            };
+            const formData = new FormData();
+            formData.append('tipo', $('#tipo').val());
+            formData.append('ementa', $('#ementa').val() || 'Proposição em elaboração');
+            formData.append('opcao_preenchimento', opcaoPreenchimento);
+            formData.append('usar_ia', opcaoPreenchimento === 'ia' ? 1 : 0);
+            formData.append('texto_ia', opcaoPreenchimento === 'ia' ? window.textoGeradoIA : null);
+            formData.append('texto_manual', opcaoPreenchimento === 'manual' ? textoManual : null);
+            formData.append('_token', $('meta[name="csrf-token"]').attr('content'));
+            
+            // Adicionar arquivos anexos do Dropzone
+            if (myDropzone && myDropzone.files.length > 0) {
+                myDropzone.files.forEach((file, index) => {
+                    formData.append(`anexos[${index}]`, file);
+                });
+            }
 
-            $.post('/proposicoes/salvar-rascunho', dados)
-                .done(function(response) {
+            $.ajax({
+                url: '/proposicoes/salvar-rascunho',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
                     if (response.success) {
                         proposicaoId = response.proposicao_id;
                         console.log('Debug: Proposição salva com sucesso', {
@@ -631,14 +1154,15 @@ $(document).ready(function() {
                                 break;
                         }
                     }
-                })
-                .fail(function(xhr) {
+                },
+                error: function(xhr) {
                     alert('Erro ao salvar rascunho. Tente novamente.');
                     console.error(xhr.responseText);
-                })
-                .always(function() {
+                },
+                complete: function() {
                     $('#btn-continuar').prop('disabled', false).html('<i class="fas fa-arrow-right me-2"></i>Continuar');
-                });
+                }
+            });
         }
     });
 
@@ -705,34 +1229,49 @@ $(document).ready(function() {
     }
 
     function salvarRascunho() {
-        const dados = {
-            tipo: $('#tipo').val(),
-            ementa: $('#ementa').val() || 'Proposição em elaboração',
-            _token: $('meta[name="csrf-token"]').attr('content')
-        };
+        const formData = new FormData();
+        formData.append('tipo', $('#tipo').val());
+        formData.append('ementa', $('#ementa').val() || 'Proposição em elaboração');
+        formData.append('_token', $('meta[name="csrf-token"]').attr('content'));
+        
+        // Adicionar arquivos anexos do Dropzone
+        if (myDropzone && myDropzone.files.length > 0) {
+            myDropzone.files.forEach((file, index) => {
+                formData.append(`anexos[${index}]`, file);
+            });
+        }
 
-        if (!dados.tipo) {
+        if (!$('#tipo').val()) {
             toastr.warning('Selecione o tipo de proposição');
             return;
         }
 
         $('#btn-salvar-rascunho').prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i>Salvando...');
 
-        $.post('/proposicoes/salvar-rascunho', dados)
-            .done(function(response) {
+        $.ajax({
+            url: '/proposicoes/salvar-rascunho',
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(response) {
                 if (response.success) {
                     proposicaoId = response.proposicao_id;
                     toastr.success('Rascunho salvo com sucesso!');
+                    if (response.anexos_salvos > 0) {
+                        toastr.info(`${response.anexos_salvos} anexo(s) salvos com sucesso!`);
+                    }
                     validarFormulario();
                 }
-            })
-            .fail(function(xhr) {
+            },
+            error: function(xhr) {
                 toastr.error('Erro ao salvar rascunho');
                 console.error(xhr.responseText);
-            })
-            .always(function() {
+            },
+            complete: function() {
                 $('#btn-salvar-rascunho').prop('disabled', false).html('<i class="fas fa-save me-2"></i>Salvar Rascunho');
-            });
+            }
+        });
     }
 
     function validarFormulario() {
@@ -875,6 +1414,173 @@ $(document).ready(function() {
 .stepper .stepper-item.current .stepper-wrapper .stepper-icon {
     background-color: var(--bs-primary);
     color: white;
+}
+
+/* === ANIMAÇÕES DA BARRA DE PROGRESSO === */
+
+/* Animação shimmer de fundo */
+.progress-shimmer {
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.4) 50%, transparent 100%);
+    animation: shimmer 2s infinite ease-in-out;
+    border-radius: 10px;
+}
+
+@keyframes shimmer {
+    0% { left: -100%; }
+    50% { left: 100%; }
+    100% { left: 100%; }
+}
+
+/* Brilho interno da barra de progresso */
+.progress-glow {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 50%;
+    background: linear-gradient(180deg, rgba(255,255,255,0.3) 0%, transparent 100%);
+    border-radius: 10px 10px 0 0;
+}
+
+/* Animação pulsante quando completando */
+.progress-bar.completing {
+    animation: progressPulse 1s ease-in-out;
+}
+
+@keyframes progressPulse {
+    0%, 100% { 
+        transform: scaleY(1);
+        box-shadow: 0 2px 8px rgba(0, 158, 247, 0.3);
+    }
+    50% { 
+        transform: scaleY(1.1);
+        box-shadow: 0 4px 16px rgba(0, 158, 247, 0.5);
+    }
+}
+
+/* Efeito de sucesso */
+.progress-bar.success {
+    background: linear-gradient(45deg, #50cd89 0%, #3d9970 50%, #2d7a5a 100%) !important;
+    box-shadow: 0 2px 8px rgba(80, 205, 137, 0.4) !important;
+    animation: successGlow 0.6s ease-in-out;
+}
+
+@keyframes successGlow {
+    0% { box-shadow: 0 2px 8px rgba(0, 158, 247, 0.3); }
+    50% { box-shadow: 0 4px 20px rgba(80, 205, 137, 0.6); }
+    100% { box-shadow: 0 2px 8px rgba(80, 205, 137, 0.4); }
+}
+
+/* Efeito de erro */
+.progress-bar.error {
+    background: linear-gradient(45deg, #f1416c 0%, #d63384 50%, #b02a5b 100%) !important;
+    box-shadow: 0 2px 8px rgba(241, 65, 108, 0.4) !important;
+    animation: errorShake 0.5s ease-in-out;
+}
+
+@keyframes errorShake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-2px); }
+    75% { transform: translateX(2px); }
+}
+
+/* Hover effect no container da progress bar */
+.dropzone-progress:hover .progress-bar {
+    box-shadow: 0 4px 12px rgba(0, 158, 247, 0.4);
+    transform: translateY(-1px);
+    transition: all 0.2s ease;
+}
+
+/* Animação do texto de porcentagem */
+.progress-percentage {
+    display: inline-block;
+    transition: all 0.3s ease;
+}
+
+.progress-percentage.updating {
+    transform: scale(1.1);
+    color: var(--bs-primary);
+}
+
+/* Animação de loading automática */
+.loading-animation {
+    animation: autoProgress 3s ease-out forwards;
+}
+
+@keyframes autoProgress {
+    0% { width: 0%; }
+    20% { width: 15%; }
+    40% { width: 35%; }
+    60% { width: 55%; }
+    80% { width: 75%; }
+    95% { width: 90%; }
+    100% { width: 95%; }
+}
+
+/* Animação do ícone de loading */
+.loading-icon {
+    animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Botão remover compacto */
+.dropzone-remove-all {
+    min-width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+}
+
+.dropzone-remove-all:hover {
+    background-color: #f1416c !important;
+    color: white !important;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(241, 65, 108, 0.3);
+}
+
+/* Shimmer otimizado para barra menor */
+.progress-shimmer {
+    border-radius: 8px;
+    animation: shimmerFast 1.5s infinite ease-in-out;
+}
+
+@keyframes shimmerFast {
+    0% { left: -100%; }
+    40% { left: 100%; }
+    100% { left: 100%; }
+}
+
+/* Responsividade otimizada */
+@media (max-width: 768px) {
+    .progress {
+        height: 4px !important;
+    }
+    
+    .progress-shimmer,
+    .progress-glow {
+        border-radius: 4px;
+    }
+    
+    .dropzone-remove-all {
+        min-width: 28px;
+        height: 28px;
+    }
+    
+    .d-flex.gap-3 {
+        gap: 1rem !important;
+    }
 }
 
 .stepper .stepper-item.completed .stepper-wrapper .stepper-icon {
@@ -1133,6 +1839,164 @@ $(document).ready(function() {
         height: 52px !important;
         right: 12px !important;
     }
+}
+
+/* DropzoneJS Card Customizado */
+#anexos-container .card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    transition: all 0.3s ease;
+}
+
+#anexos-container .card:hover {
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+}
+
+.dropzone {
+    border: none !important;
+    background: transparent !important;
+    min-height: auto !important;
+}
+
+.dropzone.dz-drag-hover .dropzone-hint {
+    border-color: #28a745 !important;
+    background: linear-gradient(145deg, rgba(40,167,69,0.05) 0%, rgba(40,167,69,0.02) 100%) !important;
+    box-shadow: 0 0 20px rgba(40,167,69,0.2) !important;
+    transform: scale(1.02);
+}
+
+.dropzone-panel {
+    background: rgba(67, 97, 238, 0.1);
+    border: 1px solid rgba(67, 97, 238, 0.2);
+    border-radius: 10px;
+    transition: all 0.3s ease;
+}
+
+.dropzone-item {
+    background: #ffffff;
+    border: 2px dashed #e1e5e9 !important;
+    border-radius: 10px;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.dropzone-item::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.dropzone-item:hover {
+    border-color: #007bff !important;
+    background: rgba(0, 123, 255, 0.02);
+    box-shadow: 0 4px 15px rgba(0, 123, 255, 0.1);
+    transform: translateY(-2px);
+}
+
+.dropzone-item:hover::before {
+    opacity: 1;
+}
+
+.dropzone-hint {
+    min-height: 180px !important;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.dropzone-hint .border-dashed {
+    transition: all 0.3s ease;
+}
+
+.dropzone-hint:hover .border-dashed {
+    border-color: #007bff !important;
+    background: rgba(0, 123, 255, 0.02) !important;
+}
+
+
+
+
+
+
+
+
+
+.symbol.symbol-40px {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+}
+
+.symbol-label.bg-light-info {
+    background: rgba(105, 147, 255, 0.1) !important;
+    border: 1px solid rgba(105, 147, 255, 0.2);
+}
+
+.progress.h-6px {
+    height: 6px !important;
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.badge {
+    font-size: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    font-weight: 500;
+}
+
+/* Card header customizado */
+.card-header.bg-light-info {
+    background: linear-gradient(135deg, rgba(105, 147, 255, 0.1) 0%, rgba(105, 147, 255, 0.05) 100%) !important;
+    border-bottom: 1px solid rgba(105, 147, 255, 0.2);
+}
+
+/* Card footer customizado */
+.card-footer.bg-light {
+    background: #f8f9fa !important;
+    border-top: 1px solid #e9ecef;
+}
+
+/* Animações */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.dropzone-item {
+    animation: fadeInUp 0.3s ease;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .dropzone-panel .d-flex {
+        flex-direction: column;
+        align-items: stretch !important;
+    }
+    
+    .dropzone-panel .ms-auto {
+        margin-left: 0 !important;
+        margin-top: 1rem;
+        text-align: center;
+    }
+    
+    .dropzone-file .d-flex {
+        flex-direction: column;
+        align-items: flex-start !important;
+    }
+    
 }
 </style>
 @endpush

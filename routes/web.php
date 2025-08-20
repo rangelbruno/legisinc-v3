@@ -922,6 +922,10 @@ Route::prefix('proposicoes')->name('proposicoes.')->middleware(['auth', 'check.s
     Route::get('/notificacoes', [App\Http\Controllers\ProposicaoController::class, 'buscarNotificacoes'])->name('notificacoes');
     Route::get('/{proposicao}/pdf', [App\Http\Controllers\ProposicaoController::class, 'servePDF'])->name('serve-pdf');
     
+    // ===== ANEXOS =====
+    Route::get('/{proposicao}/anexo/{anexoIndex}/download', [App\Http\Controllers\AnexoController::class, 'download'])->name('anexo.download');
+    Route::get('/{proposicao}/anexo/{anexoIndex}/view', [App\Http\Controllers\AnexoController::class, 'view'])->name('anexo.view');
+    
     // ===== HISTÓRICO DE ALTERAÇÕES =====
     Route::get('/{proposicao}/historico', [App\Http\Controllers\ProposicaoHistoricoController::class, 'index'])->name('historico.index');
     Route::get('/{proposicao}/historico/view', [App\Http\Controllers\ProposicaoHistoricoController::class, 'webView'])->name('historico.view');
