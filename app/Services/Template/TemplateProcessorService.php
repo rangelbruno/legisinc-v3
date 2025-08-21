@@ -348,6 +348,13 @@ class TemplateProcessorService
             'cargo_parlamentar' => $this->obterCargoParlamentar($user),
             'email_parlamentar' => $user->email ?? '[EMAIL DO PARLAMENTAR]',
             'partido_parlamentar' => $this->obterPartidoParlamentar($user),
+            
+            // Assinatura Digital e QR Code
+            'assinatura_digital_info' => $this->gerarTextoAssinaturaDigital($proposicao),
+            'qrcode_html' => $this->gerarQRCodeText($proposicao),
+            'data_assinatura' => $proposicao->data_assinatura ? $proposicao->data_assinatura->format('d/m/Y H:i:s') : '',
+            'certificado_digital' => $proposicao->certificado_digital ?? '',
+            'ip_assinatura' => $proposicao->ip_assinatura ?? '',
         ];
         
         // Combinar todas as variáveis - proposição tem precedência sobre parâmetros para dados específicos
@@ -875,5 +882,61 @@ ${justificativa}
 ---
 ${nome_camara}
 ${data_extenso}';
+    }
+
+    /**
+     * Gerar texto da assinatura digital
+     */
+    private function gerarTextoAssinaturaDigital(Proposicao $proposicao): string
+    {
+        // Se não tem assinatura digital, retornar vazio
+        if (!$proposicao->assinatura_digital || !$proposicao->data_assinatura) {
+            return '';
+        }
+
+        // Gerar identificador único baseado na proposição
+        $identificador = $this->gerarIdentificadorAssinatura($proposicao);
+        
+        return "Autenticar documento em /autenticidade com o identificador {$identificador}, Documento assinado digitalmente conforme art. 4º, II da Lei 14.063/2020";
+    }
+
+    /**
+     * Gerar texto do QR Code
+     */
+    private function gerarQRCodeText(Proposicao $proposicao): string
+    {
+        // Se não tem protocolo ainda, não gerar QR Code
+        if (!$proposicao->numero_protocolo) {
+            return '';
+        }
+
+        return "Consulte o documento online com este QR Code";
+    }
+
+    /**
+     * Gerar identificador único para assinatura
+     */
+    private function gerarIdentificadorAssinatura(Proposicao $proposicao): string
+    {
+        // Gerar um identificador baseado no ID da proposição e data de assinatura
+        $baseString = $proposicao->id . '_' . ($proposicao->data_assinatura ? $proposicao->data_assinatura->timestamp : time());
+        
+        // Converter para hexadecimal para parecer um identificador oficial
+        $hex = strtoupper(bin2hex($baseString));
+        
+        // Formatá-lo como um identificador padrão (similar ao exemplo fornecido)
+        // 31003000350039003A005000 -> dividir em grupos
+        $formatted = '';
+        for ($i = 0; $i < strlen($hex) && $i < 24; $i += 4) {
+            $formatted .= substr($hex, $i, 4);
+        }
+        
+        // Se for muito curto, preencher com zeros
+        while (strlen($formatted) < 24) {
+            $formatted .= '0000';
+        }
+        
+        // Truncar se for muito longo
+        return substr($formatted, 0, 24);
     }
 }

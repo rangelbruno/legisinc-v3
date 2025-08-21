@@ -642,7 +642,7 @@
                                 <a 
                                     :href="'/proposicoes/' + proposicao.id + '/pdf'"
                                     target="_blank"
-                                    class="btn btn-light-danger w-100">
+                                    class="btn btn-light-danger w-100 mb-3">
                                     <i class="ki-duotone ki-file-down fs-3 me-2">
                                         <span class="path1"></span>
                                         <span class="path2"></span>
@@ -652,24 +652,25 @@
                             </div>
                             <!--end::View PDF-->
 
-                            <!--begin::Delete Document-->
-                            <div v-if="canDelete()" class="separator my-3"></div>
-                            <div v-if="canDelete()">
+                            <!--begin::Delete Proposition Complete-->
+                            <div v-if="podeExcluirDocumento()">
                                 <button 
                                     type="button" 
-                                    @click="confirmDeleteProposicao" 
+                                    @click="confirmarExclusaoDocumento" 
                                     class="btn btn-light-danger w-100 mb-3">
-                                    <i class="ki-duotone ki-trash fs-4 me-2">
+                                    <i class="ki-duotone ki-trash fs-3 me-2">
                                         <span class="path1"></span>
                                         <span class="path2"></span>
                                         <span class="path3"></span>
                                         <span class="path4"></span>
                                         <span class="path5"></span>
                                     </i>
-                                    Excluir Documento
+                                    Excluir Proposição
+                                    <div class="fs-7 text-muted">Remove completamente do sistema</div>
                                 </button>
                             </div>
-                            <!--end::Delete Document-->
+                            <!--end::Delete Proposition Complete-->
+
                             
                             <!--begin::Refresh-->
                             <div class="separator my-3"></div>
@@ -937,6 +938,33 @@
 
 .card:hover {
     box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.1) !important;
+}
+
+/* SweetAlert2 Modal Customizado para Exclusão */
+.swal2-large-modal {
+    max-width: 800px !important;
+    width: 95% !important;
+}
+
+@media (max-width: 768px) {
+    .swal2-large-modal {
+        width: 100% !important;
+        margin: 0.5rem !important;
+    }
+}
+
+.swal2-large-modal .swal2-html-container {
+    max-height: 600px !important;
+    overflow-y: auto !important;
+}
+
+.swal2-large-modal .alert {
+    margin-bottom: 0 !important;
+}
+
+.swal2-large-modal .btn-lg {
+    font-size: 1.1rem !important;
+    padding: 0.75rem 1.5rem !important;
 }
 </style>
 
@@ -1854,6 +1882,202 @@ createApp({
                 setTimeout(() => {
                     this.toasts.splice(index, 1);
                 }, 300);
+            }
+        },
+
+        // Novos métodos para exclusão de documento
+        podeExcluirDocumento() {
+            // Verificar se a proposição está em um status que permite exclusão
+            const statusPermitidos = ['aprovado', 'aprovado_assinatura', 'retornado_legislativo', 'rascunho', 'em_edicao'];
+            return statusPermitidos.includes(this.proposicao?.status);
+        },
+
+        async confirmarExclusaoDocumento() {
+            try {
+                // Mapear status para texto legível
+                const statusTexto = {
+                    'rascunho': 'Rascunho',
+                    'em_edicao': 'Em Edição',
+                    'aprovado': 'Aprovado',
+                    'aprovado_assinatura': 'Aguardando Assinatura',
+                    'retornado_legislativo': 'Retornado do Legislativo'
+                };
+                
+                // Mapear tipo para texto legível
+                const tipoTexto = this.proposicao.tipo === 'mocao' ? 'Moção' : 
+                                  this.proposicao.tipo ? this.proposicao.tipo.charAt(0).toUpperCase() + this.proposicao.tipo.slice(1) : 
+                                  'Proposição';
+                
+                const result = await Swal.fire({
+                    title: '',
+                    html: `
+                        <div class="text-center" style="padding: 10px;">
+                            <div class="mb-4">
+                                <div class="bg-light-warning rounded p-4 mb-4" style="border: 2px solid #ffc107;">
+                                    <i class="ki-duotone ki-information-5 fs-3x text-warning mb-3">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                        <span class="path3"></span>
+                                    </i>
+                                    <h5 class="text-dark fw-bold mb-3">Você está prestes a excluir esta proposição</h5>
+                                    <p class="text-dark fs-6 mb-0">
+                                        Ao confirmar, <strong>todos os documentos, arquivos e informações</strong> desta proposição 
+                                        serão <strong>permanentemente removidos</strong> do sistema.
+                                    </p>
+                                </div>
+                            </div>
+                            
+                            <div class="bg-light rounded p-4 mb-4" style="border-left: 4px solid #dc3545;">
+                                <div class="text-start">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <i class="ki-duotone ki-document fs-2 text-primary me-2">
+                                            <span class="path1"></span>
+                                            <span class="path2"></span>
+                                        </i>
+                                        <span class="fw-bold text-dark">Proposição que será excluída:</span>
+                                    </div>
+                                    <div class="ms-4">
+                                        <div class="text-dark fs-6 fw-semibold mb-2">"${this.proposicao.ementa}"</div>
+                                        <div class="d-flex gap-3">
+                                            <span class="badge badge-light-primary">📝 ${tipoTexto}</span>
+                                            <span class="badge badge-light-info">📊 ${statusTexto[this.proposicao.status] || this.proposicao.status}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="alert alert-danger d-flex align-items-center mb-0" style="background-color: #fff5f5; border: 1px solid #f1416c;">
+                                <div class="text-center w-100">
+                                    <i class="ki-duotone ki-shield-cross fs-3x text-danger mb-2">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                        <span class="path3"></span>
+                                    </i>
+                                    <div class="fw-bold text-danger fs-5 mb-2">⚠️ ATENÇÃO IMPORTANTE</div>
+                                    <div class="text-danger fs-6">
+                                        <strong>Esta ação NÃO pode ser desfeita!</strong><br>
+                                        <span class="text-dark">Após a exclusão, não será possível recuperar esta proposição.</span><br>
+                                        <em class="text-muted fs-7">Certifique-se de que realmente deseja excluir antes de confirmar.</em>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `,
+                    showCancelButton: true,
+                    confirmButtonText: '<i class="ki-duotone ki-trash fs-3 me-2"><span class="path1"></span><span class="path2"></span><span class="path3"></span><span class="path4"></span><span class="path5"></span></i>Sim, Excluir Proposição',
+                    cancelButtonText: '<i class="ki-duotone ki-check fs-3 me-2"><span class="path1"></span><span class="path2"></span></i>Não, Manter Proposição',
+                    confirmButtonColor: '#dc3545',
+                    cancelButtonColor: '#6c757d',
+                    customClass: {
+                        confirmButton: 'btn btn-danger btn-lg',
+                        cancelButton: 'btn btn-secondary btn-lg',
+                        popup: 'swal2-large-modal'
+                    },
+                    buttonsStyling: false,
+                    width: '800px',
+                    padding: '2rem',
+                    allowOutsideClick: false,
+                    allowEscapeKey: false
+                });
+
+                if (result.isConfirmed) {
+                    await this.excluirDocumento();
+                }
+            } catch (error) {
+                console.error('Erro ao confirmar exclusão de proposição:', error);
+                this.showToast('Erro ao exibir confirmação', 'error');
+            }
+        },
+
+        async excluirDocumento() {
+            // Mostrar loading
+            Swal.fire({
+                title: 'Excluindo Proposição...',
+                html: 'Removendo proposição permanentemente do sistema...',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showConfirmButton: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            try {
+                const response = await fetch(`/proposicoes/${this.proposicao.id}/excluir-documento`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': this.csrfToken,
+                        'Accept': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    // Fechar loading
+                    Swal.close();
+
+                    // Mostrar sucesso final
+                    await Swal.fire({
+                        title: 'Proposição Excluída!',
+                        html: `
+                            <div class="text-center">
+                                <i class="ki-duotone ki-check-circle fs-3x text-success mb-3">
+                                    <span class="path1"></span>
+                                    <span class="path2"></span>
+                                </i>
+                                <p class="mb-2">${data.message}</p>
+                                <p class="fs-7 text-muted">Redirecionando para a listagem de proposições...</p>
+                            </div>
+                        `,
+                        icon: 'success',
+                        confirmButtonText: 'OK',
+                        timer: 3000,
+                        customClass: {
+                            confirmButton: 'btn btn-success'
+                        },
+                        buttonsStyling: false
+                    });
+
+                    // Redirecionar para a listagem
+                    if (data.redirect_url) {
+                        window.location.href = data.redirect_url;
+                    } else {
+                        window.location.href = '/proposicoes';
+                    }
+
+                } else {
+                    Swal.close();
+                    
+                    // Mostrar erro específico
+                    await Swal.fire({
+                        title: 'Erro ao Excluir',
+                        text: data.message || 'Não foi possível excluir a proposição.',
+                        icon: 'error',
+                        confirmButtonText: 'OK',
+                        customClass: {
+                            confirmButton: 'btn btn-danger'
+                        },
+                        buttonsStyling: false
+                    });
+                }
+
+            } catch (error) {
+                console.error('Erro na requisição de exclusão:', error);
+                Swal.close();
+                
+                // Mostrar erro de conexão
+                await Swal.fire({
+                    title: 'Erro de Conexão',
+                    text: 'Erro de conexão ao excluir proposição: ' + error.message,
+                    icon: 'error',
+                    confirmButtonText: 'OK',
+                    customClass: {
+                        confirmButton: 'btn btn-danger'
+                    },
+                    buttonsStyling: false
+                });
             }
         }
     }

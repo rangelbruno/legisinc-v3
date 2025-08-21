@@ -900,6 +900,17 @@ Route::prefix('proposicoes')->name('proposicoes.')->middleware(['auth', 'check.s
     Route::put('/{proposicao}/devolver-legislativo', [App\Http\Controllers\ProposicaoAssinaturaController::class, 'devolverLegislativo'])->name('devolver-legislativo')->middleware('role.permission:proposicoes.corrigir');
     Route::get('/historico-assinaturas', [App\Http\Controllers\ProposicaoAssinaturaController::class, 'historico'])->name('historico-assinaturas')->middleware('role.permission:proposicoes.view.own');
     
+    // ===== NOVAS ROTAS PARA PDF VUE.JS =====
+    Route::post('/{proposicao}/salvar-pdf', [App\Http\Controllers\ProposicaoAssinaturaController::class, 'salvarPDFVue'])->name('salvar-pdf')->middleware('role.permission:proposicoes.assinar');
+    Route::get('/{proposicao}/dados-template', [App\Http\Controllers\ProposicaoAssinaturaController::class, 'obterDadosTemplate'])->name('dados-template')->middleware('role.permission:proposicoes.view.own');
+    Route::post('/{proposicao}/processar-assinatura-vue', [App\Http\Controllers\ProposicaoAssinaturaController::class, 'processarAssinaturaVue'])->name('processar-assinatura-vue')->middleware('role.permission:proposicoes.assinar');
+    Route::get('/{proposicao}/verificar-assinatura', [App\Http\Controllers\ProposicaoAssinaturaController::class, 'verificarAssinatura'])->name('verificar-assinatura')->middleware('role.permission:proposicoes.view.own');
+    Route::get('/{proposicao}/conteudo-onlyoffice', [App\Http\Controllers\ProposicaoAssinaturaController::class, 'obterConteudoOnlyOffice'])->name('conteudo-onlyoffice')->middleware('role.permission:proposicoes.view.own');
+    Route::get('/{proposicao}/visualizar-pdf-otimizado', [App\Http\Controllers\ProposicaoAssinaturaController::class, 'visualizarPDFOtimizado'])->name('visualizar-pdf-otimizado')->middleware('role.permission:proposicoes.view.own');
+    
+    Route::get('/{proposicao}/pdf-original', [App\Http\Controllers\ProposicaoAssinaturaController::class, 'visualizarPDFOriginal'])->name('pdf-original')->middleware('role.permission:proposicoes.view.own');
+    Route::delete('/{proposicao}/excluir-documento', [App\Http\Controllers\ProposicaoAssinaturaController::class, 'excluirDocumento'])->name('excluir-documento')->middleware('role.permission:proposicoes.assinar');
+    
     // Voltar proposição para parlamentar (do legislativo)
     Route::put('/{proposicao}/voltar-parlamentar', [App\Http\Controllers\ProposicaoController::class, 'voltarParaParlamentar'])->name('voltar-parlamentar');
     

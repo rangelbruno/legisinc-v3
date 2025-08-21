@@ -75,6 +75,12 @@ class DatabaseSeeder extends Seeder
             PDFAssinaturaOptimizadoSeeder::class,
         ]);
         
+        // CORREÇÃO DEFINITIVA: Estrutura Word completa (cabeçalho + corpo + rodapé)
+        $this->call([
+            PDFEstruturaWordSeeder::class,
+            PDFErrorLogFixSeeder::class,
+        ]);
+        
         // UI: Otimizações de interface do usuário
         $this->call([
             UIOptimizationsSeeder::class,
@@ -123,6 +129,11 @@ class DatabaseSeeder extends Seeder
         // Correções de status e otimização de PDF
         $this->call([
             CorrecaoStatusPDFSeeder::class,
+        ]);
+        
+        // Correções de formatação do Legislativo no PDF
+        $this->call([
+            PDFFormatacaoLegislativoSeeder::class,
         ]);
 
         // Processar imagens dos templates admin
