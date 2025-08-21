@@ -436,16 +436,7 @@ class ProposicaoAssinaturaController extends Controller
      */
     private function criarPDFDoArquivoMaisRecente(string $caminhoPdfAbsoluto, Proposicao $proposicao): void
     {
-        static $processingLock = [];
-        
         try {
-            // Evitar execução duplicada/concorrente
-            $lockKey = "pdf_generation_{$proposicao->id}";
-            if (isset($processingLock[$lockKey])) {
-                error_log("PDF Assinatura: Execução duplicada detectada e prevenida para proposição {$proposicao->id}");
-                return;
-            }
-            $processingLock[$lockKey] = true;
             // ESTRATÉGIA MELHORADA: Buscar SEMPRE o arquivo mais recente
             $arquivoMaisRecente = $this->encontrarArquivoMaisRecente($proposicao);
             
@@ -1403,32 +1394,24 @@ class ProposicaoAssinaturaController extends Controller
                 mkdir($finalDir, 0755, true);
             }
             
-            // 3. PRIORIDADE 1: Tentar LibreOffice (mais confiável para preservar formatação)
-            if ($this->libreOfficeDisponivel()) {
-                error_log("PDF OnlyOffice: Tentando conversão via LibreOffice (prioridade alta)");
-                $pdfPath = $this->converterDocxParaPdfViaLibreOffice($caminhoDocx, $finalPdf);
-                if ($pdfPath && file_exists($pdfPath) && filesize($pdfPath) > 1000) {
-                    error_log("PDF OnlyOffice: Conversão LibreOffice bem-sucedida - " . filesize($pdfPath) . " bytes");
-                    return $pdfPath;
-                } else {
-                    error_log("PDF OnlyOffice: Conversão LibreOffice falhou ou gerou PDF inválido");
-                }
-            }
-            
-            // 4. PRIORIDADE 2: Tentar conversão via OnlyOffice Document Server se disponível
+            // 3. Tentar conversão via OnlyOffice Document Server se disponível
             if ($this->onlyOfficeServerDisponivel()) {
-                error_log("PDF OnlyOffice: Tentando conversão via OnlyOffice Document Server");
                 $pdfPath = $this->converterDocxParaPdfViaOnlyOffice($caminhoDocx, $finalPdf);
-                if ($pdfPath && file_exists($pdfPath) && filesize($pdfPath) > 1000) {
-                    error_log("PDF OnlyOffice: Conversão OnlyOffice bem-sucedida - " . filesize($pdfPath) . " bytes");
+                if ($pdfPath) {
                     return $pdfPath;
-                } else {
-                    error_log("PDF OnlyOffice: Conversão OnlyOffice falhou ou gerou PDF inválido");
                 }
             }
             
-            // 5. FALLBACK FINAL: Usar DomPDF com conteúdo extraído (menos ideal)
-            error_log("PDF OnlyOffice: Usando DomPDF como fallback (formatação limitada)");
+            // 4. Fallback: Tentar LibreOffice se disponível
+            if ($this->libreOfficeDisponivel()) {
+                $pdfPath = $this->converterDocxParaPdfViaLibreOffice($caminhoDocx, $finalPdf);
+                if ($pdfPath) {
+                    return $pdfPath;
+                }
+            }
+            
+            // 5. Fallback final: Usar DomPDF com conteúdo extraído e formatação melhorada
+            error_log("PDF OnlyOffice: Usando DomPDF como fallback com formatação melhorada");
             return $this->gerarPDFComDomPdfMelhorado($proposicao, $caminhoDocx, $finalPdf);
             
         } catch (\Exception $e) {
@@ -1477,19 +1460,13 @@ class ProposicaoAssinaturaController extends Controller
         try {
             error_log("PDF OnlyOffice: Tentando conversão via LibreOffice");
             
-            // Usar diretório temporário do sistema com permissões corretas
-            $tempDir = '/tmp/libreoffice_conversion_' . uniqid();
-            if (!mkdir($tempDir, 0755, true)) {
-                error_log("PDF OnlyOffice: Falha ao criar diretório temporário: $tempDir");
-                return null;
+            $tempDir = storage_path('app/temp/pdf_conversion');
+            if (!is_dir($tempDir)) {
+                mkdir($tempDir, 0755, true);
             }
             
             $tempDocx = $tempDir . '/temp_' . time() . '.docx';
-            if (!copy($caminhoDocx, $tempDocx)) {
-                error_log("PDF OnlyOffice: Falha ao copiar arquivo DOCX para diretório temporário");
-                exec("rm -rf $tempDir");
-                return null;
-            }
+            copy($caminhoDocx, $tempDocx);
             
             $comando = sprintf(
                 'libreoffice --headless --convert-to pdf --outdir %s %s 2>/dev/null',
@@ -1502,26 +1479,11 @@ class ProposicaoAssinaturaController extends Controller
             $pdfTemporario = $tempDir . '/' . pathinfo($tempDocx, PATHINFO_FILENAME) . '.pdf';
             
             if ($returnCode === 0 && file_exists($pdfTemporario)) {
-                // Validar se o PDF foi gerado corretamente
-                $tamanhoPdf = filesize($pdfTemporario);
-                if ($tamanhoPdf > 1000) { // PDF deve ter pelo menos 1KB
-                    if (copy($pdfTemporario, $finalPdf)) {
-                        error_log("PDF OnlyOffice: Conversão LibreOffice bem-sucedida - {$tamanhoPdf} bytes");
-                        // Limpar arquivos temporários
-                        exec("rm -rf $tempDir");
-                        return $finalPdf;
-                    } else {
-                        error_log("PDF OnlyOffice: Falha ao copiar PDF para destino final");
-                    }
-                } else {
-                    error_log("PDF OnlyOffice: PDF gerado pelo LibreOffice é muito pequeno ({$tamanhoPdf} bytes)");
-                }
-            } else {
-                error_log("PDF OnlyOffice: LibreOffice falhou - return code: {$returnCode}");
+                rename($pdfTemporario, $finalPdf);
+                unlink($tempDocx);
+                error_log("PDF OnlyOffice: Conversão LibreOffice bem-sucedida");
+                return $finalPdf;
             }
-            
-            // Limpar arquivos temporários
-            exec("rm -rf $tempDir");
             
             return null;
             
