@@ -283,6 +283,97 @@
         </div>
         <!--end::Parliamentary info-->
         
+        <!--begin::User integration-->
+        @if(!isset($parlamentar) || empty($parlamentar))
+        <div class="card card-flush py-4">
+            <!--begin::Card header-->
+            <div class="card-header">
+                <div class="card-title">
+                    <h2>Integração com Usuário</h2>
+                </div>
+            </div>
+            <!--end::Card header-->
+            <!--begin::Card body-->
+            <div class="card-body pt-0">
+                <!-- Opção: Vincular a usuário existente -->
+                <div class="row mb-6">
+                    <label class="col-lg-4 col-form-label fw-semibold fs-6">Vinculação</label>
+                    <div class="col-lg-8">
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="radio" name="user_option" value="existing" id="existing_user" />
+                            <label class="form-check-label" for="existing_user">
+                                Vincular a usuário já cadastrado
+                            </label>
+                        </div>
+                        
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="user_option" value="create" id="create_user" />
+                            <label class="form-check-label" for="create_user">
+                                Criar usuário de acesso para este parlamentar
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Select de usuário existente -->
+                <div class="row mb-6" id="select_user" style="display: none;">
+                    <label class="col-lg-4 col-form-label fw-semibold fs-6">Usuário</label>
+                    <div class="col-lg-8">
+                        <select name="user_id" class="form-control form-control-lg form-control-solid">
+                            <option value="">Selecione um usuário</option>
+                            @if(isset($usuariosSemParlamentar) && $usuariosSemParlamentar->count() > 0)
+                                @foreach($usuariosSemParlamentar as $usuario)
+                                    <option value="{{ $usuario->id }}" {{ old('user_id') == $usuario->id ? 'selected' : '' }}>
+                                        {{ $usuario->name }} ({{ $usuario->email }})
+                                        @if($usuario->partido)
+                                            - {{ $usuario->partido }}
+                                        @endif
+                                    </option>
+                                @endforeach
+                            @else
+                                <option value="" disabled>Nenhum usuário parlamentar disponível</option>
+                            @endif
+                        </select>
+                        <div class="form-text">Usuários com perfil parlamentar que não possuem cadastro de parlamentar</div>
+                    </div>
+                </div>
+
+                <!-- Campos para criar usuário -->
+                <div id="create_user_fields" style="display: none;">
+                    <div class="alert alert-info">
+                        <i class="ki-duotone ki-information fs-2">
+                            <span class="path1"></span>
+                            <span class="path2"></span>
+                            <span class="path3"></span>
+                        </i>
+                        Será criado automaticamente um usuário com perfil PARLAMENTAR usando os dados informados acima.
+                    </div>
+
+                    <div class="row mb-6">
+                        <label class="col-lg-4 col-form-label required fw-semibold fs-6">Senha do Usuário</label>
+                        <div class="col-lg-8">
+                            <input type="password" name="usuario_password" class="form-control form-control-lg form-control-solid" 
+                                   placeholder="Digite uma senha segura" />
+                            @error('usuario_password')
+                                <div class="text-danger fs-7">{{ $message }}</div>
+                            @enderror
+                        </div>
+                    </div>
+
+                    <div class="row mb-6">
+                        <label class="col-lg-4 col-form-label required fw-semibold fs-6">Confirmar Senha</label>
+                        <div class="col-lg-8">
+                            <input type="password" name="usuario_password_confirmation" class="form-control form-control-lg form-control-solid" 
+                                   placeholder="Confirme a senha" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!--end::Card body-->
+        </div>
+        <!--end::User integration-->
+        @endif
+        
         <div class="d-flex justify-content-end">
             <!--begin::Button-->
             <a href="{{ $cancelUrl }}" class="btn btn-light me-5">Cancelar</a>
@@ -381,6 +472,35 @@ document.addEventListener('DOMContentLoaded', function() {
             e.target.value = value;
         });
     }
+    
+    // Controle de integração com usuário
+    const existingUserRadio = document.getElementById('existing_user');
+    const createUserRadio = document.getElementById('create_user');
+    const selectUser = document.getElementById('select_user');
+    const createUserFields = document.getElementById('create_user_fields');
+    
+    function toggleUserOptions() {
+        if (existingUserRadio && existingUserRadio.checked) {
+            selectUser.style.display = 'block';
+            createUserFields.style.display = 'none';
+        } else if (createUserRadio && createUserRadio.checked) {
+            selectUser.style.display = 'none';
+            createUserFields.style.display = 'block';
+        } else {
+            selectUser.style.display = 'none';
+            createUserFields.style.display = 'none';
+        }
+    }
+
+    if (existingUserRadio) {
+        existingUserRadio.addEventListener('change', toggleUserOptions);
+    }
+    if (createUserRadio) {
+        createUserRadio.addEventListener('change', toggleUserOptions);
+    }
+
+    // Inicializar
+    toggleUserOptions();
     
     // Inicializar sistema de autocomplete de partidos
     setTimeout(() => {

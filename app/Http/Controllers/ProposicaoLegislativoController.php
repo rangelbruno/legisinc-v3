@@ -37,7 +37,15 @@ class ProposicaoLegislativoController extends Controller
     public function index(Request $request)
     {
         $query = Proposicao::with(['autor'])
-            ->whereIn('status', ['enviado_legislativo', 'em_revisao', 'devolvido_correcao']);
+            ->whereIn('status', [
+                'enviado_legislativo', 
+                'em_revisao', 
+                'devolvido_correcao', 
+                'aprovado', 
+                'aprovado_assinatura', 
+                'assinado', 
+                'protocolado'
+            ]);
             
         // Apply filters
         if ($request->filled('search')) {
@@ -73,17 +81,27 @@ class ProposicaoLegislativoController extends Controller
             'em_revisao', 
             'aprovado_assinatura', 
             'devolvido_correcao',
-            'retornado_legislativo'
+            'retornado_legislativo',
+            'aprovado',
+            'assinado',
+            'protocolado'
         ])->get();
 
         // Estatísticas adicionais
         $estatisticas = [
-            'total_mes' => Proposicao::whereIn('status', ['enviado_legislativo', 'em_revisao', 'aprovado_assinatura', 'devolvido_correcao', 'retornado_legislativo'])
+            'total_mes' => Proposicao::whereIn('status', [
+                'enviado_legislativo', 'em_revisao', 'aprovado_assinatura', 
+                'devolvido_correcao', 'retornado_legislativo', 'aprovado', 
+                'assinado', 'protocolado'
+            ])
                 ->whereMonth('created_at', now()->month)
                 ->whereYear('created_at', now()->year)
                 ->count(),
             'tempo_medio_revisao' => $this->calcularTempoMedioRevisao(),
-            'por_tipo' => Proposicao::whereIn('status', ['enviado_legislativo', 'em_revisao'])
+            'por_tipo' => Proposicao::whereIn('status', [
+                'enviado_legislativo', 'em_revisao', 'aprovado', 
+                'assinado', 'protocolado'
+            ])
                 ->selectRaw('tipo, count(*) as total')
                 ->groupBy('tipo')
                 ->pluck('total', 'tipo'),

@@ -5,12 +5,16 @@ namespace App\Http\Controllers\Parlamentar;
 use App\Http\Controllers\Controller;
 use App\Services\Parlamentar\ParlamentarService;
 use App\Models\Parlamentar;
+use App\Models\User;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
+use Spatie\Permission\Models\Role;
 
 class ParlamentarController extends Controller
 {
@@ -96,12 +100,21 @@ class ParlamentarController extends Controller
      */
     public function create(): View
     {
+        // Buscar usuários parlamentares que não possuem cadastro de parlamentar vinculado
+        $usuariosSemParlamentar = User::whereHas('roles', function ($q) {
+                $q->whereIn('name', [User::PERFIL_PARLAMENTAR, User::PERFIL_RELATOR]);
+            })
+            ->whereDoesntHave('parlamentar')
+            ->orderBy('name')
+            ->get(['id', 'name', 'email', 'partido']);
+
         return view('modules.parlamentares.create', [
             'title' => 'Novo Parlamentar',
             'partidos' => $this->getPartidosOptions(),
             'cargos' => $this->getCargosOptions(),
             'statusOptions' => $this->getStatusOptions(),
-            'escolaridadeOptions' => $this->getEscolaridadeOptions()
+            'escolaridadeOptions' => $this->getEscolaridadeOptions(),
+            'usuariosSemParlamentar' => $usuariosSemParlamentar
         ]);
     }
     
@@ -110,7 +123,8 @@ class ParlamentarController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
-        $validatedData = $request->validate([
+        // Validações personalizadas
+        $rules = [
             'nome' => 'required|string|max:255',
             'nome_politico' => 'nullable|string|max:255',
             'partido' => 'required|string|max:50',
@@ -123,15 +137,36 @@ class ParlamentarController extends Controller
             'escolaridade' => 'nullable|string|max:100',
             'foto' => 'nullable|image|mimes:jpeg,jpg,png,gif|max:2048',
             'comissoes' => 'nullable|string',
-        ]);
+            // Campos para integração com usuário
+            'user_id' => 'nullable|exists:users,id',
+            'criar_usuario' => 'boolean',
+            'usuario_password' => 'nullable|string|min:8',
+            'usuario_password_confirmation' => 'nullable|string|min:8|same:usuario_password',
+        ];
+
+        // Se vai criar usuário, validar email único também na tabela users
+        if ($request->boolean('criar_usuario') && $request->email) {
+            $rules['email'] = 'required|email|max:255|unique:parlamentars,email|unique:users,email';
+        }
+
+        // Se está vinculando a usuário existente, verificar se não tem parlamentar
+        if ($request->user_id) {
+            $usuarioExistente = User::find($request->user_id);
+            if ($usuarioExistente && $usuarioExistente->parlamentar) {
+                return redirect()->back()
+                    ->withErrors(['user_id' => 'Este usuário já possui cadastro de parlamentar vinculado.'])
+                    ->withInput();
+            }
+        }
+
+        $validatedData = $request->validate($rules);
 
         // Definir status padrão para novos parlamentares
         $validatedData['status'] = 'ativo';
 
-        // Debug: log dados validados
-        // Log::info('Dados validados para criação:', $validatedData);
-
         try {
+            DB::beginTransaction();
+
             // Processar upload da foto
             if ($request->hasFile('foto')) {
                 $foto = $request->file('foto');
@@ -144,6 +179,36 @@ class ParlamentarController extends Controller
             if (isset($validatedData['comissoes']) && is_string($validatedData['comissoes'])) {
                 $validatedData['comissoes'] = array_filter(explode(',', $validatedData['comissoes']));
             }
+
+            // Se deve criar usuário junto com o parlamentar
+            if ($request->boolean('criar_usuario') && $validatedData['email']) {
+                if (!$validatedData['usuario_password']) {
+                    throw new \Exception('Senha do usuário é obrigatória quando criar usuário está marcado.');
+                }
+
+                $userData = [
+                    'name' => $validatedData['nome'],
+                    'email' => $validatedData['email'],
+                    'password' => Hash::make($validatedData['usuario_password']),
+                    'documento' => $validatedData['cpf'] ?? null,
+                    'telefone' => $validatedData['telefone'],
+                    'data_nascimento' => $validatedData['data_nascimento'],
+                    'profissao' => $validatedData['profissao'],
+                    'partido' => $validatedData['partido'],
+                    'ativo' => true,
+                ];
+
+                $user = User::create($userData);
+                $user->assignRole(User::PERFIL_PARLAMENTAR);
+                
+                $validatedData['user_id'] = $user->id;
+            } elseif ($request->user_id) {
+                // Vincular a usuário existente
+                $validatedData['user_id'] = $request->user_id;
+            }
+            
+            // Remover campos que não pertencem ao model Parlamentar
+            unset($validatedData['criar_usuario'], $validatedData['usuario_password'], $validatedData['usuario_password_confirmation']);
             
             // Remover campos vazios para evitar problemas
             $validatedData = array_filter($validatedData, function($value) {
@@ -153,18 +218,20 @@ class ParlamentarController extends Controller
             // Re-adicionar status pois pode ter sido removido
             $validatedData['status'] = 'ativo';
             
-            // Log::info('Dados finais para criação:', $validatedData);
-            
             $parlamentar = $this->parlamentarService->create($validatedData);
+            
+            DB::commit();
             
             return redirect()->route('parlamentares.show', $parlamentar['id'])
                 ->with('success', 'Parlamentar criado com sucesso!');
                 
         } catch (ValidationException $e) {
+            DB::rollBack();
             return redirect()->back()
                 ->withErrors($e->errors())
                 ->withInput();
         } catch (\Exception $e) {
+            DB::rollBack();
             return redirect()->back()
                 ->with('error', 'Erro ao criar parlamentar: ' . $e->getMessage())
                 ->withInput();

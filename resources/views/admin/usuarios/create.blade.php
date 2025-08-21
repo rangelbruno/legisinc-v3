@@ -186,6 +186,78 @@
                             </div>
                         </div>
 
+                        <!-- Seção específica para Parlamentares -->
+                        <div id="parlamentar-section" style="display: none;">
+                            <div class="separator border-gray-200 mb-6"></div>
+                            <h3 class="mb-6">Dados do Parlamentar</h3>
+                            
+                            <!-- Opção: Vincular a parlamentar existente -->
+                            <div class="row mb-6">
+                                <label class="col-lg-4 col-form-label fw-semibold fs-6">Vinculação</label>
+                                <div class="col-lg-8">
+                                    <div class="form-check mb-3">
+                                        <input class="form-check-input" type="radio" name="parlamentar_option" value="existing" id="existing_parlamentar" />
+                                        <label class="form-check-label" for="existing_parlamentar">
+                                            Vincular a parlamentar já cadastrado
+                                        </label>
+                                    </div>
+                                    
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="parlamentar_option" value="create" id="create_parlamentar" />
+                                        <label class="form-check-label" for="create_parlamentar">
+                                            Criar novo cadastro de parlamentar
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Select de parlamentar existente -->
+                            <div class="row mb-6" id="select_parlamentar" style="display: none;">
+                                <label class="col-lg-4 col-form-label fw-semibold fs-6">Parlamentar</label>
+                                <div class="col-lg-8">
+                                    <select name="parlamentar_id" class="form-control form-control-lg form-control-solid">
+                                        <option value="">Selecione um parlamentar</option>
+                                        @foreach($parlamentaresSemUsuario as $parlamentar)
+                                            <option value="{{ $parlamentar->id }}" {{ old('parlamentar_id') == $parlamentar->id ? 'selected' : '' }}>
+                                                {{ $parlamentar->nome }} 
+                                                @if($parlamentar->nome_politico)
+                                                    ({{ $parlamentar->nome_politico }})
+                                                @endif
+                                                - {{ $parlamentar->partido }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Campos para criar novo parlamentar -->
+                            <div id="create_parlamentar_fields" style="display: none;">
+                                <div class="row mb-6">
+                                    <label class="col-lg-4 col-form-label fw-semibold fs-6">Nome Político</label>
+                                    <div class="col-lg-8">
+                                        <input type="text" name="nome_politico" class="form-control form-control-lg form-control-solid" 
+                                               placeholder="Nome usado na política" value="{{ old('nome_politico') }}" />
+                                        <div class="form-text">Nome pelo qual o parlamentar é conhecido (opcional)</div>
+                                    </div>
+                                </div>
+
+                                <div class="row mb-6">
+                                    <label class="col-lg-4 col-form-label fw-semibold fs-6">Escolaridade</label>
+                                    <div class="col-lg-8">
+                                        <select name="escolaridade" class="form-control form-control-lg form-control-solid">
+                                            <option value="">Selecione a escolaridade</option>
+                                            <option value="Ensino Fundamental" {{ old('escolaridade') == 'Ensino Fundamental' ? 'selected' : '' }}>Ensino Fundamental</option>
+                                            <option value="Ensino Médio" {{ old('escolaridade') == 'Ensino Médio' ? 'selected' : '' }}>Ensino Médio</option>
+                                            <option value="Ensino Superior" {{ old('escolaridade') == 'Ensino Superior' ? 'selected' : '' }}>Ensino Superior</option>
+                                            <option value="Pós-graduação" {{ old('escolaridade') == 'Pós-graduação' ? 'selected' : '' }}>Pós-graduação</option>
+                                            <option value="Mestrado" {{ old('escolaridade') == 'Mestrado' ? 'selected' : '' }}>Mestrado</option>
+                                            <option value="Doutorado" {{ old('escolaridade') == 'Doutorado' ? 'selected' : '' }}>Doutorado</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="row mb-6">
                             <label class="col-lg-4 col-form-label fw-semibold fs-6">Status</label>
                             <div class="col-lg-8">
@@ -230,6 +302,45 @@ document.addEventListener('DOMContentLoaded', function() {
     // Form validation
     const form = document.getElementById('kt_user_form');
     const submitButton = form.querySelector('[type="submit"]');
+    const roleSelect = document.querySelector('select[name="role"]');
+    const parlamentarSection = document.getElementById('parlamentar-section');
+    const existingRadio = document.getElementById('existing_parlamentar');
+    const createRadio = document.getElementById('create_parlamentar');
+    const selectParlamentar = document.getElementById('select_parlamentar');
+    const createFields = document.getElementById('create_parlamentar_fields');
+    
+    // Mostrar/ocultar seção de parlamentar baseado no perfil selecionado
+    function toggleParlamentarSection() {
+        const selectedRole = roleSelect.value;
+        if (selectedRole === 'PARLAMENTAR' || selectedRole === 'RELATOR') {
+            parlamentarSection.style.display = 'block';
+        } else {
+            parlamentarSection.style.display = 'none';
+        }
+    }
+
+    // Controlar visibilidade dos campos baseado na opção escolhida
+    function toggleParlamentarOptions() {
+        if (existingRadio.checked) {
+            selectParlamentar.style.display = 'block';
+            createFields.style.display = 'none';
+        } else if (createRadio.checked) {
+            selectParlamentar.style.display = 'none';
+            createFields.style.display = 'block';
+        } else {
+            selectParlamentar.style.display = 'none';
+            createFields.style.display = 'none';
+        }
+    }
+
+    // Event listeners
+    roleSelect.addEventListener('change', toggleParlamentarSection);
+    existingRadio.addEventListener('change', toggleParlamentarOptions);
+    createRadio.addEventListener('change', toggleParlamentarOptions);
+    
+    // Inicializar
+    toggleParlamentarSection();
+    toggleParlamentarOptions();
     
     form.addEventListener('submit', function(e) {
         submitButton.setAttribute('data-kt-indicator', 'on');

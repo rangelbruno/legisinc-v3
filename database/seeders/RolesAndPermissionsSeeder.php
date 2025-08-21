@@ -320,17 +320,17 @@ class RolesAndPermissionsSeeder extends Seeder
         
         $admin->assignRole(User::PERFIL_ADMIN);
 
-        // Criar usuário parlamentar de exemplo
+        // Criar usuário parlamentar Jessica Santos
         $parlamentar = User::firstOrCreate(
-            ['email' => 'parlamentar@camara.gov.br'],
+            ['email' => 'jessica@sistema.gov.br'],
             [
-                'name' => 'João Silva Santos',
-                'password' => bcrypt('parlamentar123'),
+                'name' => 'Jessica Santos',
+                'password' => bcrypt('123456'),
                 'documento' => '111.111.111-11',
-                'telefone' => '(11) 1111-1111',
-                'data_nascimento' => '1975-03-15',
-                'profissao' => 'Advogado',
-                'cargo_atual' => 'Vereador',
+                'telefone' => '(11) 9111-1111',
+                'data_nascimento' => '1985-03-15',
+                'profissao' => 'Advogada',
+                'cargo_atual' => 'Vereadora',
                 'partido' => 'PT',
                 'ativo' => true,
             ]
@@ -375,7 +375,7 @@ class RolesAndPermissionsSeeder extends Seeder
         $this->command->info('Perfis e permissões criados com sucesso!');
         $this->command->info('Usuários criados:');
         $this->command->info('- Admin: admin@sistema.gov.br / admin123');
-        $this->command->info('- Parlamentar: parlamentar@camara.gov.br / parlamentar123');
+        $this->command->info('- Parlamentar: jessica@sistema.gov.br / 123456');
         $this->command->info('- Legislativo: servidor@camara.gov.br / servidor123');
         $this->command->info('- Protocolo: protocolo@camara.gov.br / protocolo123');
     }

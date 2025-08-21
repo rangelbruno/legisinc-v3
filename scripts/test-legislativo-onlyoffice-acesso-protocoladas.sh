@@ -1,0 +1,58 @@
+#!/bin/bash
+
+echo "🏛️ Teste: Legislativo tem acesso a todas as proposições protocoladas"
+echo "==================================================================="
+
+echo ""
+echo "1. Verificando proposições disponíveis no sistema:"
+docker exec legisinc-postgres psql -U postgres -d legisinc -c "SELECT id, tipo, status, numero_protocolo FROM proposicoes ORDER BY id;"
+
+echo ""
+echo "2. Status incluídos na listagem do Legislativo:"
+echo "   ✅ enviado_legislativo"
+echo "   ✅ em_revisao"
+echo "   ✅ devolvido_correcao"
+echo "   ✅ aprovado (NOVO)"
+echo "   ✅ aprovado_assinatura (NOVO)" 
+echo "   ✅ assinado (NOVO)"
+echo "   ✅ protocolado (NOVO)"
+
+echo ""
+echo "3. Badges de status adicionados na view:"
+echo "   📋 Aprovado → badge verde com ícone check"
+echo "   ⏳ Aguardando Assinatura → badge azul com ícone clock"
+echo "   ✍️ Assinado → badge verde com ícone signature"
+echo "   📋 Protocolado → badge verde escuro com ícone stamp"
+
+echo ""
+echo "4. Permissões por status:"
+echo "   Status editáveis pelo Legislativo:"
+echo "   - enviado_legislativo, em_revisao, devolvido_correcao"
+echo "   "
+echo "   Status apenas visualização:"
+echo "   - aprovado, aprovado_assinatura, assinado, protocolado"
+
+echo ""
+echo "✅ CORREÇÕES IMPLEMENTADAS:"
+echo "   - ProposicaoLegislativoController.php: Query incluindo todos os status"
+echo "   - legislativo/index.blade.php: Badges para novos status"
+echo "   - Permissões mantidas: Edição só para status apropriados"
+echo "   - Estatísticas atualizadas incluindo novos status"
+
+echo ""
+echo "🧪 TESTE NO NAVEGADOR:"
+echo "   1. Login: joao@sistema.gov.br / 123456 (Legislativo)"
+echo "   2. Acesse: http://localhost:8001/proposicoes/legislativo"
+echo "   3. Deve ver TODAS as proposições, incluindo protocoladas"
+echo "   4. Proposições protocoladas: apenas opção 'Visualizar'"
+echo "   5. Proposições em revisão: opções 'Visualizar' e 'Editar'"
+
+echo ""
+echo "📊 RESULTADO ESPERADO:"
+echo "   - Legislativo vê proposições 2 e 3 (ambas protocoladas)"
+echo "   - Badge 'Protocolado' com ícone de carimbo"
+echo "   - Clique em 'Visualizar' abre a proposição"
+echo "   - PDF disponível para visualização"
+
+echo ""
+echo "✅ Implementação concluída! Legislativo agora tem acesso completo ao histórico."

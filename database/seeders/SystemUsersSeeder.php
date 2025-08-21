@@ -59,15 +59,15 @@ class SystemUsersSeeder extends Seeder
                 'role' => User::PERFIL_ADMIN
             ],
             [
-                'name' => 'Parlamentar do Sistema',
-                'email' => 'parlamentar@camara.gov.br',
-                'password' => Hash::make('parlamentar123'),
+                'name' => 'Jessica Santos',
+                'email' => 'jessica@sistema.gov.br',
+                'password' => Hash::make('123456'),
                 'documento' => '111.111.111-11',
-                'telefone' => '(11) 1111-1111',
-                'data_nascimento' => '1975-03-15',
-                'profissao' => 'Parlamentar',
-                'cargo_atual' => 'Vereador',
-                'partido' => 'PMDB',
+                'telefone' => '(11) 9111-1111',
+                'data_nascimento' => '1985-03-15',
+                'profissao' => 'Advogada',
+                'cargo_atual' => 'Vereadora',
+                'partido' => 'PT',
                 'ativo' => true,
                 'role' => User::PERFIL_PARLAMENTAR
             ],
@@ -129,9 +129,12 @@ class SystemUsersSeeder extends Seeder
         $this->command->info('   Role: admin (acesso total)');
         $this->command->info('');
         $this->command->info('🏛️ Parlamentar:');
-        $this->command->info('   Email: parlamentar@camara.gov.br');
-        $this->command->info('   Senha: parlamentar123');
+        $this->command->info('   Nome: Jessica Santos');
+        $this->command->info('   Email: jessica@sistema.gov.br');
+        $this->command->info('   Senha: 123456');
         $this->command->info('   Role: parlamentar');
+        $this->command->info('   Partido: PT');
+        $this->command->info('   Cargo: Vereadora');
         $this->command->info('   Permissões: Criar, editar e assinar projetos próprios');
         $this->command->info('');
         $this->command->info('⚖️ Legislativo:');

@@ -57,7 +57,8 @@
                 'escolaridadeOptions' => $escolaridadeOptions,
                 'statusOptions' => null,
                 'cancelUrl' => route('parlamentares.index'),
-                'submitText' => 'Salvar Parlamentar'
+                'submitText' => 'Salvar Parlamentar',
+                'usuariosSemParlamentar' => $usuariosSemParlamentar ?? collect()
             ])
         </div>
     </div>

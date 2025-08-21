@@ -115,7 +115,7 @@ class ProposicaoApiController extends Controller
                 'tipo' => $proposicao->tipo
             ],
             'has_arquivo' => !empty($proposicao->arquivo_path),
-            'has_pdf' => !empty($proposicao->arquivo_pdf_path),
+            'has_pdf' => $this->verificarExistenciaPDF($proposicao),
             'permissions' => [
                 'can_edit' => $this->canEditProposicao($proposicao),
                 'can_sign' => $this->canSignProposicao($proposicao),
@@ -481,5 +481,59 @@ class ProposicaoApiController extends Controller
 
         // Se tiver implementação de cache com tags, usar aqui
         // Cache::tags(['proposicao', "proposicao_{$proposicaoId}"])->flush();
+    }
+
+    /**
+     * Verificar se existe PDF para a proposição
+     */
+    private function verificarExistenciaPDF($proposicao): bool
+    {
+        // 1. Verificar campo arquivo_pdf_path (método rápido)
+        if (!empty($proposicao->arquivo_pdf_path)) {
+            return true;
+        }
+
+        // 2. Para status avançados, verificar fisicamente se existe PDF
+        $statusComPDF = ['aprovado', 'assinado', 'protocolado', 'aprovado_assinatura'];
+        if (in_array($proposicao->status, $statusComPDF)) {
+            
+            // Verificar múltiplos diretórios onde pode estar o PDF
+            $possiveisCaminhos = [
+                // Diretório principal de PDFs
+                "private/proposicoes/pdfs/{$proposicao->id}/",
+                "proposicoes/pdfs/{$proposicao->id}/",
+                "pdfs/{$proposicao->id}/",
+                // Arquivos individuais mais recentes
+                "private/proposicoes/pdfs/{$proposicao->id}/proposicao_{$proposicao->id}_onlyoffice_*_assinado_*.pdf",
+                "private/proposicoes/pdfs/{$proposicao->id}/proposicao_{$proposicao->id}_*.pdf",
+            ];
+
+            foreach ($possiveisCaminhos as $caminho) {
+                try {
+                    // Se contém asterisco, usar glob
+                    if (strpos($caminho, '*') !== false) {
+                        $arquivos = \Storage::glob($caminho);
+                        if (!empty($arquivos)) {
+                            return true;
+                        }
+                    } else {
+                        // Verificar se o diretório existe e tem arquivos PDF
+                        if (\Storage::exists($caminho)) {
+                            $arquivos = \Storage::files($caminho);
+                            foreach ($arquivos as $arquivo) {
+                                if (pathinfo($arquivo, PATHINFO_EXTENSION) === 'pdf') {
+                                    return true;
+                                }
+                            }
+                        }
+                    }
+                } catch (\Exception $e) {
+                    // Continuar verificando outros caminhos se um falhar
+                    continue;
+                }
+            }
+        }
+
+        return false;
     }
 }

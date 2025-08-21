@@ -1292,7 +1292,7 @@ class ProposicaoController extends Controller
                                 ($proposicao->conteudo || $proposicao->arquivo_path);
         
         // Adicionar propriedades necessárias para Vue.js
-        $proposicao->has_pdf = !empty($proposicao->arquivo_pdf_path);
+        $proposicao->has_pdf = $this->verificarExistenciaPDF($proposicao);
         $proposicao->has_arquivo = !empty($proposicao->arquivo_path);
         
         // Nova interface Vue.js - mais simples e performática
@@ -4962,15 +4962,11 @@ ${texto}
             }
         }
 
-        // Verificar se o PDF existe
-        if (!$proposicao->arquivo_pdf_path) {
-            abort(404, 'PDF não encontrado.');
-        }
-
-        $pdfPath = storage_path('app/' . $proposicao->arquivo_pdf_path);
+        // Buscar o PDF mais recente para a proposição
+        $pdfPath = $this->encontrarPDFMaisRecente($proposicao);
         
-        if (!file_exists($pdfPath)) {
-            abort(404, 'Arquivo PDF não encontrado.');
+        if (!$pdfPath) {
+            abort(404, 'PDF não encontrado.');
         }
 
         // Servir o arquivo PDF
@@ -6219,5 +6215,107 @@ ${texto}
         ];
         
         return $statusMap[$status] ?? ucfirst(str_replace('_', ' ', $status));
+    }
+
+    /**
+     * Encontrar o PDF mais recente para a proposição
+     */
+    private function encontrarPDFMaisRecente($proposicao): ?string
+    {
+        // 1. Se tem arquivo_pdf_path cadastrado, verificar se existe
+        if (!empty($proposicao->arquivo_pdf_path)) {
+            $pdfPath = storage_path('app/' . $proposicao->arquivo_pdf_path);
+            if (file_exists($pdfPath)) {
+                return $pdfPath;
+            }
+        }
+
+        // 2. Buscar PDFs fisicamente no diretório da proposição
+        $diretorioPDFs = storage_path("app/private/proposicoes/pdfs/{$proposicao->id}/");
+        
+        if (!is_dir($diretorioPDFs)) {
+            return null;
+        }
+
+        // 3. Listar todos os PDFs do diretório
+        $pdfs = glob($diretorioPDFs . "*.pdf");
+        
+        if (empty($pdfs)) {
+            return null;
+        }
+
+        // 4. Priorizar PDFs assinados
+        $pdfsAssinados = array_filter($pdfs, function($pdf) {
+            return strpos($pdf, '_assinado_') !== false;
+        });
+
+        if (!empty($pdfsAssinados)) {
+            // Retornar o PDF assinado mais recente
+            usort($pdfsAssinados, function($a, $b) {
+                return filemtime($b) - filemtime($a);
+            });
+            return $pdfsAssinados[0];
+        }
+
+        // 5. Se não há PDFs assinados, retornar o PDF mais recente
+        usort($pdfs, function($a, $b) {
+            return filemtime($b) - filemtime($a);
+        });
+
+        return $pdfs[0];
+    }
+
+    /**
+     * Verificar se existe PDF para a proposição
+     */
+    private function verificarExistenciaPDF($proposicao): bool
+    {
+        // 1. Verificar campo arquivo_pdf_path (método rápido)
+        if (!empty($proposicao->arquivo_pdf_path)) {
+            return true;
+        }
+
+        // 2. Para status avançados, verificar fisicamente se existe PDF
+        $statusComPDF = ['aprovado', 'assinado', 'protocolado', 'aprovado_assinatura'];
+        if (in_array($proposicao->status, $statusComPDF)) {
+            
+            // Verificar múltiplos diretórios onde pode estar o PDF
+            $possiveisCaminhos = [
+                // Diretório principal de PDFs
+                "private/proposicoes/pdfs/{$proposicao->id}/",
+                "proposicoes/pdfs/{$proposicao->id}/",
+                "pdfs/{$proposicao->id}/",
+                // Arquivos individuais mais recentes
+                "private/proposicoes/pdfs/{$proposicao->id}/proposicao_{$proposicao->id}_onlyoffice_*_assinado_*.pdf",
+                "private/proposicoes/pdfs/{$proposicao->id}/proposicao_{$proposicao->id}_*.pdf",
+            ];
+
+            foreach ($possiveisCaminhos as $caminho) {
+                try {
+                    // Se contém asterisco, usar glob
+                    if (strpos($caminho, '*') !== false) {
+                        $arquivos = \Storage::glob($caminho);
+                        if (!empty($arquivos)) {
+                            return true;
+                        }
+                    } else {
+                        // Verificar se o diretório existe e tem arquivos PDF
+                        if (\Storage::exists($caminho)) {
+                            $arquivos = \Storage::files($caminho);
+                            foreach ($arquivos as $arquivo) {
+                                if (pathinfo($arquivo, PATHINFO_EXTENSION) === 'pdf') {
+                                    return true;
+                                }
+                            }
+                        }
+                    }
+                } catch (\Exception $e) {
+                    // Continuar verificando outros caminhos se um falhar
+                    continue;
+                }
+            }
+        }
+
+        return false;
     }
 }

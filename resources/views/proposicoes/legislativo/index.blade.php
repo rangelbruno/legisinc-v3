@@ -436,6 +436,22 @@
                                             <div class="badge badge-light-danger fw-bold">
                                                 <i class="fas fa-arrow-left me-1"></i>Devolvido p/ Correção
                                             </div>
+                                        @elseif($proposicao->status === 'aprovado')
+                                            <div class="badge badge-light-success fw-bold">
+                                                <i class="fas fa-check me-1"></i>Aprovado
+                                            </div>
+                                        @elseif($proposicao->status === 'aprovado_assinatura')
+                                            <div class="badge badge-light-info fw-bold">
+                                                <i class="fas fa-clock me-1"></i>Aguardando Assinatura
+                                            </div>
+                                        @elseif($proposicao->status === 'assinado')
+                                            <div class="badge badge-light-success fw-bold">
+                                                <i class="fas fa-signature me-1"></i>Assinado
+                                            </div>
+                                        @elseif($proposicao->status === 'protocolado')
+                                            <div class="badge badge-success fw-bold">
+                                                <i class="fas fa-stamp me-1"></i>Protocolado
+                                            </div>
                                         @endif
                                     </td>
                                     <!--end::Status-->

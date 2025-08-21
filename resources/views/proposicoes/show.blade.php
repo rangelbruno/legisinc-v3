@@ -622,7 +622,7 @@
                             <div v-if="canSign()">
                                 <div class="separator my-3"></div>
                                 <a 
-                                    :href="'/proposicoes/' + proposicao.id + '/assinar'"
+                                    :href="'/proposicoes/' + proposicao.id + '/assinatura-digital'"
                                     class="btn btn-light-success btn-lg w-100 d-flex align-items-center justify-content-center btn-assinatura-melhorado"
                                     style="min-height: 50px;">
                                     <i class="ki-duotone ki-signature fs-2 me-3">
@@ -631,7 +631,7 @@
                                     </i>
                                     <div class="text-start">
                                         <div class="fw-bold">Assinar Documento</div>
-                                        <small class="text-muted">Assinatura digital</small>
+                                        <small class="text-muted">Assinatura digital com certificado</small>
                                     </div>
                                 </a>
                             </div>
@@ -1362,7 +1362,9 @@ createApp({
         canSign() {
             if (!this.proposicao) return false;
             const isOwner = this.proposicao.autor_id === this.userId;
-            return this.proposicao.status === 'aprovado' && (isOwner || this.userRole === 'PARLAMENTAR');
+            // Botão só aparece quando status é 'aprovado' ou 'aprovado_assinatura'
+            const canSignStatuses = ['aprovado', 'aprovado_assinatura'];
+            return canSignStatuses.includes(this.proposicao.status) && (isOwner || this.userRole === 'PARLAMENTAR');
         },
         
         getEditorUrl() {
@@ -1887,6 +1889,11 @@ createApp({
 
         // Novos métodos para exclusão de documento
         podeExcluirDocumento() {
+            // Usuários do Legislativo NÃO podem excluir proposições
+            if (this.userRole === 'LEGISLATIVO') {
+                return false;
+            }
+            
             // Verificar se a proposição está em um status que permite exclusão
             const statusPermitidos = ['aprovado', 'aprovado_assinatura', 'retornado_legislativo', 'rascunho', 'em_edicao'];
             return statusPermitidos.includes(this.proposicao?.status);

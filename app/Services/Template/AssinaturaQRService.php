@@ -202,13 +202,13 @@ class AssinaturaQRService
     }
 
     /**
-     * Gerar HTML formatado da assinatura
+     * Gerar HTML formatado da assinatura na lateral direita
      */
     private function gerarHTMLAssinaturaFormatado(string $texto): string
     {
-        return '<div class="assinatura-digital" style="border: 1px solid #28a745; padding: 10px; margin: 10px 0; background-color: #f8f9fa;">
-            <h6 style="color: #28a745; margin-bottom: 5px;"><i class="fas fa-certificate"></i> Assinatura Digital</h6>
-            <div style="font-size: 12px; line-height: 1.4;">' . nl2br($texto) . '</div>
+        return '<div class="assinatura-digital" style="position: fixed; right: 20px; top: 50%; transform: translateY(-50%); width: 200px; border: 2px solid #28a745; padding: 15px; margin: 10px 0; background-color: #f8f9fa; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); font-family: Arial, sans-serif;">
+            <h6 style="color: #28a745; margin-bottom: 10px; text-align: center; font-size: 14px; font-weight: bold;"><i class="fas fa-certificate"></i> Assinatura Digital</h6>
+            <div style="font-size: 11px; line-height: 1.4; text-align: center; color: #333;">' . nl2br($texto) . '</div>
         </div>';
     }
 

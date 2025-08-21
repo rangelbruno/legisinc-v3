@@ -12,6 +12,8 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Validation\Rule;
 use Spatie\Permission\Models\Role;
+use App\Models\Parlamentar;
+use Illuminate\Support\Facades\DB;
 use Exception;
 
 class AdminUserController extends Controller
@@ -82,7 +84,12 @@ class AdminUserController extends Controller
             User::PERFIL_PUBLICO => 'Público',
         ];
 
-        return view('admin.usuarios.create', compact('roles', 'perfis'));
+        // Buscar parlamentares que não possuem usuário vinculado
+        $parlamentaresSemUsuario = Parlamentar::whereNull('user_id')
+            ->orderBy('nome')
+            ->get(['id', 'nome', 'nome_politico', 'partido']);
+
+        return view('admin.usuarios.create', compact('roles', 'perfis', 'parlamentaresSemUsuario'));
     }
 
     /**
@@ -90,7 +97,8 @@ class AdminUserController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
-        $validator = Validator::make($request->all(), [
+        // Validações customizadas
+        $rules = [
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
@@ -102,7 +110,32 @@ class AdminUserController extends Controller
             'partido' => ['nullable', 'string', 'max:50'],
             'role' => ['required', 'string', 'exists:roles,name'],
             'ativo' => ['boolean'],
-        ]);
+            // Campos específicos para parlamentares
+            'parlamentar_id' => ['nullable', 'exists:parlamentars,id'],
+            'criar_parlamentar' => ['boolean'],
+            'nome_politico' => ['nullable', 'string', 'max:255'],
+            'escolaridade' => ['nullable', 'string', 'max:100'],
+        ];
+
+        // Se está vinculando a parlamentar existente, verificar se não tem usuário
+        if ($request->parlamentar_id) {
+            $parlamentarExistente = Parlamentar::find($request->parlamentar_id);
+            if ($parlamentarExistente && $parlamentarExistente->user_id) {
+                return back()
+                    ->withErrors(['parlamentar_id' => 'Este parlamentar já possui usuário vinculado.'])
+                    ->withInput();
+            }
+        }
+
+        // Verificar duplicação de email entre users e parlamentars
+        if ($request->email) {
+            $emailJaUsado = Parlamentar::where('email', $request->email)->exists();
+            if ($emailJaUsado) {
+                $rules['email'][] = 'unique:parlamentars,email';
+            }
+        }
+
+        $validator = Validator::make($request->all(), $rules);
 
         if ($validator->fails()) {
             return back()
@@ -111,6 +144,8 @@ class AdminUserController extends Controller
         }
 
         try {
+            DB::beginTransaction();
+
             $userData = $request->only([
                 'name', 'email', 'documento', 'telefone', 
                 'data_nascimento', 'profissao', 'cargo_atual', 'partido'
@@ -122,11 +157,49 @@ class AdminUserController extends Controller
             $user = User::create($userData);
             $user->assignRole($request->role);
 
+            // Se é um parlamentar, vinculação ou criação de parlamentar
+            if (in_array($request->role, [User::PERFIL_PARLAMENTAR, User::PERFIL_RELATOR])) {
+                if ($request->parlamentar_id) {
+                    // Vincular usuário a parlamentar existente
+                    $parlamentar = Parlamentar::find($request->parlamentar_id);
+                    $parlamentar->update(['user_id' => $user->id]);
+                    
+                    // Atualizar dados do parlamentar com dados do usuário
+                    $parlamentar->update([
+                        'email' => $userData['email'],
+                        'telefone' => $userData['telefone'] ?? $parlamentar->telefone,
+                        'data_nascimento' => $userData['data_nascimento'] ?? $parlamentar->data_nascimento,
+                        'profissao' => $userData['profissao'] ?? $parlamentar->profissao,
+                    ]);
+                    
+                } elseif ($request->boolean('criar_parlamentar')) {
+                    // Criar novo registro de parlamentar
+                    $parlamentarData = [
+                        'user_id' => $user->id,
+                        'nome' => $userData['name'],
+                        'nome_politico' => $request->nome_politico,
+                        'email' => $userData['email'],
+                        'telefone' => $userData['telefone'],
+                        'data_nascimento' => $userData['data_nascimento'],
+                        'profissao' => $userData['profissao'],
+                        'partido' => $userData['partido'] ?? 'Sem partido',
+                        'cargo' => $request->role === User::PERFIL_PARLAMENTAR ? 'Vereador' : 'Relator',
+                        'status' => 'ativo',
+                        'escolaridade' => $request->escolaridade,
+                    ];
+                    
+                    Parlamentar::create($parlamentarData);
+                }
+            }
+
+            DB::commit();
+
             return redirect()
                 ->route('admin.usuarios.index')
                 ->with('success', 'Usuário criado com sucesso!');
 
         } catch (Exception $e) {
+            DB::rollBack();
             return back()
                 ->withErrors(['error' => 'Erro ao criar usuário: ' . $e->getMessage()])
                 ->withInput();

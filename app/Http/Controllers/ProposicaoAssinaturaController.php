@@ -26,6 +26,7 @@ class ProposicaoAssinaturaController extends Controller
 
     /**
      * Tela para assinatura da proposição aprovada
+     * Redireciona para o novo sistema de assinatura digital
      */
     public function assinar(Proposicao $proposicao)
     {
@@ -51,91 +52,10 @@ class ProposicaoAssinaturaController extends Controller
             }
         }
 
-        // Obter dados otimizados para visualização integrada
-        try {
-            // Buscar conteúdo mais recente do OnlyOffice
-            $responseOnlyOffice = $this->obterConteudoOnlyOffice($proposicao);
-            $dadosOnlyOffice = json_decode($responseOnlyOffice->getContent(), true);
-            
-            if (!$dadosOnlyOffice['success']) {
-                // Fallback para dados da proposição se OnlyOffice falhar
-                $dadosOnlyOffice = $this->processarDadosFallback($proposicao);
-            }
-
-            // Aplicar limpeza de conteúdo duplicado
-            $conteudoLimpo = $this->limparConteudoDuplicado($dadosOnlyOffice['conteudo'] ?? '');
-            
-            // Preparar dados para visualização integrada
-            $dadosVisualizacao = [
-                'conteudo_html' => $this->converterDocxParaHTML($conteudoLimpo),
-                'usando_onlyoffice' => $dadosOnlyOffice['success'],
-                'autor' => $proposicao->autor,
-                'tipo_proposicao' => $proposicao->tipoProposicao ?? null,
-                'dados_camara' => $this->obterDadosCamara(),
-            ];
-        } catch (\Exception $e) {
-            Log::error("Erro ao obter dados otimizados: " . $e->getMessage());
-            // Usar dados básicos em caso de erro
-            $dadosVisualizacao = [
-                'conteudo_html' => $proposicao->conteudo ? nl2br(e($proposicao->conteudo)) : '',
-                'usando_onlyoffice' => false,
-                'autor' => $proposicao->autor,
-                'tipo_proposicao' => $proposicao->tipoProposicao ?? null,
-                'dados_camara' => $this->obterDadosCamara(),
-            ];
-        }
-
-        // Usar a nova view Vue.js otimizada para PDF com dados integrados
-        return view('proposicoes.assinatura.assinar-pdf-vue', array_merge(compact('proposicao'), $dadosVisualizacao));
+        // REDIRECIONAR PARA O NOVO SISTEMA DE ASSINATURA DIGITAL
+        return redirect()->route('proposicoes.assinatura-digital.formulario', $proposicao);
     }
 
-    /**
-     * Gerar visualização otimizada de PDF usando apenas dados do OnlyOffice
-     */
-    public function visualizarPDFOtimizado(Proposicao $proposicao)
-    {
-        try {
-            // Buscar conteúdo mais recente do OnlyOffice
-            $responseOnlyOffice = $this->obterConteudoOnlyOffice($proposicao);
-            
-            // Converter Response para array
-            $dadosOnlyOffice = json_decode($responseOnlyOffice->getContent(), true);
-            
-            if (!$dadosOnlyOffice['success']) {
-                // Fallback para dados da proposição se OnlyOffice falhar
-                $dadosOnlyOffice = $this->processarDadosFallback($proposicao);
-            }
-
-            // Aplicar limpeza de conteúdo duplicado
-            $conteudoLimpo = $this->limparConteudoDuplicado($dadosOnlyOffice['conteudo'] ?? '');
-            
-            // Preparar dados para visualização
-            $dadosVisualizacao = [
-                'proposicao' => $proposicao,
-                'conteudo_html' => $this->converterDocxParaHTML($conteudoLimpo),
-                'usando_onlyoffice' => $dadosOnlyOffice['success'],
-                'autor' => $proposicao->autor,
-                'tipo_proposicao' => $proposicao->tipoProposicao ?? null,
-                'dados_camara' => $this->obterDadosCamara(),
-                'metadados' => [
-                    'data_geracao' => now(),
-                    'metodo_extracao' => $dadosOnlyOffice['success'] ? 'onlyoffice_otimizado' : 'fallback',
-                    'hash_integridade' => $dadosOnlyOffice['hash_integridade'] ?? null
-                ]
-            ];
-
-            return view('proposicoes.assinatura.visualizar-pdf-otimizado', $dadosVisualizacao);
-            
-        } catch (\Exception $e) {
-            \Log::error('Erro ao gerar visualização PDF otimizada', [
-                'proposicao_id' => $proposicao->id,
-                'erro' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-            
-            return back()->withErrors(['pdf' => 'Erro ao carregar visualização: ' . $e->getMessage()]);
-        }
-    }
 
     /**
      * Tela para correção da proposição devolvida
@@ -186,6 +106,16 @@ class ProposicaoAssinaturaController extends Controller
                 'message' => 'É necessário confirmar a leitura do documento antes de assinar.'
             ], 400);
         }
+
+        // Obter dados do usuário para a assinatura
+        $user = Auth::user();
+        $dadosAssinatura = [
+            'nome_assinante' => $user->name,
+            'email_assinante' => $user->email,
+            'tipo_certificado' => $request->certificado_digital ?: 'SIMULADO',
+            'ip_assinatura' => $request->ip(),
+            'user_agent' => $request->userAgent()
+        ];
 
         $proposicao->update([
             'status' => 'assinado',
@@ -676,26 +606,50 @@ class ProposicaoAssinaturaController extends Controller
     }
 
     /**
-     * Regenerar PDF com dados atualizados (protocolo, assinatura, etc.)
-     * Método público para ser usado após atribuir protocolo ou assinar
+     * Regenerar PDF com assinatura digital atualizada
      */
     public function regenerarPDFAtualizado(Proposicao $proposicao): void
     {
         try {
-            $this->gerarPDFParaAssinatura($proposicao);
+            error_log("PDF Assinatura: Regenerando PDF com assinatura digital para proposição {$proposicao->id}");
             
-            // Log::info('PDF regenerado com dados atualizados', [
-            //     'proposicao_id' => $proposicao->id,
-            //     'numero_protocolo' => $proposicao->numero_protocolo,
-            //     'assinada' => !empty($proposicao->assinatura_digital)
-            // ]);
+            // Gerar novo nome de arquivo com timestamp
+            $nomePdf = 'proposicao_' . $proposicao->id . '_assinado_' . time() . '.pdf';
+            $diretorioPdf = 'proposicoes/pdfs/' . $proposicao->id;
+            $caminhoPdfRelativo = $diretorioPdf . '/' . $nomePdf;
+            $caminhoPdfAbsoluto = storage_path('app/' . $caminhoPdfRelativo);
+
+            // Garantir que o diretório existe
+            if (!is_dir(dirname($caminhoPdfAbsoluto))) {
+                mkdir(dirname($caminhoPdfAbsoluto), 0755, true);
+            }
+
+            // Buscar arquivo mais recente para conversão
+            $arquivoMaisRecente = $this->encontrarArquivoMaisRecente($proposicao);
+            
+            if ($arquivoMaisRecente) {
+                error_log("PDF Assinatura: Usando arquivo para regeneração: {$arquivoMaisRecente['path']}");
+                
+                // Usar conversão direta DOCX → PDF se disponível
+                if (str_contains($arquivoMaisRecente['path'], '.docx') && $this->libreOfficeDisponivel()) {
+                    $this->criarPDFComFormatacaoOnlyOffice($caminhoPdfAbsoluto, $proposicao, $arquivoMaisRecente['path']);
+                } else {
+                    // Fallback para método alternativo
+                    $this->criarPDFComConteudoExtraido($caminhoPdfAbsoluto, $proposicao);
+                }
+                
+                // Atualizar proposição com novo caminho do PDF
+                $proposicao->arquivo_pdf_path = $caminhoPdfRelativo;
+                $proposicao->save();
+                
+                error_log("PDF Assinatura: PDF regenerado com sucesso! Tamanho: " . filesize($caminhoPdfAbsoluto) . " bytes");
+            } else {
+                error_log("PDF Assinatura: Nenhum arquivo encontrado para regeneração");
+                throw new \Exception('Nenhum arquivo encontrado para regeneração do PDF');
+            }
             
         } catch (\Exception $e) {
-            // Log::error('Erro ao regenerar PDF atualizado', [
-            //     'proposicao_id' => $proposicao->id,
-            //     'error' => $e->getMessage()
-            // ]);
-            
+            error_log("PDF Assinatura: Erro ao regenerar PDF: " . $e->getMessage());
             throw $e;
         }
     }
@@ -895,7 +849,72 @@ class ProposicaoAssinaturaController extends Controller
     private function criarPDFComFormatacaoOnlyOffice(string $caminhoPdfAbsoluto, Proposicao $proposicao, string $arquivoPath): void
     {
         try {
-            // 1. Converter DOCX → HTML usando LibreOffice (preserva formatação)
+            error_log("PDF Assinatura: Iniciando conversão DOCX → PDF com formatação OnlyOffice");
+            
+            // 1. PRIORIDADE ALTA: Conversão direta DOCX → PDF via LibreOffice (mais confiável)
+            if ($this->libreOfficeDisponivel()) {
+                error_log("PDF Assinatura: Tentando conversão direta DOCX → PDF via LibreOffice");
+                
+                $tempDir = sys_get_temp_dir();
+                $tempFile = $tempDir . '/proposicao_' . $proposicao->id . '_temp.docx';
+                $outputDir = $tempDir . '/pdf_output_' . $proposicao->id;
+                
+                // Criar diretório de saída
+                if (!is_dir($outputDir)) {
+                    mkdir($outputDir, 0755, true);
+                }
+                
+                // Copiar arquivo DOCX para diretório temporário
+                if (!copy($arquivoPath, $tempFile)) {
+                    throw new \Exception("Falha ao copiar arquivo DOCX para diretório temporário");
+                }
+                
+                // Comando LibreOffice para conversão direta DOCX → PDF
+                $comando = sprintf(
+                    'libreoffice --headless --invisible --nodefault --nolockcheck --nologo --norestore --convert-to pdf --outdir %s %s 2>/dev/null',
+                    escapeshellarg($outputDir),
+                    escapeshellarg($tempFile)
+                );
+                
+                exec($comando, $output, $returnCode);
+                
+                $pdfPath = $outputDir . '/' . pathinfo($tempFile, PATHINFO_FILENAME) . '.pdf';
+                
+                error_log("PDF Assinatura: LibreOffice PDF conversion - return code: {$returnCode}, PDF exists: " . (file_exists($pdfPath) ? 'YES' : 'NO'));
+                
+                if ($returnCode === 0 && file_exists($pdfPath)) {
+                    // Verificar se o PDF foi gerado corretamente
+                    $tamanhoPdf = filesize($pdfPath);
+                    if ($tamanhoPdf > 1000) {
+                        // Copiar PDF gerado para o destino final
+                        if (copy($pdfPath, $caminhoPdfAbsoluto)) {
+                            error_log("PDF Assinatura: PDF criado com LibreOffice! Tamanho: {$tamanhoPdf} bytes");
+                            
+                            // Limpeza
+                            if (file_exists($tempFile)) unlink($tempFile);
+                            if (file_exists($pdfPath)) unlink($pdfPath);
+                            if (is_dir($outputDir)) @rmdir($outputDir);
+                            
+                            return; // Sucesso! PDF criado com formatação preservada
+                        } else {
+                            error_log("PDF Assinatura: Falha ao copiar PDF para destino final");
+                        }
+                    } else {
+                        error_log("PDF Assinatura: PDF gerado pelo LibreOffice é muito pequeno ({$tamanhoPdf} bytes)");
+                    }
+                } else {
+                    error_log("PDF Assinatura: LibreOffice PDF conversion failed - return code: {$returnCode}");
+                }
+                
+                // Limpeza em caso de falha
+                if (file_exists($tempFile)) unlink($tempFile);
+                if (file_exists($pdfPath)) unlink($pdfPath);
+                if (is_dir($outputDir)) @rmdir($outputDir);
+            }
+            
+            // 2. FALLBACK: Conversão DOCX → HTML → PDF (método anterior)
+            error_log("PDF Assinatura: Usando fallback DOCX → HTML → PDF");
+            
             $tempDir = sys_get_temp_dir();
             $tempFile = $tempDir . '/proposicao_' . $proposicao->id . '_html.docx';
             $outputDir = $tempDir . '/html_output_' . $proposicao->id;
@@ -926,7 +945,7 @@ class ProposicaoAssinaturaController extends Controller
                 throw new \Exception("LibreOffice HTML conversion failed: return code {$returnCode}");
             }
             
-            // 2. Ler HTML gerado e fazer correção inicial de números duplicados
+            // 3. Ler HTML gerado e fazer correção inicial de números duplicados
             $htmlContent = file_get_contents($htmlPath);
             
             // Correção prévia de números duplicados que podem vir do template OnlyOffice
@@ -949,23 +968,23 @@ class ProposicaoAssinaturaController extends Controller
             $htmlContent = $this->otimizarHTMLParaDomPDF($htmlContent);
             $htmlContent = $this->adicionarAssinaturaAoHTML($htmlContent, $proposicao);
             
-            // 3. Processar variáveis no HTML
+            // 4. Processar variáveis no HTML
             $htmlContent = $this->substituirVariaveisNoHTML($htmlContent, $proposicao);
             
-            // 4. CORREÇÃO FINAL GLOBAL: Limpar qualquer duplicação restante
+            // 5. CORREÇÃO FINAL GLOBAL: Limpar qualquer duplicação restante
             $htmlContent = str_replace('mocao/2025/0001/2025', 'mocao/2025/0001', $htmlContent);
             $htmlContent = preg_replace('/(\w+\/\d{4}\/\d{4})\/\d{4}/', '$1', $htmlContent);
             
-            // 5. Converter HTML → PDF usando DomPDF
+            // 6. Converter HTML → PDF usando DomPDF
             $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($htmlContent);
             $pdf->setPaper('A4', 'portrait');
             
-            // 5. Garantir que diretório de destino existe
+            // 7. Garantir que diretório de destino existe
             if (!is_dir(dirname($caminhoPdfAbsoluto))) {
                 mkdir(dirname($caminhoPdfAbsoluto), 0755, true);
             }
             
-            // 6. Salvar PDF
+            // 8. Salvar PDF
             file_put_contents($caminhoPdfAbsoluto, $pdf->output());
             
             error_log("PDF Assinatura: PDF criado com formatação OnlyOffice preservada! Tamanho: " . filesize($caminhoPdfAbsoluto) . " bytes");
@@ -982,6 +1001,7 @@ class ProposicaoAssinaturaController extends Controller
             if (isset($htmlPath) && file_exists($htmlPath)) @unlink($htmlPath);
             if (isset($outputDir) && is_dir($outputDir)) @rmdir($outputDir);
             
+            error_log("PDF Assinatura: Erro na conversão OnlyOffice: " . $e->getMessage());
             throw $e;
         }
     }
@@ -1160,98 +1180,65 @@ class ProposicaoAssinaturaController extends Controller
     }
     
     /**
-     * Encontrar o arquivo mais recente da proposição
-     * Busca em todos os diretórios possíveis e retorna o mais recente
+     * Encontrar o arquivo mais recente da proposição nos diretórios de storage
      */
     private function encontrarArquivoMaisRecente(Proposicao $proposicao): ?array
     {
-        $arquivosEncontrados = [];
-        
-        // Padrões de busca para arquivos da proposição
-        $padroes = [
-            "proposicao_{$proposicao->id}_*.docx",
-            "proposicao_{$proposicao->id}_*.rtf",
-            "proposicao_{$proposicao->id}.docx",
-            "proposicao_{$proposicao->id}.rtf"
-        ];
-        
-        // Diretórios onde buscar
-        $diretorios = [
-            storage_path('app/proposicoes'),
-            storage_path('app/private/proposicoes'),
-            storage_path('app/public/proposicoes'),
-            storage_path('app'), // Raiz do storage
-            '/var/www/html/storage/app/proposicoes',
-            '/var/www/html/storage/app/private/proposicoes'
-        ];
-        
-        // Buscar arquivos em cada diretório
-        foreach ($diretorios as $dir) {
-            if (!is_dir($dir)) {
-                continue;
-            }
+        try {
+            // Diretórios onde buscar arquivos, em ordem de prioridade
+            $diretoriosParaBuscar = [
+                '/var/www/html/storage/app/private/proposicoes/',
+                '/var/www/html/storage/app/proposicoes/',
+                '/var/www/html/storage/app/public/proposicoes/',
+                storage_path('app/private/proposicoes/'),
+                storage_path('app/proposicoes/'),
+                storage_path('app/public/proposicoes/'),
+            ];
             
-            foreach ($padroes as $padrao) {
-                $arquivos = glob($dir . '/' . $padrao);
+            $arquivoMaisRecente = null;
+            $timestampMaisRecente = 0;
+            
+            foreach ($diretoriosParaBuscar as $diretorio) {
+                if (!is_dir($diretorio)) {
+                    continue;
+                }
+                
+                // Buscar arquivos que contenham o ID da proposição
+                $padrao = $diretorio . 'proposicao_' . $proposicao->id . '_*';
+                $arquivos = glob($padrao);
+                
                 foreach ($arquivos as $arquivo) {
-                    if (file_exists($arquivo)) {
-                        $mtime = filemtime($arquivo);
-                        $arquivosEncontrados[] = [
-                            'path' => $arquivo,
-                            'relative_path' => str_replace(storage_path('app/'), '', $arquivo),
-                            'modified' => date('Y-m-d H:i:s', $mtime),
-                            'timestamp' => $mtime,
-                            'size' => filesize($arquivo),
-                            'type' => pathinfo($arquivo, PATHINFO_EXTENSION)
-                        ];
+                    if (is_file($arquivo)) {
+                        $timestamp = filemtime($arquivo);
+                        
+                        if ($timestamp > $timestampMaisRecente) {
+                            $timestampMaisRecente = $timestamp;
+                            $arquivoMaisRecente = [
+                                'path' => $arquivo,
+                                'relative_path' => str_replace('/var/www/html/storage/app/', '', $arquivo),
+                                'modified' => date('Y-m-d H:i:s', $timestamp),
+                                'size' => filesize($arquivo)
+                            ];
+                        }
                     }
                 }
             }
-        }
-        
-        // Se também tiver arquivo_path definido, incluir na busca
-        if ($proposicao->arquivo_path) {
-            $caminhosPossiveis = [
-                storage_path('app/' . $proposicao->arquivo_path),
-                storage_path('app/private/' . $proposicao->arquivo_path),
-                storage_path('app/public/' . $proposicao->arquivo_path),
-                storage_path('app/private/' . ltrim($proposicao->arquivo_path, 'private/')),
-                '/var/www/html/storage/app/' . $proposicao->arquivo_path,
-                '/var/www/html/storage/app/private/' . $proposicao->arquivo_path
-            ];
             
-            foreach ($caminhosPossiveis as $caminho) {
-                if (file_exists($caminho) && !$this->arquivoJaIncluido($caminho, $arquivosEncontrados)) {
-                    $mtime = filemtime($caminho);
-                    $arquivosEncontrados[] = [
-                        'path' => $caminho,
-                        'relative_path' => $proposicao->arquivo_path,
-                        'modified' => date('Y-m-d H:i:s', $mtime),
-                        'timestamp' => $mtime,
-                        'size' => filesize($caminho),
-                        'type' => pathinfo($caminho, PATHINFO_EXTENSION)
-                    ];
-                }
+            if ($arquivoMaisRecente) {
+                error_log("PDF Assinatura: Arquivo mais recente encontrado: {$arquivoMaisRecente['path']}");
+                error_log("PDF Assinatura: Caminho relativo: {$arquivoMaisRecente['relative_path']}");
+                error_log("PDF Assinatura: Modificado em: {$arquivoMaisRecente['modified']}");
+                error_log("PDF Assinatura: Tamanho: {$arquivoMaisRecente['size']} bytes");
+                return $arquivoMaisRecente;
             }
-        }
-        
-        // Ordenar por data de modificação (mais recente primeiro)
-        usort($arquivosEncontrados, function($a, $b) {
-            return $b['timestamp'] - $a['timestamp'];
-        });
-        
-        // Log para debug
-        if (!empty($arquivosEncontrados)) {
-            error_log("PDF Assinatura: Encontrados " . count($arquivosEncontrados) . " arquivos para proposição {$proposicao->id}");
-            foreach (array_slice($arquivosEncontrados, 0, 3) as $idx => $arquivo) {
-                error_log("  " . ($idx + 1) . ". {$arquivo['relative_path']} - Modificado: {$arquivo['modified']} - Tamanho: {$arquivo['size']} bytes");
-            }
-        } else {
+            
             error_log("PDF Assinatura: Nenhum arquivo encontrado para proposição {$proposicao->id}");
+            return null;
+            
+        } catch (\Exception $e) {
+            error_log("PDF Assinatura: Erro ao buscar arquivo mais recente: " . $e->getMessage());
+            return null;
         }
-        
-        // Retornar o mais recente
-        return !empty($arquivosEncontrados) ? $arquivosEncontrados[0] : null;
     }
     
     /**
@@ -3205,10 +3192,11 @@ class ProposicaoAssinaturaController extends Controller
             }
 
             // Verificar se o usuário tem permissão (deve ser o autor ou ter permissão administrativa)
-            if (Auth::id() !== $proposicao->autor_id && !Auth::user()->hasRole(['ADMIN', 'LEGISLATIVO'])) {
+            // Usuários do Legislativo NÃO podem excluir proposições
+            if (Auth::id() !== $proposicao->autor_id && !Auth::user()->hasRole(['ADMIN'])) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Você não tem permissão para excluir esta proposição.'
+                    'message' => 'Você não tem permissão para excluir esta proposição. Apenas o autor ou administradores podem excluir proposições.'
                 ], 403);
             }
 

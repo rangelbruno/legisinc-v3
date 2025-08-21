@@ -221,21 +221,6 @@
                                     </div>
                                 </div>
 
-                                <!-- Nova Visualização Otimizada -->
-                                <div class="mb-6">
-                                    <a href="{{ route('proposicoes.visualizar-pdf-otimizado', $proposicao->id) }}" 
-                                       class="btn btn-success btn-sm w-100"
-                                       target="_blank"
-                                       title="Visualizar PDF otimizado com texto selecionável">
-                                        <i class="ki-duotone ki-eye fs-2">
-                                            <span class="path1"></span>
-                                            <span class="path2"></span>
-                                            <span class="path3"></span>
-                                        </i>
-                                        📄 Visualizar PDF Otimizado
-                                        <small class="d-block">Texto selecionável</small>
-                                    </a>
-                                </div>
 
                                 <!-- Botões de Ação -->
                                 <div class="d-grid gap-2">
@@ -321,12 +306,12 @@
                                     <p class="text-muted mb-4">
                                         Documento aguardando assinatura digital
                                     </p>
-                                    <button 
-                                        @click="iniciarAssinatura"
+                                    <a 
+                                        :href="`/proposicoes/${proposicao.id}/assinatura-digital`"
                                         class="btn btn-success w-100">
                                         <i class="fas fa-signature me-2"></i>
                                         Assinar Documento
-                                    </button>
+                                    </a>
                                 </div>
                                 <div v-else>
                                     <div class="d-flex align-items-center mb-3">

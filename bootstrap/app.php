@@ -21,10 +21,12 @@ return Application::configure(basePath: dirname(__DIR__))
             'auth.token' => \App\Http\Middleware\AuthenticateToken::class,
             'check.proposicao.permission' => \App\Http\Middleware\CheckProposicaoPermission::class,
             'check.parlamentar.access' => \App\Http\Middleware\CheckParlamentarAccess::class,
+            'check.parlamentar.ativo' => \App\Http\Middleware\CheckParlamentarAtivo::class,
             'block.protocolo.access' => \App\Http\Middleware\BlockProtocoloAccess::class,
             'guest' => \App\Http\Middleware\RedirectIfAuthenticated::class,
             'prevent.back.history' => \App\Http\Middleware\PreventBackHistory::class,
             'role.permission' => \App\Http\Middleware\RolePermissionMiddleware::class,
+            'check.assinatura.permission' => \App\Http\Middleware\CheckAssinaturaPermission::class,
         ]);
         
         // Aplica middleware para prevenir navegação com botão voltar em todas as rotas autenticadas

@@ -22,6 +22,7 @@ class DatabaseSeeder extends Seeder
         // Criar usuários do sistema com roles
         $this->call([
             SystemUsersSeeder::class,
+            ParlamentarSeeder::class, // Vincular usuário parlamentar ao cadastro de parlamentar
         ]);
 
         // Seeders do sistema de parâmetros
