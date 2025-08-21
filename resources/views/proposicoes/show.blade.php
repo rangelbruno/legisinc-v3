@@ -100,12 +100,6 @@
     margin-bottom: 0;
 }
 </style>
-<style>
-
-.d-grid .btn-assinatura:last-child {
-    margin-bottom: 0;
-}
-</style>
 
 <style>
 
@@ -1362,9 +1356,21 @@ createApp({
         canSign() {
             if (!this.proposicao) return false;
             const isOwner = this.proposicao.autor_id === this.userId;
-            // Botão só aparece quando status é 'aprovado' ou 'aprovado_assinatura'
-            const canSignStatuses = ['aprovado', 'aprovado_assinatura'];
-            return canSignStatuses.includes(this.proposicao.status) && (isOwner || this.userRole === 'PARLAMENTAR');
+            // Botão só aparece quando status é exatamente 'aprovado'
+            const canSignStatuses = ['aprovado'];
+            const hasPermission = isOwner || this.userRole === 'PARLAMENTAR';
+            const statusAllowed = canSignStatuses.includes(this.proposicao.status);
+            
+            console.log('canSign check:', {
+                status: this.proposicao.status,
+                statusAllowed,
+                isOwner,
+                userRole: this.userRole,
+                hasPermission,
+                result: statusAllowed && hasPermission
+            });
+            
+            return statusAllowed && hasPermission;
         },
         
         getEditorUrl() {
