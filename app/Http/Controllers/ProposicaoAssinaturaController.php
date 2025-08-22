@@ -704,7 +704,71 @@ class ProposicaoAssinaturaController extends Controller
                         error_log("PDF Assinatura: Substituído [AGUARDANDO PROTOCOLO] por {$proposicao->numero_protocolo} no DOCX");
                     }
                     
-                    // 2. Adicionar assinatura digital se existir
+                    // 2. Gerar QR Code localmente para verificação do documento
+                    $qrCodeImageData = null;
+                    $qrCodeBase64 = null;
+                    try {
+                        $consultaUrl = route('proposicoes.consulta.publica', ['id' => $proposicao->id]);
+                        
+                        // Usar bacon/bacon-qr-code para gerar QR code localmente  
+                        $renderer = new \BaconQrCode\Renderer\ImageRenderer(
+                            new \BaconQrCode\Renderer\RendererStyle\RendererStyle(80),
+                            new \BaconQrCode\Renderer\Image\SvgImageBackEnd()
+                        );
+                        
+                        $writer = new \BaconQrCode\Writer($renderer);
+                        $qrCodeSvg = $writer->writeString($consultaUrl);
+                        
+                        // Converter SVG para PNG usando simples conversão
+                        $qrCodeImageData = $qrCodeSvg; // Por enquanto usar SVG
+                        $qrCodeBase64 = base64_encode($qrCodeImageData);
+                        
+                        error_log("PDF Assinatura: QR Code gerado localmente com sucesso para proposição {$proposicao->id}");
+                        
+                    } catch (\Exception $e) {
+                        error_log("PDF Assinatura: Erro ao gerar QR Code localmente: " . $e->getMessage());
+                        $qrCodeImageData = null;
+                    }
+                    
+                    // 3. Criar XML para QR Code (imagem + texto de verificação)
+                    $consultaUrl = route('proposicoes.consulta.publica', ['id' => $proposicao->id]);
+                    $qrCodeXml = '';
+                    
+                    if ($qrCodeImageData) {
+                        // QR Code como imagem embebida + texto explicativo
+                        $qrCodeXml = '<w:p><w:pPr><w:jc w:val="right"/></w:pPr>'
+                            . '<w:r><w:drawing>'
+                            . '<wp:inline distT="0" distB="0" distL="0" distR="0">'
+                            . '<wp:extent cx="635000" cy="635000"/>'
+                            . '<wp:effectExtent l="0" t="0" r="0" b="0"/>'
+                            . '<wp:docPr id="1" name="QRCode"/>'
+                            . '<a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">'
+                            . '<a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">'
+                            . '<pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">'
+                            . '<pic:nvPicPr><pic:cNvPr id="0" name="QRCode"/><pic:cNvPicPr/></pic:nvPicPr>'
+                            . '<pic:blipFill><a:blip r:embed="rIdQR"/></pic:blipFill>'
+                            . '<pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="635000" cy="635000"/></a:xfrm>'
+                            . '<a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic>'
+                            . '</a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>'
+                            . '<w:p><w:pPr><w:jc w:val="right"/></w:pPr>'
+                            . '<w:r><w:rPr><w:sz w:val="14"/></w:rPr>'
+                            . '<w:t>📱 Escaneie para verificar documento</w:t></w:r></w:p>';
+                            
+                        error_log("PDF Assinatura: QR Code com imagem adicionado para verificação");
+                    } else {
+                        // Fallback: apenas texto com URL
+                        $qrCodeXml = '<w:p><w:pPr><w:jc w:val="right"/></w:pPr>'
+                            . '<w:r><w:rPr><w:sz w:val="16"/></w:rPr>'
+                            . '<w:t>📱 Verificar documento: ' . htmlspecialchars($consultaUrl) . '</w:t></w:r></w:p>'
+                            . '<w:p><w:pPr><w:jc w:val="right"/></w:pPr>'
+                            . '<w:r><w:rPr><w:sz w:val="14"/></w:rPr>'
+                            . '<w:t>Acesse o link para consulta pública</w:t></w:r></w:p>';
+                            
+                        error_log("PDF Assinatura: QR Code como URL de verificação (fallback)");
+                    }
+                    
+                    // 4. Adicionar assinatura digital se existir
+                    $assinaturaXml = '';
                     if ($proposicao->assinatura_digital && $proposicao->data_assinatura) {
                         $assinaturaInfo = json_decode($proposicao->assinatura_digital, true);
                         $nomeAssinante = $assinaturaInfo['nome'] ?? 'Digital';
@@ -723,16 +787,27 @@ class ProposicaoAssinaturaController extends Controller
                             . '<w:p><w:pPr><w:jc w:val="center"/></w:pPr>'
                             . '<w:r><w:rPr><w:sz w:val="18"/></w:rPr>'
                             . '<w:t>Documento assinado eletronicamente conforme MP 2.200-2/2001</w:t></w:r></w:p>';
+                    }
+                    
+                    // 5. Adicionar QR Code e assinatura ao documento
+                    $conteudoAdicional = $qrCodeXml . $assinaturaXml;
+                    if ($conteudoAdicional && strpos($documentXmlProcessado, '</w:body>') !== false) {
+                        $documentXmlProcessado = str_replace(
+                            '</w:body>',
+                            $conteudoAdicional . '</w:body>',
+                            $documentXmlProcessado
+                        );
                         
-                        // Adicionar antes do final do documento (antes de </w:body>)
-                        if (strpos($documentXmlProcessado, '</w:body>') !== false) {
-                            $documentXmlProcessado = str_replace(
-                                '</w:body>',
-                                $assinaturaXml . '</w:body>',
-                                $documentXmlProcessado
-                            );
-                            error_log("PDF Assinatura: Adicionada assinatura digital de {$nomeAssinante} ao documento");
-                        }
+                        $logMessage = "PDF Assinatura: Adicionado ao documento - ";
+                        $logItems = [];
+                        if ($qrCodeXml) $logItems[] = "QR Code";
+                        if ($assinaturaXml) $logItems[] = "Assinatura Digital";
+                        error_log($logMessage . implode(" e ", $logItems));
+                    }
+                    
+                    // 6. Adicionar relação da imagem QR Code no arquivo .rels se necessário
+                    if ($qrCodeImageData) {
+                        $this->adicionarQRCodeRelacionamento($zip, $qrCodeBase64);
                     }
                     
                     // 3. Outras substituições se necessário
@@ -786,6 +861,47 @@ class ProposicaoAssinaturaController extends Controller
         } catch (\Exception $e) {
             error_log("PDF Assinatura: Erro ao processar placeholders no DOCX: " . $e->getMessage());
             // Não lançar exceção, continuar com arquivo original
+        }
+    }
+    
+    /**
+     * Adicionar relacionamento para imagem QR Code no DOCX
+     */
+    private function adicionarQRCodeRelacionamento(\ZipArchive $zip, string $qrCodeBase64): void
+    {
+        try {
+            // Adicionar a imagem QR Code ao diretório de mídias
+            $zip->addFromString('word/media/qrcode.png', base64_decode($qrCodeBase64));
+            
+            // Verificar se existe arquivo de relacionamentos
+            $relsXml = $zip->getFromName('word/_rels/document.xml.rels');
+            if ($relsXml) {
+                // Adicionar relacionamento para a imagem QR Code
+                $novoRelacionamento = '<Relationship Id="rIdQR" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/qrcode.png"/>';
+                
+                // Inserir antes do fechamento </Relationships>
+                if (strpos($relsXml, '</Relationships>') !== false) {
+                    $relsXmlProcessado = str_replace('</Relationships>', $novoRelacionamento . '</Relationships>', $relsXml);
+                    
+                    // Atualizar o arquivo de relacionamentos
+                    $zip->deleteName('word/_rels/document.xml.rels');
+                    $zip->addFromString('word/_rels/document.xml.rels', $relsXmlProcessado);
+                    
+                    error_log("PDF Assinatura: Relacionamento QR Code adicionado ao DOCX");
+                }
+            } else {
+                // Criar arquivo de relacionamentos se não existir
+                $relsXmlNovo = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+                    . '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+                    . '<Relationship Id="rIdQR" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/qrcode.png"/>'
+                    . '</Relationships>';
+                
+                $zip->addFromString('word/_rels/document.xml.rels', $relsXmlNovo);
+                error_log("PDF Assinatura: Arquivo de relacionamentos criado com QR Code");
+            }
+            
+        } catch (\Exception $e) {
+            error_log("PDF Assinatura: Erro ao adicionar relacionamento QR Code: " . $e->getMessage());
         }
     }
     

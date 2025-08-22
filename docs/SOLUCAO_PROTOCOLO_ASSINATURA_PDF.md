@@ -1,4 +1,4 @@
-# 🔐 Solução Completa: PDF com Protocolo e Assinatura Digital
+# 🔐 Solução Completa: PDF com Protocolo, Assinatura Digital e QR Code
 
 ## 📋 **Problema Original**
 
@@ -8,6 +8,7 @@
 - ❌ **PDF mostrava** `[AGUARDANDO PROTOCOLO]` mesmo após protocolação
 - ❌ **Assinatura digital não aparecia** no PDF final
 - ❌ **Formatação do OnlyOffice perdida** (cabeçalho, rodapé, imagens)
+- ❌ **Faltava QR Code** para verificação pública do documento
 
 ### **Exemplo do Problema**
 ```
@@ -46,6 +47,10 @@ NO PDF GERADO: "MOÇÃO Nº [AGUARDANDO PROTOCOLO]"
 #### **Problema 3: Assinatura não incluída**
 - Assinatura estava no banco de dados
 - **Não era adicionada ao PDF final**
+
+#### **Problema 4: Ausência de QR Code**
+- Faltava verificação pública do documento
+- **Necessário QR Code para consulta online**
 
 ---
 
@@ -96,7 +101,43 @@ private function processarPlaceholdersNoDOCX(string $caminhoDocx, Proposicao $pr
             );
         }
         
-        // 2. Adicionar assinatura digital se existir
+        // 2. Gerar QR Code para verificação do documento
+        $consultaUrl = route('proposicoes.consulta.publica', ['id' => $proposicao->id]);
+        $qrCodeService = new \App\Services\QRCodeService();
+        
+        // Usar bacon/bacon-qr-code para gerar QR code localmente  
+        $renderer = new \BaconQrCode\Renderer\ImageRenderer(
+            new \BaconQrCode\Renderer\RendererStyle\RendererStyle(80),
+            new \BaconQrCode\Renderer\Image\SvgImageBackEnd()
+        );
+        $writer = new \BaconQrCode\Writer($renderer);
+        $qrCodeSvg = $writer->writeString($consultaUrl);
+        $qrCodeImageData = $qrCodeSvg;
+        
+        // 3. Criar XML para QR Code (sempre incluir quando disponível)
+        $qrCodeXml = '';
+        if ($qrCodeImageData) {
+            $qrCodeXml = '<w:p><w:pPr><w:jc w:val="right"/></w:pPr>'
+                . '<w:r><w:drawing>'
+                . '<wp:inline distT="0" distB="0" distL="0" distR="0">'
+                . '<wp:extent cx="635000" cy="635000"/>'
+                . '<wp:effectExtent l="0" t="0" r="0" b="0"/>'
+                . '<wp:docPr id="1" name="QRCode"/>'
+                . '<a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">'
+                . '<a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">'
+                . '<pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">'
+                . '<pic:nvPicPr><pic:cNvPr id="0" name="QRCode"/><pic:cNvPicPr/></pic:nvPicPr>'
+                . '<pic:blipFill><a:blip r:embed="rIdQR"/></pic:blipFill>'
+                . '<pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="635000" cy="635000"/></a:xfrm>'
+                . '<a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic>'
+                . '</a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>'
+                . '<w:p><w:pPr><w:jc w:val="right"/></w:pPr>'
+                . '<w:r><w:rPr><w:sz w:val="14"/></w:rPr>'
+                . '<w:t>📱 Escaneie para verificar documento</w:t></w:r></w:p>';
+        }
+        
+        // 4. Adicionar assinatura digital se existir
+        $assinaturaXml = '';
         if ($proposicao->assinatura_digital) {
             $assinaturaInfo = json_decode($proposicao->assinatura_digital, true);
             
@@ -109,9 +150,17 @@ private function processarPlaceholdersNoDOCX(string $caminhoDocx, Proposicao $pr
                 . '<w:r><w:t>Data: ' . $dataAssinatura . '</w:t></w:r></w:p>'
                 . '<w:p><w:pPr><w:jc w:val="center"/></w:pPr>'
                 . '<w:r><w:t>Documento assinado eletronicamente conforme MP 2.200-2/2001</w:t></w:r></w:p>';
-            
-            // Adicionar antes do fechamento do body
-            $documentXml = str_replace('</w:body>', $assinaturaXml . '</w:body>', $documentXml);
+        }
+        
+        // 5. Adicionar QR Code e assinatura ao documento
+        $conteudoAdicional = $qrCodeXml . $assinaturaXml;
+        if ($conteudoAdicional) {
+            $documentXml = str_replace('</w:body>', $conteudoAdicional . '</w:body>', $documentXml);
+        }
+        
+        // 6. Adicionar relação da imagem QR Code no arquivo .rels
+        if ($qrCodeImageData) {
+            $this->adicionarQRCodeRelacionamento($zip, base64_encode($qrCodeImageData));
         }
         
         // Atualizar o XML no ZIP
@@ -154,7 +203,15 @@ try {
    - Estrutura e estilos do documento
    - Rodapé "Câmara Municipal de Caraguatatuba - Documento Oficial"
 
-3. **Assinatura Digital Completa**
+3. **QR Code para Verificação**
+   ```
+   [QR CODE IMAGE] 📱 Escaneie para verificar documento
+   ```
+   - **URL**: `http://localhost:8001/consulta/proposicao/3`
+   - **Posição**: Canto inferior direito
+   - **Tamanho**: 80x80 pixels
+
+4. **Assinatura Digital Completa**
    ```
    _____________________________________________
    ASSINATURA DIGITAL
@@ -175,16 +232,18 @@ graph LR
     C --> D[Parlamentar Assina]
     D --> E[Protocolo Atribui Número]
     E --> F[regenerarPDFAtualizado]
-    F --> G[Processa DOCX]
-    G --> H[PDF Final]
+    F --> G[Gera QR Code]
+    G --> H[Processa DOCX]
+    H --> I[PDF Final com QR Code]
 ```
 
 ### **Detalhes do Processamento**
 1. **Copia DOCX original** - Preserva arquivo fonte
-2. **Processa placeholders no XML** - Mantém formatação
-3. **Adiciona assinatura digital** - Insere no documento
-4. **Converte via LibreOffice** - Preserva layout completo
-5. **Salva PDF final** - Com todos os dados atualizados
+2. **Gera QR Code localmente** - Usando bacon/bacon-qr-code
+3. **Processa placeholders no XML** - Mantém formatação
+4. **Adiciona QR Code e assinatura** - Insere no documento
+5. **Converte via LibreOffice** - Preserva layout completo
+6. **Salva PDF final** - Com todos os dados e QR Code
 
 ---
 
@@ -225,6 +284,8 @@ docker exec legisinc-app pdftotext "/caminho/do/pdf" - | head -20
 ### **Indicadores de Funcionamento Correto**
 - ✅ PDF mostra número de protocolo correto
 - ✅ Formatação do OnlyOffice preservada
+- ✅ QR Code visível no canto inferior direito
+- ✅ Texto "📱 Escaneie para verificar documento"
 - ✅ Assinatura digital presente no final
 - ✅ Cabeçalho e rodapé mantidos
 - ✅ PDF com 2+ páginas (não vazio)

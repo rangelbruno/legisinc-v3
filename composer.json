@@ -12,6 +12,7 @@
         "php": "^8.2",
         "barryvdh/laravel-dompdf": "*",
         "doctrine/dbal": "*",
+        "endroid/qr-code": "^6.0",
         "firebase/php-jwt": "^6.11",
         "henck/rtf-to-html": "*",
         "laravel/framework": "^12.0",
