@@ -95,9 +95,12 @@ class ProposicaoProtocoloController extends Controller
 
         // Regenerar PDF com número de protocolo
         try {
+            error_log("Protocolo: Iniciando regeneração de PDF para proposição {$proposicao->id} com protocolo {$numeroProcesso}");
             $assinaturaController = app(\App\Http\Controllers\ProposicaoAssinaturaController::class);
             $assinaturaController->regenerarPDFAtualizado($proposicao->fresh());
+            error_log("Protocolo: PDF regenerado com sucesso para proposição {$proposicao->id}");
         } catch (\Exception $e) {
+            error_log("Protocolo: ERRO ao regenerar PDF para proposição {$proposicao->id}: " . $e->getMessage());
             // Log::warning('Falha ao regenerar PDF com número de protocolo', [
                 //     'proposicao_id' => $proposicao->id,
                 //     'numero_protocolo' => $numeroProcesso,

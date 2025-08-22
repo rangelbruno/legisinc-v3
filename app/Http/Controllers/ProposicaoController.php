@@ -6230,22 +6230,30 @@ ${texto}
             }
         }
 
-        // 2. Buscar PDFs fisicamente no diretório da proposição
-        $diretorioPDFs = storage_path("app/private/proposicoes/pdfs/{$proposicao->id}/");
+        // 2. Buscar PDFs fisicamente em múltiplos diretórios possíveis
+        $diretoriosParaBuscar = [
+            storage_path("app/proposicoes/pdfs/{$proposicao->id}/"),      // Diretório onde PDFs assinados são criados
+            storage_path("app/private/proposicoes/pdfs/{$proposicao->id}/"), // Diretório antigo
+            storage_path("app/public/proposicoes/pdfs/{$proposicao->id}/"),  // Diretório público
+        ];
         
-        if (!is_dir($diretorioPDFs)) {
+        $todosPDFs = [];
+        
+        foreach ($diretoriosParaBuscar as $diretorio) {
+            if (is_dir($diretorio)) {
+                $pdfs = glob($diretorio . "*.pdf");
+                if ($pdfs !== false) {
+                    $todosPDFs = array_merge($todosPDFs, $pdfs);
+                }
+            }
+        }
+        
+        if (empty($todosPDFs)) {
             return null;
         }
 
-        // 3. Listar todos os PDFs do diretório
-        $pdfs = glob($diretorioPDFs . "*.pdf");
-        
-        if (empty($pdfs)) {
-            return null;
-        }
-
-        // 4. Priorizar PDFs assinados
-        $pdfsAssinados = array_filter($pdfs, function($pdf) {
+        // 3. Priorizar PDFs assinados
+        $pdfsAssinados = array_filter($todosPDFs, function($pdf) {
             return strpos($pdf, '_assinado_') !== false;
         });
 
@@ -6257,12 +6265,12 @@ ${texto}
             return $pdfsAssinados[0];
         }
 
-        // 5. Se não há PDFs assinados, retornar o PDF mais recente
-        usort($pdfs, function($a, $b) {
+        // 4. Se não há PDFs assinados, retornar o PDF mais recente
+        usort($todosPDFs, function($a, $b) {
             return filemtime($b) - filemtime($a);
         });
 
-        return $pdfs[0];
+        return $todosPDFs[0];
     }
 
     /**

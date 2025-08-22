@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class ProposicaoAssinaturaController extends Controller
 {
@@ -611,10 +612,10 @@ class ProposicaoAssinaturaController extends Controller
     public function regenerarPDFAtualizado(Proposicao $proposicao): void
     {
         try {
-            error_log("PDF Assinatura: Regenerando PDF com assinatura digital para proposição {$proposicao->id}");
+            error_log("PDF Assinatura: Regenerando PDF preservando formatação OnlyOffice para proposição {$proposicao->id}");
             
             // Gerar novo nome de arquivo com timestamp
-            $nomePdf = 'proposicao_' . $proposicao->id . '_assinado_' . time() . '.pdf';
+            $nomePdf = 'proposicao_' . $proposicao->id . '_protocolado_' . time() . '.pdf';
             $diretorioPdf = 'proposicoes/pdfs/' . $proposicao->id;
             $caminhoPdfRelativo = $diretorioPdf . '/' . $nomePdf;
             $caminhoPdfAbsoluto = storage_path('app/' . $caminhoPdfRelativo);
@@ -630,19 +631,38 @@ class ProposicaoAssinaturaController extends Controller
             if ($arquivoMaisRecente) {
                 error_log("PDF Assinatura: Usando arquivo para regeneração: {$arquivoMaisRecente['path']}");
                 
-                // Usar conversão direta DOCX → PDF se disponível
-                if (str_contains($arquivoMaisRecente['path'], '.docx') && $this->libreOfficeDisponivel()) {
-                    $this->criarPDFComFormatacaoOnlyOffice($caminhoPdfAbsoluto, $proposicao, $arquivoMaisRecente['path']);
+                // ESTRATÉGIA: Processar placeholders no DOCX antes de converter para PDF
+                // Isso preserva toda a formatação do OnlyOffice
+                
+                // 1. Criar cópia temporária do DOCX
+                $docxTemporario = sys_get_temp_dir() . '/proposicao_' . $proposicao->id . '_temp_' . time() . '.docx';
+                copy($arquivoMaisRecente['path'], $docxTemporario);
+                
+                // 2. Processar placeholders diretamente no DOCX
+                $this->processarPlaceholdersNoDOCX($docxTemporario, $proposicao);
+                
+                // 3. Converter DOCX processado para PDF preservando formatação
+                if ($this->libreOfficeDisponivel()) {
+                    error_log("PDF Assinatura: Usando LibreOffice para preservar formatação OnlyOffice");
+                    $this->criarPDFComFormatacaoOnlyOffice($caminhoPdfAbsoluto, $proposicao, $docxTemporario);
                 } else {
-                    // Fallback para método alternativo
-                    $this->criarPDFComConteudoExtraido($caminhoPdfAbsoluto, $proposicao);
+                    // Fallback: método anterior
+                    error_log("PDF Assinatura: LibreOffice não disponível, usando conversão alternativa");
+                    $conteudoOriginal = $this->extrairConteudoDOCX($docxTemporario);
+                    $conteudoAtualizado = $this->processarPlaceholdersDocumento($conteudoOriginal, $proposicao);
+                    $this->criarPDFComConteudoProcessado($caminhoPdfAbsoluto, $proposicao, $conteudoAtualizado);
+                }
+                
+                // Limpar arquivo temporário
+                if (file_exists($docxTemporario)) {
+                    unlink($docxTemporario);
                 }
                 
                 // Atualizar proposição com novo caminho do PDF
                 $proposicao->arquivo_pdf_path = $caminhoPdfRelativo;
                 $proposicao->save();
                 
-                error_log("PDF Assinatura: PDF regenerado com sucesso! Tamanho: " . filesize($caminhoPdfAbsoluto) . " bytes");
+                error_log("PDF Assinatura: PDF regenerado com formatação preservada! Tamanho: " . filesize($caminhoPdfAbsoluto) . " bytes");
             } else {
                 error_log("PDF Assinatura: Nenhum arquivo encontrado para regeneração");
                 throw new \Exception('Nenhum arquivo encontrado para regeneração do PDF');
@@ -652,6 +672,237 @@ class ProposicaoAssinaturaController extends Controller
             error_log("PDF Assinatura: Erro ao regenerar PDF: " . $e->getMessage());
             throw $e;
         }
+    }
+    
+    /**
+     * Processar placeholders diretamente no arquivo DOCX
+     * Isso preserva toda a formatação do OnlyOffice
+     */
+    private function processarPlaceholdersNoDOCX(string $caminhoDocx, Proposicao $proposicao): void
+    {
+        try {
+            error_log("PDF Assinatura: Processando placeholders no DOCX para preservar formatação");
+            
+            // DOCX é basicamente um arquivo ZIP com XMLs dentro
+            $zip = new \ZipArchive();
+            
+            if ($zip->open($caminhoDocx) === TRUE) {
+                // O conteúdo principal está em word/document.xml
+                $documentXml = $zip->getFromName('word/document.xml');
+                
+                if ($documentXml) {
+                    // Processar placeholders no XML
+                    $documentXmlProcessado = $documentXml;
+                    
+                    // 1. Substituir [AGUARDANDO PROTOCOLO] pelo número real
+                    if ($proposicao->numero_protocolo) {
+                        $documentXmlProcessado = str_replace(
+                            '[AGUARDANDO PROTOCOLO]',
+                            $proposicao->numero_protocolo,
+                            $documentXmlProcessado
+                        );
+                        error_log("PDF Assinatura: Substituído [AGUARDANDO PROTOCOLO] por {$proposicao->numero_protocolo} no DOCX");
+                    }
+                    
+                    // 2. Adicionar assinatura digital se existir
+                    if ($proposicao->assinatura_digital && $proposicao->data_assinatura) {
+                        $assinaturaInfo = json_decode($proposicao->assinatura_digital, true);
+                        $nomeAssinante = $assinaturaInfo['nome'] ?? 'Digital';
+                        $dataAssinatura = \Carbon\Carbon::parse($proposicao->data_assinatura)->format('d/m/Y H:i');
+                        
+                        // Criar parágrafo XML para assinatura digital
+                        $assinaturaXml = '<w:p><w:pPr><w:jc w:val="center"/></w:pPr>'
+                            . '<w:r><w:rPr><w:b/><w:sz w:val="24"/></w:rPr>'
+                            . '<w:t>_____________________________________________</w:t></w:r></w:p>'
+                            . '<w:p><w:pPr><w:jc w:val="center"/></w:pPr>'
+                            . '<w:r><w:rPr><w:b/></w:rPr><w:t>ASSINATURA DIGITAL</w:t></w:r></w:p>'
+                            . '<w:p><w:pPr><w:jc w:val="center"/></w:pPr>'
+                            . '<w:r><w:t>' . htmlspecialchars($nomeAssinante) . '</w:t></w:r></w:p>'
+                            . '<w:p><w:pPr><w:jc w:val="center"/></w:pPr>'
+                            . '<w:r><w:t>Data: ' . htmlspecialchars($dataAssinatura) . '</w:t></w:r></w:p>'
+                            . '<w:p><w:pPr><w:jc w:val="center"/></w:pPr>'
+                            . '<w:r><w:rPr><w:sz w:val="18"/></w:rPr>'
+                            . '<w:t>Documento assinado eletronicamente conforme MP 2.200-2/2001</w:t></w:r></w:p>';
+                        
+                        // Adicionar antes do final do documento (antes de </w:body>)
+                        if (strpos($documentXmlProcessado, '</w:body>') !== false) {
+                            $documentXmlProcessado = str_replace(
+                                '</w:body>',
+                                $assinaturaXml . '</w:body>',
+                                $documentXmlProcessado
+                            );
+                            error_log("PDF Assinatura: Adicionada assinatura digital de {$nomeAssinante} ao documento");
+                        }
+                    }
+                    
+                    // 3. Outras substituições se necessário
+                    // Exemplo: ${numero_protocolo}, ${data_protocolo}, etc.
+                    $substituicoes = [
+                        '${numero_protocolo}' => $proposicao->numero_protocolo ?? '[AGUARDANDO]',
+                        '${data_protocolo}' => $proposicao->data_protocolo ? 
+                            \Carbon\Carbon::parse($proposicao->data_protocolo)->format('d/m/Y') : '',
+                        '${status}' => ucfirst(str_replace('_', ' ', $proposicao->status)),
+                    ];
+                    
+                    foreach ($substituicoes as $placeholder => $valor) {
+                        if (strpos($documentXmlProcessado, $placeholder) !== false) {
+                            $documentXmlProcessado = str_replace($placeholder, $valor, $documentXmlProcessado);
+                            error_log("PDF Assinatura: Substituído {$placeholder} por {$valor}");
+                        }
+                    }
+                    
+                    // Atualizar o XML no ZIP
+                    $zip->deleteName('word/document.xml');
+                    $zip->addFromString('word/document.xml', $documentXmlProcessado);
+                    
+                    // Processar também cabeçalhos e rodapés se existirem
+                    $arquivosParaProcessar = [
+                        'word/header1.xml',
+                        'word/header2.xml',
+                        'word/footer1.xml',
+                        'word/footer2.xml'
+                    ];
+                    
+                    foreach ($arquivosParaProcessar as $arquivo) {
+                        $conteudoXml = $zip->getFromName($arquivo);
+                        if ($conteudoXml) {
+                            // Processar placeholders
+                            foreach ($substituicoes as $placeholder => $valor) {
+                                $conteudoXml = str_replace($placeholder, $valor, $conteudoXml);
+                            }
+                            // Atualizar no ZIP
+                            $zip->deleteName($arquivo);
+                            $zip->addFromString($arquivo, $conteudoXml);
+                        }
+                    }
+                }
+                
+                $zip->close();
+                error_log("PDF Assinatura: DOCX processado com sucesso, formatação preservada");
+            } else {
+                error_log("PDF Assinatura: Erro ao abrir DOCX para processamento");
+            }
+            
+        } catch (\Exception $e) {
+            error_log("PDF Assinatura: Erro ao processar placeholders no DOCX: " . $e->getMessage());
+            // Não lançar exceção, continuar com arquivo original
+        }
+    }
+    
+    /**
+     * Processar placeholders no documento com dados atualizados da proposição
+     */
+    private function processarPlaceholdersDocumento(string $conteudo, Proposicao $proposicao): string
+    {
+        try {
+            // 1. Substituir [AGUARDANDO PROTOCOLO] pelo número real
+            if ($proposicao->numero_protocolo) {
+                $conteudo = str_replace('[AGUARDANDO PROTOCOLO]', $proposicao->numero_protocolo, $conteudo);
+                error_log("PDF Assinatura: Substituído [AGUARDANDO PROTOCOLO] por {$proposicao->numero_protocolo}");
+            }
+            
+            // 2. Adicionar assinatura digital se existir
+            if ($proposicao->assinatura_digital && $proposicao->data_assinatura) {
+                $assinaturaInfo = json_decode($proposicao->assinatura_digital, true);
+                $nomeAssinante = $assinaturaInfo['nome'] ?? 'Digital';
+                $dataAssinatura = \Carbon\Carbon::parse($proposicao->data_assinatura)->format('d/m/Y H:i');
+                
+                $textoAssinatura = "\n\nAssinatura Digital - {$nomeAssinante}\nData: {$dataAssinatura}\nDocumento assinado eletronicamente conforme MP 2.200-2/2001";
+                
+                // Adicionar antes do rodapé ou no final
+                if (strpos($conteudo, 'Câmara Municipal') !== false) {
+                    $conteudo = str_replace('Câmara Municipal', $textoAssinatura . "\n\nCâmara Municipal", $conteudo);
+                } else {
+                    $conteudo .= $textoAssinatura;
+                }
+                
+                error_log("PDF Assinatura: Adicionada assinatura digital de {$nomeAssinante}");
+            }
+            
+            // 3. Outros placeholders se necessário (futuras expansões)
+            // $conteudo = str_replace('${outra_variavel}', $valor, $conteudo);
+            
+            return $conteudo;
+            
+        } catch (\Exception $e) {
+            error_log("PDF Assinatura: Erro ao processar placeholders: " . $e->getMessage());
+            return $conteudo; // Retornar original em caso de erro
+        }
+    }
+    
+    /**
+     * Criar PDF com conteúdo já processado
+     */
+    private function criarPDFComConteudoProcessado(string $caminhoSalvar, Proposicao $proposicao, string $conteudo): void
+    {
+        try {
+            // Usar LibreOffice para conversão HTML → PDF (mais confiável)
+            $html = $this->converterTextoParaHTML($conteudo, $proposicao);
+            
+            // Salvar HTML temporário
+            $tempHtml = sys_get_temp_dir() . '/proposicao_' . $proposicao->id . '_' . time() . '.html';
+            file_put_contents($tempHtml, $html);
+            
+            // Converter HTML → PDF usando LibreOffice
+            $command = "libreoffice --headless --convert-to pdf --outdir " . dirname($caminhoSalvar) . " " . $tempHtml;
+            $output = [];
+            $returnCode = 0;
+            exec($command, $output, $returnCode);
+            
+            // O LibreOffice cria o PDF com mesmo nome base do HTML
+            $pdfGerado = dirname($caminhoSalvar) . '/' . pathinfo($tempHtml, PATHINFO_FILENAME) . '.pdf';
+            
+            if (file_exists($pdfGerado)) {
+                // Mover para o nome correto
+                rename($pdfGerado, $caminhoSalvar);
+                
+                // Limpar arquivo temporário
+                unlink($tempHtml);
+                
+                error_log("PDF Assinatura: PDF criado com LibreOffice - tamanho: " . filesize($caminhoSalvar) . " bytes");
+            } else {
+                // Fallback: usar método anterior
+                error_log("PDF Assinatura: LibreOffice falhou, usando método anterior");
+                $this->criarPDFComConteudoExtraido($caminhoSalvar, $proposicao);
+            }
+            
+        } catch (\Exception $e) {
+            error_log("PDF Assinatura: Erro ao criar PDF com conteúdo processado: " . $e->getMessage());
+            throw $e;
+        }
+    }
+    
+    /**
+     * Converter texto para HTML formatado
+     */
+    private function converterTextoParaHTML(string $texto, Proposicao $proposicao): string
+    {
+        // HTML básico com estilo similar ao template oficial
+        $html = '<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Arial, sans-serif; font-size: 12pt; line-height: 1.5; margin: 2cm; }
+        .titulo { text-align: center; font-weight: bold; font-size: 14pt; margin-bottom: 1em; }
+        .ementa { font-weight: bold; margin: 1em 0; }
+        .assinatura { margin-top: 2em; text-align: right; }
+        .rodape { margin-top: 3em; text-align: center; font-size: 10pt; color: #666; }
+    </style>
+</head>
+<body>';
+        
+        // Processar o texto mantendo quebras de linha
+        $textoHTML = nl2br(htmlspecialchars($texto));
+        
+        // Aplicar formatação especial para elementos conhecidos
+        $textoHTML = preg_replace('/MOÇÃO Nº (.+)/', '<div class="titulo">MOÇÃO Nº $1</div>', $textoHTML);
+        $textoHTML = preg_replace('/EMENTA: (.+)/', '<div class="ementa">EMENTA: $1</div>', $textoHTML);
+        
+        $html .= $textoHTML;
+        $html .= '</body></html>';
+        
+        return $html;
     }
     
     /**
