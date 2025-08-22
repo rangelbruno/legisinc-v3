@@ -68,10 +68,12 @@ services:
       - REDIS_SERVER_HOST=redis
       - REDIS_SERVER_PORT=6379
       - DOCUMENT_SERVER_REGION=pt-BR
-      - DOCUMENT_SERVER_LOCALE=C.UTF-8
-      - LC_ALL=C.UTF-8
-      - LANG=C.UTF-8
-      - LANGUAGE=en_US:en
+      - DOCUMENT_SERVER_LOCALE=pt_BR.UTF-8
+      - LC_ALL=pt_BR.UTF-8
+      - LANG=pt_BR.UTF-8
+      - LANGUAGE=pt_BR:pt
+      - ONLYOFFICE_DOCSERV_LANG=pt-BR
+      - ONLYOFFICE_DOCSERV_LOCALE=pt_BR.UTF-8
     ports:
       - "8080:80"
     volumes:
@@ -80,6 +82,8 @@ services:
       - onlyoffice_cache:/var/lib/onlyoffice/documentserver/App_Data/cache/files
       - onlyoffice_forgotten:/var/lib/onlyoffice/documentserver/App_Data/cache/forgotten
       - ./storage/app/public:/var/www/onlyoffice/Data/public
+      - ./docker/onlyoffice/default.json:/etc/onlyoffice/documentserver/default.json
+      - ./docker/onlyoffice/editor-config.json:/etc/onlyoffice/documentserver/editor-config.json
     networks:
       - legisinc_network
     depends_on:

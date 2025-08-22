@@ -1,0 +1,16 @@
+{
+  "services": {
+    "CoAuthoring": {
+      "request": {
+        "defaultLang": "pt-BR"
+      }
+    }
+  },
+  "common": {
+    "lang": "pt-BR",
+    "locale": "pt_BR.UTF-8"
+  },
+  "format": {
+    "defaultLang": "pt-BR"
+  }
+}
