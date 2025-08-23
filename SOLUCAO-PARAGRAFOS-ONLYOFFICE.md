@@ -1,185 +1,137 @@
-# Solução: Parágrafos no Editor OnlyOffice
+# 📝 SOLUÇÃO: Preservação de Parágrafos no OnlyOffice
 
-## 🎯 Problema Identificado
+## ✅ PROBLEMA RESOLVIDO
 
-Quando o texto do campo **"Texto Principal da Proposição"** era transferido para o editor OnlyOffice, os parágrafos não eram respeitados, resultando em texto contínuo sem formatação adequada.
+**Situação Anterior:** Quando um usuário criava uma proposição com texto contendo múltiplos parágrafos, ao abrir no editor OnlyOffice, todo o texto aparecia em uma única linha, sem respeitar as quebras de linha originais.
 
-### Sintomas:
-- Texto digitado com parágrafos aparecia "tudo junto" no editor
-- Quebras de linha eram convertidas para quebras simples (`<w:br/>`) em vez de parágrafos separados
-- Estrutura visual do documento ficava comprometida
+**Causa:** A função `converterParaRTF()` no `TemplateProcessorService.php` não estava tratando as quebras de linha (`\n` e `\r\n`), apenas convertendo caracteres Unicode para o formato RTF.
 
-## 🔍 Análise Técnica
+## 🔧 CORREÇÃO IMPLEMENTADA
 
-### Causa Raiz:
-O problema estava nos métodos de conversão de texto para os formatos DOCX e RTF:
+### Arquivo Modificado:
+`/app/Services/Template/TemplateProcessorService.php` (linhas 283-311)
 
-1. **`criarArquivoDOCXReal()`** - Convertia todas as quebras de linha para tags `<w:br/>` dentro de um único parágrafo
-2. **`criarArquivoRTF()`** - Tratava quebras simples como quebras de parágrafo
-3. **`processarConteudoDOCX()`** - Não respeitava a estrutura de parágrafos
-4. **`processarConteudoIA()`** - Processava linha por linha sem considerar blocos de texto
-
-### Código Problemático (ANTES):
+### Mudança Aplicada:
 ```php
-// ❌ PROBLEMA: Todas as quebras de linha viram quebras simples
-$textoXML = str_replace("\n", '</w:t><w:br/><w:t>', $textoLimpo);
-
-// ❌ PROBLEMA: Texto em um único parágrafo
-$documentXML = '...<w:p><w:r><w:t>' . $textoXML . '</w:t></w:r></w:p>...';
-```
-
-## ✅ Solução Implementada
-
-### 1. **Identificação Inteligente de Parágrafos**
-```php
-// ✅ SOLUÇÃO: Dividir por quebras duplas de linha
-$paragrafos = preg_split('/\n\s*\n/', $textoLimpo);
-```
-
-### 2. **Processamento de Parágrafos Separados**
-```php
-// ✅ SOLUÇÃO: Cada parágrafo vira um elemento <w:p> separado
-foreach ($paragrafos as $paragrafo) {
-    $paragrafo = trim($paragrafo);
-    if (empty($paragrafo)) continue;
+private function converterParaRTF(string $texto): string
+{
+    $textoProcessado = '';
+    $length = mb_strlen($texto, 'UTF-8');
     
-    // Normalizar espaços dentro do parágrafo
-    $paragrafoProcessado = str_replace("\n", ' ', $paragrafo);
-    $paragrafoProcessado = preg_replace('/\s+/', ' ', $paragrafoProcessado);
+    for ($i = 0; $i < $length; $i++) {
+        $char = mb_substr($texto, $i, 1, 'UTF-8');
+        $codepoint = mb_ord($char, 'UTF-8');
+        
+        // NOVA FUNCIONALIDADE: Tratar quebras de linha
+        if ($char === "\n") {
+            $textoProcessado .= '\\par ';  // Converter \n para parágrafo RTF
+        } else if ($char === "\r") {
+            // Ignorar \r se for seguido de \n (Windows line ending)
+            if ($i + 1 < $length && mb_substr($texto, $i + 1, 1, 'UTF-8') === "\n") {
+                continue;
+            }
+            $textoProcessado .= '\\par ';
+        } else if ($codepoint > 127) {
+            // Caracteres Unicode (acentuação portuguesa)
+            $textoProcessado .= '\\u' . $codepoint . '*';
+        } else {
+            // Caracteres ASCII normais
+            $textoProcessado .= $char;
+        }
+    }
     
-    $paragrafosXML .= '<w:p><w:r><w:t>' . $paragrafoProcessado . '</w:t></w:r></w:p>';
+    return $textoProcessado;
 }
 ```
 
-### 3. **Métodos Corrigidos**
+## 🎯 FLUXO CORRIGIDO
 
-#### `criarArquivoDOCXReal()` - ProposicaoController.php
-- ✅ Identifica parágrafos por quebras duplas de linha
-- ✅ Cria elemento `<w:p>` separado para cada parágrafo
-- ✅ Normaliza espaços dentro de cada parágrafo
+1. **Criação da Proposição** (`/proposicoes/create`)
+   - Usuário insere texto com múltiplos parágrafos no campo `texto_principal`
+   - Texto é salvo no banco com quebras de linha preservadas (`\n`)
 
-#### `criarArquivoRTF()` - ProposicaoController.php  
-- ✅ Processa parágrafos individualmente
-- ✅ Adiciona `\par` entre parágrafos
-- ✅ Preserva formatação RTF
+2. **Abertura no OnlyOffice** (`/proposicoes/{id}/onlyoffice/editor-parlamentar`)
+   - Template é processado pelo `TemplateProcessorService`
+   - Função `converterParaRTF()` converte cada `\n` em `\par` (parágrafo RTF)
+   - OnlyOffice recebe documento RTF com marcadores de parágrafo corretos
 
-#### `processarConteudoDOCX()` - OnlyOfficeService.php
-- ✅ Respeita estrutura de parágrafos
-- ✅ Adiciona quebras extras entre parágrafos
-- ✅ Mantém formatação ABNT
+3. **Resultado Visual**
+   - Texto aparece com parágrafos separados no editor
+   - Formatação original é preservada
+   - Usuário pode continuar editando mantendo a estrutura
 
-#### `processarConteudoIA()` - OnlyOfficeService.php
-- ✅ Processa parágrafos como blocos
-- ✅ Adiciona separação visual adequada
-- ✅ Preserva estrutura markdown
+## 📊 TESTE DE VALIDAÇÃO
 
-## 🧪 Teste de Validação
+### Script de Teste:
+`/home/bruno/legisinc/test-paragrafos-simples.php`
 
-### Arquivo de Teste: `test-paragrafos-onlyoffice.php`
+### Resultado do Teste:
+```
+✅ SUCESSO: Quebras de linha foram convertidas para \par!
+   Marcadores \par encontrados: 4
+   O texto será exibido com parágrafos separados no OnlyOffice.
+```
+
+### Comando de Teste:
 ```bash
-php test-paragrafos-onlyoffice.php
+docker exec legisinc-app php test-paragrafos-simples.php
 ```
 
-### Resultado Esperado:
-```
-=== ANÁLISE DOS PARÁGRAFOS ===
-Total de parágrafos encontrados: 5
+## 🚀 COMO TESTAR MANUALMENTE
 
-=== SIMULAÇÃO DE PROCESSAMENTO DOCX ===
-XML gerado com 5 parágrafos separados:
-  <w:p>...</w:p>
-  <w:p>...</w:p>
-  <w:p>...</w:p>
-  <w:p>...</w:p>
-  <w:p>...</w:p>
+1. **Login como Parlamentar:**
+   - URL: http://localhost:8001/login
+   - Email: jessica@sistema.gov.br
+   - Senha: 123456
 
-=== SIMULAÇÃO DE PROCESSAMENTO RTF ===
-RTF gerado com 5 parágrafos separados:
-Parágrafo 1\par
-Parágrafo 2\par
-Parágrafo 3\par
-Parágrafo 4\par
-Parágrafo 5\par
-```
+2. **Criar Nova Proposição:**
+   - Acessar: http://localhost:8001/proposicoes/create?tipo=mocao
+   - Preencher Ementa
+   - Escolher "Preencher manualmente"
+   - No campo "Texto Principal", inserir texto com múltiplos parágrafos:
+   ```
+   Primeiro parágrafo do texto.
+   
+   Segundo parágrafo com mais conteúdo.
+   
+   Terceiro parágrafo final.
+   ```
 
-## 🔧 Arquivos Modificados
+3. **Verificar no Editor:**
+   - Clicar em "Continuar"
+   - Na página da proposição, clicar em "Continuar Editando"
+   - **Verificar:** O texto deve aparecer com os 3 parágrafos separados
 
-### 1. **ProposicaoController.php**
-- `criarArquivoDOCXReal()` - Lógica de parágrafos implementada
-- `criarArquivoRTF()` - Processamento de parágrafos corrigido
-- `criarArquivoDocx()` - Formatação RTF melhorada
+## 💡 DETALHES TÉCNICOS
 
-### 2. **OnlyOfficeService.php**
-- `processarConteudoDOCX()` - Estrutura de parágrafos respeitada
-- `processarConteudoIA()` - Processamento por blocos implementado
+### Formato RTF:
+- `\par` = Marcador de fim de parágrafo no formato RTF
+- `\u225*` = Caractere Unicode (ex: "á" = código 225)
+- OnlyOffice interpreta corretamente esses marcadores
 
-## 📋 Fluxo de Funcionamento
+### Compatibilidade:
+- ✅ Windows line endings (`\r\n`)
+- ✅ Unix line endings (`\n`)
+- ✅ Mac classic line endings (`\r`)
+- ✅ Múltiplas quebras consecutivas (linhas em branco)
 
-### Antes (❌):
-```
-Texto com parágrafos → Quebras simples → Um único parágrafo → Texto contínuo
-```
+## 🔄 PRESERVAÇÃO DA CORREÇÃO
 
-### Depois (✅):
-```
-Texto com parágrafos → Identificação de parágrafos → Parágrafos separados → Formatação correta
-```
+Esta correção é permanente e será preservada após:
+- `docker exec -it legisinc-app php artisan migrate:fresh --seed`
+- Reinicialização do container
+- Deploy em produção
 
-## 🎉 Benefícios da Solução
+**Arquivo crítico:** `/app/Services/Template/TemplateProcessorService.php`
 
-1. **Formatação Visual Correta**
-   - Parágrafos são respeitados no editor OnlyOffice
-   - Estrutura do documento mantida
-   - Legibilidade melhorada
+## 📝 NOTAS ADICIONAIS
 
-2. **Compatibilidade Total**
-   - Funciona com DOCX e RTF
-   - Preserva formatação ABNT
-   - Mantém funcionalidades existentes
-
-3. **Manutenibilidade**
-   - Código mais limpo e organizado
-   - Lógica de parágrafos centralizada
-   - Fácil de estender e modificar
-
-## 🚀 Como Testar
-
-### 1. **Criar Nova Proposição**
-- Preencher campo "Texto Principal da Proposição" com parágrafos
-- Usar quebras duplas de linha para separar parágrafos
-
-### 2. **Abrir no OnlyOffice**
-- Verificar se os parágrafos são respeitados
-- Confirmar formatação visual adequada
-
-### 3. **Verificar Arquivos Gerados**
-- DOCX deve ter elementos `<w:p>` separados
-- RTF deve ter `\par` entre parágrafos
-
-## 🔮 Melhorias Futuras
-
-1. **Configuração de Espaçamento**
-   - Permitir ajuste do espaçamento entre parágrafos
-   - Configuração de margens personalizadas
-
-2. **Estilos de Parágrafo**
-   - Diferentes estilos para títulos e conteúdo
-   - Formatação automática baseada em padrões
-
-3. **Validação de Formatação**
-   - Verificação automática de estrutura
-   - Alertas para formatação incorreta
-
-## 📞 Suporte
-
-Para dúvidas ou problemas relacionados a esta solução:
-- Verificar logs do sistema
-- Executar arquivo de teste
-- Consultar documentação técnica
+1. **Acentuação:** A função também preserva corretamente caracteres acentuados (português)
+2. **Performance:** Processamento eficiente usando `mb_*` functions para UTF-8
+3. **Retrocompatibilidade:** Não afeta documentos existentes
 
 ---
 
-**Status**: ✅ IMPLEMENTADO E TESTADO  
-**Data**: $(date)  
-**Versão**: 1.0  
-**Responsável**: Sistema de Correção Automática
+**Status:** ✅ IMPLEMENTADO E TESTADO  
+**Data:** 23/08/2025  
+**Versão:** 1.0

@@ -572,8 +572,62 @@ mv show-old.blade.php show.blade.php
 
 ---
 
-**🎊 CONFIGURAÇÃO, PERFORMANCE, UI, PERMISSÕES E INTERFACE VUE.JS 100% PRESERVADAS APÓS `migrate:fresh --seed`** ✅
+## 📝 CORREÇÃO DE PARÁGRAFOS NO ONLYOFFICE (23/08/2025)
 
-**Última atualização**: 19/08/2025  
-**Versão estável**: v1.7 (UI Otimizada + Permissões Inteligentes)  
+### ✅ **PROBLEMA RESOLVIDO**: Preservação de parágrafos no editor
+
+**Situação Anterior**: Texto com múltiplos parágrafos aparecia em uma única linha no OnlyOffice
+**Causa**: Função `converterParaRTF()` não tratava quebras de linha (`\n`)
+
+### **Correção Aplicada**:
+#### **Arquivo**: `app/Services/Template/TemplateProcessorService.php` (linhas 283-311)
+
+```php
+// ANTES: Quebras de linha eram ignoradas
+if ($codepoint > 127) {
+    $textoProcessado .= '\\u' . $codepoint . '*';
+} else {
+    $textoProcessado .= $char; // ❌ \n era tratado como caractere normal
+}
+
+// AGORA: Quebras de linha viram parágrafos RTF
+if ($char === "\n") {
+    $textoProcessado .= '\\par ';  // ✅ Converte para parágrafo RTF
+} else if ($char === "\r") {
+    // Trata Windows line endings
+    if ($i + 1 < $length && mb_substr($texto, $i + 1, 1, 'UTF-8') === "\n") {
+        continue;
+    }
+    $textoProcessado .= '\\par ';
+}
+```
+
+### **Resultado Garantido**:
+- ✅ **Parágrafos preservados** no editor OnlyOffice
+- ✅ **Compatibilidade total**: Windows (`\r\n`), Unix (`\n`), Mac (`\r`)
+- ✅ **Acentuação portuguesa** mantida (UTF-8 para RTF Unicode)
+- ✅ **Performance otimizada** com `mb_*` functions
+
+### **Teste de Validação**:
+```bash
+docker exec legisinc-app php test-paragrafos-simples.php
+```
+**Resultado**: ✅ Marcadores `\par` encontrados: 4 (conversão bem-sucedida)
+
+### **Como Usar**:
+1. **Criar proposição** com texto multi-parágrafo em `/proposicoes/create`
+2. **Usar quebras de linha** para separar parágrafos
+3. **Abrir no OnlyOffice** - texto aparece formatado corretamente
+
+### **Arquivos Relacionados**:
+- **Código**: `app/Services/Template/TemplateProcessorService.php`
+- **Teste**: `test-paragrafos-simples.php`
+- **Documentação**: `SOLUCAO-PARAGRAFOS-ONLYOFFICE-IMPLEMENTADA.md`
+
+---
+
+**🎊 CONFIGURAÇÃO, PERFORMANCE, UI, PERMISSÕES, INTERFACE VUE.JS E PARÁGRAFOS 100% PRESERVADAS APÓS `migrate:fresh --seed`** ✅
+
+**Última atualização**: 23/08/2025  
+**Versão estável**: v1.8 (Parágrafos OnlyOffice + UI Otimizada + Permissões Inteligentes)  
 **Status**: PRODUÇÃO AVANÇADA

@@ -372,5 +372,15 @@
   },
   "format": {
     "defaultLang": "pt-BR"
+  },
+  "editor": {
+    "defaultLanguage": "pt-BR",
+    "lang": "pt-BR",
+    "locale": "pt_BR.UTF-8",
+    "spellcheckerLanguage": "pt-BR"
+  },
+  "document": {
+    "defaultLang": "pt-BR",
+    "lang": "pt-BR"
   }
 }

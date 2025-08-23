@@ -152,6 +152,11 @@ class DatabaseSeeder extends Seeder
         $this->call([
             PDFFormatacaoLegislativoSeeder::class,
         ]);
+        
+        // CORREÇÃO: Preservação de parágrafos no OnlyOffice
+        $this->call([
+            ParagrafosOnlyOfficeSeeder::class,
+        ]);
 
         // Processar imagens dos templates admin
         $this->command->info('');

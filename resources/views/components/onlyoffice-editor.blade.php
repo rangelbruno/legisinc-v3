@@ -412,11 +412,15 @@
                     "height": "100%",
                     "type": "desktop",
                     "documentType": "{{ $documentType }}",
+                    "lang": "pt-BR",
+                    "region": "pt-BR",
                     "document": {
                         "fileType": "{{ $fileType }}",
                         "key": "{{ $documentKey }}",
                         "title": "{{ $documentTitle }}",
                         "url": "{{ $documentUrl }}",
+                        "lang": "pt-BR",
+                        "defaultLanguage": "pt-BR",
                         "permissions": {
                             "edit": {{ $mode === 'edit' ? 'true' : 'false' }},
                             "download": true,
@@ -427,7 +431,7 @@
                     },
                     "editorConfig": {
                         "mode": "{{ $mode }}",
-                        "lang": "pt",
+                        "lang": "pt-BR",
                         "region": "pt-BR",
                         "callbackUrl": "{{ $callbackUrl }}",
                         "user": {
@@ -436,7 +440,7 @@
                             "group": "{{ $userType }}"
                         },
                         "customization": {
-                            "lang": "pt",
+                            "lang": "pt-BR",
                             "customer": {
                                 "info": "Sistema Legisinc",
                                 "logo": ""
@@ -454,7 +458,18 @@
                             "toolbar": true,
                             "statusBar": false,
                             "comments": false
-                        }
+                        },
+                        "spellcheck": {
+                            "mode": true,
+                            "lang": ["pt-BR"]
+                        },
+                        "document": {
+                            "lang": "pt-BR",
+                            "defaultLanguage": "pt-BR"
+                        },
+                        "locale": "pt_BR.UTF-8",
+                        "defaultLanguage": "pt-BR",
+                        "spellcheckerLanguage": "pt-BR"
                     },
                     "events": {
                         "onDocumentReady": function() {

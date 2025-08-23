@@ -9,6 +9,9 @@ use App\Services\Template\TemplateProcessorService;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 class OnlyOfficeService
 {
@@ -137,7 +140,7 @@ class OnlyOfficeService
                 'title' => $template->getNomeTemplate(),
                 'url' => $downloadUrl,
                 'info' => [
-                    'owner' => auth()->user()->name ?? 'Sistema',
+                    'owner' => Auth::user()->name ?? 'Sistema',
                     'uploaded' => $template->updated_at->format('d/m/Y H:i:s')
                 ],
                 'permissions' => [
@@ -158,9 +161,10 @@ class OnlyOfficeService
                 'callbackUrl' => $this->ajustarCallbackUrl(route('api.onlyoffice.callback', $documentKeyWithVersion)),
                 'lang' => 'pt-BR',
                 'region' => 'pt-BR',
+                'documentLang' => 'pt-BR',
                 'user' => [
-                    'id' => (string) auth()->id(),
-                    'name' => auth()->user()->name ?? 'Sistema',
+                    'id' => (string) Auth::id(),
+                    'name' => Auth::user()->name ?? 'Sistema',
                     'group' => 'administrators'
                 ],
                 'customization' => [
@@ -168,6 +172,7 @@ class OnlyOfficeService
                         'mode' => true,
                         'lang' => ['pt-BR']
                     ],
+                    'documentLanguage' => 'pt-BR',
                     'autosave' => true, // Habilitar autosave para garantir salvamento
                     'autosaveTimeout' => 10000, // 10 segundos para resposta mais rápida
                     'autosaveType' => 0, // 0 = strict mode
@@ -187,9 +192,9 @@ class OnlyOfficeService
                     'change' => false // Desabilitar coediting para templates
                 ],
                 'user' => [
-                    'id' => (string)(auth()->id() ?? 'user-' . time()),
-                    'name' => auth()->user()->name ?? 'Usuário',
-                    'group' => 'admin_' . auth()->id() // Grupo único por usuário
+                    'id' => (string)(Auth::id() ?? 'user-' . time()),
+                    'name' => Auth::user()->name ?? 'Usuário',
+                    'group' => 'admin_' . Auth::id() // Grupo único por usuário
                 ]
             ]
         ];
@@ -268,7 +273,7 @@ class OnlyOfficeService
         
         // Implementar lock para evitar processamento concorrente
         $lockKey = "onlyoffice_save_lock_{$documentKey}";
-        $lock = \Cache::lock($lockKey, 10); // Lock por 10 segundos
+        $lock = Cache::lock($lockKey, 10); // Lock por 10 segundos
         
         try {
             // Status 2 = Pronto para salvar (save)
@@ -437,7 +442,7 @@ class OnlyOfficeService
             $conteudoProcessado = $this->processarConteudoTemplate($conteudo, $formato, $template);
             
             // Salvar diretamente no banco de dados PostgreSQL
-            \DB::transaction(function() use ($template, $conteudoProcessado, $formato) {
+            DB::transaction(function() use ($template, $conteudoProcessado, $formato) {
                 $template->update([
                     'conteudo' => $conteudoProcessado,
                     'formato' => $formato,
@@ -453,8 +458,8 @@ class OnlyOfficeService
                 // ]);
                 
                 // Limpar cache
-                \Cache::forget('onlyoffice_template_' . $template->id);
-                \Cache::forget('template_content_' . $template->id);
+                Cache::forget('onlyoffice_template_' . $template->id);
+                Cache::forget('template_content_' . $template->id);
                 
                 // Extrair variáveis automaticamente
                 $this->extrairVariaveis($template);
@@ -641,7 +646,7 @@ class OnlyOfficeService
             // Atualizar timestamp para forçar reload
             $template->touch();
             
-            \Log::info('Template processado para visualização admin (apenas imagem)', [
+            Log::info('Template processado para visualização admin (apenas imagem)', [
                 'template_id' => $template->id,
                 'path' => $template->arquivo_path,
                 'tem_imagem' => strpos($conteudoProcessado, '\\pngblip') !== false,
@@ -665,7 +670,7 @@ class OnlyOfficeService
             
             // Verificar se a imagem existe
             if ($caminhoImagem && file_exists(public_path($caminhoImagem))) {
-                \Log::info('Imagem do cabeçalho encontrada para admin', [
+                Log::info('Imagem do cabeçalho encontrada para admin', [
                     'path' => $caminhoImagem,
                     'full_path' => public_path($caminhoImagem),
                     'exists' => true
@@ -687,11 +692,11 @@ class OnlyOfficeService
                 foreach ($formatosImagem as $formato) {
                     if (strpos($conteudo, $formato) !== false) {
                         $conteudo = str_replace($formato, $imagemRTF, $conteudo);
-                        \Log::info("Variável de imagem $formato substituída por RTF no admin");
+                        Log::info("Variável de imagem $formato substituída por RTF no admin");
                     }
                 }
             } else {
-                \Log::warning('Imagem do cabeçalho não encontrada para admin', [
+                Log::warning('Imagem do cabeçalho não encontrada para admin', [
                     'path' => $caminhoImagem,
                     'full_path' => public_path($caminhoImagem ?? ''),
                     'exists' => false
@@ -711,7 +716,7 @@ class OnlyOfficeService
             return $conteudo;
             
         } catch (\Exception $e) {
-            \Log::error('Erro ao processar imagem do cabeçalho para admin', [
+            Log::error('Erro ao processar imagem do cabeçalho para admin', [
                 'error' => $e->getMessage()
             ]);
             
@@ -734,7 +739,7 @@ class OnlyOfficeService
             return $method->invoke($this->templateProcessorService, $caminhoImagem);
             
         } catch (\Exception $e) {
-            \Log::error('Erro ao gerar imagem RTF para admin', [
+            Log::error('Erro ao gerar imagem RTF para admin', [
                 'path' => $caminhoImagem,
                 'error' => $e->getMessage()
             ]);
@@ -1336,14 +1341,14 @@ ${texto}
     private function backupTemplateAtual(TipoProposicaoTemplate $template): void
     {
         try {
-            if ($template->arquivo_path && \Storage::exists($template->arquivo_path)) {
-                $conteudoAtual = \Storage::get($template->arquivo_path);
-                
-                // Criar nome do backup com timestamp
-                $backupPath = str_replace('.rtf', '_backup_' . date('Y_m_d_His') . '.rtf', $template->arquivo_path);
-                
-                // Salvar backup
-                \Storage::put($backupPath, $conteudoAtual);
+                    if ($template->arquivo_path && Storage::exists($template->arquivo_path)) {
+            $conteudoAtual = Storage::get($template->arquivo_path);
+            
+            // Criar nome do backup com timestamp
+            $backupPath = str_replace('.rtf', '_backup_' . date('Y_m_d_His') . '.rtf', $template->arquivo_path);
+            
+            // Salvar backup
+            Storage::put($backupPath, $conteudoAtual);
                 
                 // Log::info('Backup do template criado antes da atualização', [
                     //     'template_id' => $template->id,
@@ -1373,21 +1378,21 @@ ${texto}
             $templateDir = dirname($template->arquivo_path);
             
             // Buscar todos os backups existentes
-            $arquivos = \Storage::files($templateDir);
+            $arquivos = Storage::files($templateDir);
             $backupsDoTemplate = array_filter($arquivos, function($arquivo) use ($templateBaseName) {
                 return strpos(basename($arquivo), $templateBaseName . '_backup_') === 0;
             });
             
             // Ordenar por data de modificação (mais recente primeiro)
             usort($backupsDoTemplate, function($a, $b) {
-                return \Storage::lastModified($b) - \Storage::lastModified($a);
+                return Storage::lastModified($b) - Storage::lastModified($a);
             });
             
             // Remover backups além dos 5 mais recentes
             if (count($backupsDoTemplate) > 5) {
                 $backupsParaRemover = array_slice($backupsDoTemplate, 5);
                 foreach ($backupsParaRemover as $backup) {
-                    \Storage::delete($backup);
+                    Storage::delete($backup);
                     // Log::info('Backup antigo removido', ['backup_path' => $backup]);
                 }
             }
@@ -2539,6 +2544,9 @@ Status: " . ucfirst(str_replace('_', ' ', $proposicao->status)) . "\par
             $justificativa = $this->extrairJustificativa($proposicao->conteudo);
             $assinatura = $proposicao->autor->name ?? '';
             $cargo = 'Vereador(a)';
+            
+            // Obter dados da câmara
+            $dadosCamara = $this->obterDadosCamara();
             $municipio = $dadosCamara['municipio'] ?: 'São Paulo';
             $dataLocal = $municipio . ', ' . date('d') . ' de ' . $this->obterMesPortugues(date('n')) . ' de ' . date('Y') . '.';
             
@@ -3433,5 +3441,96 @@ Status: " . ucfirst(str_replace('_', ' ', $proposicao->status)) . "\par
             ]);
             return '<em>Erro ao processar conteúdo do arquivo.</em>';
         }
+    }
+
+    /**
+     * Gerar configuração para editor de proposições
+     */
+    public function gerarConfiguracaoEditor($template, $proposicao, string $tipo, int $proposicaoId): array
+    {
+        // Gerar document key único para a proposição
+        $documentKey = 'proposicao_' . $proposicaoId . '_' . time();
+        
+        // URL para download do documento
+        $documentUrl = route('proposicoes.onlyoffice.download', [
+            'proposicao' => $proposicaoId
+        ]);
+        
+        // Ajustar URL para comunicação entre containers
+        if (config('app.env') === 'local') {
+            $documentUrl = str_replace(['http://localhost:8001', 'http://127.0.0.1:8001'], 'http://legisinc-app', $documentUrl);
+        }
+        
+        // URL de callback para salvar alterações
+        $callbackUrl = route('api.onlyoffice.callback', [
+            'proposicao' => $proposicaoId,
+            'documentKey' => $documentKey
+        ]);
+        
+        // Ajustar URL para comunicação entre containers
+        if (config('app.env') === 'local') {
+            $callbackUrl = str_replace(['http://localhost:8001', 'http://127.0.0.1:8001'], 'http://legisinc-app', $callbackUrl);
+        }
+        
+        // Determinar tipo de arquivo
+        $fileType = 'rtf'; // Padrão para proposições
+        $documentType = 'word';
+        
+        // Se tem template, usar configuração do template
+        if ($template && $template->arquivo_path) {
+            $extensao = strtolower(pathinfo($template->arquivo_path, PATHINFO_EXTENSION));
+            if (in_array($extensao, ['rtf', 'docx', 'doc'])) {
+                $fileType = $extensao;
+            }
+        }
+        
+        return [
+            'document' => [
+                'fileType' => $fileType,
+                'key' => $documentKey,
+                'title' => 'Proposição #' . $proposicaoId,
+                'url' => $documentUrl,
+                'permissions' => [
+                    'edit' => true,
+                    'download' => true,
+                    'print' => true,
+                    'review' => true,
+                    'comment' => true
+                ]
+            ],
+            'documentType' => $documentType,
+            'editorConfig' => [
+                'callbackUrl' => $callbackUrl,
+                'lang' => 'pt-BR',
+                'region' => 'pt-BR',
+                'documentLang' => 'pt-BR',
+                'mode' => 'edit',
+                'user' => [
+                    'id' => (string) auth()->id(),
+                    'name' => auth()->user()->name ?? 'Usuário',
+                    'group' => 'parlamentares'
+                ],
+                'customization' => [
+                    'spellcheck' => [
+                        'mode' => true,
+                        'lang' => ['pt-BR']
+                    ],
+                    'documentLanguage' => 'pt-BR',
+                    'autosave' => true,
+                    'autosaveTimeout' => 30000, // 30 segundos
+                    'autosaveType' => 0, // 0 = strict mode
+                    'forcesave' => true,
+                    'compactHeader' => false,
+                    'toolbarNoTabs' => false,
+                    'hideRightMenu' => false,
+                    'feedback' => [
+                        'visible' => false
+                    ],
+                    'goback' => [
+                        'url' => route('proposicoes.show', $proposicaoId)
+                    ]
+                ]
+            ]
+        ];
     }
 }

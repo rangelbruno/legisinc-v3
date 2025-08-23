@@ -1,0 +1,17 @@
+{
+  "editor": {
+    "lang": "pt-BR",
+    "locale": "pt_BR.UTF-8",
+    "defaultLanguage": "pt-BR",
+    "spellcheckerLanguage": "pt-BR"
+  },
+  "document": {
+    "lang": "pt-BR",
+    "defaultLang": "pt-BR"
+  },
+  "plugins": {
+    "spellchecker": {
+      "language": "pt-BR"
+    }
+  }
+}

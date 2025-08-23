@@ -1,0 +1,21 @@
+{
+  "services": {
+    "CoAuthoring": {
+      "server": {
+        "port": 8000
+      },
+      "request": {
+        "defaultLang": "pt-BR"
+      }
+    }
+  },
+  "editor": {
+    "defaultLanguage": "pt-BR",
+    "lang": "pt-BR",
+    "locale": "pt_BR.UTF-8"
+  },
+  "common": {
+    "lang": "pt-BR",
+    "locale": "pt_BR.UTF-8"
+  }
+}

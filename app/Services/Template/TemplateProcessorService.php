@@ -289,7 +289,16 @@ class TemplateProcessorService
             $char = mb_substr($texto, $i, 1, 'UTF-8');
             $codepoint = mb_ord($char, 'UTF-8');
             
-            if ($codepoint > 127) {
+            // Tratar quebras de linha - converter para \par (parágrafo RTF)
+            if ($char === "\n") {
+                $textoProcessado .= '\\par ';
+            } else if ($char === "\r") {
+                // Ignorar \r se for seguido de \n (Windows line ending)
+                if ($i + 1 < $length && mb_substr($texto, $i + 1, 1, 'UTF-8') === "\n") {
+                    continue;
+                }
+                $textoProcessado .= '\\par ';
+            } else if ($codepoint > 127) {
                 // Gerar sequência RTF Unicode correta: \uN*
                 $textoProcessado .= '\\u' . $codepoint . '*';
             } else {

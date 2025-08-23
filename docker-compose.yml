@@ -82,8 +82,8 @@ services:
       - onlyoffice_cache:/var/lib/onlyoffice/documentserver/App_Data/cache/files
       - onlyoffice_forgotten:/var/lib/onlyoffice/documentserver/App_Data/cache/forgotten
       - ./storage/app/public:/var/www/onlyoffice/Data/public
-      # Configurações de idioma em português
-      - ./docker/onlyoffice/onlyoffice-config.json:/etc/onlyoffice/documentserver/onlyoffice-config.json
+      # Configurações de idioma em português (temporariamente desabilitadas)
+      # - ./docker/onlyoffice/local.json:/etc/onlyoffice/documentserver/local.json
     networks:
       - legisinc_network
     depends_on:
