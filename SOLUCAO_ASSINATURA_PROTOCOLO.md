@@ -185,3 +185,5 @@ A solução implementada resolve o problema fundamental de **busca de PDFs no di
 4. **Garante que usuários vejam** o conteúdo correto
 
 A correção é **não-intrusiva** e **retrocompatível**, não afetando outras funcionalidades do sistema.
+
+

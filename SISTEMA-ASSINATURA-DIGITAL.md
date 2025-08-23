@@ -405,3 +405,5 @@ Log::error('Erro na assinatura digital: ' . $e->getMessage(), [
 O sistema está pronto para uso em produção, permitindo assinaturas digitais seguras e validadas para todas as proposições legislativas do sistema LEGISINC.
 
 
+
+

@@ -263,3 +263,5 @@ Status: Protocolado
 **✅ Resultado**: Problema Completamente Resolvido**
 
 **🎊 A proposição 2 agora exibe o PDF correto com assinatura digital no formato ICP-Brasil posicionada na lateral direita do documento!**
+
+
