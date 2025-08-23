@@ -100,12 +100,6 @@
     margin-bottom: 0;
 }
 </style>
-<style>
-
-.d-grid .btn-assinatura:last-child {
-    margin-bottom: 0;
-}
-</style>
 
 <style>
 
@@ -156,7 +150,7 @@
             <div class="col-12">
                 <!--begin::Back Button-->
                 <div class="mb-3">
-                    <a :href="getBackUrl()" class="btn btn-light btn-sm">
+                    <a :href="getBackUrl()" class="btn btn-secondary w-100">
                         <i class="ki-duotone ki-arrow-left fs-3 me-2">
                             <span class="path1"></span>
                             <span class="path2"></span>
@@ -358,9 +352,7 @@
                                                     <span class="path1"></span>
                                                     <span class="path2"></span>
                                                 </i>
-                                                Download
-                
-                                            <a :href="`/proposicoes/${proposicao.id}/anexo/${index}/view`" 
+                                                                                                Download</a><a :href="`/proposicoes/${proposicao.id}/anexo/${index}/view`" 
                                                target="_blank"
                                                class="btn btn-sm btn-light-info"
                                                v-if="['pdf', 'jpg', 'jpeg', 'png'].includes(anexo.extensao.toLowerCase())">
@@ -369,9 +361,7 @@
                                                     <span class="path2"></span>
                                                     <span class="path3"></span>
                                                 </i>
-                                                Visualizar
-                
-                                        </td>
+                                                Visualizar</a></td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -632,9 +622,7 @@
                                     <div class="text-start">
                                         <div class="fw-bold">Assinar Documento</div>
                                         <small class="text-muted">Assinatura digital com certificado</small>
-                                    </div>
-                                </a>
-                            </div>
+                                    </div></a></div>
                             <!--end::Sign Document-->
 
                             <!--begin::View PDF-->
@@ -677,7 +665,7 @@
                             <button 
                                 @click="forceRefresh" 
                                 class="btn btn-light btn-sm w-100"
-                                :disabled="loading">
+                                :disabled="loading" type="button">
                                 <i class="ki-duotone ki-arrows-circle fs-4 me-2">
                                     <span class="path1"></span>
                                     <span class="path2"></span>

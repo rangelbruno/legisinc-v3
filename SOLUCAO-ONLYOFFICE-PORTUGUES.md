@@ -236,6 +236,7 @@ cp -r backup/onlyoffice-YYYYMMDD/* docker/onlyoffice/
 
 ---
 
-**Última Atualização**: $(date)
+**Última Atualização**: 2025-08-23
 **Versão da Solução**: 1.0
 **Status**: ✅ Implementada e Testada
+**Container Status**: ✅ Rodando com configurações PT-BR aplicadas

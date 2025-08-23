@@ -1,0 +1,34 @@
+{
+  "editor": {
+    "lang": "pt-BR",
+    "locale": "pt_BR.UTF-8",
+    "defaultLanguage": "pt-BR",
+    "spellcheckerLanguage": "pt-BR",
+    "autosave": true,
+    "forcesave": true
+  },
+  "plugins": {
+    "spellchecker": {
+      "language": "pt-BR",
+      "dictionaries": ["pt-BR", "pt-PT"]
+    }
+  },
+  "user": {
+    "lang": "pt-BR",
+    "locale": "pt_BR.UTF-8"
+  },
+  "services": {
+    "CoAuthoring": {
+      "request": {
+        "defaultLang": "pt-BR"
+      }
+    }
+  },
+  "common": {
+    "lang": "pt-BR",
+    "locale": "pt_BR.UTF-8"
+  },
+  "format": {
+    "defaultLang": "pt-BR"
+  }
+}

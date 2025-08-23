@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\User;
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Artisan;
 
 class DatabaseSeeder extends Seeder
 {
@@ -122,6 +123,21 @@ class DatabaseSeeder extends Seeder
             ButtonAssinaturaUISeeder::class,
         ]);
         
+        // CORREÇÃO CRÍTICA: Garantir que a tag de fechamento </a> esteja presente
+        $this->call([
+            ButtonAssinaturaTagFixSeeder::class,
+        ]);
+        
+        // VALIDAÇÃO E CORREÇÃO COMPLETA: Estrutura HTML de todos os botões
+        $this->call([
+            HTMLStructureValidationSeeder::class,
+        ]);
+        
+        // CORREÇÃO DEFINITIVA: Botão de assinatura (executar por último)
+        $this->call([
+            FixAssinaturaButtonSeeder::class,
+        ]);
+        
         // Interface Vue.js para tela de assinatura (performance otimizada)
         $this->call([
             AssinaturaVueInterfaceSeeder::class,
@@ -140,7 +156,7 @@ class DatabaseSeeder extends Seeder
         // Processar imagens dos templates admin
         $this->command->info('');
         $this->command->info('🖼️ Processando imagens dos templates admin...');
-        \Artisan::call('templates:process-images');
+        Artisan::call('templates:process-images');
         $this->command->info('✅ Imagens dos templates processadas!');
 
 

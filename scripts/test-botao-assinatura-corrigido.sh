@@ -1,42 +1,58 @@
 #!/bin/bash
 
-echo "🔍 Testando correção do botão de assinatura digital"
-echo "================================================="
+echo "🔧 Testando correção da tag de fechamento do botão Assinar Documento..."
+echo ""
 
-# Status atual da proposição 2
-echo "1. Verificando status atual da proposição 2:"
-docker exec legisinc-postgres psql -U postgres -d legisinc -c "SELECT id, tipo, ementa, status FROM proposicoes WHERE id = 2;"
+# Verificar se o arquivo existe
+if [ ! -f "resources/views/proposicoes/show.blade.php" ]; then
+    echo "❌ Arquivo show.blade.php não encontrado"
+    exit 1
+fi
+
+echo "📁 Verificando estrutura do botão de assinatura..."
+
+# Verificar se a tag de fechamento </a> está presente
+if grep -A 10 "Assinar Documento" "resources/views/proposicoes/show.blade.php" | grep -q "</a>"; then
+    echo "✅ Tag de fechamento </a> encontrada após 'Assinar Documento'"
+else
+    echo "❌ Tag de fechamento </a> NÃO encontrada após 'Assinar Documento'"
+fi
+
+# Verificar se o botão está completo
+if grep -A 15 "assinatura-digital" "resources/views/proposicoes/show.blade.php" | grep -q "Assinar Documento" && \
+   grep -A 15 "assinatura-digital" "resources/views/proposicoes/show.blade.php" | grep -q "Assinatura digital com certificado" && \
+   grep -A 15 "assinatura-digital" "resources/views/proposicoes/show.blade.php" | grep -q "</a>"; then
+    echo "✅ Botão de assinatura está completo e funcional"
+else
+    echo "❌ Botão de assinatura está incompleto"
+fi
+
+# Verificar se não há tags <a> órfãs
+OPEN_TAGS=$(grep -o "<a" "resources/views/proposicoes/show.blade.php" | wc -l)
+CLOSE_TAGS=$(grep -o "</a>" "resources/views/proposicoes/show.blade.php" | wc -l)
+
+echo "📊 Tags <a>: $OPEN_TAGS, Tags </a>: $CLOSE_TAGS"
+
+if [ "$OPEN_TAGS" -eq "$CLOSE_TAGS" ]; then
+    echo "✅ Número de tags <a> e </a> está balanceado"
+else
+    echo "❌ Desbalanceamento de tags: $OPEN_TAGS <a> vs $CLOSE_TAGS </a>"
+fi
+
+# Verificar se a condição v-if="canSign()" está presente
+if grep -q 'v-if="canSign()"' "resources/views/proposicoes/show.blade.php"; then
+    echo "✅ Condição v-if=\"canSign()\" está presente"
+else
+    echo "❌ Condição v-if=\"canSign()\" não encontrada"
+fi
 
 echo ""
-echo "2. Testando com status 'em_edicao' (botão NÃO deve aparecer):"
-docker exec legisinc-postgres psql -U postgres -d legisinc -c "UPDATE proposicoes SET status = 'em_edicao' WHERE id = 2;"
-echo "   Status: em_edicao → Botão assinatura: ❌ NÃO deve aparecer"
-
+echo "🔍 Verificação completa!"
 echo ""
-echo "3. Testando com status 'aprovado' (botão DEVE aparecer):"
-docker exec legisinc-postgres psql -U postgres -d legisinc -c "UPDATE proposicoes SET status = 'aprovado' WHERE id = 2;"
-echo "   Status: aprovado → Botão assinatura: ✅ DEVE aparecer"
-
+echo "Para testar manualmente:"
+echo "1. Acesse uma proposição em /proposicoes/2"
+echo "2. Verifique se o botão 'Assinar Documento' aparece com texto e ícone"
+echo "3. Clique no botão para verificar se redireciona corretamente"
 echo ""
-echo "4. Testando com status 'aprovado_assinatura' (botão DEVE aparecer):"
-docker exec legisinc-postgres psql -U postgres -d legisinc -c "UPDATE proposicoes SET status = 'aprovado_assinatura' WHERE id = 2;"
-echo "   Status: aprovado_assinatura → Botão assinatura: ✅ DEVE aparecer"
-
-echo ""
-echo "5. Voltando ao status original 'em_edicao':"
-docker exec legisinc-postgres psql -U postgres -d legisinc -c "UPDATE proposicoes SET status = 'em_edicao' WHERE id = 2;"
-
-echo ""
-echo "✅ CORREÇÃO APLICADA:"
-echo "   - Função canSign() modificada para verificar statuses corretos"
-echo "   - Botão só aparece quando status é 'aprovado' ou 'aprovado_assinatura'"
-echo "   - Status 'em_edicao' não mostrará mais o botão de assinatura"
-
-echo ""
-echo "🌐 Para testar no navegador:"
-echo "   - Acesse: http://localhost:8001/proposicoes/2"
-echo "   - Com status 'em_edicao': botão assinatura não deve aparecer"
-echo "   - Mude status para 'aprovado' para ver o botão aparecer"
-
-echo ""
-echo "✅ Teste concluído!"
+echo "Se ainda houver problemas, execute:"
+echo "docker exec -it legisinc-app php artisan db:seed --class=ButtonAssinaturaTagFixSeeder"

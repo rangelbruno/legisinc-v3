@@ -1,0 +1,43 @@
+{
+  "services": {
+    "CoAuthoring": {
+      "request": {
+        "defaultLang": "pt-BR"
+      },
+      "server": {
+        "port": 8000
+      }
+    }
+  },
+  "web": {
+    "lang": "pt-BR",
+    "locale": "pt_BR.UTF-8",
+    "defaultLanguage": "pt-BR",
+    "spellcheckerLanguage": "pt-BR"
+  },
+  "editor": {
+    "lang": "pt-BR",
+    "locale": "pt_BR.UTF-8",
+    "defaultLanguage": "pt-BR",
+    "spellcheckerLanguage": "pt-BR"
+  },
+  "plugins": {
+    "spellchecker": {
+      "language": "pt-BR"
+    }
+  },
+  "user": {
+    "lang": "pt-BR",
+    "locale": "pt_BR.UTF-8"
+  },
+  "common": {
+    "lang": "pt-BR",
+    "locale": "pt_BR.UTF-8"
+  },
+  "format": {
+    "defaultLang": "pt-BR"
+  },
+  "request": {
+    "defaultLang": "pt-BR"
+  }
+}

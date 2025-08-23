@@ -5,7 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\Proposicao;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Barryvdh\DomPDF\Facade\Pdf;
 
@@ -3647,7 +3649,14 @@ class ProposicaoAssinaturaController extends Controller
                 session()->forget($key);
             }
 
-            // 7. EXCLUIR A PROPOSIÇÃO DO BANCO DE DADOS
+            // 7. EXCLUIR REGISTROS RELACIONADOS ANTES DE DELETAR A PROPOSIÇÃO
+            // Deletar tramitação logs relacionados
+            DB::table('tramitacao_logs')->where('proposicao_id', $proposicao->id)->delete();
+            
+            // Deletar histórico de proposições se existir
+            DB::table('proposicoes_historico')->where('proposicao_id', $proposicao->id)->delete();
+            
+            // 8. EXCLUIR A PROPOSIÇÃO DO BANCO DE DADOS
             $proposicao->delete();
 
             $mensagem = "Proposição excluída permanentemente do sistema!";
@@ -3699,10 +3708,24 @@ class ProposicaoAssinaturaController extends Controller
         $arquivos = glob($diretorio . '/*');
         foreach ($arquivos as $arquivo) {
             if (is_file($arquivo)) {
-                unlink($arquivo);
+                // Tentar deletar o arquivo, ignorando erros de permissão
+                try {
+                    if (is_writable($arquivo)) {
+                        @unlink($arquivo);
+                    } else {
+                        // Se não temos permissão, tenta usar o Storage do Laravel
+                        $relativePath = str_replace(storage_path('app/'), '', $arquivo);
+                        if (Storage::exists($relativePath)) {
+                            Storage::delete($relativePath);
+                        }
+                    }
+                } catch (\Exception $e) {
+                    // Log do erro mas continua o processo
+                    Log::warning("Não foi possível excluir arquivo: {$arquivo} - " . $e->getMessage());
+                }
             } elseif (is_dir($arquivo)) {
                 $this->limparDiretorioCompleto($arquivo);
-                rmdir($arquivo);
+                @rmdir($arquivo);
             }
         }
 

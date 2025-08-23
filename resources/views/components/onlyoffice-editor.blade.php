@@ -12,7 +12,7 @@
     'documentUrl',
     'documentTitle' => 'Documento',
     'documentType' => 'word',
-    'fileType' => 'docx',
+    'fileType' => 'rtf',
     'callbackUrl',
     'mode' => 'edit', // edit ou view
     'userType' => 'parlamentar', // admin, parlamentar, legislativo
@@ -427,7 +427,7 @@
                     },
                     "editorConfig": {
                         "mode": "{{ $mode }}",
-                        "lang": "pt-BR",
+                        "lang": "pt",
                         "region": "pt-BR",
                         "callbackUrl": "{{ $callbackUrl }}",
                         "user": {
@@ -436,6 +436,11 @@
                             "group": "{{ $userType }}"
                         },
                         "customization": {
+                            "lang": "pt",
+                            "customer": {
+                                "info": "Sistema Legisinc",
+                                "logo": ""
+                            },
                             "about": false,
                             "feedback": false,
                             "forcesave": true,

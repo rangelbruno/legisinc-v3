@@ -105,3 +105,4 @@ echo "   - Frontend: Botão oculto para usuários do Legislativo\n";
 echo "   - Backend: Validação reforçada para usuários do Legislativo\n";
 echo "   - Dupla proteção: Interface + Controller\n";
 echo "   - Apenas Parlamentares (autores) e Admins podem excluir\n";
+

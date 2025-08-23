@@ -1,11 +1,15 @@
 {
+  "web": {
+    "lang": "pt-BR",
+    "locale": "pt_BR.UTF-8",
+    "defaultLanguage": "pt-BR",
+    "spellcheckerLanguage": "pt-BR"
+  },
   "editor": {
     "lang": "pt-BR",
     "locale": "pt_BR.UTF-8",
     "defaultLanguage": "pt-BR",
-    "spellcheckerLanguage": "pt-BR",
-    "autosave": true,
-    "forcesave": true
+    "spellcheckerLanguage": "pt-BR"
   },
   "plugins": {
     "spellchecker": {
@@ -13,6 +17,10 @@
     }
   },
   "user": {
+    "lang": "pt-BR",
+    "locale": "pt_BR.UTF-8"
+  },
+  "common": {
     "lang": "pt-BR",
     "locale": "pt_BR.UTF-8"
   }

@@ -1,16 +1,11 @@
 {
-  "services": {
-    "CoAuthoring": {
-      "request": {
-        "defaultLang": "pt-BR"
-      }
-    }
-  },
-  "common": {
+  "editorConfig": {
     "lang": "pt-BR",
-    "locale": "pt_BR.UTF-8"
+    "region": "pt-BR"
   },
-  "format": {
-    "defaultLang": "pt-BR"
+  "customization": {
+    "forcesave": false,
+    "autosave": true,
+    "uiTheme": "theme-light"
   }
 }

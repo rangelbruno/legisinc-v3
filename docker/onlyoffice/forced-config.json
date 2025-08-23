@@ -1,0 +1,41 @@
+{
+  "lang": "pt-BR",
+  "region": "pt-BR",
+  "defaultLanguage": "pt-BR",
+  "spellcheckerLanguage": "pt-BR",
+  "locale": "pt_BR.UTF-8",
+  "services": {
+    "CoAuthoring": {
+      "request": {
+        "defaultLang": "pt-BR"
+      }
+    }
+  },
+  "common": {
+    "lang": "pt-BR",
+    "locale": "pt_BR.UTF-8"
+  },
+  "format": {
+    "defaultLang": "pt-BR"
+  },
+  "log": {
+    "options": {
+      "replaceConsole": false
+    }
+  },
+  "editor": {
+    "lang": "pt-BR",
+    "locale": "pt_BR.UTF-8",
+    "defaultLanguage": "pt-BR",
+    "spellcheckerLanguage": "pt-BR"
+  },
+  "plugins": {
+    "spellchecker": {
+      "language": "pt-BR"
+    }
+  },
+  "user": {
+    "lang": "pt-BR",
+    "locale": "pt_BR.UTF-8"
+  }
+}

@@ -76,8 +76,8 @@ class OnlyOfficeController extends Controller
                        $proposicao->ultima_modificacao->timestamp : 
                        $proposicao->updated_at->timestamp;
         
-        // Usar hash mais simples - sem random_bytes para permitir cache
-        $documentKey = $proposicao->id . '_' . $lastModified . '_' . substr(md5($proposicao->id . $lastModified), 0, 8);
+        // Usar hash mais simples - sem random_bytes para permitir cache (com timestamp atual para forçar nova configuração)
+        $documentKey = $proposicao->id . '_' . time() . '_' . substr(md5($proposicao->id . time()), 0, 8);
 
         // OTIMIZAÇÃO: Token mais eficiente
         $version = $lastModified;
@@ -106,17 +106,21 @@ class OnlyOfficeController extends Controller
             $callbackUrl = str_replace(['http://localhost:8001', 'http://127.0.0.1:8001'], 'http://legisinc-app', $callbackUrl);
         }
 
-        // Detectar tipo de arquivo baseado no conteúdo da proposição
-        $fileType = 'docx'; // Default para documentos modernos
+        // FORÇAR RTF PARA TODOS OS CASOS (temporário - debug)
+        $fileType = 'rtf';
         $documentType = 'word';
         
-        // Se há conteúdo IA e sem template específico, usar DOCX para melhor compatibilidade
-        if (!empty($proposicao->conteudo) && $proposicao->template_id === null) {
-            $fileType = 'docx';
-        }
+        Log::info('DEBUG fileType detection - START', [
+            'proposicao_id' => $proposicao->id,
+            'arquivo_path' => $proposicao->arquivo_path,
+            'template_id' => $proposicao->template_id,
+            'has_conteudo' => !empty($proposicao->conteudo),
+            'template_exists' => $proposicao->template ? true : false
+        ]);
         
         // Priorizar arquivo existente da proposição
         if ($proposicao->arquivo_path) {
+            Log::info('DEBUG - Usando arquivo_path', ['arquivo_path' => $proposicao->arquivo_path]);
             if (str_ends_with(strtolower($proposicao->arquivo_path), '.rtf')) {
                 $fileType = 'rtf';
             } elseif (str_ends_with(strtolower($proposicao->arquivo_path), '.docx')) {
@@ -125,20 +129,40 @@ class OnlyOfficeController extends Controller
                 $fileType = 'doc';
             }
         } elseif ($proposicao->template_id && is_numeric($proposicao->template_id) && $proposicao->template && $proposicao->template->arquivo_path) {
+            Log::info('DEBUG - Usando template arquivo_path', ['template_path' => $proposicao->template->arquivo_path]);
             // Se não tem arquivo próprio, verificar template (só se template_id for numérico e válido)
             if (str_ends_with(strtolower($proposicao->template->arquivo_path), '.rtf')) {
                 $fileType = 'rtf';
+            } elseif (str_ends_with(strtolower($proposicao->template->arquivo_path), '.docx')) {
+                $fileType = 'docx';
+            }
+        } else {
+            Log::info('DEBUG - Usando lógica fallback', [
+                'has_template_id' => !empty($proposicao->template_id),
+                'has_conteudo' => !empty($proposicao->conteudo)
+            ]);
+            // Se tem template_id mas não é numérico válido, usar RTF (templates dinâmicos)
+            if ($proposicao->template_id) {
+                $fileType = 'rtf';
+                Log::info('DEBUG - Definido como RTF por template_id');
+            }
+            // Se há conteúdo IA e sem template específico, usar RTF (arquivo dinâmico gerado)
+            if (!empty($proposicao->conteudo) && $proposicao->template_id === null) {
+                $fileType = 'rtf';
+                Log::info('DEBUG - Definido como RTF por conteúdo IA (arquivo dinâmico)');
             }
         }
         
-        // Log::info('OnlyOffice file type detection', [
-            //     'proposicao_id' => $proposicao->id,
-            //     'detected_file_type' => $fileType,
-            //     'arquivo_path' => $proposicao->arquivo_path,
-            //     'template_id' => $proposicao->template_id,
-            //     'template_path' => ($proposicao->template_id && is_numeric($proposicao->template_id) && $proposicao->template) ? $proposicao->template->arquivo_path : null,
-            //     'has_ai_content' => !empty($proposicao->conteudo)
-        // ]);
+        Log::info('DEBUG fileType detection - FINAL', ['fileType' => $fileType]);
+        
+        Log::info('OnlyOffice file type detection', [
+            'proposicao_id' => $proposicao->id,
+            'detected_file_type' => $fileType,
+            'arquivo_path' => $proposicao->arquivo_path,
+            'template_id' => $proposicao->template_id,
+            'template_path' => ($proposicao->template_id && is_numeric($proposicao->template_id) && $proposicao->template) ? $proposicao->template->arquivo_path : null,
+            'has_ai_content' => !empty($proposicao->conteudo)
+        ]);
 
         $config = [
             'type' => 'desktop',
