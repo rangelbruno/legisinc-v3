@@ -146,6 +146,53 @@ Vereador
 12. Reabra o documento
 13. **Confirme**: Suas alterações foram preservadas ✅
 
+## 📁 Organização de Arquivos do Projeto
+
+### **Estrutura de Pastas Organizada**
+```
+legisinc/
+├── docs/
+│   └── technical/      # Documentação técnica do sistema
+├── scripts/
+│   ├── tests/          # Scripts de teste Shell (.sh)
+│   └── [scripts operacionais]
+├── tests/
+│   ├── Feature/        # Testes de Feature (Pest/PHPUnit)
+│   ├── Unit/          # Testes Unitários (Pest/PHPUnit)
+│   └── manual/        # Testes manuais organizados
+│       ├── html/      # Arquivos HTML de teste
+│       ├── js/        # Scripts JS de teste
+│       ├── rtf/       # Arquivos RTF de teste
+│       └── *.php      # Scripts PHP de debug/teste
+└── [arquivos essenciais na raiz]
+```
+
+### **Localização dos Arquivos**
+- **Documentação Técnica**: `docs/technical/*.md`
+- **Scripts Shell de Teste**: `scripts/tests/*.sh`
+- **Scripts PHP de Debug**: `tests/manual/*.php`
+- **Testes HTML/JS/RTF**: `tests/manual/{html,js,rtf}/`
+- **Testes Automatizados**: `tests/Feature/` e `tests/Unit/`
+
+### **Arquivos Mantidos na Raiz (Essenciais)**
+- Configuração: `.env`, `.gitignore`, `.editorconfig`
+- Laravel: `artisan`, `composer.json`, `package.json`
+- Docker: `Dockerfile`, `docker-compose.yml`
+- Build: `vite.config.js`, `webpack.mix.js`
+- Docs principais: `README.md`, `CLAUDE.md`
+
+### **Scripts de Validação Disponíveis**
+```bash
+# Scripts principais de validação (em scripts/)
+./scripts/validar-pdf-otimizado.sh
+./scripts/teste-migrate-fresh-completo.sh
+./scripts/testar-fluxo-assinatura.sh
+./scripts/validacao-final-completa.sh
+
+# Scripts de teste movidos (em scripts/tests/)
+./scripts/tests/test-*.sh
+```
+
 ## 📝 Nota Importante sobre Templates Admin
 
 Após executar `migrate:fresh --seed`, os templates são criados mas a imagem não aparece imediatamente em `/admin/templates`.
