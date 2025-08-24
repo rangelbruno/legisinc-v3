@@ -87,3 +87,4 @@ echo "   - Botão 'Remove completamente do sistema' oculto para Legislativo\n";
 echo "   - Segurança implementada no frontend e backend\n";
 echo "   - Apenas Parlamentares e Admins podem excluir proposições\n";
 
+
