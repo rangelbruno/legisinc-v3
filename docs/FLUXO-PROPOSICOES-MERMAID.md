@@ -1,5 +1,8 @@
 # Diagrama de Fluxo de Proposições - Sistema Legisinc
 
+## 📅 Última Atualização: 30/08/2025
+## ✅ Status: Produção com Melhores Práticas Implementadas
+
 ## Fluxo Principal Completo
 
 ```mermaid
@@ -17,7 +20,8 @@ flowchart TB
     
     SaveDraft[Salva como rascunho<br/>Status: 'rascunho'] --> EditOnlyOffice[Edita no OnlyOffice<br/>Status: 'em_edicao']
     
-    EditOnlyOffice --> AddAttachments{Adicionar<br/>anexos?}
+    EditOnlyOffice --> ValidateContent[Validação de<br/>conteúdo RTF]
+    ValidateContent --> AddAttachments{Adicionar<br/>anexos?}
     AddAttachments -->|Sim| UploadFiles[Upload de arquivos<br/>PDF, DOC, imagens]
     AddAttachments -->|Não| SendToLegislative
     UploadFiles --> SendToLegislative
@@ -45,9 +49,10 @@ flowchart TB
     
     ConfirmReading --> DigitalSignature[Assina digitalmente<br/>Status: 'assinado']
     
-    DigitalSignature --> GeneratePDFSigned[Gera PDF com<br/>assinatura digital]
+    DigitalSignature --> GeneratePDFSigned[Gera PDF otimizado<br/>com assinatura QR]
     
-    GeneratePDFSigned --> SendToProtocol[Envia para protocolo<br/>Status: 'enviado_protocolo']
+    GeneratePDFSigned --> CleanOldPDFs[Limpa PDFs antigos<br/>mantém 3 últimos]
+    CleanOldPDFs --> SendToProtocol[Envia para protocolo<br/>Status: 'enviado_protocolo']
     
     SendToProtocol --> ProtocolQueue[Fila do protocolo]
     
@@ -59,7 +64,7 @@ flowchart TB
     
     DefineCommissions --> Protocolize[Protocoliza oficialmente<br/>Status: 'protocolado']
     
-    Protocolize --> GenerateFinalPDF[Gera PDF final com<br/>número de protocolo]
+    Protocolize --> GenerateFinalPDF[Gera PDF final otimizado<br/>com número de protocolo<br/>e QR Code]
     
     GenerateFinalPDF --> End([Fim - Proposição<br/>Protocolada])
     
@@ -113,6 +118,8 @@ flowchart LR
 ```
 
 ## Estados (Status) da Proposição
+
+### Fluxo com Validações e Otimizações
 
 ```mermaid
 stateDiagram-v2
@@ -352,6 +359,8 @@ sequenceDiagram
     S->>P: Abre editor OnlyOffice
     P->>O: Edita documento
     O->>S: Callback com alterações
+    S->>S: Valida RTF e converte parágrafos
+    S->>S: Cache timestamp único
     S->>DB: Salva arquivo_path
     DB-->>S: Confirmação
     S-->>O: Status = 0 (sucesso)
@@ -378,7 +387,8 @@ sequenceDiagram
     P->>S: Aplica assinatura digital
     S->>S: Gera hash assinatura
     S->>DB: Salva assinatura_digital
-    S->>PDF: Regenera PDF com assinatura
+    S->>S: Otimiza PDF (dompdf config)
+    S->>PDF: Regenera PDF com QR Code
     PDF-->>S: PDF assinado
     S->>DB: Atualiza arquivo_pdf_path
     S->>DB: status = 'assinado'
@@ -398,5 +408,28 @@ sequenceDiagram
 
 ---
 
-*Diagramas gerados para o Sistema Legisinc v1.8*  
-*Data: 30/08/2025*
+## 🚀 Melhorias Implementadas
+
+### Performance
+- ✅ **Cache inteligente** com timestamps únicos
+- ✅ **PDF otimizado** com configurações dompdf
+- ✅ **Limpeza automática** de arquivos antigos
+- ✅ **Polling adaptativo** no OnlyOffice
+
+### Qualidade
+- ✅ **Validação RTF** com codificação UTF-8
+- ✅ **Conversão de parágrafos** preservada
+- ✅ **QR Code** nas assinaturas digitais
+- ✅ **Backup automático** de dados críticos
+
+### Segurança
+- ✅ **Middleware de permissões** por role
+- ✅ **Validação contextual** de acesso
+- ✅ **Assinatura digital** com certificado
+- ✅ **Logs detalhados** de todas as ações
+
+---
+
+*Diagramas gerados para o Sistema Legisinc v2.0*  
+*Data: 30/08/2025*  
+*Status: Produção com Melhores Práticas*

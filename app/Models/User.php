@@ -6,13 +6,13 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Spatie\Permission\Traits\HasRoles;
 use Illuminate\Support\Facades\DB;
+use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, HasRoles;
+    use HasFactory, HasRoles, Notifiable;
 
     /**
      * The attributes that are mass assignable.
@@ -61,21 +61,30 @@ class User extends Authenticatable
             'ultimo_acesso' => 'datetime',
         ];
     }
-    
+
     /**
      * Constantes dos perfis do sistema parlamentar
      */
     public const PERFIL_ADMIN = 'ADMIN';
+
     public const PERFIL_ASSESSOR_JURIDICO = 'ASSESSOR_JURIDICO';
+
     public const PERFIL_LEGISLATIVO = 'LEGISLATIVO';
+
     public const PERFIL_EXPEDIENTE = 'EXPEDIENTE';
+
     public const PERFIL_PARLAMENTAR = 'PARLAMENTAR';
+
     public const PERFIL_RELATOR = 'RELATOR';
+
     public const PERFIL_PROTOCOLO = 'PROTOCOLO';
+
     public const PERFIL_ASSESSOR = 'ASSESSOR';
+
     public const PERFIL_CIDADAO_VERIFICADO = 'CIDADAO_VERIFICADO';
+
     public const PERFIL_PUBLICO = 'PUBLICO';
-    
+
     /**
      * Hierarquia de perfis (maior número = mais privilégios)
      */
@@ -91,16 +100,17 @@ class User extends Authenticatable
         self::PERFIL_RELATOR => 90,
         self::PERFIL_ADMIN => 100,
     ];
-    
+
     /**
      * Obter nível hierárquico do perfil atual
      */
     public function getNivelHierarquico(): int
     {
         $perfilAtual = $this->getRoleNames()->first();
+
         return self::HIERARQUIA_PERFIS[$perfilAtual] ?? 0;
     }
-    
+
     /**
      * Verificar se tem nível hierárquico igual ou superior
      */
@@ -108,7 +118,7 @@ class User extends Authenticatable
     {
         return $this->getNivelHierarquico() >= (self::HIERARQUIA_PERFIS[$perfil] ?? 0);
     }
-    
+
     /**
      * Verificar se é parlamentar
      */
@@ -116,7 +126,7 @@ class User extends Authenticatable
     {
         return $this->hasRole([self::PERFIL_PARLAMENTAR, self::PERFIL_RELATOR, self::PERFIL_ADMIN]);
     }
-    
+
     /**
      * Verificar se é admin
      */
@@ -124,7 +134,7 @@ class User extends Authenticatable
     {
         return $this->hasRole(self::PERFIL_ADMIN);
     }
-    
+
     /**
      * Verificar se é legislativo (servidor técnico)
      */
@@ -132,7 +142,7 @@ class User extends Authenticatable
     {
         return $this->hasRole([self::PERFIL_LEGISLATIVO, self::PERFIL_ADMIN]);
     }
-    
+
     /**
      * Verificar se é relator
      */
@@ -140,7 +150,7 @@ class User extends Authenticatable
     {
         return $this->hasRole([self::PERFIL_RELATOR, self::PERFIL_ADMIN]);
     }
-    
+
     /**
      * Verificar se é protocolo
      */
@@ -148,7 +158,7 @@ class User extends Authenticatable
     {
         return $this->hasRole([self::PERFIL_PROTOCOLO, self::PERFIL_ADMIN]);
     }
-    
+
     /**
      * Verificar se é expediente
      */
@@ -156,7 +166,7 @@ class User extends Authenticatable
     {
         return $this->hasRole([self::PERFIL_EXPEDIENTE, self::PERFIL_ADMIN]);
     }
-    
+
     /**
      * Verificar se é assessor jurídico
      */
@@ -164,7 +174,7 @@ class User extends Authenticatable
     {
         return $this->hasRole([self::PERFIL_ASSESSOR_JURIDICO, self::PERFIL_ADMIN]);
     }
-    
+
     /**
      * Check if user has a specific role
      */
@@ -173,31 +183,31 @@ class User extends Authenticatable
         if (is_string($roles)) {
             $roles = [$roles];
         }
-        
+
         try {
             // Check if database connection is available
             if (config('database.default') === null || config('database.default') === 'null') {
                 return $this->hasRoleFallback($roles);
             }
-            
+
             $userRoles = DB::table('model_has_roles')
                 ->join('roles', 'model_has_roles.role_id', '=', 'roles.id')
                 ->where('model_has_roles.model_type', 'App\\Models\\User')
                 ->where('model_has_roles.model_id', $this->id)
                 ->pluck('roles.name');
-                
+
             // If no roles found in database, use fallback
             if ($userRoles->isEmpty()) {
                 return $this->hasRoleFallback($roles);
             }
-                
+
             return $userRoles->intersect($roles)->isNotEmpty();
         } catch (\Exception $e) {
             // Fallback when database is not available
             return $this->hasRoleFallback($roles);
         }
     }
-    
+
     /**
      * Fallback role checking when database is not available
      */
@@ -206,14 +216,14 @@ class User extends Authenticatable
         if (is_string($roles)) {
             $roles = [$roles];
         }
-        
+
         // Get user roles from fallback method
         $userRoles = $this->getRoleNamesFallback();
-        
+
         // Check if any of the user's roles match the required roles
         return $userRoles->intersect($roles)->isNotEmpty();
     }
-    
+
     /**
      * Check if user has a specific permission
      */
@@ -224,7 +234,7 @@ class User extends Authenticatable
             if (config('database.default') === null || config('database.default') === 'null') {
                 return $this->hasPermissionFallback($permission);
             }
-            
+
             $userRoles = DB::table('model_has_roles')
                 ->where('model_type', 'App\\Models\\User')
                 ->where('model_id', $this->id)
@@ -239,19 +249,19 @@ class User extends Authenticatable
                 ->whereIn('role_has_permissions.role_id', $userRoles)
                 ->where('permissions.name', $permission)
                 ->exists();
-                
+
             // If no permission found in database but user is admin, use fallback
-            if (!$hasPermission) {
+            if (! $hasPermission) {
                 return $this->hasPermissionFallback($permission);
             }
-            
+
             return $hasPermission;
         } catch (\Exception $e) {
             // Fallback when database is not available
             return $this->hasPermissionFallback($permission);
         }
     }
-    
+
     /**
      * Fallback permission checking when database is not available
      */
@@ -261,11 +271,11 @@ class User extends Authenticatable
         if ($this->email === 'admin@sistema.gov.br' || str_contains($this->email, 'admin') || $this->email === 'test@example.com') {
             return true; // Admin has all permissions - treating test user as admin for demo
         }
-        
+
         // Basic permissions for non-admin users
         $publicPermissions = [
             'parlamentares.view',
-            'projetos.view', 
+            'projetos.view',
             'sessions.view',
             'sessions.create',
             'sessions.edit',
@@ -273,12 +283,12 @@ class User extends Authenticatable
             'sessions.export',
             'sessoes.view',
             'comissoes.view',
-            'sistema.dashboard'
+            'sistema.dashboard',
         ];
-        
+
         return in_array($permission, $publicPermissions);
     }
-    
+
     /**
      * Get user's role names
      */
@@ -289,25 +299,25 @@ class User extends Authenticatable
             if (config('database.default') === null || config('database.default') === 'null') {
                 return $this->getRoleNamesFallback();
             }
-            
+
             $roleNames = DB::table('model_has_roles')
                 ->join('roles', 'model_has_roles.role_id', '=', 'roles.id')
                 ->where('model_has_roles.model_type', 'App\\Models\\User')
                 ->where('model_has_roles.model_id', $this->id)
                 ->pluck('roles.name');
-                
+
             // If no roles found in database, use fallback
             if ($roleNames->isEmpty()) {
                 return $this->getRoleNamesFallback();
             }
-                
+
             return $roleNames;
         } catch (\Exception $e) {
             // Fallback when database is not available
             return $this->getRoleNamesFallback();
         }
     }
-    
+
     /**
      * Fallback role names when database is not available
      */
@@ -317,61 +327,61 @@ class User extends Authenticatable
         if (isset($this->roles) && $this->roles) {
             return $this->roles->pluck('name');
         }
-        
+
         // For mock/demo purposes, check if user email indicates specific roles
         if ($this->email === 'admin@sistema.gov.br' || str_contains($this->email, 'admin') || $this->email === 'test@example.com') {
             return collect([self::PERFIL_ADMIN]);
         }
-        
+
         // Check for expediente role
-        if ($this->email === 'expediente@sistema.gov.br' || 
+        if ($this->email === 'expediente@sistema.gov.br' ||
             str_contains(strtolower($this->name), 'expediente') ||
             str_contains(strtolower($this->cargo_atual ?? ''), 'expediente')) {
             return collect([self::PERFIL_EXPEDIENTE]);
         }
-        
+
         // Check for protocolo role
         if (str_contains(strtolower($this->name), 'protocolo') ||
             str_contains(strtolower($this->cargo_atual ?? ''), 'protocolo') ||
             str_contains(strtolower($this->email), 'protocolo')) {
             return collect([self::PERFIL_PROTOCOLO]);
         }
-        
+
         // Check for juridico role
         if (str_contains(strtolower($this->name), 'juridico') ||
             str_contains(strtolower($this->cargo_atual ?? ''), 'juridico') ||
             str_contains(strtolower($this->email), 'juridico')) {
             return collect([self::PERFIL_ASSESSOR_JURIDICO]);
         }
-        
+
         // Check if user name/email indicates legislativo role
-        if (str_contains(strtolower($this->name), 'legislativo') || 
+        if (str_contains(strtolower($this->name), 'legislativo') ||
             str_contains(strtolower($this->name), 'servidor') ||
             str_contains(strtolower($this->email), 'legislativo') ||
             str_contains(strtolower($this->cargo_atual ?? ''), 'legislativo') ||
             str_contains(strtolower($this->cargo_atual ?? ''), 'servidor')) {
             return collect([self::PERFIL_LEGISLATIVO]);
         }
-        
+
         // Check if user name/email indicates parlamentar role
-        if (str_contains(strtolower($this->name), 'parlamentar') || 
+        if (str_contains(strtolower($this->name), 'parlamentar') ||
             str_contains(strtolower($this->cargo_atual ?? ''), 'parlamentar') ||
             str_contains(strtolower($this->email), 'parlamentar')) {
             return collect([self::PERFIL_PARLAMENTAR]);
         }
-        
+
         // Default to PUBLICO for unknown users
         return collect(['PUBLICO']);
     }
-    
+
     /**
      * Obter perfil formatado para exibição
      */
     public function getPerfilFormatado(): string
     {
         $perfil = $this->getRoleNames()->first();
-        
-        return match($perfil) {
+
+        return match ($perfil) {
             self::PERFIL_ADMIN => 'Administrador',
             self::PERFIL_ASSESSOR_JURIDICO => 'Assessor Jurídico',
             self::PERFIL_LEGISLATIVO => 'Servidor Legislativo',
@@ -385,15 +395,15 @@ class User extends Authenticatable
             default => 'Sem perfil'
         };
     }
-    
+
     /**
      * Obter cor do badge do perfil
      */
     public function getCorPerfil(): string
     {
         $perfil = $this->getRoleNames()->first();
-        
-        return match($perfil) {
+
+        return match ($perfil) {
             self::PERFIL_ADMIN => 'danger',
             self::PERFIL_ASSESSOR_JURIDICO => 'warning',
             self::PERFIL_LEGISLATIVO => 'primary',
@@ -407,7 +417,7 @@ class User extends Authenticatable
             default => 'secondary'
         };
     }
-    
+
     /**
      * Atualizar último acesso
      */
@@ -415,37 +425,37 @@ class User extends Authenticatable
     {
         $this->update(['ultimo_acesso' => now()]);
     }
-    
+
     /**
      * Obter avatar ou iniciais
      */
     public function getAvatarAttribute($value): string
     {
         // Se há um valor e é um arquivo que existe, retorna o nome do arquivo
-        if ($value && !ctype_alpha($value) && file_exists(public_path('storage/' . $value))) {
+        if ($value && ! ctype_alpha($value) && file_exists(public_path('storage/'.$value))) {
             return $value;
         }
-        
+
         // Retornar iniciais se não tiver avatar ou arquivo não existir
         $nomes = explode(' ', $this->name);
         $iniciais = '';
         foreach (array_slice($nomes, 0, 2) as $nome) {
             $iniciais .= strtoupper(substr($nome, 0, 1));
         }
-        
+
         return $iniciais;
     }
-    
+
     /**
      * Verifica se o usuário possui uma foto válida
      */
     public function temFotoValida(): bool
     {
-        return $this->attributes['avatar'] && 
-               !ctype_alpha($this->attributes['avatar']) && 
-               file_exists(public_path('storage/' . $this->attributes['avatar']));
+        return $this->attributes['avatar'] &&
+               ! ctype_alpha($this->attributes['avatar']) &&
+               file_exists(public_path('storage/'.$this->attributes['avatar']));
     }
-    
+
     /**
      * Scope para usuários ativos
      */
@@ -453,7 +463,7 @@ class User extends Authenticatable
     {
         return $query->where('ativo', true);
     }
-    
+
     /**
      * Relacionamento com Parlamentar
      */
@@ -478,5 +488,82 @@ class User extends Authenticatable
         return $query->whereHas('roles', function ($q) {
             $q->whereIn('name', [self::PERFIL_PARLAMENTAR, self::PERFIL_RELATOR]);
         });
+    }
+
+    // ========== SCOPED RELATIONSHIPS ==========
+
+    /**
+     * Relacionamento scoped: proposições ativas do usuário
+     */
+    public function proposicoesAtivas()
+    {
+        return $this->proposicoesAutor()->whereNotIn('status', ['ARQUIVADO', 'CANCELADO']);
+    }
+
+    /**
+     * Relacionamento scoped: proposições protocoladas do usuário
+     */
+    public function proposicoesProtocoladas()
+    {
+        return $this->proposicoesAutor()->where('status', 'PROTOCOLADO');
+    }
+
+    /**
+     * Relacionamento scoped: proposições pendentes do usuário
+     */
+    public function proposicoesPendentes()
+    {
+        return $this->proposicoesAutor()->whereIn('status', [
+            'RASCUNHO', 'EM_REVISAO', 'AGUARDANDO_ASSINATURA',
+        ]);
+    }
+
+    /**
+     * Relacionamento scoped: proposições revisadas (como revisor)
+     */
+    public function proposicoesRevisadas()
+    {
+        return $this->hasMany(Proposicao::class, 'revisor_id')->latest();
+    }
+
+    /**
+     * Relacionamento scoped: proposições do ano atual
+     */
+    public function proposicoesAnoAtual()
+    {
+        return $this->proposicoesAutor()->where('ano', date('Y'));
+    }
+
+    /**
+     * Relacionamento scoped: proposições com template
+     */
+    public function proposicoesComTemplate()
+    {
+        return $this->proposicoesAutor()->whereNotNull('template_id');
+    }
+
+    /**
+     * Obter estatísticas das proposições do usuário
+     */
+    public function getEstatisticasProposicoes(): array
+    {
+        return [
+            'total' => $this->proposicoesAutor()->count(),
+            'protocoladas' => $this->proposicoesProtocoladas()->count(),
+            'pendentes' => $this->proposicoesPendentes()->count(),
+            'ativas' => $this->proposicoesAtivas()->count(),
+            'ano_atual' => $this->proposicoesAnoAtual()->count(),
+            'com_template' => $this->proposicoesComTemplate()->count(),
+            'por_tipo' => $this->proposicoesAutor()
+                ->selectRaw('tipo, count(*) as total')
+                ->groupBy('tipo')
+                ->pluck('total', 'tipo')
+                ->toArray(),
+            'por_status' => $this->proposicoesAutor()
+                ->selectRaw('status, count(*) as total')
+                ->groupBy('status')
+                ->pluck('total', 'status')
+                ->toArray(),
+        ];
     }
 }

@@ -9,19 +9,24 @@ class TipoProposicaoTemplate extends Model
 {
     protected $fillable = [
         'tipo_proposicao_id',
-        'document_key', 
+        'document_key',
         'arquivo_path',
         'conteudo',
         'formato',
         'variaveis',
         'ativo',
-        'updated_by'
+        'updated_by',
     ];
 
     protected $casts = [
         'variaveis' => 'array',
-        'ativo' => 'boolean'
+        'ativo' => 'boolean',
     ];
+
+    /**
+     * Relacionamentos sempre carregados por padrão
+     */
+    protected $with = ['updatedBy'];
 
     // Relacionamentos
     public function tipoProposicao(): BelongsTo
@@ -43,7 +48,7 @@ class TipoProposicaoTemplate extends Model
     // Métodos úteis
     public function getNomeTemplate(): string
     {
-        return "Template: " . $this->tipoProposicao->nome;
+        return 'Template: '.$this->tipoProposicao->nome;
     }
 
     public function getUrlEditor(): string
@@ -55,12 +60,12 @@ class TipoProposicaoTemplate extends Model
     {
         // Para OnlyOffice em container, usar nome do container da aplicação
         $baseUrl = config('app.url');
-        
+
         // Se for localhost, trocar para nome do container que o OnlyOffice consegue acessar
         if (str_contains($baseUrl, 'localhost')) {
             $baseUrl = str_replace('localhost:8001', 'legisinc-app', $baseUrl);
         }
-        
-        return $baseUrl . '/api/templates/' . $this->id . '/download';
+
+        return $baseUrl.'/api/templates/'.$this->id.'/download';
     }
 }

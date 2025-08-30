@@ -6,14 +6,28 @@ use App\Models\Proposicao;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
-class ProposicaoAssinaturaController extends Controller
+class ProposicaoAssinaturaController extends Controller implements HasMiddleware
 {
     use AuthorizesRequests;
+
+    /**
+     * Get the middleware that should be assigned to the controller.
+     */
+    public static function middleware(): array
+    {
+        return [
+            'auth',
+            new Middleware('can:sign,proposicao', only: ['assinar', 'processarAssinatura']),
+            new Middleware('role:PARLAMENTAR,ADMIN', only: ['assinar', 'processarAssinatura']),
+        ];
+    }
 
     /**
      * Lista proposições aguardando assinatura do parlamentar
@@ -642,18 +656,18 @@ class ProposicaoAssinaturaController extends Controller
                 if (strtolower($arquivoExtensao) === 'rtf') {
                     // ARQUIVO RTF (editado pelo Legislativo via OnlyOffice)
                     error_log('PDF Assinatura: Processando arquivo RTF editado pelo Legislativo');
-                    
+
                     try {
                         // Extrair conteúdo do RTF usando RTFTextExtractor
                         $rtfContent = file_get_contents($arquivoMaisRecente['path']);
                         $conteudoExtraido = \App\Services\RTFTextExtractor::extract($rtfContent);
                         error_log('PDF Assinatura: Conteúdo RTF extraído: '.strlen($conteudoExtraido).' caracteres');
-                        
-                        if (!empty($conteudoExtraido) && strlen($conteudoExtraido) > 100) {
+
+                        if (! empty($conteudoExtraido) && strlen($conteudoExtraido) > 100) {
                             // Processar placeholders no conteúdo extraído
                             $conteudoProcessado = $this->processarPlaceholdersDocumento($conteudoExtraido, $proposicao);
                             error_log('PDF Assinatura: Conteúdo com placeholders processados: '.strlen($conteudoProcessado).' caracteres');
-                            
+
                             // Criar PDF usando HTML com formatação do conteúdo RTF
                             $this->criarPDFComConteudoRTFProcessado($caminhoPdfAbsoluto, $proposicao, $conteudoProcessado);
                         } else {
@@ -665,7 +679,7 @@ class ProposicaoAssinaturaController extends Controller
                         // Fallback para método HTML
                         $this->criarPDFComMetodoHTML($caminhoPdfAbsoluto, $proposicao);
                     }
-                    
+
                 } elseif (strtolower($arquivoExtensao) === 'docx') {
                     // ARQUIVO DOCX (método original)
                     error_log('PDF Assinatura: Processando arquivo DOCX');
@@ -3924,24 +3938,24 @@ class ProposicaoAssinaturaController extends Controller
      */
     private function criarPDFComConteudoRTFProcessado(string $caminhoPdfAbsoluto, Proposicao $proposicao, string $conteudoRTF): void
     {
-        error_log("PDF RTF: Gerando PDF com conteúdo RTF processado");
-        
+        error_log('PDF RTF: Gerando PDF com conteúdo RTF processado');
+
         // Gerar HTML otimizado para conteúdo RTF
         $html = $this->gerarHTMLOtimizadoParaRTF($proposicao, $conteudoRTF);
-        
+
         // Criar PDF usando DomPDF com configurações A4 explícitas
         $pdf = app('dompdf.wrapper');
         $pdf->loadHTML($html);
-        
+
         // Definir explicitamente formato A4 e orientação portrait
         $pdf->setPaper('A4', 'portrait');
-        
+
         // Configurações adicionais para qualidade
         $pdf->setWarnings(false);
-        
+
         $pdf->save($caminhoPdfAbsoluto);
-        
-        error_log("PDF RTF: PDF criado com sucesso: " . filesize($caminhoPdfAbsoluto) . " bytes");
+
+        error_log('PDF RTF: PDF criado com sucesso: '.filesize($caminhoPdfAbsoluto).' bytes');
     }
 
     /**
@@ -3949,23 +3963,23 @@ class ProposicaoAssinaturaController extends Controller
      */
     private function criarPDFComMetodoHTML(string $caminhoPdfAbsoluto, Proposicao $proposicao): void
     {
-        error_log("PDF HTML: Usando método HTML genérico como fallback");
-        
+        error_log('PDF HTML: Usando método HTML genérico como fallback');
+
         $html = $this->gerarHTMLParaPDFComProtocolo($proposicao);
-        
+
         // Criar PDF usando DomPDF com configurações A4 explícitas
         $pdf = app('dompdf.wrapper');
         $pdf->loadHTML($html);
-        
+
         // Definir explicitamente formato A4 e orientação portrait
         $pdf->setPaper('A4', 'portrait');
-        
+
         // Configurações adicionais para qualidade
         $pdf->setWarnings(false);
-        
+
         $pdf->save($caminhoPdfAbsoluto);
-        
-        error_log("PDF HTML: PDF criado com sucesso: " . filesize($caminhoPdfAbsoluto) . " bytes");
+
+        error_log('PDF HTML: PDF criado com sucesso: '.filesize($caminhoPdfAbsoluto).' bytes');
     }
 
     /**
@@ -3974,7 +3988,7 @@ class ProposicaoAssinaturaController extends Controller
     private function gerarHTMLOtimizadoParaRTF(Proposicao $proposicao, string $conteudoRTF): string
     {
         $numeroProtocolo = $proposicao->numero_protocolo ?: '[AGUARDANDO PROTOCOLO]';
-        
+
         $html = '<html><head><meta charset="UTF-8">';
         $html .= '<style>';
         $html .= 'body { font-family: Arial, sans-serif; font-size: 12pt; line-height: 1.4; margin: 30px; }';
@@ -3989,7 +4003,7 @@ class ProposicaoAssinaturaController extends Controller
         $html .= '.date { text-align: right; margin-top: 30px; }';
         $html .= '</style>';
         $html .= '</head><body>';
-        
+
         // Cabeçalho institucional
         $html .= '<div class="header">';
         $html .= '<h1>CÂMARA MUNICIPAL DE CARAGUATATUBA</h1>';
@@ -3997,42 +4011,42 @@ class ProposicaoAssinaturaController extends Controller
         $html .= '<p>(12) 3882-5588</p>';
         $html .= '<p>www.camaracaraguatatuba.sp.gov.br</p>';
         $html .= '</div>';
-        
+
         // Número do protocolo
         $html .= '<div class="protocolo">';
-        $html .= strtoupper($proposicao->tipo) . ' Nº ' . $numeroProtocolo;
+        $html .= strtoupper($proposicao->tipo).' Nº '.$numeroProtocolo;
         $html .= '</div>';
-        
+
         // Conteúdo extraído do RTF (editado pelo Legislativo)
         $html .= '<div class="content">';
-        
+
         // Limpar e formatar o conteúdo RTF
         $conteudoLimpo = $this->limparConteudoRTF($conteudoRTF);
         $html .= $conteudoLimpo;
-        
+
         $html .= '</div>';
-        
+
         // Assinatura digital (se existir)
         if ($proposicao->assinatura_digital) {
             $assinatura = json_decode($proposicao->assinatura_digital, true);
             $html .= '<div class="signature">';
             $html .= '<div class="signature-line"></div>';
             $html .= '<p><strong>ASSINATURA DIGITAL</strong></p>';
-            $html .= '<p>' . ($assinatura['nome'] ?? 'Parlamentar') . '</p>';
+            $html .= '<p>'.($assinatura['nome'] ?? 'Parlamentar').'</p>';
             if ($proposicao->data_assinatura) {
-                $html .= '<p>Data: ' . $proposicao->data_assinatura->format('d/m/Y H:i') . '</p>';
+                $html .= '<p>Data: '.$proposicao->data_assinatura->format('d/m/Y H:i').'</p>';
             }
             $html .= '<p><small>Documento assinado eletronicamente conforme MP 2.200-2/2001</small></p>';
             $html .= '</div>';
         }
-        
+
         // Data e local
         $html .= '<div class="date">';
-        $html .= '<p>Caraguatatuba, ' . now()->format('d/m/Y') . '</p>';
+        $html .= '<p>Caraguatatuba, '.now()->format('d/m/Y').'</p>';
         $html .= '</div>';
-        
+
         $html .= '</body></html>';
-        
+
         return $html;
     }
 
@@ -4043,19 +4057,19 @@ class ProposicaoAssinaturaController extends Controller
     {
         // Remover caracteres de controle e espaços desnecessários
         $conteudo = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $conteudoRTF);
-        
+
         // Normalizar quebras de linha
         $conteudo = str_replace(["\r\n", "\r"], "\n", $conteudo);
-        
+
         // Remover múltiplas quebras de linha consecutivas
         $conteudo = preg_replace('/\n{3,}/', "\n\n", $conteudo);
-        
+
         // Converter quebras de linha para parágrafos HTML
         $conteudo = nl2br(trim($conteudo));
-        
+
         // Remover linhas vazias desnecessárias
         $conteudo = preg_replace('/<br\s*\/?>\s*<br\s*\/?>\s*<br\s*\/?>/i', '<br><br>', $conteudo);
-        
+
         return $conteudo;
     }
 
@@ -4065,7 +4079,7 @@ class ProposicaoAssinaturaController extends Controller
     private function gerarHTMLParaPDFComProtocolo(Proposicao $proposicao): string
     {
         $numeroProtocolo = $proposicao->numero_protocolo ?: '[AGUARDANDO PROTOCOLO]';
-        
+
         $html = '<html><head><meta charset="UTF-8">';
         $html .= '<style>';
         $html .= 'body { font-family: Arial, sans-serif; font-size: 12pt; line-height: 1.4; margin: 40px; }';
@@ -4080,7 +4094,7 @@ class ProposicaoAssinaturaController extends Controller
         $html .= '.date { text-align: right; margin-top: 30px; }';
         $html .= '</style>';
         $html .= '</head><body>';
-        
+
         // Cabeçalho
         $html .= '<div class="header">';
         $html .= '<h1>CÂMARA MUNICIPAL DE CARAGUATATUBA</h1>';
@@ -4088,19 +4102,19 @@ class ProposicaoAssinaturaController extends Controller
         $html .= '<p>(12) 3882-5588</p>';
         $html .= '<p>www.camaracaraguatatuba.sp.gov.br</p>';
         $html .= '</div>';
-        
+
         // Número do protocolo
         $html .= '<div class="protocolo">';
-        $html .= strtoupper($proposicao->tipo) . ' Nº ' . $numeroProtocolo;
+        $html .= strtoupper($proposicao->tipo).' Nº '.$numeroProtocolo;
         $html .= '</div>';
-        
+
         // Ementa
         if ($proposicao->ementa) {
             $html .= '<div class="ementa">';
-            $html .= 'EMENTA: ' . $proposicao->ementa;
+            $html .= 'EMENTA: '.$proposicao->ementa;
             $html .= '</div>';
         }
-        
+
         // Conteúdo
         $html .= '<div class="content">';
         if ($proposicao->conteudo) {
@@ -4110,29 +4124,28 @@ class ProposicaoAssinaturaController extends Controller
             $html .= 'Conteúdo da proposição será definido durante a edição.';
         }
         $html .= '</div>';
-        
+
         // Assinatura digital (se existir)
         if ($proposicao->assinatura_digital) {
             $assinatura = json_decode($proposicao->assinatura_digital, true);
             $html .= '<div class="signature">';
             $html .= '<div class="signature-line"></div>';
             $html .= '<p><strong>ASSINATURA DIGITAL</strong></p>';
-            $html .= '<p>' . ($assinatura['nome'] ?? 'Parlamentar') . '</p>';
+            $html .= '<p>'.($assinatura['nome'] ?? 'Parlamentar').'</p>';
             if ($proposicao->data_assinatura) {
-                $html .= '<p>Data: ' . $proposicao->data_assinatura->format('d/m/Y H:i') . '</p>';
+                $html .= '<p>Data: '.$proposicao->data_assinatura->format('d/m/Y H:i').'</p>';
             }
             $html .= '<p><small>Documento assinado eletronicamente conforme MP 2.200-2/2001</small></p>';
             $html .= '</div>';
         }
-        
+
         // Data e local
         $html .= '<div class="date">';
-        $html .= '<p>Caraguatatuba, ' . now()->format('d/m/Y') . '</p>';
+        $html .= '<p>Caraguatatuba, '.now()->format('d/m/Y').'</p>';
         $html .= '</div>';
-        
+
         $html .= '</body></html>';
-        
+
         return $html;
     }
-
 }

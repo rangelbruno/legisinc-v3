@@ -6,14 +6,28 @@ use App\Models\Proposicao;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
-class ProposicaoAssinaturaController extends Controller
+class ProposicaoAssinaturaController extends Controller implements HasMiddleware
 {
     use AuthorizesRequests;
+
+    /**
+     * Get the middleware that should be assigned to the controller.
+     */
+    public static function middleware(): array
+    {
+        return [
+            'auth',
+            new Middleware('can:sign,proposicao', only: ['assinar', 'processarAssinatura']),
+            new Middleware('role:PARLAMENTAR,ADMIN', only: ['assinar', 'processarAssinatura']),
+        ];
+    }
 
     /**
      * Lista proposições aguardando assinatura do parlamentar
@@ -635,27 +649,62 @@ class ProposicaoAssinaturaController extends Controller
 
             if ($arquivoMaisRecente) {
                 error_log("PDF Assinatura: Usando arquivo para regeneração: {$arquivoMaisRecente['path']}");
+                $arquivoExtensao = pathinfo($arquivoMaisRecente['path'], PATHINFO_EXTENSION);
+                error_log("PDF Assinatura: Extensão do arquivo: {$arquivoExtensao}");
 
-                // ESTRATÉGIA: Processar placeholders no DOCX antes de converter para PDF
-                // Isso preserva toda a formatação do OnlyOffice
+                // DETECTAR TIPO DE ARQUIVO E PROCESSAR ADEQUADAMENTE
+                if (strtolower($arquivoExtensao) === 'rtf') {
+                    // ARQUIVO RTF (editado pelo Legislativo via OnlyOffice)
+                    error_log('PDF Assinatura: Processando arquivo RTF editado pelo Legislativo');
 
-                // 1. Criar cópia temporária do DOCX
-                $docxTemporario = sys_get_temp_dir().'/proposicao_'.$proposicao->id.'_temp_'.time().'.docx';
-                copy($arquivoMaisRecente['path'], $docxTemporario);
+                    try {
+                        // Extrair conteúdo do RTF usando RTFTextExtractor
+                        $rtfContent = file_get_contents($arquivoMaisRecente['path']);
+                        $conteudoExtraido = \App\Services\RTFTextExtractor::extract($rtfContent);
+                        error_log('PDF Assinatura: Conteúdo RTF extraído: '.strlen($conteudoExtraido).' caracteres');
 
-                // 2. Processar placeholders diretamente no DOCX
-                $this->processarPlaceholdersNoDOCX($docxTemporario, $proposicao);
+                        if (! empty($conteudoExtraido) && strlen($conteudoExtraido) > 100) {
+                            // Processar placeholders no conteúdo extraído
+                            $conteudoProcessado = $this->processarPlaceholdersDocumento($conteudoExtraido, $proposicao);
+                            error_log('PDF Assinatura: Conteúdo com placeholders processados: '.strlen($conteudoProcessado).' caracteres');
 
-                // 3. Converter DOCX processado para PDF preservando formatação
-                if ($this->libreOfficeDisponivel()) {
-                    error_log('PDF Assinatura: Usando LibreOffice para preservar formatação OnlyOffice');
-                    $this->criarPDFComFormatacaoOnlyOffice($caminhoPdfAbsoluto, $proposicao, $docxTemporario);
+                            // Criar PDF usando HTML com formatação do conteúdo RTF
+                            $this->criarPDFComConteudoRTFProcessado($caminhoPdfAbsoluto, $proposicao, $conteudoProcessado);
+                        } else {
+                            error_log('PDF Assinatura: RTF vazio ou muito pequeno, usando método HTML genérico');
+                            $this->criarPDFComMetodoHTML($caminhoPdfAbsoluto, $proposicao);
+                        }
+                    } catch (\Exception $e) {
+                        error_log("PDF Assinatura: ERRO ao processar RTF: {$e->getMessage()}");
+                        // Fallback para método HTML
+                        $this->criarPDFComMetodoHTML($caminhoPdfAbsoluto, $proposicao);
+                    }
+
+                } elseif (strtolower($arquivoExtensao) === 'docx') {
+                    // ARQUIVO DOCX (método original)
+                    error_log('PDF Assinatura: Processando arquivo DOCX');
+
+                    // 1. Criar cópia temporária do DOCX
+                    $docxTemporario = sys_get_temp_dir().'/proposicao_'.$proposicao->id.'_temp_'.time().'.docx';
+                    copy($arquivoMaisRecente['path'], $docxTemporario);
+
+                    // 2. Processar placeholders diretamente no DOCX
+                    $this->processarPlaceholdersNoDOCX($docxTemporario, $proposicao);
+
+                    // 3. Converter DOCX processado para PDF preservando formatação
+                    if ($this->libreOfficeDisponivel()) {
+                        error_log('PDF Assinatura: Usando LibreOffice para preservar formatação OnlyOffice');
+                        $this->criarPDFComFormatacaoOnlyOffice($caminhoPdfAbsoluto, $proposicao, $docxTemporario);
+                    } else {
+                        // Fallback: método anterior
+                        error_log('PDF Assinatura: LibreOffice não disponível, usando conversão alternativa');
+                        $conteudoOriginal = $this->extrairConteudoDOCX($docxTemporario);
+                        $conteudoAtualizado = $this->processarPlaceholdersDocumento($conteudoOriginal, $proposicao);
+                        $this->criarPDFComConteudoProcessado($caminhoPdfAbsoluto, $proposicao, $conteudoAtualizado);
+                    }
                 } else {
-                    // Fallback: método anterior
-                    error_log('PDF Assinatura: LibreOffice não disponível, usando conversão alternativa');
-                    $conteudoOriginal = $this->extrairConteudoDOCX($docxTemporario);
-                    $conteudoAtualizado = $this->processarPlaceholdersDocumento($conteudoOriginal, $proposicao);
-                    $this->criarPDFComConteudoProcessado($caminhoPdfAbsoluto, $proposicao, $conteudoAtualizado);
+                    error_log("PDF Assinatura: Extensão não suportada: {$arquivoExtensao}, usando método HTML genérico");
+                    $this->criarPDFComMetodoHTML($caminhoPdfAbsoluto, $proposicao);
                 }
 
                 // Limpar arquivo temporário
@@ -3885,275 +3934,218 @@ class ProposicaoAssinaturaController extends Controller
     }
 
     /**
-     * Gerar HTML para PDF com número do protocolo e assinatura
+     * Criar PDF usando conteúdo RTF processado (editado pelo Legislativo)
      */
-    private function gerarHTMLParaPDFComProtocolo(Proposicao $proposicao): string
+    private function criarPDFComConteudoRTFProcessado(string $caminhoPdfAbsoluto, Proposicao $proposicao, string $conteudoRTF): void
     {
-        // Obter variáveis do template
-        $templateVariableService = app(\App\Services\Template\TemplateVariableService::class);
-        $variables = $templateVariableService->getTemplateVariables();
+        error_log('PDF RTF: Gerando PDF com conteúdo RTF processado');
 
-        // Número da proposição (prioriza número, depois protocolo)
-        $numeroProposicao = $proposicao->numero ?: $proposicao->numero_protocolo ?: '[AGUARDANDO PROTOCOLO]';
+        // Gerar HTML otimizado para conteúdo RTF
+        $html = $this->gerarHTMLOtimizadoParaRTF($proposicao, $conteudoRTF);
 
-        // Cabeçalho com imagem se disponível
-        $headerHTML = '';
-        if (! empty($variables['cabecalho_imagem'])) {
-            $imagePath = public_path($variables['cabecalho_imagem']);
-            if (file_exists($imagePath)) {
-                $imageData = base64_encode(file_get_contents($imagePath));
-                $mimeType = mime_content_type($imagePath);
-                $headerHTML = '<div style="text-align: center; margin-bottom: 20px;">
-                    <img src="data:'.$mimeType.';base64,'.$imageData.'" 
-                         style="max-width: 200px; height: auto;" alt="Cabeçalho" />
-                </div>';
+        // Criar PDF usando DomPDF com configurações A4 explícitas
+        $pdf = app('dompdf.wrapper');
+        $pdf->loadHTML($html);
+
+        // Definir explicitamente formato A4 e orientação portrait
+        $pdf->setPaper('A4', 'portrait');
+
+        // Configurações adicionais para qualidade
+        $pdf->setWarnings(false);
+
+        $pdf->save($caminhoPdfAbsoluto);
+
+        error_log('PDF RTF: PDF criado com sucesso: '.filesize($caminhoPdfAbsoluto).' bytes');
+    }
+
+    /**
+     * Criar PDF usando método HTML genérico (fallback)
+     */
+    private function criarPDFComMetodoHTML(string $caminhoPdfAbsoluto, Proposicao $proposicao): void
+    {
+        error_log('PDF HTML: Usando método HTML genérico como fallback');
+
+        $html = $this->gerarHTMLParaPDFComProtocolo($proposicao);
+
+        // Criar PDF usando DomPDF com configurações A4 explícitas
+        $pdf = app('dompdf.wrapper');
+        $pdf->loadHTML($html);
+
+        // Definir explicitamente formato A4 e orientação portrait
+        $pdf->setPaper('A4', 'portrait');
+
+        // Configurações adicionais para qualidade
+        $pdf->setWarnings(false);
+
+        $pdf->save($caminhoPdfAbsoluto);
+
+        error_log('PDF HTML: PDF criado com sucesso: '.filesize($caminhoPdfAbsoluto).' bytes');
+    }
+
+    /**
+     * Gerar HTML otimizado para conteúdo RTF extraído
+     */
+    private function gerarHTMLOtimizadoParaRTF(Proposicao $proposicao, string $conteudoRTF): string
+    {
+        $numeroProtocolo = $proposicao->numero_protocolo ?: '[AGUARDANDO PROTOCOLO]';
+
+        $html = '<html><head><meta charset="UTF-8">';
+        $html .= '<style>';
+        $html .= 'body { font-family: Arial, sans-serif; font-size: 12pt; line-height: 1.4; margin: 30px; }';
+        $html .= '.header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 15px; }';
+        $html .= '.header h1 { font-size: 16pt; margin: 0; font-weight: bold; }';
+        $html .= '.header p { margin: 5px 0; font-size: 10pt; }';
+        $html .= '.protocolo { text-align: center; font-size: 14pt; font-weight: bold; margin: 20px 0; }';
+        $html .= '.content { margin: 20px 0; text-align: justify; line-height: 1.6; }';
+        $html .= '.content p { margin: 10px 0; }';
+        $html .= '.signature { margin-top: 40px; text-align: center; }';
+        $html .= '.signature-line { border-top: 1px solid #000; width: 300px; margin: 20px auto 10px auto; }';
+        $html .= '.date { text-align: right; margin-top: 30px; }';
+        $html .= '</style>';
+        $html .= '</head><body>';
+
+        // Cabeçalho institucional
+        $html .= '<div class="header">';
+        $html .= '<h1>CÂMARA MUNICIPAL DE CARAGUATATUBA</h1>';
+        $html .= '<p>Praça da República, 40, Centro</p>';
+        $html .= '<p>(12) 3882-5588</p>';
+        $html .= '<p>www.camaracaraguatatuba.sp.gov.br</p>';
+        $html .= '</div>';
+
+        // Número do protocolo
+        $html .= '<div class="protocolo">';
+        $html .= strtoupper($proposicao->tipo).' Nº '.$numeroProtocolo;
+        $html .= '</div>';
+
+        // Conteúdo extraído do RTF (editado pelo Legislativo)
+        $html .= '<div class="content">';
+
+        // Limpar e formatar o conteúdo RTF
+        $conteudoLimpo = $this->limparConteudoRTF($conteudoRTF);
+        $html .= $conteudoLimpo;
+
+        $html .= '</div>';
+
+        // Assinatura digital (se existir)
+        if ($proposicao->assinatura_digital) {
+            $assinatura = json_decode($proposicao->assinatura_digital, true);
+            $html .= '<div class="signature">';
+            $html .= '<div class="signature-line"></div>';
+            $html .= '<p><strong>ASSINATURA DIGITAL</strong></p>';
+            $html .= '<p>'.($assinatura['nome'] ?? 'Parlamentar').'</p>';
+            if ($proposicao->data_assinatura) {
+                $html .= '<p>Data: '.$proposicao->data_assinatura->format('d/m/Y H:i').'</p>';
             }
-        }
-
-        // Cabeçalho da câmara
-        $cabeçalhoTexto = "
-        <div style='text-align: center; margin-bottom: 20px;'>
-            <strong>{$variables['cabecalho_nome_camara']}</strong><br>
-            {$variables['cabecalho_endereco']}<br>
-            {$variables['cabecalho_telefone']}<br>
-            {$variables['cabecalho_website']}
-        </div>";
-
-        // Título do documento com número da proposição
-        $tipoUppercase = strtoupper($proposicao->tipo);
-        $tituloHTML = "
-        <div class='documento-titulo'>
-            {$tipoUppercase} Nº {$numeroProposicao}
-        </div>";
-
-        // Ementa se disponível
-        $ementaHTML = '';
-        if ($proposicao->ementa) {
-            $ementaHTML = "
-            <div class='ementa'>
-                <strong>EMENTA:</strong> {$proposicao->ementa}
-            </div>";
-        }
-
-        // Conteúdo da proposição
-        $conteudoHTML = '';
-        if ($proposicao->conteudo) {
-            $conteudoHTML = "
-            <div class='document-content'>
-                {$proposicao->conteudo}
-            </div>";
-        }
-
-        // Assinatura digital se disponível
-        $assinaturaDigitalHTML = '';
-        if ($proposicao->assinatura_digital && $proposicao->data_assinatura) {
-            $assinaturaInfo = json_decode($proposicao->assinatura_digital, true);
-            $nomeAssinante = $assinaturaInfo['nome'] ?? $proposicao->autor->name ?? 'Parlamentar';
-            $dataAssinatura = \Carbon\Carbon::parse($proposicao->data_assinatura)->format('d/m/Y H:i:s');
-
-            $cargoAtual = $proposicao->autor->cargo_atual ?? 'Vereadora';
-            $assinaturaDigitalHTML = "
-            <div class='assinatura-digital'>
-                <h4>🔐 ASSINATURA DIGITAL</h4>
-                <div class='assinatura-nome'>{$nomeAssinante}</div>
-                <div class='assinatura-cargo'>{$cargoAtual}</div>
-                <div class='assinatura-data'>Data: {$dataAssinatura}</div>
-                <div class='assinatura-legal'>
-                    Documento assinado eletronicamente conforme MP 2.200-2/2001<br>
-                    Lei Federal nº 14.063/2020 - Certificado Digital ICP-Brasil
-                </div>
-            </div>";
-        }
-
-        // QR Code para verificação
-        $qrCodeHTML = '';
-        try {
-            $consultaUrl = route('proposicoes.consulta.publica', ['id' => $proposicao->id]);
-            $qrCodeHTML = "
-            <div class='qr-code'>
-                <strong>📱 Verificação Digital</strong><br>
-                Escaneie o QR Code ou acesse:<br>
-                <small>{$consultaUrl}</small>
-            </div>";
-        } catch (\Exception $e) {
-            error_log('PDF Simplificado: Erro ao gerar URL de consulta: '.$e->getMessage());
+            $html .= '<p><small>Documento assinado eletronicamente conforme MP 2.200-2/2001</small></p>';
+            $html .= '</div>';
         }
 
         // Data e local
-        $dataLocalHTML = "
-        <div class='data-local'>
-            <em>Caraguatatuba, ".date('d').' de '.$this->getMesExtenso(date('n')).' de '.date('Y').'.</em>
-        </div>';
+        $html .= '<div class="date">';
+        $html .= '<p>Caraguatatuba, '.now()->format('d/m/Y').'</p>';
+        $html .= '</div>';
 
-        return "
-        <!DOCTYPE html>
-        <html lang='pt-BR'>
-        <head>
-            <meta charset='UTF-8'>
-            <title>{$tipoUppercase} {$numeroProposicao}</title>
-            <style>
-                @page {
-                    margin: 2.5cm 2cm 2cm 2cm;
-                    @top-center {
-                        content: 'Documento Oficial da Câmara Municipal';
-                        font-size: 10pt;
-                        color: #666;
-                    }
-                }
-                body { 
-                    font-family: 'Times New Roman', Georgia, serif; 
-                    font-size: 12pt;
-                    line-height: 1.8; 
-                    color: #000;
-                    text-align: justify;
-                    background-color: #fff;
-                }
-                .header { 
-                    text-align: center; 
-                    margin-bottom: 40px; 
-                    padding: 20px 0;
-                    border-bottom: 2px solid #003366;
-                }
-                .header img {
-                    max-width: 300px;
-                    height: auto;
-                    margin-bottom: 15px;
-                }
-                .header-text {
-                    font-size: 13pt;
-                    font-weight: bold;
-                    color: #003366;
-                    line-height: 1.4;
-                }
-                .documento-titulo {
-                    font-size: 16pt;
-                    font-weight: bold;
-                    text-align: center;
-                    margin: 30px 0;
-                    padding: 15px;
-                    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-                    border: 1px solid #dee2e6;
-                    border-radius: 8px;
-                    color: #003366;
-                    text-transform: uppercase;
-                    letter-spacing: 1px;
-                }
-                .ementa {
-                    font-weight: bold;
-                    margin: 25px 0;
-                    padding: 15px;
-                    background-color: #f8f9fa;
-                    border-left: 4px solid #003366;
-                    font-size: 13pt;
-                }
-                .document-content { 
-                    margin: 30px 0; 
-                    padding: 20px;
-                    background-color: #fefefe;
-                    border: 1px solid #e9ecef;
-                    border-radius: 6px;
-                    white-space: pre-wrap;
-                    text-indent: 2em;
-                    font-size: 12pt;
-                    line-height: 2.0;
-                }
-                .data-local {
-                    text-align: right;
-                    margin: 40px 0 30px 0;
-                    font-style: italic;
-                    font-size: 12pt;
-                }
-                .assinatura-digital { 
-                    border: 3px solid #28a745; 
-                    padding: 25px; 
-                    margin: 40px 20px; 
-                    background: linear-gradient(135deg, #f8fff8 0%, #e8f5e8 100%);
-                    font-family: Arial, Helvetica, sans-serif;
-                    font-size: 12pt;
-                    page-break-inside: avoid;
-                    border-radius: 12px;
-                    text-align: center;
-                    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-                }
-                .assinatura-digital h4 { 
-                    color: #28a745; 
-                    margin: 0 0 15px 0; 
-                    font-size: 16pt;
-                    font-weight: bold;
-                    text-transform: uppercase;
-                    letter-spacing: 2px;
-                }
-                .assinatura-nome {
-                    font-size: 14pt;
-                    font-weight: bold;
-                    color: #003366;
-                    margin: 10px 0;
-                    text-decoration: overline;
-                    padding-top: 10px;
-                }
-                .assinatura-cargo {
-                    font-size: 12pt;
-                    color: #555;
-                    margin: 5px 0;
-                }
-                .assinatura-data {
-                    font-size: 11pt;
-                    color: #666;
-                    margin: 8px 0;
-                    font-style: italic;
-                }
-                .assinatura-legal {
-                    font-size: 10pt;
-                    color: #888;
-                    margin-top: 15px;
-                    font-style: italic;
-                    border-top: 1px solid #ddd;
-                    padding-top: 10px;
-                }
-                .qr-code {
-                    text-align: right;
-                    margin: 30px 0;
-                    padding: 15px;
-                    background-color: #f8f9fa;
-                    border: 1px solid #e9ecef;
-                    border-radius: 6px;
-                    font-size: 11pt;
-                    color: #666;
-                }
-                .rodape {
-                    text-align: center;
-                    margin-top: 50px;
-                    padding: 20px;
-                    border-top: 2px solid #003366;
-                    font-size: 11pt;
-                    color: #666;
-                    background-color: #f8f9fa;
-                }
-                /* Melhorias de qualidade tipográfica */
-                p { margin: 12px 0; }
-                strong { color: #003366; }
-                .text-center { text-align: center; }
-                .text-right { text-align: right; }
-                .mb-3 { margin-bottom: 20px; }
-                .mt-3 { margin-top: 20px; }
-            </style>
-        </head>
-        <body>
-            {$headerHTML}
-            {$cabeçalhoTexto}
-            {$tituloHTML}
-            {$ementaHTML}
-            {$conteudoHTML}
-            {$dataLocalHTML}
-            {$assinaturaDigitalHTML}
-            {$qrCodeHTML}
-            <div class='rodape'>
-                <strong>Câmara Municipal de Caraguatatuba</strong><br>
-                Praça da República, 40, Centro - Caraguatatuba/SP<br>
-                Telefone: (12) 3882-5588 | www.camaracaraguatatuba.sp.gov.br<br>
-                <small>Documento oficial gerado eletronicamente</small>
-            </div>
-        </body>
-        </html>';
+        $html .= '</body></html>';
+
+        return $html;
+    }
+
+    /**
+     * Limpar e formatar conteúdo extraído do RTF
+     */
+    private function limparConteudoRTF(string $conteudoRTF): string
+    {
+        // Remover caracteres de controle e espaços desnecessários
+        $conteudo = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $conteudoRTF);
+
+        // Normalizar quebras de linha
+        $conteudo = str_replace(["\r\n", "\r"], "\n", $conteudo);
+
+        // Remover múltiplas quebras de linha consecutivas
+        $conteudo = preg_replace('/\n{3,}/', "\n\n", $conteudo);
+
+        // Converter quebras de linha para parágrafos HTML
+        $conteudo = nl2br(trim($conteudo));
+
+        // Remover linhas vazias desnecessárias
+        $conteudo = preg_replace('/<br\s*\/?>\s*<br\s*\/?>\s*<br\s*\/?>/i', '<br><br>', $conteudo);
+
+        return $conteudo;
+    }
+
+    /**
+     * Gera HTML para conversão em PDF com protocolo e assinatura
+     */
+    private function gerarHTMLParaPDFComProtocolo(Proposicao $proposicao): string
+    {
+        $numeroProtocolo = $proposicao->numero_protocolo ?: '[AGUARDANDO PROTOCOLO]';
+
+        $html = '<html><head><meta charset="UTF-8">';
+        $html .= '<style>';
+        $html .= 'body { font-family: Arial, sans-serif; font-size: 12pt; line-height: 1.4; margin: 40px; }';
+        $html .= '.header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 15px; }';
+        $html .= '.header h1 { font-size: 16pt; margin: 0; font-weight: bold; }';
+        $html .= '.header p { margin: 5px 0; font-size: 10pt; }';
+        $html .= '.protocolo { text-align: center; font-size: 14pt; font-weight: bold; margin: 20px 0; }';
+        $html .= '.ementa { margin: 20px 0; font-weight: bold; }';
+        $html .= '.content { margin: 20px 0; text-align: justify; }';
+        $html .= '.signature { margin-top: 40px; text-align: center; }';
+        $html .= '.signature-line { border-top: 1px solid #000; width: 300px; margin: 20px auto 10px auto; }';
+        $html .= '.date { text-align: right; margin-top: 30px; }';
+        $html .= '</style>';
+        $html .= '</head><body>';
+
+        // Cabeçalho
+        $html .= '<div class="header">';
+        $html .= '<h1>CÂMARA MUNICIPAL DE CARAGUATATUBA</h1>';
+        $html .= '<p>Praça da República, 40, Centro</p>';
+        $html .= '<p>(12) 3882-5588</p>';
+        $html .= '<p>www.camaracaraguatatuba.sp.gov.br</p>';
+        $html .= '</div>';
+
+        // Número do protocolo
+        $html .= '<div class="protocolo">';
+        $html .= strtoupper($proposicao->tipo).' Nº '.$numeroProtocolo;
+        $html .= '</div>';
+
+        // Ementa
+        if ($proposicao->ementa) {
+            $html .= '<div class="ementa">';
+            $html .= 'EMENTA: '.$proposicao->ementa;
+            $html .= '</div>';
+        }
+
+        // Conteúdo
+        $html .= '<div class="content">';
+        if ($proposicao->conteudo) {
+            $conteudo = nl2br($proposicao->conteudo);
+            $html .= $conteudo;
+        } else {
+            $html .= 'Conteúdo da proposição será definido durante a edição.';
+        }
+        $html .= '</div>';
+
+        // Assinatura digital (se existir)
+        if ($proposicao->assinatura_digital) {
+            $assinatura = json_decode($proposicao->assinatura_digital, true);
+            $html .= '<div class="signature">';
+            $html .= '<div class="signature-line"></div>';
+            $html .= '<p><strong>ASSINATURA DIGITAL</strong></p>';
+            $html .= '<p>'.($assinatura['nome'] ?? 'Parlamentar').'</p>';
+            if ($proposicao->data_assinatura) {
+                $html .= '<p>Data: '.$proposicao->data_assinatura->format('d/m/Y H:i').'</p>';
+            }
+            $html .= '<p><small>Documento assinado eletronicamente conforme MP 2.200-2/2001</small></p>';
+            $html .= '</div>';
+        }
+
+        // Data e local
+        $html .= '<div class="date">';
+        $html .= '<p>Caraguatatuba, '.now()->format('d/m/Y').'</p>';
+        $html .= '</div>';
+
+        $html .= '</body></html>';
+
+        return $html;
     }
 }

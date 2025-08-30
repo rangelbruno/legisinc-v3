@@ -102,6 +102,10 @@ class ProposicaoProtocoloController extends Controller
             // Usar método que preserva formatação OnlyOffice
             $assinaturaController->regenerarPDFAtualizado($proposicao->fresh());
             error_log("Protocolo: PDF regenerado com sucesso para proposição {$proposicao->id}");
+            
+            // Validar se PDF foi gerado corretamente (validação robusta)
+            $this->validarPDFGerado($proposicao->fresh(), $numeroProcesso);
+            
         } catch (\Exception $e) {
             error_log("Protocolo: ERRO ao regenerar PDF para proposição {$proposicao->id}: ".$e->getMessage());
             // Log::warning('Falha ao regenerar PDF com número de protocolo', [
@@ -360,5 +364,65 @@ class ProposicaoProtocoloController extends Controller
             'success' => true,
             'message' => 'Tramitação iniciada com sucesso!',
         ]);
+    }
+
+    /**
+     * Validar se o PDF foi gerado corretamente com protocolo e assinatura
+     */
+    private function validarPDFGerado(Proposicao $proposicao, string $numeroProcesso): void
+    {
+        try {
+            // Verificar se arquivo_pdf_path foi atualizado
+            if (empty($proposicao->arquivo_pdf_path)) {
+                error_log("Protocolo: AVISO - proposição {$proposicao->id} sem arquivo_pdf_path após regeneração");
+                return;
+            }
+
+            $pdfPath = storage_path('app/' . $proposicao->arquivo_pdf_path);
+            
+            // Verificar se arquivo existe fisicamente
+            if (!file_exists($pdfPath)) {
+                error_log("Protocolo: ERRO - PDF não encontrado: {$pdfPath}");
+                return;
+            }
+
+            // Extrair conteúdo do PDF para validação
+            $comando = "pdftotext '{$pdfPath}' -";
+            $conteudo = shell_exec($comando);
+            
+            if (empty($conteudo)) {
+                error_log("Protocolo: AVISO - PDF vazio ou não legível: {$pdfPath}");
+                return;
+            }
+
+            // Validar presença do número de protocolo
+            $temProtocolo = stripos($conteudo, $numeroProcesso) !== false;
+            $temPlaceholder = stripos($conteudo, '[AGUARDANDO PROTOCOLO]') !== false;
+            
+            if (!$temProtocolo || $temPlaceholder) {
+                error_log("Protocolo: ❌ CRÍTICO - PDF sem número correto para proposição {$proposicao->id}");
+                error_log("Protocolo: - Protocolo '{$numeroProcesso}' encontrado: " . ($temProtocolo ? 'SIM' : 'NÃO'));
+                error_log("Protocolo: - Placeholder presente: " . ($temPlaceholder ? 'SIM' : 'NÃO'));
+            } else {
+                error_log("Protocolo: ✅ PDF válido com protocolo correto para proposição {$proposicao->id}");
+            }
+
+            // Validar presença de assinatura (se existir)
+            if ($proposicao->assinatura_digital) {
+                $temAssinatura = stripos($conteudo, 'ASSINATURA DIGITAL') !== false;
+                if (!$temAssinatura) {
+                    error_log("Protocolo: ❌ CRÍTICO - PDF sem assinatura digital para proposição {$proposicao->id}");
+                } else {
+                    error_log("Protocolo: ✅ PDF com assinatura digital OK para proposição {$proposicao->id}");
+                }
+            }
+
+            // Log do tamanho do arquivo para monitoramento
+            $tamanho = filesize($pdfPath);
+            error_log("Protocolo: ℹ️  PDF gerado: {$tamanho} bytes - {$pdfPath}");
+
+        } catch (\Exception $e) {
+            error_log("Protocolo: ERRO na validação do PDF: " . $e->getMessage());
+        }
     }
 }

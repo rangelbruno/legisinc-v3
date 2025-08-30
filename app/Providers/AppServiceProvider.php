@@ -2,9 +2,10 @@
 
 namespace App\Providers;
 
-use Illuminate\Support\ServiceProvider;
-use Illuminate\Support\Facades\View;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Pagination\Paginator;
+use Illuminate\Support\Facades\View;
+use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -24,12 +25,21 @@ class AppServiceProvider extends ServiceProvider
         // Configurar paginação padrão
         Paginator::defaultView('pagination.bootstrap-4');
         Paginator::defaultSimpleView('pagination.bootstrap-4');
-        
+
+        // Prevenção N+1 queries em desenvolvimento
+        Model::preventLazyLoading(! $this->app->isProduction());
+
+        // Log personalizado para violações de lazy loading
+        Model::handleLazyLoadingViolationUsing(function (Model $model, string $relation) {
+            $class = $model::class;
+            \Log::warning("Lazy loading violation: [{$relation}] on model [{$class}].");
+        });
+
         // Registrar View Composer para notificações
         View::composer([
             'components.layouts.header',
             'components.layouts.app',
-            'layouts.app'
+            'layouts.app',
         ], \App\Http\View\Composers\NotificationComposer::class);
 
         // Registrar comandos Artisan do sistema de parâmetros

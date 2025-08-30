@@ -75,6 +75,19 @@ class Proposicao extends Model
         'total_anexos' => 'integer',
     ];
 
+    /**
+     * Relacionamentos sempre carregados por padrão
+     */
+    protected $with = ['autor', 'tipoProposicao'];
+
+    /**
+     * Relacionamentos disponíveis para eager loading
+     */
+    public static array $availableIncludes = [
+        'revisor', 'template', 'funcionarioProtocolo', 'parecerJuridico',
+        'logstramitacao', 'itensPauta',
+    ];
+
     public function autor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'autor_id');
@@ -494,5 +507,102 @@ class Proposicao extends Model
         //         session([$sessionKey => $conteudoProcessado]);
         //     }
         // });
+    }
+
+    // ========== SCOPED RELATIONSHIPS ==========
+
+    /**
+     * Relacionamento scoped: logs de tramitação recentes (últimos 5)
+     */
+    public function tramitacaoRecente()
+    {
+        return $this->logstramitacao()->latest()->limit(5);
+    }
+
+    /**
+     * Relacionamento scoped: proposições do mesmo autor
+     */
+    public function proposicoesDoMesmoAutor()
+    {
+        return $this->hasMany(Proposicao::class, 'autor_id', 'autor_id')
+            ->where('id', '!=', $this->id);
+    }
+
+    /**
+     * Relacionamento scoped: proposições similares (mesmo tipo e ano)
+     */
+    public function proposicoesSimilares()
+    {
+        return $this->proposicoesDoMesmoAutor()
+            ->where('tipo', $this->tipo)
+            ->where('ano', $this->ano);
+    }
+
+    /**
+     * Relacionamento scoped: proposições ativas (não arquivadas/canceladas)
+     */
+    public function scopeAtivas($query)
+    {
+        return $query->whereNotIn('status', ['ARQUIVADO', 'CANCELADO']);
+    }
+
+    /**
+     * Relacionamento scoped: proposições pendentes de análise
+     */
+    public function scopePendentesAnalise($query)
+    {
+        return $query->whereIn('status', [
+            'RASCUNHO', 'EM_REVISAO', 'AGUARDANDO_ASSINATURA',
+        ]);
+    }
+
+    /**
+     * Relacionamento scoped: proposições finalizadas
+     */
+    public function scopeFinalizadas($query)
+    {
+        return $query->whereIn('status', [
+            'PROTOCOLADO', 'APROVADO', 'REJEITADO',
+        ]);
+    }
+
+    /**
+     * Relacionamento scoped: proposições do ano atual
+     */
+    public function scopeAnoAtual($query)
+    {
+        return $query->where('ano', date('Y'));
+    }
+
+    /**
+     * Relacionamento scoped: proposições com template
+     */
+    public function scopeComTemplateAtivo($query)
+    {
+        return $query->whereHas('template');
+    }
+
+    /**
+     * Relacionamento scoped: proposições modificadas recentemente (última semana)
+     */
+    public function scopeModificadasRecentemente($query)
+    {
+        return $query->where('ultima_modificacao', '>=', now()->subWeek());
+    }
+
+    /**
+     * Relacionamento scoped: proposições por tipo específico
+     */
+    public function scopePorTipo($query, string $tipo)
+    {
+        return $query->where('tipo', $tipo);
+    }
+
+    /**
+     * Relacionamento scoped: proposições com anexos
+     */
+    public function scopeComAnexos($query)
+    {
+        return $query->where('total_anexos', '>', 0);
     }
 }

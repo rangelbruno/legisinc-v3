@@ -14,18 +14,39 @@
                             <p class="text-sm mb-0">Documentação completa dos processos e diagramas do sistema</p>
                         </div>
                         <div class="ms-auto">
-                            <span class="badge bg-gradient-success">
-                                <i class="fas fa-file-code me-1"></i>
-                                Documentação Técnica
-                            </span>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-gradient-info">
+                                    <i class="fas fa-clock me-1"></i>
+                                    Atualizado: {{ $fileInfo['lastModified'] }}
+                                </span>
+                                <span class="badge bg-gradient-primary">
+                                    <i class="fas fa-file-alt me-1"></i>
+                                    {{ $fileInfo['size'] }}
+                                </span>
+                                <span class="badge bg-gradient-success">
+                                    <i class="fas fa-file-code me-1"></i>
+                                    Documentação Técnica
+                                </span>
+                                <button class="btn btn-sm btn-outline-primary" onclick="window.location.reload()">
+                                    <i class="fas fa-sync-alt"></i>
+                                    Recarregar
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
                 <div class="card-body pt-4">
+                    <!-- Alerta informativo -->
+                    <div class="alert alert-info alert-dismissible fade show mb-4" role="alert">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Documentação Dinâmica:</strong> Esta página é atualizada automaticamente quando o arquivo
+                        <code>{{ $fileInfo['path'] }}</code> é modificado.
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                    
+                    <!-- Conteúdo Markdown processado -->
                     <div class="markdown-content" id="documentation-content">
-                        {!! \League\CommonMark\GithubFlavoredMarkdownConverter::class ? 
-                            (new \League\CommonMark\GithubFlavoredMarkdownConverter())->convert($content) : 
-                            nl2br(e($content)) !!}
+                        {!! $htmlContent !!}
                     </div>
                 </div>
             </div>

@@ -11,10 +11,26 @@ use App\Services\Template\TemplateParametrosService;
 use App\Services\Template\TemplateProcessorService;
 use App\Services\TemplateVariablesService;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Facades\Auth;
 
-class ProposicaoController extends Controller
+class ProposicaoController extends Controller implements HasMiddleware
 {
+    /**
+     * Get the middleware that should be assigned to the controller.
+     */
+    public static function middleware(): array
+    {
+        return [
+            'auth',
+            new Middleware('can:create,App\Models\Proposicao', only: ['create', 'store', 'createModern']),
+            new Middleware('can:update,proposicao', only: ['update', 'edit']),
+            new Middleware('can:delete,proposicao', only: ['destroy']),
+            new Middleware('can:view,proposicao', only: ['show']),
+        ];
+    }
+
     /**
      * Tela inicial para criação de proposição (Parlamentar)
      */
@@ -1213,15 +1229,15 @@ class ProposicaoController extends Controller
     /**
      * Visualizar proposição
      */
-    public function show($proposicaoId)
+    public function show(Proposicao $proposicao)
     {
         // Limpar cache se houver refresh
         if (request()->has('_refresh')) {
-            \Cache::forget('proposicao_'.$proposicaoId);
+            \Cache::forget('proposicao_'.$proposicao->id);
         }
 
-        // Buscar proposição real do banco de dados (sempre dados frescos)
-        $proposicao = Proposicao::with(['autor', 'tipoProposicao'])->findOrFail($proposicaoId);
+        // Reload with relationships for fresh data
+        $proposicao->load(['autor', 'tipoProposicao']);
 
         // TODO: Implement proper authorization
         // $this->authorize('view', $proposicao);
@@ -6251,11 +6267,11 @@ ${texto}
         $conteudo = preg_replace('/\d{10,}/', '', $conteudo);
         $conteudo = preg_replace('/[A-Z0-9]{10,}/', '', $conteudo);
         $conteudo = preg_replace('/\s*;\s*/', ' ', $conteudo);
-        
+
         // Remover sequências específicas de caracteres corrompidos
         $conteudo = preg_replace('/[0-9]{2,}[a-zA-Z]{2,}[0-9]{2,}/', '', $conteudo);
         $conteudo = preg_replace('/[a-zA-Z]{2,}[0-9]{2,}[a-zA-Z]{2,}/', '', $conteudo);
-        
+
         // Limpar espaços múltiplos e caracteres especiais
         $conteudo = preg_replace('/\s+/', ' ', $conteudo);
         $conteudo = preg_replace('/[^\w\s\-\.\,\:\;\(\)]/', '', $conteudo);
@@ -6289,15 +6305,15 @@ ${texto}
         try {
             // Para proposições com conteúdo RTF corrompido, usar apenas a ementa
             $conteudoParaPDF = $proposicao->ementa ?: 'Conteúdo não disponível';
-            
+
             // Se a ementa for muito curta, adicionar informações básicas
             if (strlen($conteudoParaPDF) < 100) {
                 $conteudoParaPDF = "Ementa: {$conteudoParaPDF}\n\n";
-                $conteudoParaPDF .= "Tipo: " . ($proposicao->tipo ?? 'Proposição') . "\n";
-                $conteudoParaPDF .= "Autor: " . ($proposicao->autor->name ?? 'Parlamentar') . "\n";
-                $conteudoParaPDF .= "Data: " . ($proposicao->created_at ? $proposicao->created_at->format('d/m/Y') : 'N/A') . "\n";
-                $conteudoParaPDF .= "Status: " . ($proposicao->status ?? 'N/A') . "\n\n";
-                $conteudoParaPDF .= "Conteúdo completo disponível no sistema.";
+                $conteudoParaPDF .= 'Tipo: '.($proposicao->tipo ?? 'Proposição')."\n";
+                $conteudoParaPDF .= 'Autor: '.($proposicao->autor->name ?? 'Parlamentar')."\n";
+                $conteudoParaPDF .= 'Data: '.($proposicao->created_at ? $proposicao->created_at->format('d/m/Y') : 'N/A')."\n";
+                $conteudoParaPDF .= 'Status: '.($proposicao->status ?? 'N/A')."\n\n";
+                $conteudoParaPDF .= 'Conteúdo completo disponível no sistema.';
             }
 
             // Criar HTML simples para teste
@@ -6306,7 +6322,7 @@ ${texto}
             $status = $proposicao->status ? $proposicao->status : 'N/A';
             $data = $proposicao->created_at ? $proposicao->created_at->format('d/m/Y') : 'N/A';
             $dataAtual = now()->format('d/m/Y H:i:s');
-            
+
             $html = "
             <!DOCTYPE html>
             <html>
@@ -6382,10 +6398,10 @@ ${texto}
     private function gerarAssinaturaDigital(Proposicao $proposicao): string
     {
         $dataAssinatura = now()->format('d/m/Y H:i:s');
-        
+
         $nomeAssinante = $proposicao->autor->name ? $proposicao->autor->name : 'Parlamentar';
         $numeroProtocolo = $proposicao->numero_protocolo ? $proposicao->numero_protocolo : 'Pendente';
-        
+
         return "
         <div class='assinatura-digital'>
             <div class='linha-assinatura'></div>
@@ -6402,7 +6418,7 @@ ${texto}
     private function gerarQRCode(Proposicao $proposicao): string
     {
         $urlVerificacao = url("/proposicoes/{$proposicao->id}");
-        
+
         return "
         <div class='qrcode-container'>
             <div class='qrcode-info'>
@@ -6495,11 +6511,11 @@ ${texto}
                 try {
                     if (is_dir($diretorio)) {
                         // Usar glob nativo do PHP para buscar PDFs
-                        $pdfs = glob($diretorio . '*.pdf');
-                        if ($pdfs !== false && !empty($pdfs)) {
+                        $pdfs = glob($diretorio.'*.pdf');
+                        if ($pdfs !== false && ! empty($pdfs)) {
                             return true;
                         }
-                        
+
                         // Buscar também por padrões específicos
                         $padroes = [
                             "proposicao_{$proposicao->id}_onlyoffice_*_assinado_*.pdf",
@@ -6507,10 +6523,10 @@ ${texto}
                             "proposicao_{$proposicao->id}_protocolado_*.pdf",
                             "proposicao_{$proposicao->id}_assinado_*.pdf",
                         ];
-                        
+
                         foreach ($padroes as $padrao) {
-                            $arquivos = glob($diretorio . $padrao);
-                            if ($arquivos !== false && !empty($arquivos)) {
+                            $arquivos = glob($diretorio.$padrao);
+                            if ($arquivos !== false && ! empty($arquivos)) {
                                 return true;
                             }
                         }
