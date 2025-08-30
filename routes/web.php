@@ -1,18 +1,17 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\Auth;
+use App\Http\Controllers\ApiDocumentationController;
+use App\Http\Controllers\Auth\TokenController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\DocumentationController;
+use App\Http\Controllers\Parlamentar\ParlamentarController;
+use App\Http\Controllers\ProgressController;
+use App\Http\Controllers\Session\SessionController;
+use App\Http\Controllers\User\UserController as UserManagementController;
 use App\Http\Controllers\UserApiController;
 use App\Http\Controllers\UserController;
-use App\Http\Controllers\Parlamentar\ParlamentarController;
-use App\Http\Controllers\Partido\PartidoController;
-use App\Http\Controllers\User\UserController as UserManagementController;
-use App\Http\Controllers\Session\SessionController;
-use App\Http\Controllers\ProgressController;
-use App\Http\Controllers\ApiDocumentationController;
-use App\Http\Controllers\DocumentationController;
-use App\Http\Controllers\Auth\TokenController;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -31,6 +30,7 @@ Route::get('/logout', function () {
     Auth::logout();
     request()->session()->invalidate();
     request()->session()->regenerateToken();
+
     return redirect('/login')->with('info', 'Sua sessão expirou. Por favor, faça login novamente.');
 })->name('logout.get');
 Route::post('/logout', [AuthController::class, 'logout'])->name('auth.logout')->middleware('auth');
@@ -63,10 +63,11 @@ Route::prefix('api')->group(function () {
     Route::get('/proposicoes/{proposicao}/status', [\App\Http\Controllers\ProcessoCompletoController::class, 'getProposicaoStatus']);
     Route::delete('/tests/limpar-dados', [\App\Http\Controllers\ProcessoCompletoController::class, 'limparDadosTeste']);
 });
-Route::get('/docs/test', function() {
+Route::get('/docs/test', function () {
     $cssExists = file_exists(public_path('css/documentation.css'));
     $cssSize = $cssExists ? filesize(public_path('css/documentation.css')) : 0;
-    return response('<html><head><title>CSS Test</title></head><body style="font-family: Arial; padding: 20px; background: #f8f9fa;"><div style="max-width: 800px; margin: 0 auto;"><h1 style="color: #28a745;">✅ CSS Fix Successful</h1><div style="background: #d4edda; color: #155724; padding: 15px; border-radius: 4px; margin: 20px 0;"><strong>Status:</strong><ul><li>CSS File exists: ' . ($cssExists ? '✅ Yes' : '❌ No') . '</li><li>File size: ' . $cssSize . ' bytes</li><li>Location: public/css/documentation.css</li><li>URL: <a href="/css/documentation.css" target="_blank">/css/documentation.css</a></li></ul></div><div style="margin: 20px 0;"><a href="/css/documentation.css" style="background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; margin-right: 10px;" target="_blank">🎨 Test CSS Direct</a><a href="/docs" style="background: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">📚 Go to Documentation</a></div></div></body></html>');
+
+    return response('<html><head><title>CSS Test</title></head><body style="font-family: Arial; padding: 20px; background: #f8f9fa;"><div style="max-width: 800px; margin: 0 auto;"><h1 style="color: #28a745;">✅ CSS Fix Successful</h1><div style="background: #d4edda; color: #155724; padding: 15px; border-radius: 4px; margin: 20px 0;"><strong>Status:</strong><ul><li>CSS File exists: '.($cssExists ? '✅ Yes' : '❌ No').'</li><li>File size: '.$cssSize.' bytes</li><li>Location: public/css/documentation.css</li><li>URL: <a href="/css/documentation.css" target="_blank">/css/documentation.css</a></li></ul></div><div style="margin: 20px 0;"><a href="/css/documentation.css" style="background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; margin-right: 10px;" target="_blank">🎨 Test CSS Direct</a><a href="/docs" style="background: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">📚 Go to Documentation</a></div></div></body></html>');
 })->name('documentation.test');
 Route::get('/docs/api/documents', [DocumentationController::class, 'documents'])->name('documentation.documents');
 Route::get('/docs/api/stats', [DocumentationController::class, 'stats'])->name('documentation.stats');
@@ -77,8 +78,8 @@ Route::get('/dashboard', [App\Http\Controllers\DashboardController::class, 'inde
 // Dashboard de Administração route (protected)
 Route::get('/admin/dashboard', function () {
     // Auto-login as admin if no user is authenticated (for demo purposes)
-    if (!Auth::check()) {
-        $user = new \App\Models\User();
+    if (! Auth::check()) {
+        $user = new \App\Models\User;
         $user->id = 1;
         $user->name = 'Administrador do Sistema';
         $user->email = 'admin@sistema.gov.br';
@@ -88,10 +89,10 @@ Route::get('/admin/dashboard', function () {
         $user->cargo_atual = 'Administrador';
         $user->ativo = true;
         $user->exists = true;
-        
+
         Auth::login($user);
     }
-    
+
     return view('admin.dashboard');
 })->name('admin.dashboard')->middleware('auth');
 Route::get('/home', function () {
@@ -110,8 +111,8 @@ Route::get('/auto-login-admin', function () {
     Auth::logout();
     request()->session()->invalidate();
     request()->session()->regenerateToken();
-    
-    $user = new \App\Models\User();
+
+    $user = new \App\Models\User;
     $user->id = 1;
     $user->name = 'Administrador do Sistema';
     $user->email = 'admin@sistema.gov.br';
@@ -121,9 +122,9 @@ Route::get('/auto-login-admin', function () {
     $user->cargo_atual = 'Administrador';
     $user->ativo = true;
     $user->exists = true;
-    
+
     Auth::login($user);
-    
+
     return redirect()->route('dashboard')->with('success', 'Logado como administrador (modo demo)');
 })->name('auto-login-admin');
 
@@ -165,7 +166,9 @@ Route::prefix('partidos')->name('partidos.')->middleware(['auth', 'check.screen.
     Route::get('/create', [App\Http\Controllers\Partido\PartidoController::class, 'create'])->name('create')->middleware('check.permission:partidos.create');
     Route::post('/', [App\Http\Controllers\Partido\PartidoController::class, 'store'])->name('store')->middleware('check.permission:partidos.create');
     Route::get('/search', [App\Http\Controllers\Partido\PartidoController::class, 'search'])->name('search')->middleware('check.permission:partidos.view');
-    Route::get('/brasileiros', function () { return view('modules.partidos.brasileiros', ['title' => 'Partidos Brasileiros']); })->name('brasileiros')->middleware('check.permission:partidos.view');
+    Route::get('/brasileiros', function () {
+        return view('modules.partidos.brasileiros', ['title' => 'Partidos Brasileiros']);
+    })->name('brasileiros')->middleware('check.permission:partidos.view');
     Route::get('/export/csv', [App\Http\Controllers\Partido\PartidoController::class, 'exportCsv'])->name('export.csv')->middleware('check.permission:partidos.view');
     Route::get('/estatisticas', [App\Http\Controllers\Partido\PartidoController::class, 'estatisticas'])->name('estatisticas')->middleware('check.permission:partidos.view');
     Route::get('/{id}', [App\Http\Controllers\Partido\PartidoController::class, 'show'])->name('show')->middleware('check.permission:partidos.view');
@@ -233,17 +236,17 @@ Route::prefix('admin/sessions')->name('admin.sessions.')->middleware(['auth', 'c
     Route::get('/{id}/edit', [SessionController::class, 'edit'])->name('edit')->middleware('check.permission:sessions.edit');
     Route::put('/{id}', [SessionController::class, 'update'])->name('update')->middleware('check.permission:sessions.edit');
     Route::delete('/{id}', [SessionController::class, 'destroy'])->name('destroy')->middleware('check.permission:sessions.delete');
-    
+
     // Gerenciamento de matérias
     Route::post('/{id}/matters', [SessionController::class, 'addMatter'])->name('add-matter')->middleware('check.permission:sessions.edit');
     Route::put('/{sessionId}/matters/{matterId}', [SessionController::class, 'updateMatter'])->name('update-matter')->middleware('check.permission:sessions.edit');
     Route::delete('/{sessionId}/matters/{matterId}', [SessionController::class, 'removeMatter'])->name('remove-matter')->middleware('check.permission:sessions.edit');
-    
+
     // XML generation and export
     Route::post('/{id}/generate-xml', [SessionController::class, 'generateXml'])->name('generate-xml')->middleware('check.permission:sessions.export');
     Route::post('/{id}/export-xml', [SessionController::class, 'exportXml'])->name('export-xml')->middleware('check.permission:sessions.export');
     Route::get('/{id}/preview-xml', [SessionController::class, 'previewXml'])->name('preview-xml')->middleware('check.permission:sessions.export');
-    
+
     // AJAX endpoints
     Route::get('/search-parlamentares', [SessionController::class, 'searchParlamentares'])->name('search-parlamentares')->middleware('check.permission:sessions.view');
 });
@@ -260,21 +263,28 @@ Route::prefix('admin/usuarios')->name('admin.usuarios.')->middleware(['auth', 'c
     Route::post('/{usuario}/toggle-ativo', [App\Http\Controllers\AdminUserController::class, 'toggleAtivo'])->name('toggle-ativo');
 });
 
+// Admin Documentation routes (protected with auth - Admin only)
+Route::prefix('admin/docs')->name('admin.docs.')->middleware(['auth', 'check.screen.permission'])->group(function () {
+    Route::get('/fluxo-proposicoes', [App\Http\Controllers\DocsController::class, 'fluxoProposicoes'])->name('fluxo-proposicoes');
+});
+
 // Screen Permissions routes (protected with auth - Admin only)
 Route::prefix('admin/screen-permissions')->name('admin.screen-permissions.')->middleware(['auth'])->group(function () {
     Route::get('/', [App\Http\Controllers\Admin\ScreenPermissionController::class, 'index'])->name('index');
-    Route::get('/debug', function() {
+    Route::get('/debug', function () {
         $service = app(\App\Services\DynamicPermissionService::class);
         $data = $service->getPermissionStructure();
+
         return view('admin.screen-permissions.debug', $data);
     })->name('debug');
-    
-    Route::get('/test', function() {
+
+    Route::get('/test', function () {
         $service = app(\App\Services\DynamicPermissionService::class);
         $data = $service->getPermissionStructure();
+
         return view('admin.screen-permissions.test', $data);
     })->name('test');
-    
+
     // Novas rotas dinâmicas
     Route::post('/save', [App\Http\Controllers\Admin\ScreenPermissionController::class, 'saveRolePermissions'])->name('save');
     Route::post('/apply-defaults', [App\Http\Controllers\Admin\ScreenPermissionController::class, 'applyDefaults'])->name('apply-defaults');
@@ -290,19 +300,19 @@ Route::prefix('admin/parametros')->name('admin.parametros.')->middleware(['auth'
     Route::get('/', function () {
         return redirect()->route('parametros.index');
     })->name('index');
-    
+
     Route::get('/create', function () {
         return redirect()->route('parametros.create');
     })->name('create');
-    
+
     Route::get('/{id}', function ($id) {
         return redirect()->route('parametros.show', $id);
     })->name('show');
-    
+
     Route::get('/{id}/edit', function ($id) {
         return redirect()->route('parametros.edit', $id);
     })->name('edit');
-    
+
     // Legacy catch-all route removed to prevent conflicts with specific routes
 });
 
@@ -312,37 +322,38 @@ Route::prefix('admin/parametros')->name('parametros.')->middleware(['auth', 'che
     Route::get('/', [App\Http\Controllers\Parametro\ParametroController::class, 'index'])->name('index')->middleware('check.permission:parametros.view');
     Route::get('/create', [App\Http\Controllers\Parametro\ParametroController::class, 'create'])->name('create')->middleware('check.permission:parametros.create');
     Route::post('/', [App\Http\Controllers\Parametro\ParametroController::class, 'store'])->name('store')->middleware('check.permission:parametros.create');
-    
+
     // Rota específica para configuração de IA (nova arquitetura com múltiplas APIs)
-    Route::get('/configurar-ia', function() {
+    Route::get('/configurar-ia', function () {
         \Log::info('Redirecionando para configurações de IA', ['user' => auth()->id()]);
+
         return redirect()->route('admin.ai-configurations.index');
     })->name('configurar-ia')->middleware('check.permission:parametros.view');
-    
+
     Route::get('/{id}', [App\Http\Controllers\Parametro\ParametroController::class, 'show'])->name('show')->middleware('check.permission:parametros.view')->where('id', '[0-9]+');
     Route::get('/{id}/edit', [App\Http\Controllers\Parametro\ParametroController::class, 'edit'])->name('edit')->middleware('check.permission:parametros.edit')->where('id', '[0-9]+');
     Route::put('/{id}', [App\Http\Controllers\Parametro\ParametroController::class, 'update'])->name('update')->middleware('check.permission:parametros.edit')->where('id', '[0-9]+');
     Route::delete('/{id}', [App\Http\Controllers\Parametro\ParametroController::class, 'destroy'])->name('destroy')->middleware('check.permission:parametros.delete')->where('id', '[0-9]+');
-    
+
     // Página de teste isolada
-    Route::get('/test-page', function() {
+    Route::get('/test-page', function () {
         return view('test-page');
     })->name('test.page')->middleware('auth');
-    
+
     // Rota de teste para debug do configurar-ia
-    Route::get('/debug-configurar-ia', function() {
+    Route::get('/debug-configurar-ia', function () {
         return response()->json([
             'route_exists' => Route::has('parametros.configurar-ia'),
             'route_url' => route('parametros.configurar-ia'),
             'timestamp' => now(),
             'user_authenticated' => auth()->check(),
-            'user_email' => auth()->check() ? auth()->user()->email : null
+            'user_email' => auth()->check() ? auth()->user()->email : null,
         ]);
     })->name('debug.configurar-ia');
-    
+
     // Configuração de módulos
     Route::get('/configurar/{nomeModulo}', [App\Http\Controllers\Parametro\ParametroController::class, 'configurar'])->name('configurar')->middleware('check.permission:parametros.view');
-    
+
     Route::post('/salvar-configuracoes/{submoduloId}', [App\Http\Controllers\Parametro\ParametroController::class, 'salvarConfiguracoes'])->name('salvar-configuracoes')->middleware('check.permission:parametros.edit');
 
     // Rotas específicas para configurações de IA
@@ -356,27 +367,27 @@ Route::prefix('admin/parametros')->name('parametros.')->middleware(['auth', 'che
         Route::post('/usage', [App\Http\Controllers\AI\AIConfigController::class, 'recordTokenUsage'])->name('usage')->middleware('check.permission:parametros.edit');
     });
 
-        // Rota específica para configurar Dados Gerais
-    Route::get('/dados-gerais', function() {
+    // Rota específica para configurar Dados Gerais
+    Route::get('/dados-gerais', function () {
         return app(App\Http\Controllers\Parametro\ParametroController::class)->configurar('Dados Gerais');
     })->name('dados-gerais')->middleware('check.permission:parametros.view');
-    
+
     // Rota de teste para debug
-    Route::get('/test-templates-debug', function() {
+    Route::get('/test-templates-debug', function () {
         $parametroService = app(App\Services\Parametro\ParametroService::class);
         $modulo = $parametroService->obterModulos()->where('nome', 'Templates')->first();
         $submodulos = $parametroService->obterSubmodulos($modulo->id);
-        
+
         return response()->json([
             'modulo' => $modulo->nome,
             'total_submodulos' => $submodulos->count(),
-            'submodulos' => $submodulos->map(function($sub) {
+            'submodulos' => $submodulos->map(function ($sub) {
                 return [
                     'id' => $sub->id,
                     'nome' => $sub->nome,
-                    'ativo' => $sub->ativo
+                    'ativo' => $sub->ativo,
                 ];
-            })
+            }),
         ]);
     });
 
@@ -385,35 +396,36 @@ Route::prefix('admin/parametros')->name('parametros.')->middleware(['auth', 'che
     Route::post('/ajax/submodulos/{id}/delete', [App\Http\Controllers\Parametro\SubmoduloParametroController::class, 'destroy'])->name('ajax.submodulos.destroy');
     Route::post('/ajax/campos/{id}/delete', [App\Http\Controllers\Parametro\CampoParametroController::class, 'destroy'])->name('ajax.campos.destroy');
     Route::get('/ajax/modulos/{id}', [App\Http\Controllers\Parametro\ModuloParametroController::class, 'show'])->name('ajax.modulos.show');
-    
+
     // AJAX DataTables endpoints (movido temporariamente)
     // Route::get('/ajax/modulos', [App\Http\Controllers\Parametro\ModuloParametroController::class, 'index'])->name('ajax.modulos.index');
-    
+
     // Rota de teste para verificar autenticação
-    Route::get('/ajax/test-auth', function() {
+    Route::get('/ajax/test-auth', function () {
         return response()->json([
             'authenticated' => auth()->check(),
             'user_id' => auth()->id(),
             'user_name' => auth()->user() ? auth()->user()->name : null,
             'csrf_token' => csrf_token(),
-            'session_id' => session()->getId()
+            'session_id' => session()->getId(),
         ]);
     })->name('ajax.test.auth');
-    
-    // Rota de teste para exclusão sem middleware 
-    Route::post('/ajax/test-delete/{id}', function($id) {
+
+    // Rota de teste para exclusão sem middleware
+    Route::post('/ajax/test-delete/{id}', function ($id) {
         \Log::info("Test delete route accessed for ID: $id");
-        
+
         return response()->json([
             'success' => true,
-            'message' => 'Teste de exclusão OK - ID: ' . $id,
-            'timestamp' => now()
+            'message' => 'Teste de exclusão OK - ID: '.$id,
+            'timestamp' => now(),
         ]);
     })->name('ajax.test.delete');
-    
+
     // Rota de teste para debug
-    Route::post('/ajax/test', function() {
-        \Illuminate\Support\Facades\Log::info("AJAX Test route accessed");
+    Route::post('/ajax/test', function () {
+        \Illuminate\Support\Facades\Log::info('AJAX Test route accessed');
+
         return response()->json([
             'success' => true,
             'message' => 'Teste de comunicação OK!',
@@ -421,21 +433,21 @@ Route::prefix('admin/parametros')->name('parametros.')->middleware(['auth', 'che
             'data' => [
                 'user_id' => auth()->id(),
                 'request_method' => request()->method(),
-                'csrf_token' => request()->input('_token')
-            ]
+                'csrf_token' => request()->input('_token'),
+            ],
         ]);
     })->name('ajax.test');
-    
+
     // Rota de teste específica para debug do módulo (sem middleware pesado)
-    Route::get('/ajax/test-modulos', function() {
+    Route::get('/ajax/test-modulos', function () {
         try {
-            \Illuminate\Support\Facades\Log::info("Test modulos route accessed", [
+            \Illuminate\Support\Facades\Log::info('Test modulos route accessed', [
                 'user_authenticated' => \Illuminate\Support\Facades\Auth::check(),
                 'user_id' => \Illuminate\Support\Facades\Auth::id(),
                 'request_headers' => request()->headers->all(),
-                'request_method' => request()->method()
+                'request_method' => request()->method(),
             ]);
-            
+
             // Dados de teste estáticos
             $testData = [
                 [
@@ -449,10 +461,10 @@ Route::prefix('admin/parametros')->name('parametros.')->middleware(['auth', 'che
                     'status_text' => 'Ativo',
                     'ordem' => 1,
                     'created_at' => now()->format('d/m/Y H:i'),
-                    'updated_at' => now()->format('d/m/Y H:i')
-                ]
+                    'updated_at' => now()->format('d/m/Y H:i'),
+                ],
             ];
-            
+
             return response()->json([
                 'data' => $testData,
                 'recordsTotal' => 1,
@@ -460,19 +472,19 @@ Route::prefix('admin/parametros')->name('parametros.')->middleware(['auth', 'che
                 'draw' => intval(request()->input('draw', 1)),
                 'debug' => [
                     'user_id' => \Illuminate\Support\Facades\Auth::id(),
-                    'authenticated' => \Illuminate\Support\Facades\Auth::check()
-                ]
+                    'authenticated' => \Illuminate\Support\Facades\Auth::check(),
+                ],
             ]);
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error("Error in test modulos route", [
+            \Illuminate\Support\Facades\Log::error('Error in test modulos route', [
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
-            
+
             return response()->json([
                 'error' => $e->getMessage(),
                 'line' => $e->getLine(),
-                'file' => $e->getFile()
+                'file' => $e->getFile(),
             ], 500);
         }
     })->name('ajax.test-modulos');
@@ -490,20 +502,20 @@ Route::get('/api-test/health', function () {
 });
 
 // Rota de teste AJAX para parâmetros (fora do grupo com middleware)
-Route::get('/test-ajax-parametros', function() {
+Route::get('/test-ajax-parametros', function () {
     try {
-        \Log::info("Test AJAX parametros route accessed");
-        
+        \Log::info('Test AJAX parametros route accessed');
+
         // Auto-login se não estiver logado
-        if (!Auth::check()) {
-            $user = new \App\Models\User();
+        if (! Auth::check()) {
+            $user = new \App\Models\User;
             $user->id = 1;
             $user->name = 'Administrador do Sistema';
             $user->email = 'admin@sistema.gov.br';
             $user->exists = true;
             Auth::login($user);
         }
-        
+
         // Dados de teste estáticos
         $testData = [
             [
@@ -517,7 +529,7 @@ Route::get('/test-ajax-parametros', function() {
                 'status_text' => 'Ativo',
                 'ordem' => 1,
                 'created_at' => now()->format('d/m/Y H:i'),
-                'updated_at' => now()->format('d/m/Y H:i')
+                'updated_at' => now()->format('d/m/Y H:i'),
             ],
             [
                 'id' => 2,
@@ -530,24 +542,24 @@ Route::get('/test-ajax-parametros', function() {
                 'status_text' => 'Ativo',
                 'ordem' => 2,
                 'created_at' => now()->subDays(1)->format('d/m/Y H:i'),
-                'updated_at' => now()->subHours(2)->format('d/m/Y H:i')
-            ]
+                'updated_at' => now()->subHours(2)->format('d/m/Y H:i'),
+            ],
         ];
-        
+
         return response()->json([
             'data' => $testData,
             'recordsTotal' => count($testData),
             'recordsFiltered' => count($testData),
-            'draw' => intval(request()->input('draw', 1))
+            'draw' => intval(request()->input('draw', 1)),
         ]);
     } catch (\Exception $e) {
-        \Log::error("Error in test AJAX parametros route", [
+        \Log::error('Error in test AJAX parametros route', [
             'error' => $e->getMessage(),
-            'trace' => $e->getTraceAsString()
+            'trace' => $e->getTraceAsString(),
         ]);
-        
+
         return response()->json([
-            'error' => $e->getMessage()
+            'error' => $e->getMessage(),
         ], 500);
     }
 })->name('test.ajax.parametros');
@@ -556,214 +568,216 @@ Route::get('/test-ajax-parametros', function() {
 Route::get('/ajax-modulos-parametros', [App\Http\Controllers\Parametro\ModuloParametroController::class, 'index'])->name('ajax.modulos.parametros');
 
 // Rotas de templates com auto-login (sem prefix admin)
-Route::get('/parametros-templates-debug', function() {
+Route::get('/parametros-templates-debug', function () {
     // Auto-login se não estiver logado
-    if (!Auth::check()) {
-        $user = new \App\Models\User();
+    if (! Auth::check()) {
+        $user = new \App\Models\User;
         $user->id = 5;
         $user->name = 'Bruno Administrador';
         $user->email = 'bruno@sistema.gov.br';
         $user->exists = true;
         Auth::login($user);
     }
-    
-    return '<h1>🎯 DEBUG: Rota funcionando!</h1><p>User: ' . auth()->user()->email . '</p><p>Time: ' . now() . '</p><p><a href="' . route('parametros.index') . '">Voltar para Parâmetros</a></p>';
+
+    return '<h1>🎯 DEBUG: Rota funcionando!</h1><p>User: '.auth()->user()->email.'</p><p>Time: '.now().'</p><p><a href="'.route('parametros.index').'">Voltar para Parâmetros</a></p>';
 })->name('parametros.templates.debug');
 
-Route::get('/parametros-templates-cabecalho', function() {
+Route::get('/parametros-templates-cabecalho', function () {
     // Auto-login se não estiver logado
-    if (!Auth::check()) {
-        $user = new \App\Models\User();
+    if (! Auth::check()) {
+        $user = new \App\Models\User;
         $user->id = 5;
         $user->name = 'Bruno Administrador';
         $user->email = 'bruno@sistema.gov.br';
         $user->exists = true;
         Auth::login($user);
     }
-    
+
     return app(App\Http\Controllers\TemplateHeaderController::class)->index();
 })->name('parametros.templates.cabecalho');
 
-Route::post('/parametros-templates-cabecalho', function() {
+Route::post('/parametros-templates-cabecalho', function () {
     // Auto-login se não estiver logado
-    if (!Auth::check()) {
-        $user = new \App\Models\User();
+    if (! Auth::check()) {
+        $user = new \App\Models\User;
         $user->id = 5;
         $user->name = 'Bruno Administrador';
         $user->email = 'bruno@sistema.gov.br';
         $user->exists = true;
         Auth::login($user);
     }
-    
+
     return app(App\Http\Controllers\TemplateHeaderController::class)->store(request());
 })->name('parametros.templates.cabecalho.store');
 
-Route::get('/parametros-templates-marca-dagua', function() {
+Route::get('/parametros-templates-marca-dagua', function () {
     // Auto-login se não estiver logado
-    if (!Auth::check()) {
-        $user = new \App\Models\User();
+    if (! Auth::check()) {
+        $user = new \App\Models\User;
         $user->id = 5;
         $user->name = 'Bruno Administrador';
         $user->email = 'bruno@sistema.gov.br';
         $user->exists = true;
         Auth::login($user);
     }
-    
+
     return app(App\Http\Controllers\TemplateWatermarkController::class)->index();
 })->name('parametros.templates.marca-dagua');
 
-Route::post('/parametros-templates-marca-dagua', function() {
+Route::post('/parametros-templates-marca-dagua', function () {
     // Auto-login se não estiver logado
-    if (!Auth::check()) {
-        $user = new \App\Models\User();
+    if (! Auth::check()) {
+        $user = new \App\Models\User;
         $user->id = 5;
         $user->name = 'Bruno Administrador';
         $user->email = 'bruno@sistema.gov.br';
         $user->exists = true;
         Auth::login($user);
     }
-    
+
     return app(App\Http\Controllers\TemplateWatermarkController::class)->store(request());
 })->name('parametros.templates.marca-dagua.store');
 
 Route::get('/test-criar-docx', [App\Http\Controllers\ProposicaoController::class, 'criarArquivoTesteDOCX'])->name('test.criar.docx');
 
 // Rotas do template padrão removidas - sistema usa apenas templates específicos por tipo de proposição
-Route::get('/parametros-templates-rodape', function() {
+Route::get('/parametros-templates-rodape', function () {
     // Auto-login se não estiver logado
-    if (!Auth::check()) {
-        $user = new \App\Models\User();
+    if (! Auth::check()) {
+        $user = new \App\Models\User;
         $user->id = 5;
         $user->name = 'Bruno Administrador';
         $user->email = 'bruno@sistema.gov.br';
         $user->exists = true;
         Auth::login($user);
     }
-    
+
     return app(App\Http\Controllers\TemplateFooterController::class)->index();
 })->name('parametros.templates.rodape');
-Route::post('/parametros-templates-rodape', function() {
+Route::post('/parametros-templates-rodape', function () {
     // Auto-login se não estiver logado
-    if (!Auth::check()) {
-        $user = new \App\Models\User();
+    if (! Auth::check()) {
+        $user = new \App\Models\User;
         $user->id = 5;
         $user->name = 'Bruno Administrador';
         $user->email = 'bruno@sistema.gov.br';
         $user->exists = true;
         Auth::login($user);
     }
-    
+
     return app(App\Http\Controllers\TemplateFooterController::class)->store(request());
 })->name('parametros.templates.rodape.store');
 
 // Rotas para configuração de Assinatura e QR Code
-Route::get('/parametros-templates-assinatura-qrcode', function() {
+Route::get('/parametros-templates-assinatura-qrcode', function () {
     // Auto-login se não estiver logado
-    if (!Auth::check()) {
-        $user = new \App\Models\User();
+    if (! Auth::check()) {
+        $user = new \App\Models\User;
         $user->id = 5;
         $user->name = 'Bruno Administrador';
         $user->email = 'bruno@sistema.gov.br';
         $user->exists = true;
         Auth::login($user);
     }
-    
+
     return app(App\Http\Controllers\TemplateAssinaturaQRController::class)->index();
 })->name('parametros.templates.assinatura-qrcode');
 
-Route::post('/parametros-templates-assinatura-qrcode', function() {
+Route::post('/parametros-templates-assinatura-qrcode', function () {
     // Auto-login se não estiver logado
-    if (!Auth::check()) {
-        $user = new \App\Models\User();
+    if (! Auth::check()) {
+        $user = new \App\Models\User;
         $user->id = 5;
         $user->name = 'Bruno Administrador';
         $user->email = 'bruno@sistema.gov.br';
         $user->exists = true;
         Auth::login($user);
     }
-    
+
     return app(App\Http\Controllers\TemplateAssinaturaQRController::class)->store(request());
 })->name('parametros.templates.assinatura-qrcode.store');
 
 // Rotas para Dados Gerais da Câmara
-Route::get('/parametros-dados-gerais-camara', function() {
+Route::get('/parametros-dados-gerais-camara', function () {
     // Auto-login se não estiver logado
-    if (!Auth::check()) {
-        $user = new \App\Models\User();
+    if (! Auth::check()) {
+        $user = new \App\Models\User;
         $user->id = 5;
         $user->name = 'Bruno Administrador';
         $user->email = 'bruno@sistema.gov.br';
         $user->exists = true;
         Auth::login($user);
     }
-    
+
     return app(App\Http\Controllers\DadosGeraisCamaraController::class)->index();
 })->name('parametros.dados-gerais-camara');
 
-Route::post('/parametros-dados-gerais-camara', function() {
+Route::post('/parametros-dados-gerais-camara', function () {
     // Auto-login se não estiver logado
-    if (!Auth::check()) {
-        $user = new \App\Models\User();
+    if (! Auth::check()) {
+        $user = new \App\Models\User;
         $user->id = 5;
         $user->name = 'Bruno Administrador';
         $user->email = 'bruno@sistema.gov.br';
         $user->exists = true;
         Auth::login($user);
     }
-    
+
     return app(App\Http\Controllers\DadosGeraisCamaraController::class)->store(request());
 })->name('parametros.dados-gerais-camara.store');
 
 // Test route para debug
-Route::get('/test-debug', function() {
+Route::get('/test-debug', function () {
     return response()->json(['message' => 'Route working', 'time' => now()]);
 });
 
-Route::get('/test-controller', function() {
+Route::get('/test-controller', function () {
     try {
-        \Log::info('🧪 Test route chamado [' . now() . ']');
+        \Log::info('🧪 Test route chamado ['.now().']');
         $controller = app(App\Http\Controllers\DadosGeraisCamaraController::class);
         \Log::info('🧪 Controller instantiated');
         $response = $controller->index();
         \Log::info('✅ Controller funcionou via test route');
+
         return $response;
     } catch (\Exception $e) {
         \Log::error('❌ Erro no test route', [
             'error' => $e->getMessage(),
             'line' => $e->getLine(),
             'file' => $e->getFile(),
-            'trace' => $e->getTraceAsString()
+            'trace' => $e->getTraceAsString(),
         ]);
-        return response('Error: ' . $e->getMessage() . ' at line ' . $e->getLine(), 500);
+
+        return response('Error: '.$e->getMessage().' at line '.$e->getLine(), 500);
     }
 });
 
 // Rotas para Variáveis Dinâmicas
-Route::get('/parametros-variaveis-dinamicas', function() {
+Route::get('/parametros-variaveis-dinamicas', function () {
     // Auto-login se não estiver logado
-    if (!Auth::check()) {
-        $user = new \App\Models\User();
+    if (! Auth::check()) {
+        $user = new \App\Models\User;
         $user->id = 5;
         $user->name = 'Bruno Administrador';
         $user->email = 'bruno@sistema.gov.br';
         $user->exists = true;
         Auth::login($user);
     }
-    
+
     return app(App\Http\Controllers\VariaveisDinamicasController::class)->index();
 })->name('parametros.variaveis-dinamicas');
 
-Route::post('/parametros-variaveis-dinamicas', function() {
+Route::post('/parametros-variaveis-dinamicas', function () {
     // Auto-login se não estiver logado
-    if (!Auth::check()) {
-        $user = new \App\Models\User();
+    if (! Auth::check()) {
+        $user = new \App\Models\User;
         $user->id = 5;
         $user->name = 'Bruno Administrador';
         $user->email = 'bruno@sistema.gov.br';
         $user->exists = true;
         Auth::login($user);
     }
-    
+
     return app(App\Http\Controllers\VariaveisDinamicasController::class)->store(request());
 })->name('parametros.variaveis-dinamicas.store');
 
@@ -782,14 +796,14 @@ Route::get('/test-editor-funcionando', function () {
 });
 
 // Debug route - REMOVER DEPOIS
-Route::get('/debug-permissions', function() {
-    if (!auth()->check()) {
+Route::get('/debug-permissions', function () {
+    if (! auth()->check()) {
         return 'Usuário não logado';
     }
-    
+
     $user = auth()->user();
     $roleName = $user->getRoleNames()->first() ?? 'PUBLICO';
-    
+
     $debug = [
         'user_id' => $user->id,
         'user_name' => $user->name,
@@ -803,26 +817,26 @@ Route::get('/debug-permissions', function() {
         'proposicoes_permissions' => \App\Models\ScreenPermission::where('role_name', $roleName)
             ->where('screen_module', 'proposicoes')
             ->get(['screen_route', 'can_access'])
-            ->toArray()
+            ->toArray(),
     ];
-    
-    return '<pre>' . json_encode($debug, JSON_PRETTY_PRINT) . '</pre>';
+
+    return '<pre>'.json_encode($debug, JSON_PRETTY_PRINT).'</pre>';
 })->middleware('auth');
 
 // ROTAS DE PROPOSIÇÕES - Sistema completo conforme documentação
 Route::prefix('proposicoes')->name('proposicoes.')->middleware(['auth', 'check.screen.permission'])->group(function () {
-    
+
     // ===== LISTAGEM DE TIPOS DE PROPOSIÇÃO =====
-    Route::get('/criar', function() {
+    Route::get('/criar', function () {
         return view('proposicoes.criar');
     })->name('criar')->middleware('check.parlamentar.ativo');
-    
+
     // ===== PARLAMENTAR - CRIAÇÃO (FORMULÁRIO DETALHADO) =====
     Route::get('/create', [App\Http\Controllers\ProposicaoController::class, 'createModern'])->name('create')->middleware('check.parlamentar.ativo');
-    
+
     // ===== INTERFACE ORIGINAL (BACKUP) =====
     Route::get('/criar-original', [App\Http\Controllers\ProposicaoController::class, 'create'])->name('criar-original')->middleware('check.parlamentar.ativo');
-    
+
     // ===== NOVA INTERFACE VUE.JS (STANDALONE) =====
     Route::get('/criar-vue', function () {
         return view('proposicoes.create-vue');
@@ -833,7 +847,7 @@ Route::prefix('proposicoes')->name('proposicoes.')->middleware(['auth', 'check.s
     Route::get('/modelos/{tipo}', [App\Http\Controllers\ProposicaoController::class, 'buscarModelos'])->name('buscar-modelos')->middleware('check.parlamentar.ativo');
     Route::get('/{proposicao}/preencher-modelo/{modeloId}', [App\Http\Controllers\ProposicaoController::class, 'preencherModelo'])->name('preencher-modelo')->middleware('check.parlamentar.ativo');
     Route::get('/{proposicao}/processar-texto-e-redirecionar/{modeloId}', [App\Http\Controllers\ProposicaoController::class, 'processarTextoERedirecionar'])->name('processar-texto-e-redirecionar')->middleware('check.parlamentar.ativo');
-    
+
     // Validação ABNT para proposições
     Route::prefix('abnt')->name('abnt.')->group(function () {
         Route::post('/validar', [App\Http\Controllers\Template\ABNTValidationController::class, 'validarDocumento'])->name('validar');
@@ -847,7 +861,7 @@ Route::prefix('proposicoes')->name('proposicoes.')->middleware(['auth', 'check.s
     Route::get('/{proposicao}/editar-onlyoffice/{template}', [App\Http\Controllers\ProposicaoController::class, 'editarOnlyOffice'])->name('editar-onlyoffice')->middleware('check.parlamentar.ativo');
     Route::get('/{proposicao}/preparar-edicao/{template}', [App\Http\Controllers\ProposicaoController::class, 'prepararEdicao'])->name('preparar-edicao')->middleware('check.parlamentar.ativo');
     Route::get('/{proposicao}/editor-completo/{template}', [App\Http\Controllers\ProposicaoController::class, 'editorCompleto'])->name('editor-completo')->middleware('check.parlamentar.ativo');
-    
+
     // Nova Arquitetura - Template Instance routes
     Route::post('/{proposicao}/selecionar-template', [App\Http\Controllers\ProposicaoController::class, 'selecionarTemplate'])->name('selecionar-template')->middleware('check.parlamentar.ativo');
     Route::post('/{proposicao}/processar-template', [App\Http\Controllers\ProposicaoController::class, 'processarTemplateNovaArquitetura'])->name('processar-template')->middleware('check.parlamentar.ativo');
@@ -863,19 +877,19 @@ Route::prefix('proposicoes')->name('proposicoes.')->middleware(['auth', 'check.s
     Route::post('/{proposicao}/retorno-legislativo', [App\Http\Controllers\ProposicaoController::class, 'retornoLegislativo'])->name('retorno-legislativo');
     Route::post('/{proposicao}/assinar-documento', [App\Http\Controllers\ProposicaoController::class, 'assinarDocumento'])->name('assinar-documento')->middleware('check.parlamentar.ativo');
     Route::post('/{proposicao}/enviar-protocolo', [App\Http\Controllers\ProposicaoController::class, 'enviarProtocolo'])->name('enviar-protocolo')->middleware('check.parlamentar.ativo');
-    
+
     // ===== LEGISLATIVO - REVISÃO =====
     Route::get('/legislativo', [App\Http\Controllers\ProposicaoLegislativoController::class, 'index'])->name('legislativo.index')->middleware('check.proposicao.permission');
     Route::get('/{proposicao}/legislativo/editar', [App\Http\Controllers\ProposicaoLegislativoController::class, 'editar'])->name('legislativo.editar')->middleware('check.proposicao.permission');
     Route::put('/{proposicao}/legislativo/salvar-edicao', [App\Http\Controllers\ProposicaoLegislativoController::class, 'salvarEdicao'])->name('legislativo.salvar-edicao')->middleware('check.proposicao.permission');
     Route::put('/{proposicao}/legislativo/enviar-parlamentar', [App\Http\Controllers\ProposicaoLegislativoController::class, 'enviarParaParlamentar'])->name('legislativo.enviar-parlamentar')->middleware('check.proposicao.permission');
-    
+
     // OnlyOffice para Legislativo
     Route::get('/{proposicao}/onlyoffice/editor', [App\Http\Controllers\OnlyOfficeController::class, 'editorLegislativo'])->name('onlyoffice.editor')->middleware('role.permission:onlyoffice.editor.review');
-    
+
     // OnlyOffice para Parlamentares
     Route::get('/{proposicao}/onlyoffice/editor-parlamentar', [App\Http\Controllers\OnlyOfficeController::class, 'editorParlamentar'])->name('onlyoffice.editor-parlamentar')->middleware('role.permission:onlyoffice.editor.own');
-    
+
     Route::post('/{proposicao}/onlyoffice/callback/{documentKey}', [App\Http\Controllers\OnlyOfficeController::class, 'callback'])->name('onlyoffice.callback');
     Route::get('/revisar', [App\Http\Controllers\ProposicaoLegislativoController::class, 'index'])->name('revisar');
     Route::get('/{proposicao}/revisar', [App\Http\Controllers\ProposicaoLegislativoController::class, 'revisar'])->name('revisar.show');
@@ -887,7 +901,7 @@ Route::prefix('proposicoes')->name('proposicoes.')->middleware(['auth', 'check.s
     Route::get('/relatorio-legislativo/pdf', [App\Http\Controllers\ProposicaoLegislativoController::class, 'relatorioPdf'])->name('relatorio-legislativo.pdf');
     Route::get('/relatorio-legislativo/excel', [App\Http\Controllers\ProposicaoLegislativoController::class, 'relatorioExcel'])->name('relatorio-legislativo.excel');
     Route::get('/aguardando-protocolo', [App\Http\Controllers\ProposicaoLegislativoController::class, 'aguardandoProtocolo'])->name('aguardando-protocolo')->middleware('block.protocolo.access');
-    
+
     // ===== PARLAMENTAR - ASSINATURA =====
     Route::get('/assinatura', [App\Http\Controllers\ProposicaoAssinaturaController::class, 'index'])->name('assinatura')->middleware('role.permission:proposicoes.view.own');
     Route::get('/{proposicao}/assinar', [App\Http\Controllers\ProposicaoAssinaturaController::class, 'assinar'])->name('assinar')->middleware('role.permission:proposicoes.assinar');
@@ -899,23 +913,23 @@ Route::prefix('proposicoes')->name('proposicoes.')->middleware(['auth', 'check.s
     Route::put('/{proposicao}/reenviar-legislativo', [App\Http\Controllers\ProposicaoAssinaturaController::class, 'reenviarLegislativo'])->name('reenviar-legislativo')->middleware('role.permission:proposicoes.corrigir');
     Route::put('/{proposicao}/devolver-legislativo', [App\Http\Controllers\ProposicaoAssinaturaController::class, 'devolverLegislativo'])->name('devolver-legislativo')->middleware('role.permission:proposicoes.corrigir');
     Route::get('/historico-assinaturas', [App\Http\Controllers\ProposicaoAssinaturaController::class, 'historico'])->name('historico-assinaturas')->middleware('role.permission:proposicoes.view.own');
-    
+
     // ===== NOVAS ROTAS PARA PDF VUE.JS =====
     Route::post('/{proposicao}/salvar-pdf', [App\Http\Controllers\ProposicaoAssinaturaController::class, 'salvarPDFVue'])->name('salvar-pdf')->middleware('role.permission:proposicoes.assinar');
     Route::get('/{proposicao}/dados-template', [App\Http\Controllers\ProposicaoAssinaturaController::class, 'obterDadosTemplate'])->name('dados-template')->middleware('role.permission:proposicoes.view.own');
     Route::post('/{proposicao}/processar-assinatura-vue', [App\Http\Controllers\ProposicaoAssinaturaController::class, 'processarAssinaturaVue'])->name('processar-assinatura-vue')->middleware('role.permission:proposicoes.assinar');
     Route::get('/{proposicao}/verificar-assinatura', [App\Http\Controllers\ProposicaoAssinaturaController::class, 'verificarAssinatura'])->name('verificar-assinatura')->middleware('role.permission:proposicoes.view.own');
     Route::get('/{proposicao}/conteudo-onlyoffice', [App\Http\Controllers\ProposicaoAssinaturaController::class, 'obterConteudoOnlyOffice'])->name('conteudo-onlyoffice')->middleware('role.permission:proposicoes.view.own');
-    
+
     Route::get('/{proposicao}/pdf-original', [App\Http\Controllers\ProposicaoAssinaturaController::class, 'visualizarPDFOriginal'])->name('pdf-original')->middleware('role.permission:proposicoes.view.own');
     Route::delete('/{proposicao}/excluir-documento', [App\Http\Controllers\ProposicaoAssinaturaController::class, 'excluirDocumento'])->name('excluir-documento')->middleware('role.permission:proposicoes.assinar');
-    
+
     // Voltar proposição para parlamentar (do legislativo)
     Route::put('/{proposicao}/voltar-parlamentar', [App\Http\Controllers\ProposicaoController::class, 'voltarParaParlamentar'])->name('voltar-parlamentar');
-    
+
     // Aprovar edições do legislativo (parlamentar)
     Route::post('/{proposicao}/aprovar-edicoes-legislativo', [App\Http\Controllers\ProposicaoController::class, 'aprovarEdicoesLegislativo'])->name('aprovar-edicoes-legislativo')->middleware('check.parlamentar.ativo');
-    
+
     // ===== PROTOCOLO =====
     Route::get('/protocolar', [App\Http\Controllers\ProposicaoProtocoloController::class, 'index'])->name('protocolar');
     Route::get('/{proposicao}/protocolar', [App\Http\Controllers\ProposicaoProtocoloController::class, 'protocolar'])->name('protocolar.show');
@@ -924,35 +938,36 @@ Route::prefix('proposicoes')->name('proposicoes.')->middleware(['auth', 'check.s
     Route::get('/protocolos-hoje', [App\Http\Controllers\ProposicaoProtocoloController::class, 'protocolosHoje'])->name('protocolos-hoje');
     Route::get('/estatisticas-protocolo', [App\Http\Controllers\ProposicaoProtocoloController::class, 'estatisticas'])->name('estatisticas-protocolo');
     Route::put('/{proposicao}/iniciar-tramitacao', [App\Http\Controllers\ProposicaoProtocoloController::class, 'iniciarTramitacao'])->name('iniciar-tramitacao');
-    
+
     // ===== GERAL =====
     Route::get('/minhas-proposicoes', [App\Http\Controllers\ProposicaoController::class, 'minhasProposicoes'])->name('minhas-proposicoes')->middleware('check.parlamentar.ativo');
     Route::get('/limpar-sessao-teste', [App\Http\Controllers\ProposicaoController::class, 'limparSessaoTeste'])->name('limpar-sessao-teste'); // Temporário para desenvolvimento
     Route::get('/{proposicao}/status', [App\Http\Controllers\ProposicaoController::class, 'statusTramitacao'])->name('status-tramitacao');
     Route::get('/notificacoes', [App\Http\Controllers\ProposicaoController::class, 'buscarNotificacoes'])->name('notificacoes');
     Route::get('/{proposicao}/pdf', [App\Http\Controllers\ProposicaoController::class, 'servePDF'])->name('serve-pdf');
-    
+
     // ===== ANEXOS =====
     Route::get('/{proposicao}/anexo/{anexoIndex}/download', [App\Http\Controllers\AnexoController::class, 'download'])->name('anexo.download');
     Route::get('/{proposicao}/anexo/{anexoIndex}/view', [App\Http\Controllers\AnexoController::class, 'view'])->name('anexo.view');
-    
+
     // ===== HISTÓRICO DE ALTERAÇÕES =====
     Route::get('/{proposicao}/historico', [App\Http\Controllers\ProposicaoHistoricoController::class, 'index'])->name('historico.index');
     Route::get('/{proposicao}/historico/view', [App\Http\Controllers\ProposicaoHistoricoController::class, 'webView'])->name('historico.view');
     Route::get('/{proposicao}/historico/{historico}', [App\Http\Controllers\ProposicaoHistoricoController::class, 'show'])->name('historico.show');
-    
+
     // ===== VISUALIZAÇÃO VUE.JS (NOVA) =====
     Route::get('/{proposicao}/vue', function ($proposicaoId) {
         $proposicao = \App\Models\Proposicao::findOrFail($proposicaoId);
+
         return view('proposicoes.show-vue', compact('proposicao'));
     })->name('show-vue');
-    
+
     // ===== ATUALIZAÇÃO DE STATUS =====
     Route::patch('/{proposicao}/status', [App\Http\Controllers\ProposicaoController::class, 'updateStatus'])->name('update-status');
-    
+
     // ===== DADOS FRESCOS PARA VUE.JS =====
     Route::get('/{proposicao}/dados-frescos', [App\Http\Controllers\ProposicaoController::class, 'getDadosFrescos'])->name('dados-frescos');
-    
+
     Route::get('/{proposicao}', [App\Http\Controllers\ProposicaoController::class, 'show'])->name('show');
     Route::delete('/{proposicao}', [App\Http\Controllers\ProposicaoController::class, 'destroy'])->name('destroy');
 });
@@ -961,7 +976,7 @@ Route::prefix('proposicoes')->name('proposicoes.')->middleware(['auth', 'check.s
 Route::prefix('onlyoffice')->name('onlyoffice.')->group(function () {
     // File serving routes (no auth middleware since OnlyOffice server needs direct access)
     Route::get('/file/proposicao/{proposicao}/{arquivo}', [App\Http\Controllers\ProposicaoController::class, 'serveFile'])->name('file.proposicao');
-    
+
     // Callback routes for document updates
     Route::post('/callback/proposicao/{proposicao}', [App\Http\Controllers\ProposicaoController::class, 'onlyOfficeCallback'])->name('callback.proposicao');
 });
@@ -984,17 +999,17 @@ Route::get('/proposicoes/{proposicao}/onlyoffice/status', [App\Http\Controllers\
 Route::prefix('expediente')->name('expediente.')->middleware(['auth', 'check.screen.permission'])->group(function () {
     // Painel principal do expediente
     Route::get('/', [App\Http\Controllers\ExpedienteController::class, 'index'])->name('index');
-    
+
     // Visualização de proposições
     Route::get('/proposicoes/{proposicao}', [App\Http\Controllers\ExpedienteController::class, 'show'])->name('show');
-    
+
     // Classificação de proposições
     Route::post('/proposicoes/{proposicao}/classificar', [App\Http\Controllers\ExpedienteController::class, 'classificar'])->name('classificar');
     Route::get('/reclassificar-todas', [App\Http\Controllers\ExpedienteController::class, 'reclassificarTodas'])->name('reclassificar');
-    
+
     // Envio para votação
     Route::post('/proposicoes/{proposicao}/enviar-votacao', [App\Http\Controllers\ExpedienteController::class, 'enviarParaVotacao'])->name('enviar-votacao');
-    
+
     // Rotas específicas do menu
     Route::get('/aguardando-pauta', [App\Http\Controllers\ExpedienteController::class, 'aguardandoPauta'])->name('aguardando-pauta');
     Route::get('/relatorio', [App\Http\Controllers\ExpedienteController::class, 'relatorio'])->name('relatorio');
@@ -1008,26 +1023,26 @@ Route::prefix('admin/templates')->name('admin.templates.')->middleware(['auth', 
     Route::get('/backups', [App\Http\Controllers\Admin\TemplateRelatorioController::class, 'listarBackups'])->name('listar-backups');
     Route::post('/backup/restaurar', [App\Http\Controllers\Admin\TemplateRelatorioController::class, 'restaurarBackup'])->name('restaurar-backup');
     Route::post('/resetar', [App\Http\Controllers\Admin\TemplateRelatorioController::class, 'resetarTemplate'])->name('resetar');
-    
+
 });
 
 // ROTAS DO PARECER JURÍDICO
 Route::prefix('parecer-juridico')->name('parecer-juridico.')->middleware(['auth', 'check.screen.permission'])->group(function () {
     // Listar proposições para parecer jurídico
     Route::get('/', [App\Http\Controllers\ParecerJuridicoController::class, 'index'])->name('index');
-    
+
     // Meus pareceres
     Route::get('/meus-pareceres', [App\Http\Controllers\ParecerJuridicoController::class, 'meusPareceres'])->name('meus-pareceres');
-    
+
     // Emitir parecer
     Route::get('/proposicoes/{proposicao}/parecer', [App\Http\Controllers\ParecerJuridicoController::class, 'create'])->name('create');
     Route::post('/proposicoes/{proposicao}/parecer', [App\Http\Controllers\ParecerJuridicoController::class, 'store'])->name('store');
-    
+
     // Visualizar e editar parecer
     Route::get('/pareceres/{parecerJuridico}', [App\Http\Controllers\ParecerJuridicoController::class, 'show'])->name('show');
     Route::get('/pareceres/{parecerJuridico}/edit', [App\Http\Controllers\ParecerJuridicoController::class, 'edit'])->name('edit');
     Route::put('/pareceres/{parecerJuridico}', [App\Http\Controllers\ParecerJuridicoController::class, 'update'])->name('update');
-    
+
     // Gerar PDF
     Route::get('/pareceres/{parecerJuridico}/pdf', [App\Http\Controllers\ParecerJuridicoController::class, 'generatePDF'])->name('pdf');
 });
@@ -1042,17 +1057,17 @@ Route::prefix('admin/tipo-proposicoes')->name('admin.tipo-proposicoes.')->middle
     Route::get('/{tipoProposicao}/edit', [App\Http\Controllers\Admin\TipoProposicaoController::class, 'edit'])->name('edit')->middleware('check.permission:tipo_proposicoes.edit');
     Route::put('/{tipoProposicao}', [App\Http\Controllers\Admin\TipoProposicaoController::class, 'update'])->name('update')->middleware('check.permission:tipo_proposicoes.edit');
     Route::delete('/{tipoProposicao}', [App\Http\Controllers\Admin\TipoProposicaoController::class, 'destroy'])->name('destroy')->middleware('check.permission:tipo_proposicoes.delete');
-    
+
     // Ações especiais
     Route::post('/{tipoProposicao}/toggle-status', [App\Http\Controllers\Admin\TipoProposicaoController::class, 'toggleStatus'])->name('toggle-status')->middleware('check.permission:tipo_proposicoes.edit');
     Route::post('/reordenar', [App\Http\Controllers\Admin\TipoProposicaoController::class, 'reordenar'])->name('reordenar')->middleware('check.permission:tipo_proposicoes.edit');
     Route::post('/acoes-bulk', [App\Http\Controllers\Admin\TipoProposicaoController::class, 'acoesBulk'])->name('acoes-bulk')->middleware('check.permission:tipo_proposicoes.delete');
-    
+
     // AJAX endpoints
     Route::get('/ajax/dropdown', [App\Http\Controllers\Admin\TipoProposicaoController::class, 'getParaDropdown'])->name('ajax.dropdown');
     Route::get('/ajax/validar-codigo', [App\Http\Controllers\Admin\TipoProposicaoController::class, 'validarCodigo'])->name('ajax.validar-codigo');
     Route::get('/ajax/buscar-sugestoes', [App\Http\Controllers\Admin\TipoProposicaoController::class, 'buscarSugestoes'])->name('ajax.buscar-sugestoes');
-    
+
     // ===== RELATÓRIOS DE AUDITORIA =====
     Route::get('/auditoria/relatorio', [App\Http\Controllers\ProposicaoHistoricoController::class, 'relatorioAuditoria'])->name('auditoria.relatorio');
 });
@@ -1066,7 +1081,7 @@ Route::middleware(['web'])->prefix('auth')->name('auth.')->group(function () {
 
 // ===== SISTEMA DE DOCUMENTOS - GESTÃO DE MODELOS =====
 Route::prefix('admin/documentos')->name('documentos.')->middleware(['auth', 'check.screen.permission'])->group(function () {
-    
+
     // ===== GESTÃO DE TEMPLATES PADRÃO =====
     Route::prefix('templates')->name('templates.')->group(function () {
         Route::get('/', [App\Http\Controllers\Admin\DocumentoTemplateController::class, 'index'])->name('index')->middleware('check.permission:documentos.view');
@@ -1078,7 +1093,7 @@ Route::prefix('admin/documentos')->name('documentos.')->middleware(['auth', 'che
         Route::post('/reordenar', [App\Http\Controllers\Admin\DocumentoTemplateController::class, 'reordenar'])->name('reordenar')->middleware('check.permission:documentos.edit');
         Route::post('/resetar-padrao', [App\Http\Controllers\Admin\DocumentoTemplateController::class, 'resetarPadrao'])->name('resetar-padrao')->middleware('check.permission:documentos.create');
     });
-    
+
     // ===== GESTÃO DE MODELOS =====
     Route::prefix('modelos')->name('modelos.')->group(function () {
         Route::get('/', [App\Http\Controllers\Documento\DocumentoModeloController::class, 'index'])->name('index')->middleware('check.permission:documentos.view');
@@ -1094,23 +1109,23 @@ Route::prefix('admin/documentos')->name('documentos.')->middleware(['auth', 'che
         Route::get('/{modelo}/editor-onlyoffice', [App\Http\Controllers\Documento\DocumentoModeloController::class, 'editorOnlyOffice'])->name('editor-onlyoffice')->middleware('check.permission:documentos.edit');
         Route::get('/{modelo}/last-update', [App\Http\Controllers\Documento\DocumentoModeloController::class, 'lastUpdate'])->name('last-update')->middleware('check.permission:documentos.view');
     });
-    
+
     // ===== GESTÃO DE INSTÂNCIAS =====
     Route::prefix('instancias')->name('instancias.')->group(function () {
         Route::get('/', [App\Http\Controllers\Documento\DocumentoInstanciaController::class, 'index'])->name('index')->middleware('check.permission:documentos.view');
         Route::get('/{instancia}', [App\Http\Controllers\Documento\DocumentoInstanciaController::class, 'show'])->name('show')->middleware('check.permission:documentos.view');
         Route::delete('/{instancia}', [App\Http\Controllers\Documento\DocumentoInstanciaController::class, 'destroy'])->name('destroy')->middleware('check.permission:documentos.delete');
-        
+
         // Upload e download de versões
         Route::post('/{instancia}/upload-versao', [App\Http\Controllers\Documento\DocumentoInstanciaController::class, 'uploadVersao'])->name('upload-versao')->middleware('check.permission:documentos.edit');
         Route::get('/{instancia}/download', [App\Http\Controllers\Documento\DocumentoInstanciaController::class, 'download'])->name('download')->middleware('check.permission:documentos.view');
         Route::get('/versoes/{versao}/download', [App\Http\Controllers\Documento\DocumentoInstanciaController::class, 'downloadVersao'])->name('versao.download')->middleware('check.permission:documentos.view');
-        
+
         // Gestão de status e finalização
         Route::post('/{instancia}/alterar-status', [App\Http\Controllers\Documento\DocumentoInstanciaController::class, 'alterarStatus'])->name('alterar-status')->middleware('check.permission:documentos.edit');
         Route::post('/{instancia}/finalizar', [App\Http\Controllers\Documento\DocumentoInstanciaController::class, 'finalizar'])->name('finalizar')->middleware('check.permission:documentos.edit');
         Route::get('/{instancia}/gerar-pdf', [App\Http\Controllers\Documento\DocumentoInstanciaController::class, 'gerarPDF'])->name('gerar-pdf')->middleware('check.permission:documentos.edit');
-        
+
         // Histórico de versões
         Route::get('/{instancia}/versoes', [App\Http\Controllers\Documento\DocumentoInstanciaController::class, 'versoes'])->name('versoes')->middleware('check.permission:documentos.view');
         Route::get('/versoes/{versao1}/comparar/{versao2}', [App\Http\Controllers\Documento\DocumentoInstanciaController::class, 'compararVersoes'])->name('comparar-versoes')->middleware('check.permission:documentos.view');
@@ -1120,24 +1135,24 @@ Route::prefix('admin/documentos')->name('documentos.')->middleware(['auth', 'che
 
 // ===== ONLYOFFICE INTEGRATION ROUTES =====
 Route::prefix('onlyoffice')->name('onlyoffice.')->group(function () {
-    
+
     // Editor routes (protected)
     Route::middleware(['auth'])->group(function () {
         Route::get('/editor/modelo/{modelo}', [App\Http\Controllers\OnlyOffice\OnlyOfficeController::class, 'editarModelo'])->name('editor.modelo');
         Route::get('/editor/instancia/{instancia}', [App\Http\Controllers\OnlyOffice\OnlyOfficeController::class, 'editarDocumento'])->name('editor.instancia');
         Route::get('/viewer/instancia/{instancia}', [App\Http\Controllers\OnlyOffice\OnlyOfficeController::class, 'visualizarDocumento'])->name('viewer.instancia');
-        
+
         // Conversion routes
         Route::get('/pdf/instancia/{instancia}', [App\Http\Controllers\OnlyOffice\OnlyOfficeController::class, 'converterParaPDF'])->name('pdf.instancia');
-        
+
         // History routes
         Route::get('/history/instancia/{instancia}', [App\Http\Controllers\OnlyOffice\OnlyOfficeController::class, 'obterHistoricoVersoes'])->name('history.instancia');
     });
-    
+
     // File serving routes (public for OnlyOffice access)
     Route::get('/file/modelo/{modelo}', [App\Http\Controllers\OnlyOffice\OnlyOfficeController::class, 'downloadModelo'])->name('file.modelo');
     Route::get('/file/instancia/{instancia}', [App\Http\Controllers\OnlyOffice\OnlyOfficeController::class, 'downloadInstancia'])->name('file.instancia');
-    
+
     // Callback route (public for OnlyOffice server)
     Route::post('/callback/{documentKey}', [App\Http\Controllers\OnlyOffice\OnlyOfficeController::class, 'callback'])->name('callback');
 });
@@ -1148,18 +1163,19 @@ Route::prefix('onlyoffice-standalone')->name('onlyoffice.standalone.')->middlewa
     Route::get('/editor/modelo/{modelo}', [App\Http\Controllers\OnlyOffice\OnlyOfficeController::class, 'editarModeloStandalone'])->name('editor.modelo');
     Route::get('/editor/instancia/{instancia}', [App\Http\Controllers\OnlyOffice\OnlyOfficeController::class, 'editarDocumentoStandalone'])->name('editor.instancia');
     Route::get('/viewer/instancia/{instancia}', [App\Http\Controllers\OnlyOffice\OnlyOfficeController::class, 'visualizarDocumentoStandalone'])->name('viewer.instancia');
-    
+
     // Force save routes
     Route::post('/force-save/modelo/{modelo}', [App\Http\Controllers\OnlyOffice\OnlyOfficeController::class, 'forceSaveModelo'])->name('force-save.modelo');
 });
 
 // Debug route - remove after testing
 Route::get('/debug-user', function () {
-    if (!auth()->check()) {
+    if (! auth()->check()) {
         return response()->json(['error' => 'User not authenticated']);
     }
-    
+
     $user = auth()->user();
+
     return response()->json([
         'user_id' => $user->id,
         'user_name' => $user->name,
@@ -1172,30 +1188,30 @@ Route::get('/debug-user', function () {
 // Templates routes (protected with auth and permissions)
 Route::prefix('admin')->middleware(['auth', 'check.screen.permission'])->group(function () {
     Route::get('templates', [App\Http\Controllers\TemplateController::class, 'index'])
-         ->name('templates.index');
+        ->name('templates.index');
     Route::get('templates/create', [App\Http\Controllers\TemplateController::class, 'create'])
-         ->name('templates.create');
+        ->name('templates.create');
     Route::post('templates', [App\Http\Controllers\TemplateController::class, 'store'])
-         ->name('templates.store');
+        ->name('templates.store');
     Route::delete('templates/{template}', [App\Http\Controllers\TemplateController::class, 'destroy'])
-         ->name('templates.destroy');
+        ->name('templates.destroy');
     Route::get('templates/{tipo}/editor', [App\Http\Controllers\TemplateController::class, 'editor'])
-         ->name('templates.editor');
+        ->name('templates.editor');
     Route::post('templates/{tipo}/salvar', [App\Http\Controllers\TemplateController::class, 'salvarTemplate'])
-         ->name('templates.salvar');
+        ->name('templates.salvar');
     Route::post('templates/regenerar-todos', [App\Http\Controllers\TemplateController::class, 'regenerarTodos'])
-         ->name('templates.regenerar-todos');
+        ->name('templates.regenerar-todos');
     Route::get('templates/status', [App\Http\Controllers\TemplateController::class, 'status'])
-         ->name('templates.status');
+        ->name('templates.status');
     Route::get('templates/{tipo}/preview', [App\Http\Controllers\TemplateController::class, 'previewTemplate'])
-         ->name('templates.preview');
-    
+        ->name('templates.preview');
+
     // Rotas para Padrões Legais
     Route::post('templates/{tipo}/gerar-padroes-legais', [App\Http\Controllers\TemplateController::class, 'gerarComPadroesLegais'])
-         ->name('templates.gerar-padroes-legais');
+        ->name('templates.gerar-padroes-legais');
     Route::get('templates/{tipo}/validar', [App\Http\Controllers\TemplateController::class, 'validarTemplate'])
-         ->name('templates.validar');
-    
+        ->name('templates.validar');
+
     // Parâmetros de Protocolo
     Route::prefix('parametros/protocolo')->name('admin.parametros.protocolo.')->group(function () {
         Route::get('/', [App\Http\Controllers\Admin\ParametroProtocoloController::class, 'index'])->name('index');
@@ -1219,20 +1235,20 @@ Route::prefix('admin')->middleware(['auth', 'check.screen.permission'])->group(f
         Route::patch('/{documentoTemplate}/toggle-status', [App\Http\Controllers\DocumentoTemplateController::class, 'toggleStatus'])->name('toggle-status');
         Route::post('/{documentoTemplate}/duplicate', [App\Http\Controllers\DocumentoTemplateController::class, 'duplicate'])->name('duplicate');
     });
-    
+
     // AI Configurations routes
     Route::prefix('ai-configurations')->name('admin.ai-configurations.')->group(function () {
         Route::get('/', [App\Http\Controllers\Admin\AIConfigurationController::class, 'index'])->name('index');
         Route::get('/create', [App\Http\Controllers\Admin\AIConfigurationController::class, 'create'])->name('create');
         Route::post('/', [App\Http\Controllers\Admin\AIConfigurationController::class, 'store'])->name('store');
-        
+
         // AJAX routes (must come BEFORE parameterized routes)
         Route::post('/test-data', [App\Http\Controllers\Admin\AIConfigurationController::class, 'testConnectionData'])->name('test-data');
         Route::post('/test-all', [App\Http\Controllers\Admin\AIConfigurationController::class, 'testAllConnections'])->name('test-all');
         Route::get('/provider-models', [App\Http\Controllers\Admin\AIConfigurationController::class, 'getProviderModels'])->name('provider-models');
         Route::post('/reorder', [App\Http\Controllers\Admin\AIConfigurationController::class, 'reorder'])->name('reorder');
         Route::get('/usage-stats', [App\Http\Controllers\Admin\AIConfigurationController::class, 'getUsageStats'])->name('usage-stats');
-        
+
         // Parameterized routes (must come AFTER specific routes)
         Route::get('/{aiConfiguration}', [App\Http\Controllers\Admin\AIConfigurationController::class, 'show'])->name('show');
         Route::get('/{aiConfiguration}/edit', [App\Http\Controllers\Admin\AIConfigurationController::class, 'edit'])->name('edit');
@@ -1245,37 +1261,37 @@ Route::prefix('admin')->middleware(['auth', 'check.screen.permission'])->group(f
 
     // System Diagnostic routes
     Route::get('system-diagnostic', [App\Http\Controllers\Admin\SystemDiagnosticController::class, 'index'])
-         ->name('admin.system-diagnostic.index');
+        ->name('admin.system-diagnostic.index');
     Route::get('system-diagnostic/database', [App\Http\Controllers\Admin\SystemDiagnosticController::class, 'database'])
-         ->name('admin.system-diagnostic.database');
+        ->name('admin.system-diagnostic.database');
     Route::get('system-diagnostic/database/table/{table}', [App\Http\Controllers\Admin\SystemDiagnosticController::class, 'tableRecords'])
-         ->name('admin.system-diagnostic.table');
+        ->name('admin.system-diagnostic.table');
     Route::post('system-diagnostic/fix-permissions', [App\Http\Controllers\Admin\SystemDiagnosticController::class, 'fixPermissions'])
-         ->name('admin.system-diagnostic.fix-permissions');
+        ->name('admin.system-diagnostic.fix-permissions');
 });
 
 // Test Module routes (protected with auth)
 Route::prefix('tests')->name('tests.')->middleware('auth')->group(function () {
     Route::get('/', [App\Http\Controllers\TestController::class, 'index'])->name('index');
-    
+
     // User Tests
     Route::get('/users', [App\Http\Controllers\TestController::class, 'usersIndex'])->name('users');
     Route::post('/create-users', [App\Http\Controllers\TestController::class, 'createTestUsers'])->name('create-users');
     Route::get('/list-users', [App\Http\Controllers\TestController::class, 'listTestUsers'])->name('list-users');
     Route::delete('/clear-users', [App\Http\Controllers\TestController::class, 'clearTestUsers'])->name('clear-users');
-    
+
     // Process Tests
     Route::get('/processes', [App\Http\Controllers\TestController::class, 'processesIndex'])->name('processes');
     Route::post('/run-process-tests', [App\Http\Controllers\TestController::class, 'runProcessTests'])->name('run-process-tests');
     Route::post('/run-pest-tests', [App\Http\Controllers\TestController::class, 'runPestTests'])->name('run-pest-tests');
-    
+
     // Visualization HTML Files
     Route::get('/processes/index.html', [App\Http\Controllers\TestController::class, 'visualizationCenter'])->name('processes.visualization-center');
     Route::get('/processes/fluxo-visualizer.html', [App\Http\Controllers\TestController::class, 'fluxoVisualizer'])->name('processes.fluxo-visualizer');
     Route::get('/processes/fluxo-dashboard.html', [App\Http\Controllers\TestController::class, 'fluxoDashboard'])->name('processes.fluxo-dashboard');
     Route::get('/processes/network-flow.html', [App\Http\Controllers\TestController::class, 'networkFlow'])->name('processes.network-flow');
     Route::get('/processes/animated-flow.html', [App\Http\Controllers\TestController::class, 'animatedFlow'])->name('processes.animated-flow');
-    
+
     // Interactive Process Test Routes
     Route::get('/get-tipos-proposicao', [App\Http\Controllers\TestController::class, 'getTiposProposicao'])->name('get-tipos-proposicao');
     Route::get('/get-templates/{tipoId}', [App\Http\Controllers\TestController::class, 'getTemplates'])->name('get-templates');
@@ -1287,13 +1303,13 @@ Route::prefix('tests')->name('tests.')->middleware('auth')->group(function () {
     Route::post('/tramitar/{id}/protocolizar', [App\Http\Controllers\TestController::class, 'protocolizar'])->name('tramitar.protocolizar');
     Route::post('/tramitar/{id}/enviar-expediente', [App\Http\Controllers\TestController::class, 'enviarExpediente'])->name('tramitar.enviar-expediente');
     Route::post('/tramitar/{id}/emitir-parecer', [App\Http\Controllers\TestController::class, 'emitirParecer'])->name('tramitar.emitir-parecer');
-    
+
     // API Tests
     Route::get('/api', [App\Http\Controllers\TestController::class, 'apiIndex'])->name('api');
-    
-    // Database Tests  
+
+    // Database Tests
     Route::get('/database', [App\Http\Controllers\TestController::class, 'databaseIndex'])->name('database');
-    
+
     // Performance Tests
     Route::get('/performance', [App\Http\Controllers\TestController::class, 'performanceIndex'])->name('performance');
 
@@ -1310,13 +1326,13 @@ Route::prefix('api')->name('api.')->middleware(['auth'])->group(function () {
 // Menu Debug Routes
 Route::middleware(['auth'])->group(function () {
     Route::get('/test-menu', [App\Http\Controllers\TestMenuController::class, 'testExpedienteMenu'])->name('test-menu');
-    Route::get('/debug-menu', function() {
+    Route::get('/debug-menu', function () {
         return view('debug-menu');
     })->name('debug-menu');
-    Route::get('/test-permissions-live', function() {
+    Route::get('/test-permissions-live', function () {
         return view('test-permissions-live');
     })->name('test-permissions-live');
-    Route::get('/test-aside-debug', function() {
+    Route::get('/test-aside-debug', function () {
         return view('test-aside-debug');
     })->name('test-aside-debug');
 });
@@ -1340,3 +1356,7 @@ Route::prefix('proposicoes/{proposicao}/assinatura-digital')->name('proposicoes.
     Route::get('/status', [App\Http\Controllers\AssinaturaDigitalController::class, 'verificarStatus'])->name('status');
 });
 
+// ===== ROTA TEMPORÁRIA PARA PDF DE PROPOSIÇÕES PROTOCOLADAS (SEM AUTENTICAÇÃO) =====
+Route::get('/proposicoes/{proposicao}/pdf-publico', [\App\Http\Controllers\ProposicaoController::class, 'servePDFPublico'])
+    ->name('proposicoes.pdf.publico')
+    ->where('proposicao', '[0-9]+');

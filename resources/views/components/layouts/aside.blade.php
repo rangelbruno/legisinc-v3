@@ -498,6 +498,13 @@
                                         </a>
                                     </div>
                                     @endif
+                                    <div class="menu-item">
+                                        <a class="menu-link {{ request()->routeIs('admin.docs.*') ? 'active' : '' }}" href="{{ route('admin.docs.fluxo-proposicoes') }}">
+                                            <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                            <span class="menu-title">Fluxo de Proposições</span>
+                                            <span class="badge badge-light-success badge-sm ms-auto">NOVO</span>
+                                        </a>
+                                    </div>
                                 </div>
                             </div>
                             @endif

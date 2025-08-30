@@ -4,9 +4,9 @@ namespace App\Services\Template;
 
 use App\Models\Proposicao;
 use App\Services\Parametro\ParametroService;
-use SimpleSoftwareIO\QrCode\Facades\QrCode;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
+use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 class AssinaturaQRService
 {
@@ -25,19 +25,19 @@ class AssinaturaQRService
         try {
             // Verificar se QR Code deve ser exibido apenas após protocolo
             $apenasProtocolo = $this->parametroService->obterValor('Templates', 'Assinatura e QR Code', 'qrcode_apenas_protocolo');
-            
-            if ($apenasProtocolo && !$proposicao->numero_protocolo) {
+
+            if ($apenasProtocolo && ! $proposicao->numero_protocolo) {
                 return null;
             }
 
             // Obter configurações do QR Code
             $urlFormato = $this->parametroService->obterValor('Templates', 'Assinatura e QR Code', 'qrcode_url_formato');
             $tamanho = $this->parametroService->obterValor('Templates', 'Assinatura e QR Code', 'qrcode_tamanho') ?: 100;
-            
+
             // Construir URL
             $url = $this->construirURL($proposicao, $urlFormato);
-            
-            if (!$url) {
+
+            if (! $url) {
                 return null;
             }
 
@@ -49,16 +49,17 @@ class AssinaturaQRService
             // Salvar QR Code como arquivo SVG
             $fileName = "qrcode_proposicao_{$proposicao->id}.svg";
             $filePath = "qrcodes/{$fileName}";
-            
+
             Storage::disk('public')->put($filePath, $qrCodeSvg);
-            
+
             return $filePath;
 
         } catch (\Exception $e) {
             Log::error('Erro ao gerar QR Code', [
                 'proposicao_id' => $proposicao->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             return null;
         }
     }
@@ -71,30 +72,31 @@ class AssinaturaQRService
         try {
             // Verificar se assinatura deve ser exibida apenas após protocolo
             $apenasProtocolo = $this->parametroService->obterValor('Templates', 'Assinatura e QR Code', 'assinatura_apenas_protocolo');
-            
-            if ($apenasProtocolo && !$proposicao->numero_protocolo) {
+
+            if ($apenasProtocolo && ! $proposicao->numero_protocolo) {
                 return null;
             }
 
             // Verificar se proposição tem assinatura digital
-            if (!$proposicao->assinatura_digital || !$proposicao->data_assinatura) {
+            if (! $proposicao->assinatura_digital || ! $proposicao->data_assinatura) {
                 return null;
             }
 
             // Obter texto da assinatura
             $textoAssinatura = $this->parametroService->obterValor('Templates', 'Assinatura e QR Code', 'assinatura_texto');
-            
+
             // Substituir variáveis no texto
             $textoFinal = $this->substituirVariaveisAssinatura($proposicao, $textoAssinatura);
-            
+
             // Gerar HTML da assinatura
             return $this->gerarHTMLAssinaturaFormatado($textoFinal);
 
         } catch (\Exception $e) {
             Log::error('Erro ao gerar HTML da assinatura', [
                 'proposicao_id' => $proposicao->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             return null;
         }
     }
@@ -106,23 +108,24 @@ class AssinaturaQRService
     {
         try {
             $qrCodePath = $this->gerarQRCode($proposicao);
-            
-            if (!$qrCodePath) {
+
+            if (! $qrCodePath) {
                 return null;
             }
 
             // Obter texto do QR Code
             $textoQR = $this->parametroService->obterValor('Templates', 'Assinatura e QR Code', 'qrcode_texto');
             $textoFinal = $this->substituirVariaveisQR($proposicao, $textoQR);
-            
+
             // Gerar HTML do QR Code
             return $this->gerarHTMLQRCodeFormatado($qrCodePath, $textoFinal);
 
         } catch (\Exception $e) {
             Log::error('Erro ao gerar HTML do QR Code', [
                 'proposicao_id' => $proposicao->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             return null;
         }
     }
@@ -145,7 +148,7 @@ class AssinaturaQRService
      */
     private function construirURL(Proposicao $proposicao, string $urlFormato): ?string
     {
-        if (!$urlFormato) {
+        if (! $urlFormato) {
             return null;
         }
 
@@ -156,11 +159,11 @@ class AssinaturaQRService
         $url = str_replace([
             '{base_url}',
             '{numero_protocolo}',
-            '{numero_proposicao}'
+            '{numero_proposicao}',
         ], [
             $baseUrl,
             $numeroProtocolo,
-            $numeroProposicao
+            $numeroProposicao,
         ], $urlFormato);
 
         return $url;
@@ -172,18 +175,18 @@ class AssinaturaQRService
     private function substituirVariaveisAssinatura(Proposicao $proposicao, string $texto): string
     {
         $autor = $proposicao->autor;
-        $dataAssinatura = $proposicao->data_assinatura ? 
-            $proposicao->data_assinatura->format('d/m/Y H:i:s') : 
+        $dataAssinatura = $proposicao->data_assinatura ?
+            $proposicao->data_assinatura->format('d/m/Y H:i:s') :
             'Data não disponível';
 
         return str_replace([
             '{autor_nome}',
             '{autor_cargo}',
-            '{data_assinatura}'
+            '{data_assinatura}',
         ], [
             $autor ? $autor->name : 'Autor não identificado',
             'Vereador',
-            $dataAssinatura
+            $dataAssinatura,
         ], $texto);
     }
 
@@ -194,10 +197,10 @@ class AssinaturaQRService
     {
         return str_replace([
             '{numero_protocolo}',
-            '{numero_proposicao}'
+            '{numero_proposicao}',
         ], [
             $proposicao->numero_protocolo ?: 'Aguardando protocolo',
-            $proposicao->id
+            $proposicao->id,
         ], $texto);
     }
 
@@ -206,9 +209,11 @@ class AssinaturaQRService
      */
     private function gerarHTMLAssinaturaFormatado(string $texto): string
     {
-        return '<div class="assinatura-digital" style="position: fixed; right: 20px; top: 50%; transform: translateY(-50%); width: 200px; border: 2px solid #28a745; padding: 15px; margin: 10px 0; background-color: #f8f9fa; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); font-family: Arial, sans-serif;">
-            <h6 style="color: #28a745; margin-bottom: 10px; text-align: center; font-size: 14px; font-weight: bold;"><i class="fas fa-certificate"></i> Assinatura Digital</h6>
-            <div style="font-size: 11px; line-height: 1.4; text-align: center; color: #333;">' . nl2br($texto) . '</div>
+        // CORREÇÃO PDF: Remover position fixed que não funciona em PDF
+        // Usar layout em bloco normal compatível com DomPDF
+        return '<div class="assinatura-digital" style="width: 100%; border: 2px solid #28a745; padding: 15px; margin: 20px 0; background-color: #f0f8f0; border-radius: 8px; font-family: Arial, sans-serif; page-break-inside: avoid; text-align: center;">
+            <h6 style="color: #28a745; margin: 0 0 10px 0; font-size: 14px; font-weight: bold;">🏆 ASSINATURA DIGITAL</h6>
+            <div style="font-size: 12px; line-height: 1.5; color: #333; font-weight: bold;">'.nl2br($texto).'</div>
         </div>';
     }
 
@@ -218,11 +223,11 @@ class AssinaturaQRService
     private function gerarHTMLQRCodeFormatado(string $qrCodePath, string $texto): string
     {
         $qrCodeUrl = Storage::disk('public')->url($qrCodePath);
-        
+
         return '<div class="qr-code-section" style="border: 1px solid #17a2b8; padding: 10px; margin: 10px 0; text-align: center; background-color: #f8f9fa;">
             <h6 style="color: #17a2b8; margin-bottom: 10px;"><i class="fas fa-qrcode"></i> Verificação Online</h6>
-            <img src="' . $qrCodeUrl . '" alt="QR Code" style="margin-bottom: 5px;" />
-            <div style="font-size: 11px; line-height: 1.3;">' . nl2br($texto) . '</div>
+            <img src="'.$qrCodeUrl.'" alt="QR Code" style="margin-bottom: 5px;" />
+            <div style="font-size: 11px; line-height: 1.3;">'.nl2br($texto).'</div>
         </div>';
     }
 }

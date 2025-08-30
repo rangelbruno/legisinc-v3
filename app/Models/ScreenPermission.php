@@ -58,7 +58,7 @@ class ScreenPermission extends Model
             'dashboard' => [
                 'name' => 'Dashboard',
                 'module' => 'dashboard',
-                'route' => 'dashboard'
+                'route' => 'dashboard',
             ],
             'parlamentares' => [
                 'name' => 'Parlamentares',
@@ -68,7 +68,7 @@ class ScreenPermission extends Model
                     'parlamentares.create' => ['name' => 'Novo Parlamentar', 'route' => 'parlamentares.create'],
                     'parlamentares.edit' => ['name' => 'Editar Parlamentar', 'route' => 'parlamentares.edit'],
                     'parlamentares.mesa-diretora' => ['name' => 'Mesa Diretora', 'route' => 'parlamentares.mesa-diretora'],
-                ]
+                ],
             ],
             'comissoes' => [
                 'name' => 'Comissões',
@@ -77,7 +77,7 @@ class ScreenPermission extends Model
                     'comissoes.index' => ['name' => 'Lista de Comissões', 'route' => 'comissoes.index'],
                     'comissoes.create' => ['name' => 'Nova Comissão', 'route' => 'comissoes.create'],
                     'comissoes.edit' => ['name' => 'Editar Comissão', 'route' => 'comissoes.edit'],
-                ]
+                ],
             ],
             'sessoes' => [
                 'name' => 'Sessões',
@@ -86,7 +86,7 @@ class ScreenPermission extends Model
                     'admin.sessions.index' => ['name' => 'Lista de Sessões', 'route' => 'admin.sessions.index'],
                     'admin.sessions.create' => ['name' => 'Nova Sessão', 'route' => 'admin.sessions.create'],
                     'admin.sessions.edit' => ['name' => 'Editar Sessão', 'route' => 'admin.sessions.edit'],
-                ]
+                ],
             ],
             'usuarios' => [
                 'name' => 'Usuários',
@@ -95,7 +95,7 @@ class ScreenPermission extends Model
                     'usuarios.index' => ['name' => 'Gestão de Usuários', 'route' => 'usuarios.index'],
                     'usuarios.create' => ['name' => 'Novo Usuário', 'route' => 'usuarios.create'],
                     'usuarios.edit' => ['name' => 'Editar Usuário', 'route' => 'usuarios.edit'],
-                ]
+                ],
             ],
             'proposicoes' => [
                 'name' => 'Proposições',
@@ -111,7 +111,7 @@ class ScreenPermission extends Model
                     'proposicoes.protocolar' => ['name' => 'Protocolar', 'route' => 'proposicoes.protocolar'],
                     'proposicoes.protocolos-hoje' => ['name' => 'Protocolos Hoje', 'route' => 'proposicoes.protocolos-hoje'],
                     'proposicoes.estatisticas-protocolo' => ['name' => 'Estatísticas Protocolo', 'route' => 'proposicoes.estatisticas-protocolo'],
-                ]
+                ],
             ],
         ];
     }
@@ -140,24 +140,24 @@ class ScreenPermission extends Model
      */
     public static function userCanAccessRoute(string $route): bool
     {
-        if (!Auth::check()) {
+        if (! Auth::check()) {
             return false;
         }
 
         $user = Auth::user();
-        
+
         // Admin sempre tem acesso total a todas as telas
         if ($user->isAdmin()) {
             return true;
         }
 
         $roleName = $user->getRoleNames()->first() ?? 'PUBLICO';
-        
+
         // Admin via role name também tem acesso total
         if ($roleName === 'ADMIN') {
             return true;
         }
-        
+
         // Verificar se existe configuração de permissões para este perfil
         if (self::hasConfiguredPermissions($roleName)) {
             // Se há permissões configuradas, só permitir o que foi explicitamente liberado
@@ -180,19 +180,21 @@ class ScreenPermission extends Model
         switch ($roleName) {
             case 'ADMIN':
                 return true;
-            
+
             case 'LEGISLATIVO':
                 $defaultModules = self::getDefaultLegislativoModules();
+
                 return $defaultModules[$module] ?? false;
-            
+
             case 'PARLAMENTAR':
                 $parlamentarModules = ['dashboard' => true, 'proposicoes' => true, 'parlamentares' => true];
+
                 return $parlamentarModules[$module] ?? false;
-                
+
             case 'PUBLICO':
             case 'CIDADAO_VERIFICADO':
                 return $module === 'dashboard';
-                
+
             default:
                 return false;
         }
@@ -206,7 +208,7 @@ class ScreenPermission extends Model
         return [
             // Dashboard
             'dashboard' => true,
-            
+
             // Proposições - Apenas rotas de revisão e processamento
             // Legislativo NÃO pode criar proposições
             'proposicoes.show' => true,
@@ -222,11 +224,11 @@ class ScreenPermission extends Model
             'proposicoes.devolver' => true,
             'proposicoes.relatorio-legislativo' => true,
             'proposicoes.aguardando-protocolo' => true,
-            
+
             // Parlamentares - Visualização necessária
             'parlamentares.index' => true,
             'parlamentares.show' => true,
-            
+
             // Sistema
             'user.profile' => true,
             'user.update-last-access' => true,
@@ -254,11 +256,12 @@ class ScreenPermission extends Model
         switch ($roleName) {
             case 'ADMIN':
                 return true;
-            
+
             case 'LEGISLATIVO':
                 $defaultPermissions = self::getDefaultLegislativoPermissions();
+
                 return $defaultPermissions[$route] ?? false;
-            
+
             case 'PARLAMENTAR':
                 $parlamentarRoutes = [
                     'dashboard',
@@ -268,9 +271,13 @@ class ScreenPermission extends Model
                     'admin.sessions.index',
                     'admin.sessions.create',
                     'comissoes.index',
+                    'proposicoes.serve-pdf',
+                    'proposicoes.show',
+                    'proposicoes.index',
                 ];
+
                 return in_array($route, $parlamentarRoutes);
-            
+
             case 'RELATOR':
                 $relatorRoutes = [
                     'dashboard',
@@ -279,8 +286,9 @@ class ScreenPermission extends Model
                     'admin.sessions.index',
                     'comissoes.index',
                 ];
+
                 return in_array($route, $relatorRoutes);
-            
+
             case 'PROTOCOLO':
                 $protocoloRoutes = [
                     'dashboard',
@@ -294,16 +302,18 @@ class ScreenPermission extends Model
                     'proposicoes.iniciar-tramitacao',
                     'parlamentares.index',
                 ];
+
                 return in_array($route, $protocoloRoutes);
-            
+
             case 'ASSESSOR':
                 $assessorRoutes = [
                     'dashboard',
                     'parlamentares.index',
                     'admin.sessions.index',
                 ];
+
                 return in_array($route, $assessorRoutes);
-            
+
             case 'CIDADAO_VERIFICADO':
             case 'PUBLICO':
                 $publicRoutes = [
@@ -311,8 +321,9 @@ class ScreenPermission extends Model
                     'parlamentares.index',
                     'admin.sessions.index',
                 ];
+
                 return in_array($route, $publicRoutes);
-            
+
             default:
                 return false;
         }
@@ -323,24 +334,24 @@ class ScreenPermission extends Model
      */
     public static function userCanAccessModule(string $module): bool
     {
-        if (!Auth::check()) {
+        if (! Auth::check()) {
             return false;
         }
 
         $user = Auth::user();
-        
+
         // Admin sempre tem acesso total a todos os módulos
         if ($user->isAdmin()) {
             return true;
         }
 
         $roleName = $user->getRoleNames()->first() ?? 'PUBLICO';
-        
+
         // Admin via role name também tem acesso total
         if ($roleName === 'ADMIN') {
             return true;
         }
-        
+
         // Verificar se existem permissões configuradas para este role
         if (self::hasConfiguredPermissions($roleName)) {
             // Se há permissões configuradas, só permitir módulos com pelo menos uma rota liberada
@@ -410,5 +421,4 @@ class ScreenPermission extends Model
     {
         return self::where('role_name', $roleName)->exists();
     }
-
 }

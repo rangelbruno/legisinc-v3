@@ -193,8 +193,13 @@ class CheckAssinaturaPermission
             }
         }
 
-        // NOVO: Verificar se existe arquivo DOCX que pode ser convertido
+        // Verificar se existe arquivo DOCX/RTF que pode ser convertido para PDF
         if ($this->existeDocxParaConversao($proposicao)) {
+            return true;
+        }
+
+        // Verificar se existe arquivo RTF que pode ser convertido
+        if ($this->existeRtfParaConversao($proposicao)) {
             return true;
         }
 
@@ -224,6 +229,39 @@ class CheckAssinaturaPermission
         foreach ($diretorios as $diretorio) {
             if (is_dir($diretorio)) {
                 $pattern = $diretorio . "/proposicao_{$proposicao->id}_*.docx";
+                $encontrados = glob($pattern);
+                if (!empty($encontrados)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Verificar se existe arquivo RTF que pode ser convertido para PDF
+     */
+    private function existeRtfParaConversao(Proposicao $proposicao): bool
+    {
+        // Verificar arquivo_path do banco
+        if ($proposicao->arquivo_path) {
+            $caminhoCompleto = storage_path('app/' . $proposicao->arquivo_path);
+            if (file_exists($caminhoCompleto) && str_ends_with($caminhoCompleto, '.rtf')) {
+                return true;
+            }
+        }
+
+        // Buscar arquivos RTF nos diretórios padrão
+        $diretorios = [
+            storage_path("app/proposicoes"),
+            storage_path("app/private/proposicoes"),
+            storage_path("app/public/proposicoes")
+        ];
+
+        foreach ($diretorios as $diretorio) {
+            if (is_dir($diretorio)) {
+                $pattern = $diretorio . "/proposicao_{$proposicao->id}_*.rtf";
                 $encontrados = glob($pattern);
                 if (!empty($encontrados)) {
                     return true;

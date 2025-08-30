@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Artisan;
@@ -18,6 +17,11 @@ class DatabaseSeeder extends Seeder
         $this->call([
             OnlyOfficeTablesSeeder::class,
             RolesAndPermissionsSeeder::class,
+        ]);
+
+        // PRESERVAÇÃO DE DADOS CRÍTICOS: Sistema automático de backup e preservação
+        $this->call([
+            PreservarDadosCriticosSeeder::class,
         ]);
 
         // Criar usuários do sistema com roles
@@ -42,6 +46,7 @@ class DatabaseSeeder extends Seeder
         // Seeder de permissões de menu
         $this->call([
             MenuPermissionsSeeder::class,
+            DocsPermissionsSeeder::class, // Permissões para acesso à documentação
         ]);
 
         // Seeder de tipos de proposição
@@ -76,86 +81,96 @@ class DatabaseSeeder extends Seeder
         $this->call([
             PDFAssinaturaOptimizadoSeeder::class,
         ]);
-        
+
         // CORREÇÃO DEFINITIVA: Estrutura Word completa (cabeçalho + corpo + rodapé)
         $this->call([
             PDFEstruturaWordSeeder::class,
             PDFErrorLogFixSeeder::class,
         ]);
-        
+
         // UI: Otimizações de interface do usuário
         $this->call([
             UIOptimizationsSeeder::class,
         ]);
-        
+
         // UI: Correções de botões OnlyOffice (previne captura incorreta de cliques)
         $this->call([
             UIButtonsFixSeeder::class,
         ]);
-        
+
         // FINAL: Limpeza de código debug
         $this->call([
             LimpezaCodigoDebugSeeder::class,
         ]);
-        
+
         // Correção do botão Assinar Documento
         $this->call([
             ButtonAssinaturaFixSeeder::class,
         ]);
-        
+
+        // Correção de PDFs com protocolo e assinatura 
+        $this->call([
+            CorrecaoPDFProtocoloAssinaturaSeeder::class,
+        ]);
+
         // ÚLTIMO: Correções HTML de estrutura de botões (DEVE ser executado POR ÚLTIMO)
         $this->call([
             HTMLButtonsFixSeeder::class,
         ]);
-        
+
         // Interface Vue.js para proposições (performance e tempo real)
         $this->call([
             VueInterfaceSeeder::class,
         ]);
-        
+
         // Sistema de permissões por role (FINAL)
         $this->call([
             RolePermissionSystemSeeder::class,
         ]);
-        
+
         // Melhorias de UI do botão Assinar Documento
         $this->call([
             ButtonAssinaturaUISeeder::class,
         ]);
-        
+
         // CORREÇÃO CRÍTICA: Garantir que a tag de fechamento </a> esteja presente
         $this->call([
             ButtonAssinaturaTagFixSeeder::class,
         ]);
-        
+
         // VALIDAÇÃO E CORREÇÃO COMPLETA: Estrutura HTML de todos os botões
         $this->call([
             HTMLStructureValidationSeeder::class,
         ]);
-        
+
         // CORREÇÃO DEFINITIVA: Botão de assinatura (executar por último)
         $this->call([
             FixAssinaturaButtonSeeder::class,
         ]);
-        
+
         // Interface Vue.js para tela de assinatura (performance otimizada)
         $this->call([
             AssinaturaVueInterfaceSeeder::class,
         ]);
-        
+
         // Correções de status e otimização de PDF
         $this->call([
             CorrecaoStatusPDFSeeder::class,
         ]);
-        
+
         // Correções de formatação do Legislativo no PDF
         $this->call([
             PDFFormatacaoLegislativoSeeder::class,
         ]);
-        
+
         // CORREÇÃO: Preservação de parágrafos no OnlyOffice
         $this->call([
             ParagrafosOnlyOfficeSeeder::class,
+        ]);
+
+        // CORREÇÃO: Visualização de assinatura e protocolo no PDF
+        $this->call([
+            CorrecaoPDFAssinaturaSeeder::class,
         ]);
 
         // Processar imagens dos templates admin
@@ -163,7 +178,6 @@ class DatabaseSeeder extends Seeder
         $this->command->info('🖼️ Processando imagens dos templates admin...');
         Artisan::call('templates:process-images');
         $this->command->info('✅ Imagens dos templates processadas!');
-
 
         $this->command->info('');
         $this->command->info('🎉 ===============================================');
