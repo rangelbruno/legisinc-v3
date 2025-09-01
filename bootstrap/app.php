@@ -25,6 +25,9 @@ return Application::configure(basePath: dirname(__DIR__))
             'block.protocolo.access' => \App\Http\Middleware\BlockProtocoloAccess::class,
             'guest' => \App\Http\Middleware\RedirectIfAuthenticated::class,
             'prevent.back.history' => \App\Http\Middleware\PreventBackHistory::class,
+            'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
+            'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
+            'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
             'role.permission' => \App\Http\Middleware\RolePermissionMiddleware::class,
             'check.assinatura.permission' => \App\Http\Middleware\CheckAssinaturaPermission::class,
         ]);

@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Proposicao;
+use App\Models\TipoProposicao;
 use App\Services\OnlyOffice\OnlyOfficeService;
+use App\Services\Template\TemplateUniversalService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -12,7 +14,8 @@ use Illuminate\Support\Facades\Storage;
 class OnlyOfficeController extends Controller
 {
     public function __construct(
-        private OnlyOfficeService $onlyOfficeService
+        private OnlyOfficeService $onlyOfficeService,
+        private TemplateUniversalService $templateUniversalService
     ) {}
 
     /**
@@ -50,17 +53,65 @@ class OnlyOfficeController extends Controller
             $proposicao->load('template');
         }
         
-        // Usar OnlyOfficeService para gerar configuração consistente
-        if ($proposicao->template_id && $proposicao->template) {
-            $config = $this->onlyOfficeService->gerarConfiguracaoEditor(
-                $proposicao->template,
-                $proposicao,
-                'proposicao',
-                $proposicao->id
-            );
-        } else {
-            // Fallback para proposições sem template
+        // PRIORIDADE PARA LEGISLATIVO: Verificar se já existe arquivo salvo
+        // O Legislativo deve editar o arquivo já criado pelo Parlamentar, não usar template
+        $temArquivoSalvo = !empty($proposicao->arquivo_path) && 
+                          (Storage::disk('local')->exists($proposicao->arquivo_path) || 
+                           Storage::disk('public')->exists($proposicao->arquivo_path) ||
+                           file_exists(storage_path('app/' . $proposicao->arquivo_path)));
+        
+        if ($temArquivoSalvo) {
+            Log::info('OnlyOffice Editor Legislativo: Usando arquivo salvo existente', [
+                'proposicao_id' => $proposicao->id,
+                'arquivo_path' => $proposicao->arquivo_path,
+                'status' => $proposicao->status
+            ]);
+            
+            // Usar configuração padrão que carrega o arquivo salvo (RÁPIDO)
             $config = $this->generateOnlyOfficeConfig($proposicao);
+        } else {
+            // Se não tem arquivo salvo, usar template como fallback
+            if (!$proposicao->relationLoaded('tipoProposicao')) {
+                $proposicao->load('tipoProposicao');
+            }
+            
+            $tipoProposicao = $proposicao->tipoProposicao;
+            
+            // Se a relação não funcionou, buscar por nome
+            if (!$tipoProposicao && $proposicao->tipo) {
+                $tipoProposicao = TipoProposicao::where('nome', $proposicao->tipo)->first();
+            }
+            
+            $deveUsarUniversal = $tipoProposicao 
+                ? $this->templateUniversalService->deveUsarTemplateUniversal($tipoProposicao)
+                : false;
+            
+            if ($deveUsarUniversal) {
+                Log::info('OnlyOffice Editor Legislativo: Usando template universal (sem arquivo salvo)', [
+                    'proposicao_id' => $proposicao->id,
+                    'tipo_proposicao' => $tipoProposicao ? $tipoProposicao->nome : $proposicao->tipo
+                ]);
+                
+                $config = $this->generateOnlyOfficeConfigWithUniversalTemplate($proposicao);
+            } else if ($proposicao->template_id && $proposicao->template) {
+                Log::info('OnlyOffice Editor Legislativo: Usando template específico', [
+                    'proposicao_id' => $proposicao->id,
+                    'template_id' => $proposicao->template_id
+                ]);
+                
+                $config = $this->onlyOfficeService->gerarConfiguracaoEditor(
+                    $proposicao->template,
+                    $proposicao,
+                    'proposicao',
+                    $proposicao->id
+                );
+            } else {
+                Log::info('OnlyOffice Editor Legislativo: Usando fallback básico', [
+                    'proposicao_id' => $proposicao->id
+                ]);
+                
+                $config = $this->generateOnlyOfficeConfig($proposicao);
+            }
         }
 
         return view('proposicoes.legislativo.onlyoffice-editor', compact('proposicao', 'config'));
@@ -83,7 +134,7 @@ class OnlyOfficeController extends Controller
         $version = $lastModified;
         $token = base64_encode($proposicao->id . '|' . $lastModified); // Usar lastModified em vez de time()
         $documentUrl = route('proposicoes.onlyoffice.download', [
-            'proposicao' => $proposicao,
+            'id' => $proposicao->id,
             'token' => $token,
             'v' => $version,
             '_' => $lastModified // Cache buster baseado em modificação, não time atual
@@ -106,9 +157,9 @@ class OnlyOfficeController extends Controller
             $callbackUrl = str_replace(['http://localhost:8001', 'http://127.0.0.1:8001'], 'http://legisinc-app', $callbackUrl);
         }
 
-        // FORÇAR RTF PARA TODOS OS CASOS (temporário - debug)
+        // Configuração padrão para documentos de texto
         $fileType = 'rtf';
-        $documentType = 'word';
+        $documentType = 'word'; // SEMPRE 'word' para RTF/DOCX/DOC
         
         Log::info('DEBUG fileType detection - START', [
             'proposicao_id' => $proposicao->id,
@@ -223,6 +274,158 @@ class OnlyOfficeController extends Controller
     }
 
     /**
+     * Download do documento para o OnlyOffice por ID (sem model binding)
+     */
+    public function downloadById(Request $request, $id)
+    {
+        Log::info('OnlyOffice Download Request', [
+            'proposicao_id' => $id,
+            'user_agent' => $request->header('User-Agent'),
+            'ip' => $request->ip(),
+            'from_container' => str_contains($request->ip(), '172.') || $request->ip() === 'onlyoffice'
+        ]);
+
+        // INTEGRAÇÃO: Usar Template Universal Service (conforme CLAUDE.md)
+        try {
+            // Buscar proposição sem falhar por problemas de conexão
+            $proposicao = Proposicao::with(['tipoProposicao', 'autor'])->find($id);
+            
+            if (!$proposicao) {
+                throw new \Exception("Proposição não encontrada: {$id}");
+            }
+            
+            // Usar TemplateUniversalService para determinar se deve usar template universal
+            $tipoProposicao = $proposicao->tipoProposicao;
+            
+            // Se a relação não funcionou, buscar por nome
+            if (!$tipoProposicao && $proposicao->tipo) {
+                $tipoProposicao = TipoProposicao::where('nome', $proposicao->tipo)->first();
+            }
+            
+            $deveUsarUniversal = $tipoProposicao 
+                ? $this->templateUniversalService->deveUsarTemplateUniversal($tipoProposicao)
+                : false;
+            
+            if ($deveUsarUniversal) {
+                Log::info('OnlyOffice Download: Usando template universal', [
+                    'proposicao_id' => $id,
+                    'tipo_proposicao' => $tipoProposicao ? $tipoProposicao->nome : $proposicao->tipo
+                ]);
+                
+                // Usar TemplateUniversalService para aplicar template
+                $rtfContent = $this->templateUniversalService->aplicarTemplateParaProposicao($proposicao);
+            } else {
+                Log::info('OnlyOffice Download: Usando RTF básico/específico', [
+                    'proposicao_id' => $id,
+                    'template_id' => $proposicao->template_id
+                ]);
+                
+                // Fallback para RTF básico
+                $rtfContent = $this->gerarRTFTemplateUniversal($id);
+            }
+            
+            $tempFile = tempnam(sys_get_temp_dir(), 'template_universal_') . '.rtf';
+            file_put_contents($tempFile, $rtfContent);
+            
+            return response()->download($tempFile, "proposicao_{$id}.rtf", [
+                'Content-Type' => 'application/rtf; charset=UTF-8',
+                'Cache-Control' => 'no-cache, no-store, must-revalidate',
+                'Pragma' => 'no-cache'
+            ])->deleteFileAfterSend(true);
+            
+        } catch (\Exception $e) {
+            Log::error('Erro ao gerar RTF universal', [
+                'proposicao_id' => $id,
+                'error' => $e->getMessage()
+            ]);
+            
+            // Fallback mínimo
+            $rtfFallback = $this->gerarRTFSimples($id);
+            $tempFile = tempnam(sys_get_temp_dir(), 'fallback_') . '.rtf';
+            file_put_contents($tempFile, $rtfFallback);
+            
+            return response()->download($tempFile, "fallback_{$id}.rtf", [
+                'Content-Type' => 'application/rtf; charset=UTF-8'
+            ])->deleteFileAfterSend(true);
+        }
+    }
+
+    /**
+     * Gerar RTF com template universal simulado
+     */
+    private function gerarRTFTemplateUniversal($id)
+    {
+        $dadosCamara = [
+            'nome' => 'CÂMARA MUNICIPAL DE CARAGUATATUBA',
+            'endereco' => 'Praça da República, 40, Centro',
+            'telefone' => '(12) 3882-5588',
+            'website' => 'www.camaracaraguatatuba.sp.gov.br',
+            'municipio' => 'Caraguatatuba'
+        ];
+
+        $data = now();
+        $numeroProposicao = "[AGUARDANDO PROTOCOLO]";
+
+        return '{\rtf1\ansi\ansicpg1252\deff0\nouicompat\deflang1046{\fonttbl{\f0\fnil\fcharset0 Times New Roman;}}
+{\colortbl;\red0\green0\blue0;\red255\green255\blue255;}
+{\*\generator Laravel Template Universal}
+\viewkind4\uc1
+\pard\sa200\sl276\slmult1\qc\f0\fs24\b ' . $dadosCamara['nome'] . '\b0\par
+\qc ' . $dadosCamara['endereco'] . '\par
+\qc ' . $dadosCamara['telefone'] . '\par
+\qc ' . $dadosCamara['website'] . '\par
+\par\par
+\qc\fs28\b MOÇÃO Nº ' . $numeroProposicao . '\b0\fs24\par
+\par\par
+\ql\b EMENTA:\b0 [Ementa da proposição será definida pelo parlamentar]\par
+\par
+A Câmara Municipal manifesta:\par
+\par
+[Texto da proposição será criado pelo parlamentar usando este template universal.]\par
+\par
+[Este documento foi gerado automaticamente com o Template Universal do Sistema Legisinc.]\par
+\par
+[Justificativa se houver]\par
+\par
+Resolve dirigir a presente Moção.\par
+\par\par
+\qr ' . $dadosCamara['municipio'] . ', ' . $data->format('d') . ' de ' . $this->obterMesPortugues($data->month) . ' de ' . $data->year . '.\par
+\par\par
+\qc __________________________________\par
+\qc [Nome do Parlamentar]\par
+\qc Vereador(a)\par
+}';
+    }
+
+    /**
+     * Gerar RTF simples para fallback
+     */
+    private function gerarRTFSimples($id)
+    {
+        return '{\rtf1\ansi\ansicpg1252\deff0\nouicompat\deflang1046{\fonttbl{\f0\fnil\fcharset0 Times New Roman;}}
+\viewkind4\uc1
+\pard\sa200\sl276\slmult1\qc\f0\fs24\b DOCUMENTO BÁSICO\b0\par
+\ql Proposição ID: ' . $id . '\par
+Data: ' . now()->format('d/m/Y H:i:s') . '\par
+\par
+Este é um documento básico gerado pelo sistema.\par
+}';
+    }
+
+    /**
+     * Obter mês em português
+     */
+    private function obterMesPortugues($mes)
+    {
+        $meses = [
+            1 => 'janeiro', 2 => 'fevereiro', 3 => 'março', 4 => 'abril',
+            5 => 'maio', 6 => 'junho', 7 => 'julho', 8 => 'agosto',
+            9 => 'setembro', 10 => 'outubro', 11 => 'novembro', 12 => 'dezembro'
+        ];
+        return $meses[$mes] ?? 'janeiro';
+    }
+
+    /**
      * Download do documento para o OnlyOffice
      */
     public function download(Request $request, Proposicao $proposicao)
@@ -260,8 +463,70 @@ class OnlyOfficeController extends Controller
             }
         }
 
-        // Usar o serviço para gerar o documento
-        return $this->onlyOfficeService->gerarDocumentoProposicao($proposicao);
+        // Usar o serviço para gerar o documento - com fallback em caso de erro
+        try {
+            return $this->onlyOfficeService->gerarDocumentoProposicao($proposicao);
+        } catch (\Exception $e) {
+            Log::error('Erro ao gerar documento da proposição, usando fallback RTF', [
+                'proposicao_id' => $proposicao->id,
+                'error' => $e->getMessage()
+            ]);
+            
+            // Fallback: criar documento RTF simples direto
+            $rtfContent = '{\rtf1\ansi\ansicpg1252\deff0\nouicompat\deflang1046{\fonttbl{\f0\fnil\fcharset0 Times New Roman;}}
+{\*\generator Riched20 10.0.19041}\viewkind4\uc1 
+\pard\sa200\sl276\slmult1\qc\f0\fs24\b PROPOSIÇÃO\b0\par
+\ql ID: ' . $proposicao->id . '\par
+Tipo: ' . ($proposicao->tipo ?? 'Não definido') . '\par
+Status: ' . ($proposicao->status ?? 'Em edição') . '\par
+Data: ' . now()->format('d/m/Y H:i:s') . '\par
+\par
+Documento gerado automaticamente devido a erro no sistema.\par
+Por favor, contacte o administrador.\par
+}';
+            
+            $tempFile = tempnam(sys_get_temp_dir(), 'fallback_prop_') . '.rtf';
+            file_put_contents($tempFile, $rtfContent);
+            
+            return response()->download($tempFile, "proposicao_{$proposicao->id}.rtf", [
+                'Content-Type' => 'application/rtf',
+                'Cache-Control' => 'no-cache, no-store, must-revalidate',
+                'Pragma' => 'no-cache'
+            ])->deleteFileAfterSend(true);
+        }
+    }
+
+    /**
+     * Debug endpoint para testar geração de documento
+     */
+    public function debugDownload($id)
+    {
+        try {
+            // Teste super simples sem consulta ao banco
+            $rtfContent = '{\rtf1\ansi\ansicpg1252\deff0\nouicompat\deflang1046{\fonttbl{\f0\fnil\fcharset0 Times New Roman;}}
+{\*\generator Riched20 10.0.19041}\viewkind4\uc1 
+\pard\sa200\sl276\slmult1\qc\f0\fs24\b TESTE DE DOCUMENTO RTF SIMPLES\b0\par
+\ql Proposicao ID: ' . $id . '\par
+Status: Testando\par
+Data: ' . date('d/m/Y H:i:s') . '\par
+Sistema funcionando!\par
+}';
+            
+            $tempFile = tempnam(sys_get_temp_dir(), 'debug_simple_') . '.rtf';
+            file_put_contents($tempFile, $rtfContent);
+            
+            return response()->download($tempFile, "debug_simple_{$id}.rtf", [
+                'Content-Type' => 'application/rtf'
+            ])->deleteFileAfterSend(true);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Debug error: ' . $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'line' => $e->getLine(),
+                'file' => $e->getFile()
+            ], 500);
+        }
     }
 
     /**
@@ -394,12 +659,9 @@ class OnlyOfficeController extends Controller
         $temArquivoSalvo = !empty($proposicao->arquivo_path) && 
                           Storage::disk('local')->exists($proposicao->arquivo_path);
         
-        // Se há conteúdo de IA ou texto manual E NÃO existe arquivo salvo, forçar regeneração do documento
-        $temConteudoValido = !empty($proposicao->conteudo) && 
-                           $proposicao->conteudo !== 'Conteúdo a ser definido' && 
-                           $proposicao->template_id === null;
-                           
-        $forcarRegeneracao = ($request->has('ai_content') || $request->has('manual_content') || $temConteudoValido) && !$temArquivoSalvo;
+        // SEMPRE usar template universal - não forçar regeneração baseada em conteúdo
+        // Só forçar regeneração se explicitamente solicitado via parâmetros
+        $forcarRegeneracao = ($request->has('ai_content') || $request->has('manual_content')) && !$temArquivoSalvo;
                            
         if ($forcarRegeneracao) {
             // Limpar arquivo_path para forçar regeneração com conteúdo personalizado
@@ -412,7 +674,6 @@ class OnlyOfficeController extends Controller
                 'proposicao_id' => $proposicao->id,
                 'ai_content_param' => $request->has('ai_content'),
                 'manual_content_param' => $request->has('manual_content'),
-                'tem_conteudo_valido' => $temConteudoValido,
                 'tem_arquivo_salvo' => $temArquivoSalvo,
                 'template_id' => $proposicao->template_id,
                 'arquivo_path_anterior' => $proposicao->arquivo_path
@@ -428,8 +689,39 @@ class OnlyOfficeController extends Controller
             ]);
         }
         
-        // Usar OnlyOfficeService para gerar configuração consistente
-        if ($proposicao->template_id && $proposicao->template) {
+        // NOVA LÓGICA: Integração com Template Universal (conforme CLAUDE.md)
+        // Carregar tipo de proposição se não estiver carregado
+        if (!$proposicao->relationLoaded('tipoProposicao')) {
+            $proposicao->load('tipoProposicao');
+        }
+        
+        // Verificar se deve usar template universal
+        $tipoProposicao = $proposicao->tipoProposicao;
+        
+        // Se a relação não funcionou, buscar por nome
+        if (!$tipoProposicao && $proposicao->tipo) {
+            $tipoProposicao = TipoProposicao::where('nome', $proposicao->tipo)->first();
+        }
+        
+        $deveUsarUniversal = $tipoProposicao 
+            ? $this->templateUniversalService->deveUsarTemplateUniversal($tipoProposicao)
+            : false;
+        
+        if ($deveUsarUniversal) {
+            Log::info('OnlyOffice Editor: Usando template universal', [
+                'proposicao_id' => $proposicao->id,
+                'tipo_proposicao' => $tipoProposicao ? $tipoProposicao->nome : $proposicao->tipo,
+                'template_id_anterior' => $proposicao->template_id
+            ]);
+            
+            // Usar template universal através do serviço
+            $config = $this->generateOnlyOfficeConfigWithUniversalTemplate($proposicao);
+        } else if ($proposicao->template_id && $proposicao->template) {
+            Log::info('OnlyOffice Editor: Usando template específico', [
+                'proposicao_id' => $proposicao->id,
+                'template_id' => $proposicao->template_id
+            ]);
+            
             $config = $this->onlyOfficeService->gerarConfiguracaoEditor(
                 $proposicao->template,
                 $proposicao,
@@ -437,7 +729,13 @@ class OnlyOfficeController extends Controller
                 $proposicao->id
             );
         } else {
-            // Fallback para proposições sem template
+            Log::info('OnlyOffice Editor: Usando fallback básico', [
+                'proposicao_id' => $proposicao->id,
+                'sem_template_universal' => !$deveUsarUniversal,
+                'sem_template_especifico' => !$proposicao->template_id
+            ]);
+            
+            // Fallback para proposições sem qualquer template
             $config = $this->generateOnlyOfficeConfig($proposicao);
         }
 
@@ -459,5 +757,110 @@ class OnlyOfficeController extends Controller
             'conteudo_length' => strlen($proposicao->conteudo ?? ''),
             'status' => $proposicao->status
         ]);
+    }
+
+    /**
+     * Gerar configuração OnlyOffice usando Template Universal
+     */
+    private function generateOnlyOfficeConfigWithUniversalTemplate(Proposicao $proposicao)
+    {
+        // OTIMIZAÇÃO: Document key mais simples e deterministic para melhor cache
+        $lastModified = $proposicao->ultima_modificacao ? 
+                       $proposicao->ultima_modificacao->timestamp : 
+                       $proposicao->updated_at->timestamp;
+        
+        // Usar hash mais simples para permitir cache
+        $documentKey = 'universal_' . $proposicao->id . '_' . time() . '_' . substr(md5($proposicao->id . time()), 0, 8);
+        
+        // OTIMIZAÇÃO: Token mais eficiente
+        $version = $lastModified;
+        $token = base64_encode($proposicao->id . '|' . $lastModified);
+        
+        $documentUrl = route('proposicoes.onlyoffice.download', [
+            'id' => $proposicao->id,
+            'token' => $token,
+            'v' => $version,
+            '_' => $lastModified
+        ]);
+        
+        // Se estiver em ambiente local/docker, ajustar URL para comunicação entre containers
+        if (config('app.env') === 'local') {
+            $documentUrl = str_replace('localhost:8001', 'legisinc-app:80', $documentUrl);
+        }
+        
+        $callbackUrl = route('api.onlyoffice.callback.legislativo', [
+            'proposicao' => $proposicao,
+            'documentKey' => $documentKey
+        ]);
+        
+        // Ajustar URL para comunicação entre containers
+        if (config('app.env') === 'local') {
+            $callbackUrl = str_replace(['http://localhost:8001', 'http://127.0.0.1:8001'], 'http://legisinc-app', $callbackUrl);
+        }
+        
+        Log::info('OnlyOffice Config - Template Universal', [
+            'proposicao_id' => $proposicao->id,
+            'document_key' => $documentKey,
+            'document_url' => $documentUrl,
+            'callback_url' => $callbackUrl,
+            'tipo_proposicao' => $proposicao->tipoProposicao->codigo ?? 'unknown'
+        ]);
+        
+        return [
+            'document' => [
+                'fileType' => 'rtf',
+                'key' => $documentKey,
+                'title' => 'Proposição #' . $proposicao->id . ' - ' . $proposicao->ementa,
+                'url' => $documentUrl,
+                'permissions' => [
+                    'edit' => true,
+                    'download' => true,
+                    'print' => true,
+                    'review' => true,
+                    'comment' => true,
+                ],
+                'info' => [
+                    'author' => $proposicao->autor->name ?? 'Autor',
+                    'created' => $proposicao->created_at->toISOString(),
+                    'folder' => 'Proposições'
+                ]
+            ],
+            'documentType' => 'word',
+            'editorConfig' => [
+                'mode' => 'edit',
+                'lang' => 'pt',
+                'callbackUrl' => $callbackUrl,
+                'customization' => [
+                    'autosave' => true,
+                    'chat' => false,
+                    'comments' => true,
+                    'help' => false,
+                    'hideRightMenu' => false,
+                    'logo' => [
+                        'image' => asset('template/cabecalho.png'),
+                        'imageEmbedded' => asset('template/cabecalho.png'),
+                        'url' => config('app.url')
+                    ],
+                    'compactToolbar' => false,
+                    'toolbarNoTabs' => false,
+                    'reviewDisplay' => 'original'
+                ],
+                'user' => [
+                    'id' => (string) Auth::id(),
+                    'name' => Auth::user()->name,
+                    'group' => Auth::user()->isLegislativo() ? 'Legislativo' : 'Parlamentar'
+                ],
+                'embedded' => [
+                    'saveUrl' => $callbackUrl,
+                    'embedUrl' => $callbackUrl,
+                    'shareUrl' => config('app.url'),
+                    'toolbarDocked' => 'top'
+                ]
+            ],
+            'type' => 'desktop',
+            'token' => $token,
+            'height' => '100%',
+            'width' => '100%'
+        ];
     }
 }

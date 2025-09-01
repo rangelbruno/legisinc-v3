@@ -17,6 +17,9 @@ class VerifyCsrfToken extends Middleware
         'onlyoffice/*',
         '*/onlyoffice/*',
         'api/camaras/*',
+        'proposicoes/*/onlyoffice/callback/*',
+        'api/onlyoffice/*',
+        '*/callback/*',
     ];
     
 } 

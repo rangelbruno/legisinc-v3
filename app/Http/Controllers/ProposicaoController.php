@@ -9,6 +9,7 @@ use App\Models\TipoProposicaoTemplate;
 use App\Services\Template\TemplateInstanceService;
 use App\Services\Template\TemplateParametrosService;
 use App\Services\Template\TemplateProcessorService;
+use App\Services\Template\TemplateUniversalService;
 use App\Services\TemplateVariablesService;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -17,6 +18,10 @@ use Illuminate\Support\Facades\Auth;
 
 class ProposicaoController extends Controller implements HasMiddleware
 {
+    public function __construct(
+        private TemplateUniversalService $templateUniversalService
+    ) {}
+
     /**
      * Get the middleware that should be assigned to the controller.
      */
@@ -368,143 +373,85 @@ class ProposicaoController extends Controller implements HasMiddleware
      */
     public function buscarModelos($tipo)
     {
-        // Log::info('Buscando modelos para tipo: ' . $tipo);
-
         try {
             // Verificar se o tipo existe
             $tipoProposicao = TipoProposicao::buscarPorCodigo($tipo);
 
             if (! $tipoProposicao || ! $tipoProposicao->ativo) {
-                // Log::warning('Tipo de proposição não encontrado ou inativo: ' . $tipo);
                 return response()->json([], 404);
             }
 
-            // Log::info('Tipo encontrado, buscando modelos para ID: ' . $tipoProposicao->id);
-
-            // Buscar templates específicos para este tipo de proposição
-            $templates = \App\Models\TipoProposicaoTemplate::where('tipo_proposicao_id', $tipoProposicao->id)
-                ->where('ativo', true)
-                ->get();
-
-            // Log::info('Templates específicos encontrados: ' . $templates->count());
-
-            // Converter templates específicos para formato esperado pelo frontend
             $modelosArray = [];
-            foreach ($templates as $template) {
-                $modelosArray[] = [
-                    'id' => 'template_'.$template->id,
-                    'nome' => $tipoProposicao->nome.' - Template #'.$template->id,
-                    'descricao' => 'Template específico para '.$tipoProposicao->nome,
-                    'is_template' => true,
-                    'template_id' => $template->id,
-                    'document_key' => $template->document_key,
-                    'arquivo_path' => $template->arquivo_path,
-                ];
+
+            // PRIORITÁRIO: Verificar se deve usar template universal (conforme CLAUDE.md)
+            if ($this->templateUniversalService->deveUsarTemplateUniversal($tipoProposicao)) {
+                // Buscar template universal
+                $templateUniversal = \App\Models\TemplateUniversal::where('ativo', true)->first();
+                
+                if ($templateUniversal) {
+                    $modelosArray[] = [
+                        'id' => 'template_universal_' . $templateUniversal->id,
+                        'nome' => $tipoProposicao->nome . ' - Template Universal',
+                        'descricao' => 'Template universal configurado para ' . $tipoProposicao->nome,
+                        'is_template' => true,
+                        'template_id' => 'universal_' . $templateUniversal->id,
+                        'document_key' => $templateUniversal->document_key ?? null,
+                        'arquivo_path' => $templateUniversal->arquivo_path ?? null,
+                        'is_universal' => true,
+                    ];
+                }
             }
 
-            // Se não há templates específicos, adicionar opção em branco
-            if (count($modelosArray) === 0) {
-                // Log::info('Nenhum template específico encontrado, adicionando opção em branco');
-                $modelosArray[] = [
-                    'id' => 'template_blank',
-                    'nome' => 'Documento em Branco',
-                    'descricao' => 'Criar '.$tipoProposicao->nome.' sem template específico',
-                    'is_template' => true,
-                    'template_id' => 'blank',
-                ];
+            // FALLBACK: Se não usar template universal, buscar templates específicos
+            if (empty($modelosArray)) {
+                $templates = \App\Models\TipoProposicaoTemplate::where('tipo_proposicao_id', $tipoProposicao->id)
+                    ->where('ativo', true)
+                    ->get();
+
+                foreach ($templates as $template) {
+                    $modelosArray[] = [
+                        'id' => 'template_' . $template->id,
+                        'nome' => $tipoProposicao->nome . ' - Template #' . $template->id,
+                        'descricao' => 'Template específico para ' . $tipoProposicao->nome,
+                        'is_template' => true,
+                        'template_id' => $template->id,
+                        'document_key' => $template->document_key,
+                        'arquivo_path' => $template->arquivo_path,
+                        'is_universal' => false,
+                    ];
+                }
             }
 
-            // Log::info('Modelos formatados para retorno:', [
-            //     'count' => count($modelosArray),
-            //     'data' => $modelosArray
-            // ]);
+            // ÚLTIMO RECURSO: Opção básica se nenhum template existe
+            if (empty($modelosArray)) {
+                $modelosArray[] = [
+                    'id' => 'template_basic',
+                    'nome' => $tipoProposicao->nome . ' - Documento Básico',
+                    'descricao' => 'Criar ' . $tipoProposicao->nome . ' com formatação básica',
+                    'is_template' => false,
+                    'template_id' => 'basic',
+                    'is_universal' => false,
+                ];
+            }
 
             return response()->json($modelosArray);
 
         } catch (\Exception $e) {
-            // Log::error('Erro ao buscar modelos para tipo: ' . $tipo, [
-            //     'error' => $e->getMessage(),
-            //     'trace' => $e->getTraceAsString()
-            // ]);
-
-            // Fallback com modelos mock quando há erro de conexão
-            $modelosMock = $this->getModelosMockPorTipo($tipo);
-
-            // Log::info('Usando fallback com ' . count($modelosMock) . ' modelos mock para tipo: ' . $tipo);
-            return response()->json($modelosMock);
+            // Fallback em caso de erro de conexão
+            return response()->json([
+                [
+                    'id' => 'template_fallback',
+                    'nome' => 'Documento Básico - ' . ucfirst($tipo),
+                    'descricao' => 'Template de fallback devido a problemas de conectividade',
+                    'is_template' => false,
+                    'template_id' => 'basic',
+                    'is_universal' => false,
+                    'error' => 'Conexão com banco indisponível'
+                ]
+            ]);
         }
     }
 
-    /**
-     * Retornar modelos mock para cada tipo (fallback para problemas de conexão)
-     */
-    private function getModelosMockPorTipo($tipo)
-    {
-        $modelos = [
-            'projeto_lei_ordinaria' => [
-                [
-                    'id' => 'mock_1',
-                    'nome' => 'Modelo Padrão - Projeto de Lei',
-                    'descricao' => 'Template padrão para projetos de lei ordinária',
-                    'is_template' => true,
-                    'template_id' => 1,
-                ],
-                [
-                    'id' => 'mock_2',
-                    'nome' => 'Modelo Simplificado - PL',
-                    'descricao' => 'Template simplificado para projetos de lei',
-                    'is_template' => false,
-                    'template_id' => null,
-                ],
-            ],
-            'projeto_lei_complementar' => [
-                [
-                    'id' => 'mock_3',
-                    'nome' => 'Modelo Padrão - Lei Complementar',
-                    'descricao' => 'Template padrão para projetos de lei complementar',
-                    'is_template' => true,
-                    'template_id' => 2,
-                ],
-            ],
-            'indicacao' => [
-                [
-                    'id' => 'mock_4',
-                    'nome' => 'Modelo Padrão - Indicação',
-                    'descricao' => 'Template padrão para indicações',
-                    'is_template' => true,
-                    'template_id' => 3,
-                ],
-            ],
-            'projeto_decreto_legislativo' => [
-                [
-                    'id' => 'mock_5',
-                    'nome' => 'Modelo Padrão - Decreto Legislativo',
-                    'descricao' => 'Template padrão para projetos de decreto legislativo',
-                    'is_template' => true,
-                    'template_id' => 4,
-                ],
-            ],
-            'projeto_resolucao' => [
-                [
-                    'id' => 'mock_6',
-                    'nome' => 'Modelo Padrão - Resolução',
-                    'descricao' => 'Template padrão para projetos de resolução',
-                    'is_template' => true,
-                    'template_id' => 5,
-                ],
-            ],
-        ];
-
-        return $modelos[$tipo] ?? [
-            [
-                'id' => 'mock_default',
-                'nome' => 'Modelo Padrão',
-                'descricao' => 'Template padrão para este tipo de proposição',
-                'is_template' => true,
-                'template_id' => 999,
-            ],
-        ];
-    }
 
     /**
      * Tela de preenchimento do modelo selecionado
@@ -2588,10 +2535,12 @@ ${texto}
     {
         try {
             $sequencia = '';
-            for ($i = 0; $i < strlen($variavel); $i++) {
-                $char = $variavel[$i];
-                $codigo = ord($char);
-                $sequencia .= '\\u'.$codigo.'*';
+            $length = mb_strlen($variavel, 'UTF-8');
+            
+            for ($i = 0; $i < $length; $i++) {
+                $char = mb_substr($variavel, $i, 1, 'UTF-8');
+                $codepoint = mb_ord($char, 'UTF-8');
+                $sequencia .= '\\u'.$codepoint.'*';
             }
 
             return $sequencia;

@@ -93,6 +93,12 @@ class DatabaseSeeder extends Seeder
             UIOptimizationsSeeder::class,
         ]);
 
+        // TEMPLATE UNIVERSAL: Correção automática do problema de codificação
+        $this->call([
+            TemplateUniversalFixSeeder::class,
+            TemplateUniversalSimplificadoSeeder::class, // Template simplificado com variáveis essenciais
+        ]);
+
         // UI: Correções de botões OnlyOffice (previne captura incorreta de cliques)
         $this->call([
             UIButtonsFixSeeder::class,
@@ -108,7 +114,7 @@ class DatabaseSeeder extends Seeder
             ButtonAssinaturaFixSeeder::class,
         ]);
 
-        // Correção de PDFs com protocolo e assinatura 
+        // Correção de PDFs com protocolo e assinatura
         $this->call([
             CorrecaoPDFProtocoloAssinaturaSeeder::class,
         ]);

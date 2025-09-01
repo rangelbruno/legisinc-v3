@@ -28,9 +28,8 @@ class CheckScreenPermission
         }
 
         // Admin sempre tem acesso total
-        // Verificar se tem role de administrador
-        $userRoles = $user->roles->pluck('name');
-        if ($userRoles->contains('ADMIN') || $userRoles->contains('Administrador')) {
+        // Verificar se tem role de administrador usando método seguro
+        if ($user->hasRole(['ADMIN', 'Administrador'])) {
             return $next($request);
         }
 
@@ -41,7 +40,7 @@ class CheckScreenPermission
         // Log para debug
         \Illuminate\Support\Facades\Log::info('CheckScreenPermission - Debug', [
             'user_id' => $user->id,
-            'user_roles' => $user->roles->pluck('name')->toArray(),
+            'user_roles' => $user->getRoleNames()->toArray(),
             'screen_to_check' => $screenToCheck,
             'action_to_check' => $actionToCheck,
             'route_name' => $request->route()->getName(),

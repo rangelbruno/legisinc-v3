@@ -344,9 +344,15 @@
                                         <div class="template-preview">
                                             <div class="template-header">
                                                 <h3>{{ templateSelecionado?.nome || 'Carregando template...' }}</h3>
-                                                <span class="template-badge">
-                                                    <i class="fas fa-certificate me-1"></i>
-                                                    Template Oficial
+                                                <span class="template-badge" :class="{
+                                                    'badge-universal': templateSelecionado?.is_universal,
+                                                    'badge-specific': !templateSelecionado?.is_universal
+                                                }">
+                                                    <i class="fas" :class="{
+                                                        'fa-globe': templateSelecionado?.is_universal,
+                                                        'fa-certificate': !templateSelecionado?.is_universal
+                                                    }" class="me-1"></i>
+                                                    {{ templateSelecionado?.is_universal ? 'Template Universal' : 'Template Específico' }}
                                                 </span>
                                             </div>
                                             <div class="template-info">
@@ -1577,13 +1583,18 @@
         }
 
         .template-badge {
-            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
             color: white;
             padding: 0.5rem 1rem;
             border-radius: 20px;
             font-size: 0.875rem;
             display: flex;
             align-items: center;
+        }
+        .template-badge.badge-universal {
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+        }
+        .template-badge.badge-specific {
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
         }
 
         .template-info {

@@ -183,6 +183,14 @@ class User extends Authenticatable
         if (is_string($roles)) {
             $roles = [$roles];
         }
+        
+        // Handle nested arrays that might come from Spatie middleware
+        if (is_array($roles) && isset($roles[0]) && is_array($roles[0])) {
+            $roles = $roles[0];
+        }
+        
+        // Ensure roles is always a collection for consistent handling
+        $rolesCollection = collect($roles);
 
         try {
             // Check if database connection is available
@@ -201,7 +209,7 @@ class User extends Authenticatable
                 return $this->hasRoleFallback($roles);
             }
 
-            return $userRoles->intersect($roles)->isNotEmpty();
+            return $userRoles->intersect($rolesCollection)->isNotEmpty();
         } catch (\Exception $e) {
             // Fallback when database is not available
             return $this->hasRoleFallback($roles);
@@ -216,12 +224,40 @@ class User extends Authenticatable
         if (is_string($roles)) {
             $roles = [$roles];
         }
+        
+        // Handle nested arrays that might come from Spatie middleware
+        if (is_array($roles) && isset($roles[0]) && is_array($roles[0])) {
+            $roles = $roles[0];
+        }
 
-        // Get user roles from fallback method
-        $userRoles = $this->getRoleNamesFallback();
+        try {
+            // Get user roles from fallback method
+            $userRoles = $this->getRoleNamesFallback();
+            
+            // Ensure userRoles is a Collection
+            if (!$userRoles instanceof \Illuminate\Support\Collection) {
+                $userRoles = collect($userRoles);
+            }
 
-        // Check if any of the user's roles match the required roles
-        return $userRoles->intersect($roles)->isNotEmpty();
+            // Convert roles array to collection for intersection
+            $rolesCollection = collect($roles);
+
+            // Check if any of the user's roles match the required roles
+            return $userRoles->intersect($rolesCollection)->isNotEmpty();
+            
+        } catch (\Exception $e) {
+            // Log the error for debugging
+            \Log::error('Error in hasRoleFallback', [
+                'user_id' => $this->id,
+                'email' => $this->email,
+                'roles_requested' => $roles,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            // Return false as safe fallback
+            return false;
+        }
     }
 
     /**
@@ -325,7 +361,9 @@ class User extends Authenticatable
     {
         // Use mock roles if available (from AuthController)
         if (isset($this->roles) && $this->roles) {
-            return $this->roles->pluck('name');
+            $roleNames = $this->roles->pluck('name');
+            // Ensure it's always a Collection
+            return $roleNames instanceof \Illuminate\Support\Collection ? $roleNames : collect($roleNames);
         }
 
         // For mock/demo purposes, check if user email indicates specific roles

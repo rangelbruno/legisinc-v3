@@ -253,46 +253,92 @@ document.addEventListener('DOMContentLoaded', function() {
             htmlLabels: true,
             curve: 'basis'
         },
+        sequence: {
+            useMaxWidth: true,
+            actorMargin: 50,
+            boxMargin: 10,
+            boxTextMargin: 5,
+            noteMargin: 10,
+            messageMargin: 35
+        },
+        gantt: {
+            useMaxWidth: true,
+            leftPadding: 75,
+            gridLineStartPadding: 35,
+            fontSize: 11,
+            fontFamily: '"Open Sans", sans-serif'
+        },
         fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-        fontSize: '14px'
+        fontSize: '14px',
+        securityLevel: 'loose'
     });
 
     // Renderizar diagramas
     const renderDiagrams = async () => {
         try {
-            // Encontrar todos os blocos de código mermaid
-            const mermaidElements = document.querySelectorAll('pre code.language-mermaid, code.language-mermaid');
+            console.log('🔍 Iniciando busca por diagramas Mermaid...');
             
-            for (let i = 0; i < mermaidElements.length; i++) {
-                const element = mermaidElements[i];
-                const graphDefinition = element.textContent;
+            // Buscar por diferentes padrões de blocos Mermaid
+            const codeElements = document.querySelectorAll('pre code');
+            let diagramCount = 0;
+            
+            for (let i = 0; i < codeElements.length; i++) {
+                const element = codeElements[i];
+                const content = element.textContent.trim();
                 
-                // Criar container para o diagrama
-                const diagramContainer = document.createElement('div');
-                diagramContainer.className = 'mermaid-diagram';
-                diagramContainer.id = 'mermaid-' + i;
-                
-                // Substituir o elemento de código pelo container
-                const parent = element.closest('pre') || element;
-                parent.parentNode.insertBefore(diagramContainer, parent);
-                parent.remove();
-                
-                // Renderizar o diagrama
-                const { svg } = await mermaid.render('diagram-' + i, graphDefinition);
-                diagramContainer.innerHTML = svg;
+                // Verificar se o conteúdo é um diagrama Mermaid válido
+                if (content.match(/^(flowchart|graph|sequenceDiagram|classDiagram|stateDiagram|erDiagram|gantt|gitGraph|journey|pie|requirementDiagram|mindmap|timeline|C4Context)/)) {
+                    console.log(`📊 Encontrado diagrama Mermaid ${diagramCount + 1}: ${content.substring(0, 50)}...`);
+                    
+                    // Criar container para o diagrama
+                    const diagramContainer = document.createElement('div');
+                    diagramContainer.className = 'mermaid-diagram';
+                    diagramContainer.id = 'mermaid-diagram-' + diagramCount;
+                    
+                    // Encontrar o elemento pai (pre)
+                    const preElement = element.closest('pre');
+                    if (preElement) {
+                        // Substituir o pre pelo container do diagrama
+                        preElement.parentNode.insertBefore(diagramContainer, preElement);
+                        preElement.remove();
+                        
+                        try {
+                            // Renderizar o diagrama
+                            const { svg } = await mermaid.render('diagram-' + diagramCount, content);
+                            diagramContainer.innerHTML = svg;
+                            console.log(`✅ Diagrama ${diagramCount + 1} renderizado com sucesso`);
+                        } catch (renderError) {
+                            console.error(`❌ Erro ao renderizar diagrama ${diagramCount + 1}:`, renderError);
+                            diagramContainer.innerHTML = `
+                                <div class="alert alert-warning">
+                                    <strong>Erro na renderização do diagrama:</strong><br>
+                                    <code>${renderError.message}</code>
+                                    <details>
+                                        <summary>Código do diagrama:</summary>
+                                        <pre>${content}</pre>
+                                    </details>
+                                </div>
+                            `;
+                        }
+                        
+                        diagramCount++;
+                    }
+                }
             }
             
-            console.log('✅ Diagramas Mermaid renderizados com sucesso!');
-        } catch (error) {
-            console.error('❌ Erro ao renderizar diagramas Mermaid:', error);
+            if (diagramCount > 0) {
+                console.log(`✅ Processamento concluído! ${diagramCount} diagramas encontrados e processados.`);
+            } else {
+                console.log('ℹ️ Nenhum diagrama Mermaid encontrado.');
+            }
             
-            // Fallback: tentar renderização automática
-            mermaid.init(undefined, document.querySelectorAll('.mermaid'));
+        } catch (error) {
+            console.error('❌ Erro geral ao processar diagramas:', error);
         }
     };
 
     // Aguardar um pouco para garantir que o DOM está completamente carregado
-    setTimeout(renderDiagrams, 500);
+    setTimeout(renderDiagrams, 800);
 });
 </script>
 @endsection

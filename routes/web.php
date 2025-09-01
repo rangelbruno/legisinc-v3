@@ -992,7 +992,28 @@ Route::prefix('images')->name('images.')->middleware('auth')->group(function () 
 });
 
 // OnlyOffice download route for Legislativo (sem autenticação para acesso do servidor OnlyOffice)
-Route::get('/proposicoes/{proposicao}/onlyoffice/download', [App\Http\Controllers\OnlyOfficeController::class, 'download'])->name('proposicoes.onlyoffice.download');
+Route::get('/proposicoes/{id}/onlyoffice/download', [App\Http\Controllers\OnlyOfficeController::class, 'downloadById'])->name('proposicoes.onlyoffice.download');
+Route::get('/proposicoes/{proposicao}/onlyoffice/debug', [App\Http\Controllers\OnlyOfficeController::class, 'debugDownload'])->name('proposicoes.onlyoffice.debug');
+Route::get('/test-debug', function() {
+    return response()->json(['status' => 'OK', 'time' => now()]);
+})->name('test.debug');
+
+Route::get('/test-rtf/{id}', function($id) {
+    $rtfContent = '{\rtf1\ansi\ansicpg1252\deff0\nouicompat\deflang1046{\fonttbl{\f0\fnil\fcharset0 Times New Roman;}}
+{\*\generator Riched20 10.0.19041}\viewkind4\uc1 
+\pard\sa200\sl276\slmult1\qc\f0\fs24\b TESTE RTF DIRETO\b0\par
+\ql ID: ' . $id . '\par
+Data: ' . now()->format('d/m/Y H:i:s') . '\par
+Status: Funcionando sem dependências\par
+}';
+    
+    $tempFile = tempnam(sys_get_temp_dir(), 'test_direct_') . '.rtf';
+    file_put_contents($tempFile, $rtfContent);
+    
+    return response()->download($tempFile, "test_direct_{$id}.rtf", [
+        'Content-Type' => 'application/rtf'
+    ])->deleteFileAfterSend(true);
+})->name('test.rtf');
 Route::get('/proposicoes/{proposicao}/onlyoffice/status', [App\Http\Controllers\OnlyOfficeController::class, 'getUpdateStatus'])->name('proposicoes.onlyoffice.status');
 
 // ROTAS DO EXPEDIENTE
@@ -1015,15 +1036,22 @@ Route::prefix('expediente')->name('expediente.')->middleware(['auth', 'check.scr
     Route::get('/relatorio', [App\Http\Controllers\ExpedienteController::class, 'relatorio'])->name('relatorio');
 });
 
-// ROTAS DE ADMINISTRAÇÃO - TEMPLATES DE RELATÓRIO
+// ROTAS DE ADMINISTRAÇÃO - TEMPLATES
 Route::prefix('admin/templates')->name('admin.templates.')->middleware(['auth', 'check.screen.permission'])->group(function () {
+    // Template Universal (Nova funcionalidade)
+    Route::get('/universal', [App\Http\Controllers\Admin\TemplateUniversalController::class, 'index'])->name('universal');
+    Route::get('/universal/editor/{template?}', [App\Http\Controllers\Admin\TemplateUniversalController::class, 'editor'])->name('universal.editor');
+    Route::post('/universal', [App\Http\Controllers\Admin\TemplateUniversalController::class, 'store'])->name('universal.store');
+    Route::post('/universal/{template}/set-default', [App\Http\Controllers\Admin\TemplateUniversalController::class, 'setDefault'])->name('universal.set-default');
+    Route::post('/universal/{template}/aplicar/{tipo}', [App\Http\Controllers\Admin\TemplateUniversalController::class, 'aplicarParaTipo'])->name('universal.aplicar-tipo');
+
+    // Templates de Relatório
     Route::get('/relatorio-pdf', [App\Http\Controllers\Admin\TemplateRelatorioController::class, 'editarTemplatePdf'])->name('relatorio-pdf');
     Route::post('/relatorio-pdf/salvar', [App\Http\Controllers\Admin\TemplateRelatorioController::class, 'salvarTemplatePdf'])->name('salvar-pdf');
     Route::post('/relatorio-pdf/preview', [App\Http\Controllers\Admin\TemplateRelatorioController::class, 'previewTemplate'])->name('preview');
     Route::get('/backups', [App\Http\Controllers\Admin\TemplateRelatorioController::class, 'listarBackups'])->name('listar-backups');
     Route::post('/backup/restaurar', [App\Http\Controllers\Admin\TemplateRelatorioController::class, 'restaurarBackup'])->name('restaurar-backup');
     Route::post('/resetar', [App\Http\Controllers\Admin\TemplateRelatorioController::class, 'resetarTemplate'])->name('resetar');
-
 });
 
 // ROTAS DO PARECER JURÍDICO

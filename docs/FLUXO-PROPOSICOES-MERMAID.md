@@ -3,6 +3,96 @@
 ## 📅 Última Atualização: 30/08/2025
 ## ✅ Status: Produção com Melhores Práticas Implementadas
 
+## 📝 Template Universal - Fluxo Completo
+
+### Visão Geral do Template Universal
+
+O **Template Universal** é um sistema inovador que elimina a necessidade de manter 23 templates separados para cada tipo de proposição. Ele se adapta automaticamente ao tipo selecionado, aplicando variáveis dinâmicas e estrutura específica conforme a legislação brasileira (LC 95/1998).
+
+```mermaid
+flowchart TB
+    subgraph TemplateSystem["🎨 Sistema Template Universal"]
+        TU_Creation[Template Universal<br/>📄 RTF com 29 variáveis]
+        TU_Variables["Variáveis Dinâmicas<br/>tipo_proposicao<br/>ementa<br/>texto<br/>autor_nome"]
+        TU_Processing[Processamento RTF<br/>✅ UTF-8 correto<br/>✅ OnlyOffice compatível]
+        
+        TU_Creation --> TU_Variables
+        TU_Variables --> TU_Processing
+    end
+    
+    subgraph PropositionCreation["👤 Criação pelo Parlamentar"]
+        PC_Select[Parlamentar seleciona tipo]
+        PC_Template[Sistema aplica Template Universal]
+        PC_Variables[Substitui variáveis automáticas<br/>Nome, cargo, câmara, data]
+        PC_Editor[Abre OnlyOffice com template]
+        
+        PC_Select --> PC_Template
+        PC_Template --> PC_Variables
+        PC_Variables --> PC_Editor
+    end
+    
+    subgraph LegalAnalysis["⚖️ Análise Jurídica"]
+        LA_Receive[Jurídico recebe proposição]
+        LA_OpenEditor[Abre OnlyOffice para revisão]
+        LA_ContentCheck[Verifica conteúdo salvo<br/>🔍 Não usa template]
+        LA_Edit[Edita documento final]
+        
+        LA_Receive --> LA_OpenEditor
+        LA_OpenEditor --> LA_ContentCheck
+        LA_ContentCheck --> LA_Edit
+    end
+    
+    TU_Processing --> PC_Select
+    PC_Editor --> LA_Receive
+    LA_Edit --> End([Documento final<br/>pronto para assinatura])
+    
+    style TemplateSystem fill:#e3f2fd
+    style PropositionCreation fill:#f3e5f5
+    style LegalAnalysis fill:#e8f5e8
+```
+
+### Detalhamento do Template Universal
+
+```mermaid
+flowchart LR
+    subgraph Admin["🔧 Administrador"]
+        A1[Configura Template Universal<br/>em /admin/templates/universal]
+        A2[29 variáveis disponíveis]
+        A3[Estrutura RTF válida]
+        A4[Imagem cabeçalho processada]
+        
+        A1 --> A2 --> A3 --> A4
+    end
+    
+    subgraph Variables["📊 Variáveis do Sistema"]
+        V1[Proposição: tipo, número, ementa]
+        V2[Autor: nome, cargo, partido]
+        V3[Instituição: câmara, endereço, CNPJ]
+        V4[Datas: atual, criação, protocolo]
+        V5[Dinâmicas: preâmbulo adaptável]
+        
+        V1 --> V2 --> V3 --> V4 --> V5
+    end
+    
+    subgraph Process["⚙️ Processamento"]
+        P1[Template base RTF]
+        P2["Substitui imagem_cabecalho"]
+        P3[Mantém outras como placeholder]
+        P4[Encoding UTF-8 correto]
+        P5[OnlyOffice compatível]
+        
+        P1 --> P2 --> P3 --> P4 --> P5
+    end
+    
+    A4 --> V1
+    V5 --> P1
+    P5 --> Output([Template pronto para<br/>uso pelo Parlamentar])
+    
+    style Admin fill:#fff3e0
+    style Variables fill:#e8f5e8
+    style Process fill:#f3e5f5
+```
+
 ## Fluxo Principal Completo
 
 ```mermaid
@@ -77,6 +167,162 @@ flowchart TB
     style ReturnForCorrection fill:#ffebee
     style DigitalSignature fill:#e0f2f1
     style Protocolize fill:#f1f8e9
+```
+
+## 👥 Fluxo Parlamentar → Jurídico (Detalhado)
+
+### Sequência Completa de Interação
+
+```mermaid
+sequenceDiagram
+    participant P as 👤 Parlamentar
+    participant TU as 🎨 Template Universal
+    participant S as 🖥️ Sistema
+    participant OO as 📝 OnlyOffice
+    participant J as ⚖️ Jurídico
+    participant DB as 🗄️ Database
+    
+    Note over P,DB: Fase 1: Criação com Template Universal
+    P->>S: Acessa /proposicoes/create?tipo=mocao
+    S->>TU: Busca Template Universal padrão
+    TU-->>S: Template RTF com variáveis
+    S->>S: Substitui variáveis automáticas<br/>(nome, cargo, câmara, data)
+    S->>DB: Salva rascunho com template aplicado
+    DB-->>S: ID da proposição criada
+    S->>P: Redireciona para tela da proposição
+    
+    Note over P,DB: Fase 2: Edição pelo Parlamentar
+    P->>S: Clique "Adicionar Conteúdo" (OnlyOffice)
+    S->>OO: Gera config com template processado
+    OO-->>P: Editor carregado com template
+    P->>OO: Edita conteúdo da proposição
+    OO->>S: Callback salva alterações (RTF)
+    S->>DB: Atualiza arquivo_path e conteudo
+    DB-->>S: Confirmação
+    S-->>OO: Status = 0 (sucesso)
+    P->>S: Finaliza edição
+    S->>DB: Status → 'em_edicao'
+    
+    Note over P,DB: Fase 3: Envio para Análise
+    P->>S: Clique "Enviar para Legislativo"
+    S->>S: Valida conteúdo mínimo
+    S->>DB: Status → 'enviado_legislativo'
+    S->>J: Notifica nova proposição disponível
+    DB-->>S: Log da tramitação
+    
+    Note over J,DB: Fase 4: Análise Jurídica
+    J->>S: Acessa lista de proposições
+    S->>DB: Lista proposições 'enviado_legislativo'
+    DB-->>S: Proposições para análise
+    S->>J: Exibe proposições pendentes
+    J->>S: Abre proposição específica
+    S->>DB: Busca dados completos
+    DB-->>S: Proposição + arquivos
+    S->>J: Tela de análise jurídica
+    
+    Note over J,DB: Fase 5: Revisão no OnlyOffice
+    J->>S: Clique "Revisar no Editor"
+    S->>S: Verifica arquivo salvo pelo Parlamentar
+    S->>OO: Config para carregar arquivo existente<br/>(NÃO template)
+    OO-->>J: Editor com conteúdo do Parlamentar
+    J->>OO: Faz revisões e correções
+    OO->>S: Callback salva versão revisada
+    S->>DB: Atualiza com versão do Jurídico
+    DB-->>S: Confirmação
+    S-->>OO: Status = 0 (sucesso)
+    
+    Note over J,DB: Fase 6: Decisão Final
+    J->>S: Escolhe ação (Aprovar/Devolver)
+    alt Aprovar
+        S->>DB: Status → 'aprovado_assinatura'
+        S->>P: Notifica aprovação
+        DB-->>S: Log de aprovação
+    else Devolver
+        S->>DB: Status → 'devolvido_correcao'
+        S->>P: Notifica devolução + motivos
+        DB-->>S: Log de devolução
+        P->>S: Acessa proposição devolvida
+        Note over P,OO: Volta para Fase 2 (Edição)
+    end
+    
+    Note over P,DB: Fase 7: Pós-Aprovação
+    P->>S: Visualiza versão final aprovada
+    S->>DB: Busca arquivo mais recente (do Jurídico)
+    DB-->>S: Versão final revisada
+    S->>P: Exibe documento para confirmação
+    P->>S: Confirma leitura
+    S->>DB: confirmacao_leitura = true
+    P->>S: Assina digitalmente
+    S->>DB: Status → 'assinado'
+    S->>S: Gera PDF final com QR Code
+    DB-->>S: Documento finalizado
+```
+
+### Estados e Transições Template Universal
+
+```mermaid
+stateDiagram-v2
+    [*] --> template_aplicado: Template Universal aplicado
+    
+    template_aplicado --> parlamentar_editando: OnlyOffice carrega template
+    parlamentar_editando --> rascunho_salvo: Parlamentar salva
+    rascunho_salvo --> enviado_juridico: Envia para análise
+    
+    enviado_juridico --> juridico_analisando: Jurídico inicia análise
+    juridico_analisando --> juridico_editando: Abre OnlyOffice (arquivo salvo)
+    juridico_editando --> versao_revisada: Jurídico salva revisões
+    
+    versao_revisada --> aprovado: Jurídico aprova
+    versao_revisada --> devolvido: Jurídico devolve
+    
+    devolvido --> parlamentar_editando: Volta para edição
+    
+    aprovado --> aguardando_assinatura: Parlamentar pode assinar
+    aguardando_assinatura --> assinado: Assinatura digital
+    
+    assinado --> [*]: Fluxo concluído
+    
+    note right of template_aplicado: Template com variáveis<br/>automáticas aplicadas
+    note right of juridico_editando: NÃO usa template,<br/>carrega arquivo existente
+    note right of versao_revisada: Versão final com<br/>revisões jurídicas
+```
+
+### Comparação: Template vs Arquivo Salvo
+
+```mermaid
+flowchart LR
+    subgraph Parlamentar["👤 Parlamentar (Primeira vez)"]
+        P1[Template Universal aplicado]
+        P2[Variáveis substituídas]
+        P3[OnlyOffice carrega template]
+        P4[Edita e salva arquivo]
+        
+        P1 --> P2 --> P3 --> P4
+    end
+    
+    subgraph Juridico["⚖️ Jurídico (Revisão)"]
+        J1[Sistema detecta arquivo salvo]
+        J2[OnlyOffice carrega arquivo<br/>NÃO template]
+        J3[Jurídico vê conteúdo real]
+        J4[Faz revisões e salva]
+        
+        J1 --> J2 --> J3 --> J4
+    end
+    
+    P4 --> J1
+    
+    subgraph Decision["🤔 Lógica de Detecção"]
+        D1{Existe arquivo_path?}
+        D2[Carrega arquivo existente]
+        D3[Aplica Template Universal]
+        
+        D1 -->|Sim| D2
+        D1 -->|Não| D3
+    end
+    
+    style Parlamentar fill:#e3f2fd
+    style Juridico fill:#e8f5e8
+    style Decision fill:#fff3e0
 ```
 
 ## Fluxo por Perfil de Usuário
@@ -407,6 +653,173 @@ sequenceDiagram
 - 🟧 **Laranja**: Ações do Protocolo
 
 ---
+
+## 🔧 Template Universal - Especificações Técnicas
+
+### Arquitetura do Sistema
+
+```mermaid
+C4Context
+    Person(parlamentar, "Parlamentar", "Cria proposições usando Template Universal")
+    Person(juridico, "Jurídico", "Analisa e revisa proposições")
+    Person(admin, "Administrador", "Configura Template Universal")
+
+    System_Boundary(legisinc, "Sistema Legisinc") {
+        System(template_universal, "Template Universal", "Sistema único de templates adaptativos")
+        System(onlyoffice, "OnlyOffice", "Editor de documentos RTF")
+        System(proposicoes, "Módulo Proposições", "Gestão do fluxo legislativo")
+    }
+
+    System_Ext(database, "PostgreSQL", "Armazenamento de dados")
+
+    Rel(parlamentar, template_universal, "Usa templates")
+    Rel(juridico, proposicoes, "Analisa proposições")
+    Rel(admin, template_universal, "Configura")
+    
+    Rel(template_universal, onlyoffice, "Processa RTF")
+    Rel(proposicoes, database, "Persiste dados")
+    Rel(template_universal, database, "Armazena templates")
+```
+
+### Variáveis do Template Universal
+
+```mermaid
+mindmap
+  root((Template Universal<br/>29 Variáveis))
+    Proposição
+      tipo_proposicao
+      numero_proposicao
+      ementa
+      texto
+      justificativa
+      protocolo
+    Autor
+      autor_nome
+      autor_cargo
+      autor_partido
+    Datas
+      data_atual
+      data_criacao
+      data_protocolo
+      dia
+      mes
+      ano_atual
+      mes_extenso
+    Instituição
+      municipio
+      nome_camara
+      endereco_camara
+      telefone_camara
+      email_camara
+      cnpj_camara
+    Estrutura
+      imagem_cabecalho
+      assinatura_padrao
+      rodape_texto
+      preambulo_dinamico
+      clausula_vigencia
+      categoria_tipo
+    Status
+      status
+```
+
+### Fluxo Técnico de Processamento RTF
+
+```mermaid
+sequenceDiagram
+    participant Admin as 🔧 Admin
+    participant TU as 📝 TemplateUniversal
+    participant Proc as ⚙️ ProcessorService
+    participant OO as 📄 OnlyOffice
+    participant Fix as 🛠️ FixSeeder
+    
+    Note over Admin,Fix: Configuração Inicial
+    Admin->>TU: Acessa /admin/templates/universal
+    TU->>Proc: Cria template base RTF
+    Proc->>Proc: Valida estrutura RTF básica
+    Proc->>Proc: Processa imagem_cabecalho
+    Proc->>TU: Template válido com imagem
+    TU->>Admin: Interface de edição
+    
+    Note over Admin,Fix: Durante migrate:fresh --seed
+    Fix->>TU: TemplateUniversalFixSeeder executa
+    TU->>Proc: Gera conteúdo RTF correto
+    Proc->>Proc: corrigirRTFCorrompido()
+    Proc->>Proc: gerarCodigoRTFImagem()
+    Proc->>Proc: validarEstruturaRTF()
+    TU->>Fix: Template criado/corrigido
+    
+    Note over Admin,Fix: Uso pelo Parlamentar
+    TU->>OO: Download RTF válido
+    OO->>OO: Abre sem diálogo "Choose TXT options"
+    OO->>Proc: Callback com alterações
+    Proc->>Proc: Preserva parágrafos (\n → \\par)
+    Proc->>TU: Salva versão final
+```
+
+### Resolução de Problemas Técnicos
+
+```mermaid
+flowchart TD
+    Problem[❌ Problema: Choose TXT options]
+    
+    Problem --> Analysis{Análise do RTF}
+    Analysis --> Corrupted[RTF corrompido<br/>Headers malformados]
+    Analysis --> Encoding[Encoding incorreto<br/>text/plain vs application/rtf]
+    Analysis --> Structure[Estrutura inválida<br/>Headers malformados]
+    
+    Corrupted --> Fix1[corrigirRTFCorrompido()<br/>• Corrige headers RTF<br/>• Valida estrutura<br/>• Ajusta formatação]
+    
+    Encoding --> Fix2[Headers HTTP corretos<br/>• Content-Type: application/rtf<br/>• charset=utf-8<br/>• fileType: 'rtf']
+    
+    Structure --> Fix3[garantirRTFValido()<br/>• Validar início RTF<br/>• Codificação UTF-8<br/>• Estrutura completa]
+    
+    Fix1 --> Test[🧪 Teste Automático<br/>debug_template_universal.php]
+    Fix2 --> Test
+    Fix3 --> Test
+    
+    Test --> Success[✅ Editor OnlyOffice<br/>abre sem diálogos]
+    Test --> Fail[❌ Ainda com problemas]
+    
+    Fail --> Analysis
+    
+    Success --> Seeder[TemplateUniversalFixSeeder<br/>preserva correções]
+    Seeder --> Production[🚀 Produção]
+    
+    style Problem fill:#ffebee
+    style Success fill:#e8f5e8
+    style Production fill:#c8e6c9
+```
+
+### Benefícios do Template Universal
+
+```mermaid
+flowchart LR
+    subgraph Antes["📝 Antes: 23 Templates"]
+        A1[23 arquivos RTF separados]
+        A2[Manutenção complexa]
+        A3[Inconsistência entre tipos]
+        A4[Templates podem corromper]
+        A5[Difícil padronização]
+        
+        A1 --> A2 --> A3 --> A4 --> A5
+    end
+    
+    subgraph Agora["🎨 Agora: Template Universal"]
+        B1[1 template adaptativo]
+        B2[Manutenção centralizada]
+        B3[Consistência garantida]
+        B4[Auto-correção automática]
+        B5[Padrão LC 95/1998]
+        
+        B1 --> B2 --> B3 --> B4 --> B5
+    end
+    
+    Antes -.->|Evolução| Agora
+    
+    style Antes fill:#ffebee
+    style Agora fill:#e8f5e8
+```
 
 ## 🚀 Melhorias Implementadas
 

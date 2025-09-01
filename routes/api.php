@@ -15,7 +15,7 @@ Route::post('/onlyoffice/callback/legislativo/{proposicao}/{documentKey}', [App\
 Route::post('/onlyoffice/force-save/proposicao/{proposicao}', [App\Http\Controllers\OnlyOfficeController::class, 'forceSave'])->name('api.onlyoffice.force-save');
 
 // API Routes para busca de câmaras (sem CSRF protection)
-Route::get('/camaras/buscar', function() {
+Route::get('/camaras/buscar', function () {
     return app(App\Http\Controllers\Api\CamaraInfoController::class)->buscarPorNome(request());
 })->name('api.camaras.buscar');
 
@@ -25,16 +25,16 @@ Route::get('/parlamentares/buscar', [App\Http\Controllers\Parlamentar\Parlamenta
 // API para buscar dados atualizados de proposição (usado após fechar OnlyOffice)
 Route::get('/proposicoes/{proposicao}/dados-atualizados', [App\Http\Controllers\ProposicaoController::class, 'getDadosAtualizados'])->name('api.proposicoes.dados-atualizados');
 
-Route::post('/camaras/buscar-completa', function() {
+Route::post('/camaras/buscar-completa', function () {
     return app(App\Http\Controllers\Api\CamaraInfoController::class)->buscarCompleta(request());
 })->name('api.camaras.buscar-completa');
 
 // Novos endpoints para APIs externas
-Route::get('/camaras/status', function() {
+Route::get('/camaras/status', function () {
     return app(App\Http\Controllers\Api\CamaraInfoController::class)->verificarStatusApis();
 })->name('api.camaras.status');
 
-Route::post('/camaras/limpar-cache', function() {
+Route::post('/camaras/limpar-cache', function () {
     return app(App\Http\Controllers\Api\CamaraInfoController::class)->limparCache(request());
 })->name('api.camaras.limpar-cache');
 
@@ -45,6 +45,15 @@ Route::prefix('ai')->name('api.ai.')->middleware(['web'])->group(function () {
     Route::get('/stats', [App\Http\Controllers\Api\AIController::class, 'estatisticas'])->name('stats');
 });
 
+// Progress Schedule API routes
+Route::prefix('progress')->name('api.progress.')->middleware(['web'])->group(function () {
+    Route::get('/schedule', [App\Http\Controllers\Api\ProgressApiController::class, 'schedule'])->name('schedule');
+    Route::get('/overview', [App\Http\Controllers\Api\ProgressApiController::class, 'overview'])->name('overview');
+    Route::get('/timeline', [App\Http\Controllers\Api\ProgressApiController::class, 'timeline'])->name('timeline');
+    Route::get('/stats', [App\Http\Controllers\Api\ProgressApiController::class, 'realTimeStats'])->name('stats');
+    Route::get('/ui-settings', [App\Http\Controllers\Api\ProgressApiController::class, 'uiSettings'])->name('ui-settings');
+    Route::post('/update-progress', [App\Http\Controllers\Api\ProgressApiController::class, 'updateProgress'])->name('update-progress');
+});
 
 // Parâmetros API routes - Mantido para compatibilidade, mas deprecado
 Route::prefix('parametros')->name('api.parametros.')->middleware(['web'])->group(function () {
@@ -53,18 +62,18 @@ Route::prefix('parametros')->name('api.parametros.')->middleware(['web'])->group
         return response()->json([
             'message' => 'API depreciada. Use /api/parametros-modular/',
             'deprecated' => true,
-            'new_endpoint' => '/api/parametros-modular/'
+            'new_endpoint' => '/api/parametros-modular/',
         ], 410);
     })->name('index');
-    
+
     Route::post('/validar-valor', [App\Http\Controllers\Parametro\ParametroController::class, 'validar'])->name('validar-valor');
-    
+
     // Outras rotas retornam aviso de depreciação
     Route::any('/{any}', function () {
         return response()->json([
             'message' => 'Endpoint depreciado. Use o novo sistema de parâmetros modulares.',
             'deprecated' => true,
-            'new_endpoint' => '/api/parametros-modular/'
+            'new_endpoint' => '/api/parametros-modular/',
         ], 410);
     })->where('any', '.*');
 });
@@ -76,7 +85,7 @@ Route::prefix('parametros-modular')->name('api.parametros-modular.')->group(func
     Route::get('/configuracoes/{modulo}/{submodulo}', [App\Http\Controllers\Parametro\ParametroController::class, 'obterConfiguracoes'])->name('configuracoes');
     Route::get('/valor/{modulo}/{submodulo}/{campo}', [App\Http\Controllers\Parametro\ParametroController::class, 'obterValor'])->name('valor');
     Route::post('/cache/limpar', [App\Http\Controllers\Parametro\ParametroController::class, 'limparCache'])->name('limpar-cache');
-    
+
     // Módulos
     Route::prefix('modulos')->name('modulos.')->group(function () {
         Route::get('/', [App\Http\Controllers\Parametro\ModuloParametroController::class, 'index'])->name('index');
@@ -90,12 +99,12 @@ Route::prefix('parametros-modular')->name('api.parametros-modular.')->group(func
         Route::get('/{id}/exportar', [App\Http\Controllers\Parametro\ModuloParametroController::class, 'exportar'])->name('exportar');
         Route::post('/importar', [App\Http\Controllers\Parametro\ModuloParametroController::class, 'importar'])->name('importar');
         Route::get('/extrair-json', [App\Http\Controllers\Parametro\ModuloParametroController::class, 'extrairJson'])->name('extrair-json');
-        
+
         // AJAX deletion routes without CSRF protection
         Route::delete('/{id}/ajax-delete', [App\Http\Controllers\Parametro\ModuloParametroController::class, 'destroy'])->name('ajax-delete');
         Route::get('/teste-extracao', [App\Http\Controllers\Parametro\ModuloParametroController::class, 'testeExtracao'])->name('teste-extracao');
     });
-    
+
     // Submódulos
     Route::prefix('submodulos')->name('submodulos.')->group(function () {
         Route::get('/modulo/{moduloId}', [App\Http\Controllers\Parametro\SubmoduloParametroController::class, 'index'])->name('index');
@@ -110,7 +119,7 @@ Route::prefix('parametros-modular')->name('api.parametros-modular.')->group(func
         Route::post('/{id}/salvar-valores', [App\Http\Controllers\Parametro\SubmoduloParametroController::class, 'salvarValores'])->name('salvar-valores');
         Route::post('/{id}/validar-valores', [App\Http\Controllers\Parametro\SubmoduloParametroController::class, 'validarValores'])->name('validar-valores');
     });
-    
+
     // Campos
     Route::prefix('campos')->name('campos.')->group(function () {
         Route::get('/submodulo/{submoduloId}', [App\Http\Controllers\Parametro\CampoParametroController::class, 'index'])->name('index');
@@ -129,10 +138,10 @@ Route::prefix('parametros-modular')->name('api.parametros-modular.')->group(func
 
 // ===== ONLYOFFICE API ROUTES =====
 Route::prefix('onlyoffice')->name('api.onlyoffice.')->group(function () {
-    
+
     // Callback route (without CSRF protection for ONLYOFFICE server)
     Route::post('/callback/{documentKey}', [App\Http\Controllers\OnlyOffice\OnlyOfficeController::class, 'callback'])->name('callback');
-    
+
     // Document models API
     Route::get('/modelos', [App\Http\Controllers\Documento\DocumentoModeloController::class, 'apiList'])->name('modelos.list');
     Route::get('/modelos/{tipo_proposicao_id}', [App\Http\Controllers\Documento\DocumentoModeloController::class, 'apiList'])->name('modelos.by-tipo');
@@ -144,74 +153,91 @@ Route::prefix('mock-api')->name('mock-api.')->group(function () {
         return response()->json([
             'status' => 'ok',
             'service' => 'Mock API',
-            'timestamp' => now()->toISOString()
+            'timestamp' => now()->toISOString(),
         ]);
     })->name('health');
-    
+
     Route::get('/parlamentares', function () {
         return response()->json([
             'data' => [
                 ['id' => 1, 'nome' => 'João Silva', 'partido' => 'PDT'],
                 ['id' => 2, 'nome' => 'Maria Santos', 'partido' => 'PSDB'],
-                ['id' => 3, 'nome' => 'Pedro Oliveira', 'partido' => 'PT']
+                ['id' => 3, 'nome' => 'Pedro Oliveira', 'partido' => 'PT'],
             ],
-            'total' => 3
+            'total' => 3,
         ]);
     })->name('parlamentares');
-    
+
     Route::post('/parametros/validar', function () {
         return response()->json(['valid' => true]);
     })->name('parametros.validar');
-    
+
     Route::get('/status', function () {
         return response()->json([
             'api_status' => 'operational',
             'database' => 'connected',
             'cache' => 'active',
-            'timestamp' => now()->toISOString()
+            'timestamp' => now()->toISOString(),
         ]);
     })->name('status');
 });
 
 // ===== PARTIDOS API ROUTES =====
 Route::prefix('partidos')->name('api.partidos.')->group(function () {
-    
+
     // Lista e busca de partidos
     Route::get('/', [App\Http\Controllers\Api\PartidoApiController::class, 'index'])->name('index');
     Route::get('/brasileiros', [App\Http\Controllers\Api\PartidoApiController::class, 'partidosBrasileiros'])->name('brasileiros');
     Route::get('/buscar-sigla', [App\Http\Controllers\Api\PartidoApiController::class, 'buscarPorSigla'])->name('buscar-sigla');
     Route::get('/buscar-externos', [App\Http\Controllers\Api\PartidoApiController::class, 'buscarDadosExternos'])->name('buscar-externos');
     Route::get('/estatisticas', [App\Http\Controllers\Api\PartidoApiController::class, 'estatisticas'])->name('estatisticas');
-    
+
     // Validações
     Route::get('/validar-sigla', [App\Http\Controllers\Api\PartidoApiController::class, 'validarSigla'])->name('validar-sigla');
     Route::get('/validar-numero', [App\Http\Controllers\Api\PartidoApiController::class, 'validarNumero'])->name('validar-numero');
-    
+
     // Partido específico
     Route::get('/{id}', [App\Http\Controllers\Api\PartidoApiController::class, 'show'])->name('show');
 });
 
-// Templates API routes  
+// Templates API routes
 Route::prefix('templates')->group(function () {
+    // Templates específicos por tipo (sistema antigo)
     Route::get('{template}/download', [App\Http\Controllers\TemplateController::class, 'download'])
-         ->name('api.templates.download')
-         ->withoutMiddleware(['auth']);
+        ->name('api.templates.download')
+        ->withoutMiddleware(['auth']);
     Route::post('{tipo}/gerar', [App\Http\Controllers\TemplateController::class, 'gerar'])
-         ->name('api.templates.gerar');
-         
+        ->name('api.templates.gerar');
+
+    // Template Universal (sistema novo)
+    Route::prefix('universal')->group(function () {
+        Route::get('{template}/download', [App\Http\Controllers\Admin\TemplateUniversalController::class, 'download'])
+            ->name('api.templates.universal.download')
+            ->withoutMiddleware(['auth']);
+        Route::get('{template}/preview', [App\Http\Controllers\Api\TemplateUniversalApiController::class, 'preview'])
+            ->name('api.templates.universal.preview')
+            ->withoutMiddleware(['auth']);
+        Route::post('{template}/callback/{documentKey}', [App\Http\Controllers\Admin\TemplateUniversalController::class, 'callback'])
+            ->name('api.onlyoffice.template-universal.callback')
+            ->withoutMiddleware(['auth']);
+        Route::post('{template}/force-save', [App\Http\Controllers\Admin\TemplateUniversalController::class, 'forceSave'])
+            ->name('api.templates.universal.force-save')
+            ->withoutMiddleware(['auth']);
+    });
+
     // Template validation routes
     Route::post('validar-conteudo', [App\Http\Controllers\Template\TemplateValidationController::class, 'validarConteudo'])
-         ->name('api.templates.validar-conteudo');
+        ->name('api.templates.validar-conteudo');
     Route::get('{template}/preview', [App\Http\Controllers\Template\TemplateValidationController::class, 'gerarPreview'])
-         ->name('api.templates.preview');
+        ->name('api.templates.preview');
     Route::get('variaveis-disponiveis', [App\Http\Controllers\Template\TemplateValidationController::class, 'variaveisDisponiveis'])
-         ->name('api.templates.variaveis');
+        ->name('api.templates.variaveis');
     Route::get('{template}/validar', [App\Http\Controllers\Template\TemplateValidationController::class, 'validarTemplate'])
-         ->name('api.templates.validar');
+        ->name('api.templates.validar');
     Route::post('testar-processamento', [App\Http\Controllers\Template\TemplateValidationController::class, 'testarProcessamento'])
-         ->name('api.templates.testar');
+        ->name('api.templates.testar');
     Route::post('extrair-variaveis', [App\Http\Controllers\Template\TemplateValidationController::class, 'extrairVariaveis'])
-         ->name('api.templates.extrair-variaveis');
+        ->name('api.templates.extrair-variaveis');
 });
 
 // Route duplicada removida - usar a rota correta no grupo onlyoffice acima
@@ -233,4 +259,3 @@ Route::middleware(['web', 'auth'])->prefix('proposicoes')->name('api.proposicoes
 Route::middleware(['web', 'auth'])->group(function () {
     Route::get('/notifications', [App\Http\Controllers\Api\NotificationController::class, 'index'])->name('api.notifications.index');
 });
-

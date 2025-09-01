@@ -1179,29 +1179,44 @@ $(document).ready(function() {
                     // Usar o primeiro modelo (padrão do tipo)
                     const modeloPadrao = modelos[0];
                     $('#modelo').val(modeloPadrao.id);
-                    $('#template-info-nome').text(modeloPadrao.nome);
+                    
+                    // Verificar se é template universal e ajustar a mensagem
+                    if (modeloPadrao.is_universal) {
+                        $('#template-info-nome').html(`
+                            <span class="badge bg-primary me-2">Universal</span>
+                            ${modeloPadrao.nome}
+                        `);
+                        $('.alert .small').text('Usando template universal configurado pelo sistema para formatação padrão');
+                    } else {
+                        $('#template-info-nome').html(`
+                            <span class="badge bg-info me-2">Específico</span>
+                            ${modeloPadrao.nome}
+                        `);
+                        $('.alert .small').text('Usando template específico configurado para este tipo de proposição');
+                    }
                     
                     console.log('Modelo automático selecionado:', {
                         id: modeloPadrao.id,
-                        nome: modeloPadrao.nome
+                        nome: modeloPadrao.nome,
+                        is_universal: modeloPadrao.is_universal
                     });
                     
                     // Atualizar status
                     $('#template-info-container .alert')
-                        .removeClass('alert-warning')
+                        .removeClass('alert-warning alert-danger')
                         .addClass('alert-success');
                     $('#template-info-container i')
-                        .removeClass('fa-exclamation-triangle')
+                        .removeClass('fa-exclamation-triangle fa-times-circle')
                         .addClass('fa-check-circle');
                         
                 } else {
                     // Nenhum modelo disponível
                     $('#template-info-nome').text('Nenhum template configurado para este tipo');
                     $('#template-info-container .alert')
-                        .removeClass('alert-success')
+                        .removeClass('alert-success alert-danger')
                         .addClass('alert-warning');
                     $('#template-info-container i')
-                        .removeClass('fa-check-circle')
+                        .removeClass('fa-check-circle fa-times-circle')
                         .addClass('fa-exclamation-triangle');
                     
                     console.warn('Nenhum modelo disponível para tipo:', tipo);
@@ -1214,17 +1229,32 @@ $(document).ready(function() {
             })
             .fail(function(xhr, status, error) {
                 console.error('Erro ao carregar modelo automático:', xhr, status, error);
-                $('#template-info-nome').text('Erro ao carregar template');
+                
+                // Tentar extrair mensagem de erro do response JSON
+                let errorMessage = 'Erro ao carregar template automático';
+                try {
+                    const response = JSON.parse(xhr.responseText);
+                    if (response.message) {
+                        errorMessage = response.message;
+                    }
+                } catch (e) {
+                    console.log('Não foi possível parsear erro JSON:', e);
+                }
+                
+                $('#template-info-nome').text(errorMessage);
                 $('#template-info-container .alert')
-                    .removeClass('alert-success')
+                    .removeClass('alert-success alert-warning')
                     .addClass('alert-danger');
                 $('#template-info-container i')
-                    .removeClass('fa-check-circle')
+                    .removeClass('fa-check-circle fa-exclamation-triangle')
                     .addClass('fa-times-circle');
                 
                 if (typeof toastr !== 'undefined') {
-                    toastr.error('Erro ao carregar template automático');
+                    toastr.error(errorMessage);
                 }
+                
+                // Desabilitar continuação quando há erro crítico
+                $('#btn-continuar').prop('disabled', true);
             });
     }
 

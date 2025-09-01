@@ -1,461 +1,326 @@
 # Acompanhamento de Progresso - Sistema de Tramitação Parlamentar 2.0
 
-## Visão Geral
+## 🔎 Visão Geral
 
-Este documento detalha o status de desenvolvimento do Sistema de Tramitação Parlamentar 2.0, baseado em uma análise completa da estrutura de código atual. Ele serve como uma referência central para identificar quais funcionalidades já foram implementadas e quais são os próximos passos.
+Documento revisado para alinhar o projeto com o **TR da Câmara de Franco da Rocha** e com o **estado atual do Legisinc**. 
 
----
-
-## Status Atual: **9 Módulos Core Implementados** (35% dos 25 módulos totais)
-
-A estrutura base está 100% completa e os primeiros 9 módulos core do sistema foram implementados com sucesso, incluindo interfaces completas, APIs funcionais e funcionalidades avançadas com sistema de parâmetros modulares. **Sistema migrado de Projetos para Proposições** com processo legislativo completo. **Implementações recentes incluem Mesa Diretora, Partidos Políticos e Sistema de Documentos avançado**.
-
-### Estrutura Base (100% Concluída ✅)
-
-- [x] **Stack Tecnológico:** Laravel 12 + PHP 8.2 + Docker + Vite + TailwindCSS 4.0
-- [x] **Template Metronic:** Interface completa com tema claro/escuro, componentes Blade modulares
-- [x] **NodeApiClient:** Sistema de API client configurável (mock/external via .env)
-- [x] **Sistema de Autenticação:** Login/logout/registro com JWT e middleware
-- [x] **Sistema de Permissões:** Spatie Permission implementado com roles e permissões
-- [x] **Containerização:** Docker completo com Makefile para desenvolvimento
-- [x] **Mock APIs:** 31 endpoints mock funcionando com cache Laravel
-
-### Módulos Core Implementados (100% Funcionais ✅)
-
-#### 1. Autenticação e Identidade Digital ✅
-- **Status:** COMPLETO
-- **Funcionalidades:** Login unificado, registro, logout, middleware de autenticação
-- **Estrutura:** AuthController, views Blade, integração com NodeApiClient
-- **Mock APIs:** `/mock-api/login`, `/mock-api/register`, `/mock-api/logout`
-
-#### 2. Gestão de Usuários ✅
-- **Status:** COMPLETO
-- **Funcionalidades:** CRUD completo, perfis, estatísticas, busca, validações
-- **Estrutura:** UserController, UserService, views modulares, permissões
-- **Mock APIs:** `/mock-api/users/*` (GET, POST, PUT, DELETE)
-- **Funcionalidades Avançadas:** Alteração de status, reset de senha, exportação/importação
-
-#### 3. Parlamentares e Estrutura ✅
-- **Status:** COMPLETO
-- **Funcionalidades:** CRUD completo, mesa diretora, partidos, busca avançada
-- **Estrutura:** ParlamentarController, ParlamentarService, views modulares
-- **Mock APIs:** `/mock-api/parlamentares/*`, `/mock-api/mesa-diretora`
-- **Funcionalidades Avançadas:** Filtros por partido/status, comissões do parlamentar
-
-#### 4. Comissões ✅
-- **Status:** COMPLETO
-- **Funcionalidades:** CRUD completo, tipos (permanente/temporária/CPI/especial), membros, reuniões
-- **Estrutura:** ComissaoController, ComissaoService, views modulares
-- **Mock APIs:** `/mock-api/comissoes/*`, estatísticas, busca, filtros
-- **Funcionalidades Avançadas:** Gestão de membros, histórico de reuniões, estatísticas
-
-#### 5. Proposições e Tramitação Legislativa ✅
-- **Status:** COMPLETO
-- **Funcionalidades:** Sistema completo de proposições com workflow parlamentar, criação, revisão legislativa, assinatura e protocolo
-- **Estrutura:** ProposicaoController, ProposicaoLegislativoController, ProposicaoAssinaturaController, ProposicaoProtocoloController
-- **Funcionalidades Avançadas:** 
-  - Workflow completo parlamentar (Criação → Revisão Legislativa → Assinatura → Protocolo → Tramitação)
-  - Sistema de modelos de proposições
-  - Editor de texto avançado
-  - Gestão de rascunhos
-  - Sistema de correções e devoluções
-  - Confirmação de leitura e assinatura digital
-  - Protocolo automatizado com numeração sequencial
-  - Histórico completo de tramitação
-  - Relatórios por etapa do processo
-
-#### 6. Sistema de Parâmetros Modulares ✅
-- **Status:** COMPLETO
-- **Funcionalidades:** Sistema completo de configuração modular com CRUD, hierarquia, auditoria
-- **Estrutura:** Controllers modulares, Services, DTOs, Models hierárquicos, Cache inteligente
-- **API Funcional:** `/api/parametros-modular/*` (endpoints reais funcionando)
-- **Funcionalidades Avançadas:**
-  - Hierarquia modular (Módulos → Submódulos → Campos → Valores)
-  - Sistema de exclusão com validação e força (cascade deletion)
-  - Cache inteligente com fallback para drivers sem tagging
-  - Interface administrativa completa com confirmações e warnings
-  - Auditoria completa de todas as operações
-  - Validação de integridade referencial
-  - Sistema de ordenação e ativação/desativação
-  - Importação/exportação de configurações
-
-#### 7. Mesa Diretora e Estrutura Organizacional ✅
-- **Status:** COMPLETO
-- **Funcionalidades:** CRUD completo da mesa diretora, gestão de cargos, estrutura organizacional
-- **Estrutura:** MesaDiretoraController, views especializadas, validações
-- **Mock APIs:** `/mock-api/mesa-diretora/*` (GET, POST, PUT, DELETE)
-- **Funcionalidades Avançadas:** Gestão de mandatos, histórico de composição, relatórios
-
-#### 8. Sistema de Partidos Políticos ✅
-- **Status:** COMPLETO
-- **Funcionalidades:** CRUD completo de partidos, integração com parlamentares
-- **Estrutura:** PartidoController, sistema de validação, dropdown integrado
-- **Mock APIs:** `/mock-api/partidos/*` (GET, POST, PUT, DELETE)
-- **Funcionalidades Avançadas:** Sigla expandida, filtros, estatísticas partidárias
-
-#### 9. Sistema de Documentos Avançado ✅
-- **Status:** COMPLETO
-- **Funcionalidades:** Editor de texto avançado, download funcional, gestão de versões
-- **Estrutura:** DocumentoController, editor TipTap, sistema de versioning
-- **Funcionalidades Avançadas:** Download de documentos editados, viewer integrado, controle de versões
+Consolidamos:
+1. O que já está pronto
+2. O que falta para cumprir o TR
+3. Um cronograma curto para desenvolvimento, testes, homologação e **deploy**
 
 ---
 
-## Próximos Módulos Prioritários (Em Planejamento 📋)
+## 📊 Status Atual
 
-### Módulos Core - Fase 2 (Prioridade Alta)
-- [ ] **10. Sessões Plenárias** - Controle de sessões, atas, presenças, pauta
-- [ ] **11. Sistema de Votação** - Votação eletrônica, resultados, histórico
-- [ ] **12. Transparência e Engajamento** - Portal cidadão, participação pública
-- [ ] **13. Analytics e Inteligência** - Dashboards, relatórios, estatísticas avançadas
+- **Módulos Implementados:** **9/25** → **36%** (corrigido; antes constava 35%)
+- **Cobertura do TR (módulos obrigatórios):** **9/17** → **53%** (faltam 8 para 100% do TR)
+- **Base do Sistema:** mantida como **100%** concluída (stack, autenticação, permissões, containerização e mocks)
 
-### Módulos de Infraestrutura (Prioridade Média)
-- [ ] **14. APIs e Integrações** - Developer portal, API management, webhooks
-- [ ] **15. Notificações e Comunicação** - Sistema unificado, multi-canal
-- [ ] **16. Segurança e Compliance** - Security center, auditoria, LGPD
+### ✅ Estrutura Base (100% Concluída)
+- **Stack:** Laravel 12 + PHP 8.2 (mantido como no documento original) + Docker + Vite
+- **UI:** Template Metronic + Blade Components + (TailwindCSS utilizado em componentes auxiliares)
+- **Autenticação:** Login/Logout/Registro (middleware e JWT/Sanctum conforme ambiente)
+- **Permissões:** Spatie Permission (roles e permissões)
+- **DevOps:** Docker + Makefile
+- **Mocks:** 31 endpoints com cache para desenvolvimento
 
-### Módulos Avançados (Prioridade Baixa)
-- [ ] **17. Blockchain e Auditoria** - Trilha de auditoria, smart contracts
-- [ ] **18. Comunicação e Colaboração** - Hub de comunicação, rede social parlamentar
-- [ ] **19. Educação e Capacitação** - Academia legislativa, simulador
-- [ ] **20. Inteligência Artificial** - AI assistant, analytics preditivo
-- [ ] **21. Gestão de Crises** - Plano de continuidade, emergency mode
-- [ ] **22. Inovação e Laboratório** - Future tech, AR/VR, metaverso
-- [ ] **23. Sustentabilidade** - Green parliament, impacto ambiental
-- [ ] **24. Acessibilidade Avançada** - Centro de acessibilidade, tecnologias assistivas
-- [ ] **25. Gamificação e Engajamento** - Cidadão gamer, democracy quest
+> **Correção de consistência:** Onde o documento referia-se a “Projetos”, já está migrado para **Proposições**. A seção de arquivos foi atualizada para refletir essa migração (removendo referências ao `ProjetoController`).
+
+### ✅ Módulos Core Implementados (100% Funcionais)
+
+1. **Autenticação e Identidade Digital**
+2. **Gestão de Usuários**
+3. **Parlamentares e Estrutura** (inclui **Mesa Diretora** e **Partidos**)
+4. **Comissões**
+5. **Proposições e Tramitação Legislativa** (workflow completo: Criação → Revisão → Assinatura → Protocolo → Tramitação)
+6. **Sistema de Parâmetros Modulares** (API real funcional)
+7. **Mesa Diretora e Estrutura Organizacional**
+8. **Sistema de Partidos Políticos**
+9. **Sistema de Documentos Avançado** (editor interno; versionamento; download)
+
+> **Observação:** A edição colaborativa avançada e requisitos de **PDF/A** entram na fase de **Processo Eletrônico** (ver abaixo) para atender às exigências do TR (assinatura ICP‑Brasil, validação e preservação).
 
 ---
 
-## Arquitetura Técnica Atual
+## 🧭 Delta vs. TR (o que falta para 100% do TR)
 
-### Backend (Laravel)
-- **Framework:** Laravel 12 + PHP 8.2
-- **Database:** PostgreSQL (produção/desenvolvimento) via Docker
-- **Cache:** Laravel Cache (File/Redis)
-- **Queue:** Laravel Queue configurado
-- **Auth:** Laravel Sanctum + JWT
+### **Módulos a Criar (novos):**
 
-### Frontend
-- **Template:** Metronic Admin Template (completo)
-- **Styles:** TailwindCSS 4.0 + componentes customizados
-- **Build:** Vite 6.2 + asset optimization
-- **Components:** Blade Components modulares
+1. **Administrativo** — documentos administrativos, peticionamento, arquivo permanente
+2. **Protocolo Geral** — registro/anulação, etiquetas/código de barras/QR
+3. **Processo Eletrônico (ICP‑Brasil/PAdES + PDF/A)** — assinatura e validação no fluxo
+4. **Normas Jurídicas (+ LexML)** — cadastro/compilação/vigência/publicação
+5. **Automação do Plenário** — presença, oradores, cronômetro, pautas/atas, votações
+6. **Disseminação de Leis & App do Plenário** — portal pesquisável + acompanhamento em tempo real
+7. **Comunicação com Tribunal de Contas (TCE)** — coletas, validações, prazos, portal de auditoria
+8. **Portal da Transparência & Contato com Vereadores** — páginas, ouvidoria, notificações
 
-### APIs e Integrações
-- **Mock System:** 31 endpoints mock implementados
-- **NodeApiClient:** Sistema configurável (mock/external)
-- **Estrutura:** MockApiController com cache Laravel
-- **Documentação:** Endpoints documentados no código
+### **Módulos a Finalizar/Adequar (já existem, alinhar a requisitos do TR):**
 
-### Estrutura de Arquivos
+- **Proposições**: geração de pauta/ata conforme TR; calendários/prazos regimentais; ritos especiais (ex.: LOM em 2 turnos)
+- **Usuários/Institucional**: Mesa por legislatura/período; **Comissões** com reuniões/pareceres; **Bancadas/Blocos**
+- **Templates**: variáveis extras (quórum, resultado de votação, turnos); validações de conformidade (LC 95/1998)
+- **Parâmetros**: cadastros de tipos e ritos regimentais; integrações (LexML/TCE)
+- **Permissões**: logs detalhados; MFA opcional; trilha auditável
+- **Relatórios**: presença, votação, sessões, tramitações (PDF/Excel/HTML/RSS)
+- **Documentos/PDF**: **PDF/A** quando exigido; carimbo de tempo; metadados
+
+---
+
+## 🗓️ Cronograma de Desenvolvimento (Setembro → Outubro/2025)
+
+> **🎯 Meta Principal:** Concluir os **8 módulos faltantes** do TR, realizar testes e homologar até **07/10/2025**
+
+### 📅 Visão Geral do Cronograma
+
+| Semana | Período | Status | Módulos | Entregas Principais |
+|--------|---------|---------|---------|-------------------|
+| **S1** | 02-06/Set | 🔄 Planejado | 2 módulos | Administrativo + Protocolo Geral |
+| **S2** | 09-13/Set | 🔄 Planejado | 2 módulos | Processo Eletrônico + Normas Jurídicas |
+| **S3** | 16-20/Set | 🔄 Planejado | 2 módulos | Automação Plenário + Disseminação |
+| **S4** | 23-27/Set | 🔄 Planejado | 2 módulos | TCE + Portal Transparência |
+| **S5** | 30/Set-07/Out | 🔄 Planejado | Finalização | Testes + Homologação + Deploy |
+
+---
+
+### 🚀 Detalhamento Semanal
+
+#### **📍 SEMANA 1 (02-06 Setembro)** - Fundação Base
+**Status:** 🔄 Aguardando início  
+**Prioridade:** ALTA
+
+| Módulo | Atividades Principais | Critério de Aceite | Complexidade |
+|--------|----------------------|-------------------|--------------|
+| **🗂️ Administrativo** | • CRUD documentos administrativos<br>• Sistema de caixas (entrada/rascunhos/enviados)<br>• Arquivo permanente com busca<br>• Auditoria básica | ✅ Funcionalidades básicas operacionais | 🟡 Média |
+| **📋 Protocolo Geral** | • Numeração sequencial automática<br>• Sistema de etiquetas/QR Code<br>• Pesquisa avançada<br>• Integração com módulos existentes | ✅ Protocolo funcionando fim-a-fim | 🟡 Média |
+
+**🎯 Entrega S1:** Base sólida para protocolação e documentos administrativos
+
+---
+
+#### **📍 SEMANA 2 (09-13 Setembro)** - Segurança & Normas
+**Status:** 🔄 Dependente de S1  
+**Prioridade:** CRÍTICA
+
+| Módulo | Atividades Principais | Critério de Aceite | Complexidade |
+|--------|----------------------|-------------------|--------------|
+| **🔐 Processo Eletrônico** | • Implementação ICP-Brasil/PAdES<br>• Validação PDF/A<br>• Cadeia de confiança<br>• Histórico de assinaturas | ✅ Assinatura digital funcionando | 🔴 Alta |
+| **⚖️ Normas Jurídicas** | • CRUD normas + vigência<br>• Exportação LexML<br>• Índice temático<br>• Sistema de busca | ✅ Cadastro e publicação LexML | 🟡 Média |
+
+**🎯 Entrega S2:** Conformidade legal e assinatura digital operacional
+
+---
+
+#### **📍 SEMANA 3 (16-20 Setembro)** - Automação & Portal
+**Status:** 🔄 Dependente de S2  
+**Prioridade:** ALTA
+
+| Módulo | Atividades Principais | Critério de Aceite | Complexidade |
+|--------|----------------------|-------------------|--------------|
+| **🏛️ Automação Plenário** | • Sistema de presença<br>• Controle de oradores<br>• Cronômetro de sessão<br>• Painel do presidente | ✅ Sessão plenária automatizada | 🔴 Alta |
+| **🌐 Disseminação & App** | • Portal pesquisável<br>• App mobile responsivo<br>• SEO + acessibilidade<br>• Cache + CDN | ✅ Portal público funcional | 🟡 Média |
+
+**🎯 Entrega S3:** Plenário digital e transparência ativa
+
+---
+
+#### **📍 SEMANA 4 (23-27 Setembro)** - Integração Externa
+**Status:** 🔄 Dependente de S3  
+**Prioridade:** ALTA
+
+| Módulo | Atividades Principais | Critério de Aceite | Complexidade |
+|--------|----------------------|-------------------|--------------|
+| **🏦 Comunicação TCE** | • Painel de prazos<br>• Validação automática<br>• Portal de auditoria<br>• Registro de envios | ✅ Integração TCE operacional | 🟡 Média |
+| **👥 Portal Transparência** | • Páginas por vereador<br>• Sistema de ouvidoria<br>• Notificações push/email<br>• Moderação de conteúdo | ✅ Transparência + contato cidadão | 🟡 Média |
+
+**🎯 Entrega S4:** Compliance total e engajamento cidadão
+
+---
+
+#### **📍 SEMANA 5 (30/Set - 07/Out)** - Validação & Deploy
+**Status:** 🔄 Dependente de S1-S4  
+**Prioridade:** CRÍTICA
+
+| Fase | Atividades | Duração | Responsável |
+|------|------------|---------|-------------|
+| **🧪 Testes Integrados** | • Testes funcionais<br>• Performance/carga<br>• Segurança/penetração | 5 dias | Equipe Dev |
+| **👥 Homologação** | • Treinamento usuários<br>• Testes de aceitação<br>• Ajustes finais | 2 dias | Usuários-chave |
+| **🚀 Deploy Produção** | • Migração dados<br>• Go-live<br>• Monitoramento | 1 dia | DevOps |
+
+**🎯 Entrega S5:** Sistema em produção com qualidade assegurada
+
+---
+
+### 🎯 Marcos Críticos de Validação
+
+| Marco | Data | Critério de Sucesso | Impacto se Falhar |
+|-------|------|-------------------|------------------|
+| **🏁 Checkpoint S1** | 06/Set | Administrativo + Protocolo 100% | ⚠️ Atraso cascata (baixo) |
+| **🔥 Checkpoint S2** | 13/Set | ICP-Brasil funcionando | 🚨 Risco alto no projeto |
+| **⚡ Checkpoint S3** | 20/Set | Plenário operacional | ⚠️ Impacto médio |
+| **🎯 Checkpoint S4** | 27/Set | Módulos finalizados | ⚠️ Compromete homologação |
+| **🚀 Go-Live** | 07/Out | **ENTREGA FINAL** | 🚨 Descumprimento do TR |
+
+---
+
+### 📊 Indicadores de Progresso
+
+#### Progresso Atual
 ```
-📁 Módulos Implementados:
+📈 Módulos Implementados: ████████████░░░░░░░░░░░░░ 36% (9/25)
+📋 Cobertura do TR:       █████████████░░░░░░░░░░░░ 53% (9/17)
+🏗️  Infraestrutura:       ████████████████████████ 100%
+```
+
+#### Meta de Cada Semana
+- **S1:** 📈 +12% → 48% total (11/25 módulos)
+- **S2:** 📈 +12% → 60% total (13/25 módulos)  
+- **S3:** 📈 +12% → 72% total (15/25 módulos)
+- **S4:** 📈 +12% → 84% total (17/25 módulos)
+- **S5:** 📈 +16% → **100%** total (25/25 módulos) ✅
+
+---
+
+### ⚠️ Matriz de Riscos por Semana
+
+| Semana | Risco Principal | Probabilidade | Impacto | Mitigação |
+|---------|----------------|---------------|---------|-----------|
+| S1 | Complexidade CRUD | 🟡 Baixa | 🟢 Baixo | Templates existentes |
+| S2 | Certificados ICP-Brasil | 🔴 Alta | 🚨 Crítico | Ambiente de testes preparado |
+| S3 | Hardware plenário | 🟡 Média | 🟡 Médio | Fallback sem hardware dedicado |
+| S4 | APIs externas TCE | 🟡 Média | 🟡 Médio | Simuladores/mocks |
+| S5 | Tempo para ajustes | 🟡 Média | 🟡 Médio | Buffer de contingência |
+
+---
+
+### 🔄 Dependências Entre Módulos
+
+```mermaid
+graph TD
+    A[Administrativo] --> E[Processo Eletrônico]
+    B[Protocolo Geral] --> F[Normas Jurídicas]
+    E --> G[Automação Plenário]
+    F --> H[Disseminação Leis]
+    G --> I[Comunicação TCE]
+    H --> J[Portal Transparência]
+    I --> K[Testes Integrados]
+    J --> K
+    K --> L[Homologação]
+    L --> M[Deploy]
+```
+
+## ✅ Checklists de Aceite (por módulo)
+
+### Administrativo
+
+- [ ] CRUD de documentos administrativos com anexo e metadados
+- [ ] Caixas (entrada/rascunhos/enviados) e recebimento
+- [ ] Arquivo permanente com pesquisa
+- [ ] Auditoria de eventos
+
+### Protocolo Geral
+
+- [ ] Numeração sequencial e anulação com trilha
+- [ ] Impressão de etiquetas (direto/código de barras/QR)
+- [ ] Pesquisa por número/origem/período
+- [ ] Integração com Proposições/Administrativo
+
+### Processo Eletrônico (ICP‑Brasil/PAdES, PDF/A)
+
+- [ ] Assinatura PAdES; cadeia de confiança verificada
+- [ ] Validação de integridade + carimbo de tempo
+- [ ] Geração/validação PDF/A quando exigido
+- [ ] Históricos de assinatura e logs
+
+### Normas Jurídicas (+ LexML)
+
+- [ ] Cadastro/compilação com controle de vigência
+- [ ] Índice temático e relacionamentos
+- [ ] Exportação/publicação LexML
+- [ ] Busca por nº/ano/assunto/palavra-chave
+
+### Automação do Plenário
+
+- [ ] Presenças, oradores, cronômetro, pauta/ata
+- [ ] Votação nominal/simbólica + relatórios
+- [ ] Painel do presidente/operador
+- [ ] Integração multimídia (opcional escalável)
+
+### Disseminação de Leis & App do Plenário
+
+- [ ] Repositório pesquisável de normas/pautas/resultados
+- [ ] App/web mobile com atualização em tempo real
+- [ ] SEO/acessibilidade/caching/CDN
+- [ ] Exportações (PDF/RSS/CSV quando aplicável)
+
+### Comunicação com TCE
+
+- [ ] Painel de prazos e pendências
+- [ ] Validação de formato/tamanho/nomenclatura
+- [ ] Registro/protocolo de envios
+- [ ] Portal de auditoria (respeitando LGPD/sigilo)
+
+### Transparência & Contato com Vereadores
+
+- [ ] Páginas por vereador com contatos/redes
+- [ ] Ouvidoria/Fale com vereador (gera protocolo)
+- [ ] Notificações (e‑mail/push) e assinaturas
+- [ ] Moderação + auditoria
+
+## 🧱 Arquitetura Técnica (ajustes pontuais)
+
+- **Backend:** Laravel 12 + PHP 8.2; PostgreSQL; Cache; Queue
+- **Frontend:** Metronic (Bootstrap) + Blade; componentes auxiliares com Tailwind quando necessário
+- **Docs/Assinaturas:** Editor interno + pipeline PDF/A; assinatura ICP‑Brasil/PAdES no módulo Processo Eletrônico
+- **Integrações:** LexML (Normas); TCE (Comunicação)
+- **Permissões/Auditoria:** Spatie Permission; logs detalhados por módulo e evento
+
+## 🗂️ Estrutura de Arquivos (corrigida)
+
+### 📁 Módulos Implementados:
+
+```
 ├── app/Http/Controllers/
-│   ├── AuthController.php ✅
+│   ├── Auth/AuthController.php ✅
 │   ├── User/UserController.php ✅
 │   ├── Parlamentar/ParlamentarController.php ✅
 │   ├── Comissao/ComissaoController.php ✅
-│   ├── Projeto/ProjetoController.php ✅
-│   ├── Parametro/ParametroController.php ✅ (Sistema modular)
-│   ├── Admin/ParametroController.php ✅ (Interface administrativa)
-│   └── MockApiController.php ✅ (31 endpoints)
-├── app/Services/ (Service Layer completo + ParametroService)
-├── resources/views/modules/ (6 módulos com views + admin/parametros)
-├── routes/api.php (31 endpoints mock + endpoints parametros funcionais)
+│   ├── Proposicao/ProposicaoController.php ✅
+│   ├── Proposicao/ProposicaoLegislativoController.php ✅
+│   ├── Proposicao/ProposicaoAssinaturaController.php ✅
+│   ├── Proposicao/ProposicaoProtocoloController.php ✅
+│   ├── Parametro/ParametroController.php ✅
+│   └── Mock/MockApiController.php ✅ (31 endpoints)
+├── app/Services/ (Service Layer + ParametroService + Auditoria/Cache)
+├── resources/views/modules/ (usuarios, parlamentares, comissoes, proposicoes, admin/parametros, etc.)
+├── routes/api.php (endpoints reais de parâmetros + mocks)
 └── docs/
-    ├── apiDocumentation.md ✅ (Documentação completa da API)
-    └── api-implementation-checklist.md ✅ (Checklist de implementação)
+    ├── apiDocumentation.md ✅
+    └── api-implementation-checklist.md ✅
 ```
+## ⚠️ Riscos & Mitigações (resumo)
+
+- **ICP‑Brasil/PAdES/PDF‑A:** padronizar biblioteca/serviço; testar certificados reais; cenários multi‑assinatura
+- **LexML:** mapear metadados/ontologias; testes de round‑trip (import/export)
+- **Plenário/Multimídia:** prever fallback sem hardware dedicado; logs completos de sessão
+- **Prazos TCE:** calendário oficial + alertas; validações automáticas impedindo erro humano
+- **Segurança/LGPD:** revisão de perfis de acesso; anonimização/minimização em portais públicos
+
+## 📈 Métricas e Progresso (atualizadas)
+
+- **Implementados:** 9/25 (36%) — base sólida para acelerar
+- **TR Cobertura:** 9/17 (53%) — meta 100% até 2025-10-07
+- **Infra/DevOps/Permissões:** 100% para suportar S1–S5
+- **Qualidade:** padrões PSR-12, validações e documentação mantidas
+
+## ✅ Próximas Ações Imediatas
+
+- **S1 Kickoff (09/02):** criar branches e checklists por módulo (Administrativo, Protocolo)
+- **S2 Preparação:** decidir pipeline PAdES/PDF‑A e esquema LexML (campos/validações)
+- **S3–S4:** consolidar Plenário e Portais; iniciar TCE
+- **S5:** testes integrados (funcionais, carga e segurança), homologação, deploy
 
 ---
 
-## 📚 Documentação da API (Recém Criada ✅)
-
-### Documentação Completa Implementada
-- **Arquivo:** `docs/apiDocumentation.md`
-- **Status:** 100% Completo
-- **Conteúdo:** Documentação técnica completa da API RESTful do LegisInc
-- **Funcionalidades Documentadas:**
-  - ✅ Autenticação com Laravel Sanctum
-  - ✅ Gestão de Usuários (CRUD completo)
-  - ✅ Gestão de Parlamentares (CRUD completo)
-  - ✅ Gestão de Projetos (CRUD + funcionalidades avançadas)
-  - ✅ Sistema de Tramitação
-  - ✅ Gestão de Anexos
-  - ✅ Controle de Versões
-  - ✅ Tipos e Modelos de Projeto
-  - ✅ Relatórios e Estatísticas
-  - ✅ Busca e Filtros
-  - ✅ Métricas e Monitoramento
-  - ✅ Sistema de Permissões
-
-### Checklist de Implementação
-- **Arquivo:** `docs/api-implementation-checklist.md`
-- **Status:** 100% Completo
-- **Conteúdo:** Guia step-by-step para implementar a API
-- **Fases Organizadas:**
-  - 🔧 Fase 1: Configuração Inicial (Laravel Sanctum)
-  - 🔐 Fase 2: Autenticação
-  - 👥 Fase 3: Gestão de Usuários
-  - 🏛️ Fase 4: Gestão de Parlamentares
-  - 📄 Fase 5: Gestão de Projetos
-  - 🔄 Fase 6: Tramitação
-  - 🗂️ Fase 7: Gestão de Anexos
-  - 📝 Fase 8: Controle de Versões
-  - 🏢 Fase 9: Tipos e Modelos
-  - 📊 Fase 10: Relatórios
-  - 🔍 Fase 11: Busca e Filtros
-  - 📈 Fase 12: Métricas
-  - 🔐 Fase 13: Permissões Avançadas
-  - 🧪 Fase 14: Testes
-  - 🔄 Fase 15: Versionamento
-  - 🚀 Fase 16: Deploy e Produção
-
-### Especificações da API
-- **Padrão:** RESTful API
-- **Versionamento:** URL-based (`/api/v1/`)
-- **Autenticação:** Bearer Token (Laravel Sanctum)
-- **Formato:** JSON
-- **Códigos de Status:** HTTP padrão + códigos personalizados
-- **Paginação:** Cursor-based + meta informações
-- **Filtros:** Query parameters avançados
-- **Documentação:** Exemplos de código para JavaScript/PHP
-
-### Recursos Incluídos
-- **Exemplos de Código:** Controllers, Resources, Middleware
-- **Estrutura de Testes:** PHPUnit + feature tests
-- **Configuração:** Routes, middleware, validation
-- **Tratamento de Erros:** Padronização de respostas
-- **Performance:** Estratégias de cache e otimização
-
----
-
-## Próximos Passos Recomendados
-
-### Fase 2 - Módulos de Negócio (Próximos 3-6 meses)
-1. **🎯 Prioridade 1:** **Sessões Plenárias** 
-   - Controle de sessões, atas, presenças
-   - Pauta inteligente, ordem do dia
-   - Integração com sistema de votação
-
-2. **🗳️ Prioridade 2:** **Sistema de Votação**
-   - Votação eletrônica segura
-   - Resultados em tempo real
-   - Histórico e auditoria de votos
-
-3. **🌐 Prioridade 3:** **Transparência e Engajamento**
-   - Portal cidadão
-   - Participação pública
-   - Radar legislativo
-
-4. **📊 Prioridade 4:** **Analytics e Inteligência**
-   - Dashboards avançados para todos os módulos
-   - Relatórios consolidados
-   - Estatísticas parlamentares
-
-### Fase 3 - Infraestrutura Avançada (6-12 meses)
-1. **🔌 APIs e Integrações** - Developer portal, API management
-2. **🔔 Notificações** - Sistema unificado multi-canal
-3. **🔐 Segurança** - Security center completo
-
-### Fase 4 - Inovação (12+ meses)
-1. **⛓️ Blockchain** - Auditoria distribuída
-2. **🤖 IA** - Assistentes inteligentes
-3. **🎮 Gamificação** - Engajamento cidadão
-
----
-
-## Estatísticas de Progresso
-
-### Módulos por Status
-- ✅ **Implementados:** 9 módulos (36%)
-- 🚧 **Em Desenvolvimento:** 0 módulos (0%)
-- 📋 **Planejados:** 16 módulos (64%)
-
-### Funcionalidades por Categoria
-- ✅ **Core Business:** 9/13 módulos (69%)
-- 📋 **Infraestrutura:** 0/3 módulos (0%)
-- 📋 **Inovação:** 0/9 módulos (0%)
-
-### Cobertura Técnica
-- ✅ **Backend:** 100% (Laravel + Services + Controllers)
-- ✅ **Frontend:** 100% (Metronic + Blade + TailwindCSS)
-- ✅ **APIs:** 100% (31 endpoints mock + endpoints parametros funcionais)
-- ✅ **Database:** 100% (Migrations + Models + Sistema hierárquico de parâmetros)
-- ✅ **Auth:** 100% (Login + Permissions)
-- ✅ **Docker:** 100% (Ambiente completo)
-- ✅ **Documentação API:** 100% (Documentação completa + Checklist de implementação)
-
----
-
-## Métricas de Qualidade
-
-### Desenvolvimento
-- **Arquitetura:** MVC + Service Layer + Repository Pattern
-- **Testes:** PestPHP configurado
-- **Documentação:** Inline + arquivos .md
-- **Padrões:** PSR-12 + Laravel Best Practices
-
-### Performance
-- **Frontend:** Vite build optimization
-- **Backend:** Laravel optimization
-- **Database:** Indexes + relationships
-- **Cache:** Laravel Cache implementation
-
-### Segurança
-- **Auth:** JWT + middleware
-- **Permissions:** Spatie Permission
-- **Validation:** Laravel Validation
-- **CSRF:** Laravel CSRF protection
-
----
-
-**Última Atualização:** 2025-07-27  
-**Próxima Revisão:** Após implementação do módulo 10 (Sessões Plenárias)
-
----
-
-## 🎯 Conquistas Recentes (2025-07-23)
-
-### Migração Completa de Projetos para Proposições ✅
-
-**Problema:** Sistema antigo de Projetos não seguia o processo legislativo correto
-
-**Solução Implementada:**
-- ✅ **Remoção Completa do Sistema de Projetos:** 58+ arquivos removidos (models, controllers, views, migrations, policies)
-- ✅ **Implementação do Sistema de Proposições:** Workflow legislativo completo e correto
-- ✅ **4 Controllers Especializados:** ProposicaoController, ProposicaoLegislativoController, ProposicaoAssinaturaController, ProposicaoProtocoloController
-- ✅ **Workflow Parlamentar Completo:** Criação → Revisão Legislativa → Assinatura → Protocolo → Tramitação
-- ✅ **Limpeza do Sistema:** Rotas, navegação, permissões e enums atualizados
-- ✅ **Views Especializadas:** Interface completa para cada etapa do processo
-- ✅ **Middleware de Permissões:** Sistema de controle de acesso por etapa
-
-**Funcionalidades do Sistema de Proposições:**
-- 📝 **Criação:** Modelos, rascunhos, editor de texto, envio para revisão
-- 🔍 **Revisão Legislativa:** Análise técnica, aprovação, devolução com observações
-- ✍️ **Assinatura:** Confirmação de leitura, assinatura digital, correções
-- 📋 **Protocolo:** Numeração automática, efetivação, início de tramitação
-- 📊 **Relatórios:** Estatísticas por etapa, histórico completo
-
-### Sistema de Parâmetros Modulares - Implementação Completa ✅
-
-### Sistema de Parâmetros Modulares - Implementação Completa ✅
-
-**Problema Resolvido:** Sistema de configuração modular com hierarquia complexa e operações CRUD avançadas
-
-**Solução Implementada:**
-- ✅ **Arquitetura Modular:** 4 níveis hierárquicos (Módulos → Submódulos → Campos → Valores)
-- ✅ **Controllers Especializados:** `ParametroController`, `ModuloParametroController`, `SubmoduloParametroController`, `CampoParametroController`
-- ✅ **Services Robustos:** `ParametroService`, `CacheParametroService`, `ValidacaoParametroService`, `AuditoriaParametroService`
-- ✅ **Models Relacionais:** Relacionamentos eloquent bem definidos com constraints
-- ✅ **Cache Inteligente:** Sistema de cache que funciona com file storage e Redis
-- ✅ **API Funcional:** Endpoints reais `/api/parametros-modular/*` com respostas JSON
-- ✅ **Interface Administrativa:** Interface Metronic completa com DataTables
-- ✅ **Sistema de Exclusão Avançado:** Validação + confirmação + exclusão forçada em cascata
-
-**Desafios Técnicos Superados:**
-1. **Cache Tagging Compatibility:** Implementado sistema que detecta capabilities do driver de cache
-2. **CSRF Token Issues:** Criados endpoints API sem proteção CSRF para operações AJAX
-3. **Cascade Deletion:** Sistema inteligente que valida dependências e oferece exclusão forçada
-4. **Error Handling:** JavaScript robusto que distingue entre erros de rede, validação e autenticação
-5. **Database Relationships:** Estrutura hierárquica com integridade referencial
-
-**Funcionalidades Implementadas:**
-- 🔧 **CRUD Completo** para todos os níveis da hierarquia
-- 🔒 **Validação de Integridade** antes de exclusões
-- ⚡ **Cache com Fallback** para diferentes drivers
-- 🎯 **Exclusão Forçada** com confirmação dupla
-- 📊 **Auditoria Completa** de todas as operações
-- 🎨 **Interface Responsiva** seguindo padrões Metronic
-- 🔄 **Ordenação Dinâmica** e controle de status
-- 📈 **Estatísticas** e contadores automáticos
-
-**Qualidade do Código:**
-- ✅ **Service Layer Pattern** implementado
-- ✅ **DTO Pattern** para transferência de dados
-- ✅ **Repository Pattern** com Eloquent
-- ✅ **Error Handling** padronizado
-- ✅ **Logging Completo** para debugging
-- ✅ **Testes de API** com curl validation
-- ✅ **Documentação Inline** em todos os métodos 
-
----
-
-## 🆕 Changelog Recente (2025-07-27)
-
-### Status Atual do Sistema ✅
-
-**Sistema Estável e Consolidado:** O LegisInc encontra-se em excelente estado após todas as implementações recentes. Os 9 módulos core estão funcionando perfeitamente com interfaces responsivas, validações robustas e APIs funcionais.
-
-### Implementações Completadas (2025-07-23) ✅
-
-#### Sistema de Mesa Diretora (2025-07-23)
-- ✅ **CRUD Completo:** Interface completa para gestão da mesa diretora
-- ✅ **Estrutura Padronizada:** Formulários seguindo convenções do sistema
-- ✅ **Validações:** Sistema robusto de validação de dados
-- ✅ **Interface Responsiva:** Design Metronic integrado
-
-#### Sistema de Partidos Políticos (2025-07-23)
-- ✅ **CRUD Completo:** Gestão completa de partidos políticos
-- ✅ **Integração:** Dropdown de partidos no cadastro de parlamentares
-- ✅ **Validações:** Campo sigla com maxlength expandido para 15 caracteres
-- ✅ **Interface Otimizada:** Views responsivas e funcionais
-
-#### Melhorias no Sistema de Parlamentares (2025-07-23)
-- ✅ **Fluxo Melhorado:** Cadastro de parlamentares com seleção de partidos
-- ✅ **Validação Aprimorada:** Lógica de formulário aprimorada
-
-#### Sistema de Documentos Avançado (2025-07-23)
-- ✅ **Download Funcional:** Download de documentos do viewer
-- ✅ **Edição Integrada:** Download de documentos editados
-- ✅ **Editor Aprimorado:** Experiência de edição de texto melhorada
-
-#### Melhorias no Sistema de Usuários (2025-07-23)
-- ✅ **Fluxo de Registro:** Processo de registro aprimorado
-- ✅ **Validações Robustas:** Sistema de validação melhorado
-
----
-
-## 🆕 Changelog Anterior (2025-07-21)
-
-### Migração Completa: Projetos → Proposições
-
-**Arquivos Removidos (58+ files):**
-- ❌ `app/Models/Projeto.php` e todos os models relacionados
-- ❌ `app/Http/Controllers/Projeto/` (diretório completo)
-- ❌ `app/Services/Projeto/` (diretório completo) 
-- ❌ `app/DTOs/Projeto/` (diretório completo)
-- ❌ `app/Policies/ProjetoPolicy.php` e `ModeloProjetoPolicy.php`
-- ❌ `resources/views/modules/projetos/` (diretório completo)
-- ❌ `database/migrations/*projeto*` (todas as migrations)
-- ❌ `tests/Feature/ProjetoAccessControlTest.php`
-
-**Sistema de Proposições Implementado:**
-- ✅ **Controllers Especializados:** 4 controllers para cada etapa do workflow
-- ✅ **Views Completas:** Interface responsiva para todo o processo legislativo
-- ✅ **Middleware Personalizado:** `CheckProposicaoPermission` para controle de acesso
-- ✅ **Services Dedicados:** `DynamicPermissionService` para gerenciamento de permissões
-- ✅ **Migrations Atualizadas:** Schema completo para proposições com campos específicos
-- ✅ **Rotas Organizadas:** 30+ rotas organizadas por funcionalidade
-
-**Limpeza do Sistema:**
-- 🧹 **Navegação Atualizada:** Menus limpos, sem referências ao sistema antigo
-- 🧹 **Permissões Atualizadas:** Screen permissions sem projeto, focadas em proposições
-- 🧹 **Enums Limpos:** SystemModule sem PROJETOS, mantendo apenas módulos ativos
-- 🧹 **Providers Atualizados:** AuthServiceProvider sem políticas obsoletas
-
-### Melhorias de Sistema e Interface (2025-07-21)
-
-**Estabilização e Manutenção:**
-- ✅ **Dashboard Principal:** Interface administrativa consolidada com acesso rápido a todos os módulos
-- ✅ **Sistema de Rotas:** 100+ rotas organizadas e funcionais com middleware apropriado
-- ✅ **Documentação Atualizada:** Documentos PROJETO.md e progress.md mantidos atualizados
-- ✅ **Controle de Versão:** Sistema de git organizado com commits semânticos
-- ✅ **Permissões Granulares:** Sistema de screen permissions funcionando para todos os módulos
-
-**Status do Sistema:**
-- 🟢 **Estabilidade:** Sistema robusto sem erros críticos
-- 🟢 **Performance:** Interface responsiva e otimizada
-- 🟢 **Segurança:** Middleware de autenticação e autorização funcionando
-- 🟢 **Usabilidade:** Interface intuitiva seguindo padrões Metronic
+Este documento substitui a versão de 2025‑07‑27 onde necessário, corrigindo a porcentagem geral, removendo referências a "Projetos" na estrutura, e incluindo o plano tático de setembro 2025 para cumprimento do TR.

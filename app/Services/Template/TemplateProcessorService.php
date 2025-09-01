@@ -132,6 +132,14 @@ class TemplateProcessorService
     }
 
     /**
+     * Processar variáveis em conteúdo RTF ou texto (método público para TemplateUniversalService)
+     */
+    public function processarVariaveisRTF(string $conteudo, array $variaveis): string
+    {
+        return $this->substituirVariaveis($conteudo, $variaveis);
+    }
+
+    /**
      * Extrair todas as variáveis do template
      */
     public function extrairVariaveis(string $conteudo): array
