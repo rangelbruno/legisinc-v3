@@ -765,6 +765,15 @@
                             </a>
                         </div>
                         <div class="menu-item">
+                            <a class="menu-link {{ request()->routeIs('admin.database.*') ? 'active' : '' }}" href="{{ route('admin.database.index') }}">
+                                <span class="menu-bullet">
+                                    <span class="bullet bullet-dot"></span>
+                                </span>
+                                <span class="menu-title">Banco de Dados</span>
+                                <span class="badge badge-light-info badge-sm ms-auto">ADMIN</span>
+                            </a>
+                        </div>
+                        <div class="menu-item">
                             <a class="menu-link" href="#" onclick="showComingSoon('Configurações do Sistema')">
                                 <span class="menu-bullet">
                                     <span class="bullet bullet-dot"></span>

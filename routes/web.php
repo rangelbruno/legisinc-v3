@@ -1287,6 +1287,14 @@ Route::prefix('admin')->middleware(['auth', 'check.screen.permission'])->group(f
         Route::post('/{aiConfiguration}/reset-usage', [App\Http\Controllers\Admin\AIConfigurationController::class, 'resetDailyUsage'])->name('reset-usage');
     });
 
+    // Database Administration routes
+    Route::get('/database', [App\Http\Controllers\Admin\AdminDatabaseController::class, 'index'])
+        ->name('admin.database.index')
+        ->middleware('check.screen.permission');
+    Route::get('/database/table/{table}', [App\Http\Controllers\Admin\AdminDatabaseController::class, 'showTable'])
+        ->name('admin.database.table')
+        ->middleware('check.screen.permission');
+
     // System Diagnostic routes
     Route::get('system-diagnostic', [App\Http\Controllers\Admin\SystemDiagnosticController::class, 'index'])
         ->name('admin.system-diagnostic.index');

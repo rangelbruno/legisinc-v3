@@ -650,6 +650,104 @@
             </div>
             <!--end::Row-->
 
+            <!--begin::Ferramentas Administrativas Row-->
+            <div class="row g-5 g-xl-8 mt-5 mt-xl-10">
+                <!--begin::Col-->
+                <div class="col-xl-4">
+                    <!--begin::Database Administration Card-->
+                    <div class="card card-flush h-100 mb-5 mb-xl-10">
+                        <div class="card-header pt-5 pb-3">
+                            <div class="d-flex flex-center rounded-circle h-70px w-70px" style="background: linear-gradient(135deg, #1B84FF 0%, #0066CC 100%);">
+                                <i class="fas fa-database text-white fs-2x"></i>
+                            </div>
+                        </div>
+                        
+                        <div class="card-body d-flex flex-column justify-content-between pt-0">
+                            <div class="mb-4">
+                                <h3 class="text-gray-800 fw-bold fs-4 mb-2">Banco de Dados</h3>
+                                <p class="text-muted fw-semibold fs-7 mb-3">
+                                    Visualize e explore todas as tabelas do sistema
+                                </p>
+                                
+                                <div class="d-flex align-items-center mb-2">
+                                    <i class="fas fa-table text-primary fs-6 me-2"></i>
+                                    <span class="text-gray-700 fs-7">Listar todas as tabelas</span>
+                                </div>
+                                <div class="d-flex align-items-center mb-2">
+                                    <i class="fas fa-eye text-success fs-6 me-2"></i>
+                                    <span class="text-gray-700 fs-7">Visualizar dados das tabelas</span>
+                                </div>
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-search text-info fs-6 me-2"></i>
+                                    <span class="text-gray-700 fs-7">Navegar pelos registros</span>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <a href="{{ route('admin.database.index') }}" 
+                                   class="btn btn-primary btn-sm w-100">
+                                    <i class="fas fa-database me-2"></i>
+                                    Administrar Banco
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <!--end::Database Administration Card-->
+                </div>
+                <!--end::Col-->
+
+                <!--begin::Col-->
+                <div class="col-xl-8">
+                    <!--begin::System Tools-->
+                    <div class="card mb-5 mb-xl-8">
+                        <!--begin::Header-->
+                        <div class="card-header border-0 pt-5">
+                            <h3 class="card-title align-items-start flex-column">
+                                <span class="card-label fw-bold fs-3 mb-1">🛠️ Ferramentas do Sistema</span>
+                                <span class="text-muted fw-semibold fs-7">Acesso rápido às funcionalidades administrativas</span>
+                            </h3>
+                        </div>
+                        <!--end::Header-->
+                        <!--begin::Body-->
+                        <div class="card-body py-3">
+                            <div class="row g-4">
+                                <div class="col-md-4">
+                                    <div class="d-flex align-items-center p-3 bg-light-primary rounded">
+                                        <i class="fas fa-users text-primary fs-2x me-3"></i>
+                                        <div>
+                                            <h5 class="text-gray-800 mb-1">Usuários</h5>
+                                            <p class="text-muted mb-0 fs-7">Gerenciar contas</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="d-flex align-items-center p-3 bg-light-success rounded">
+                                        <i class="fas fa-file-alt text-success fs-2x me-3"></i>
+                                        <div>
+                                            <h5 class="text-gray-800 mb-1">Templates</h5>
+                                            <p class="text-muted mb-0 fs-7">Configurar modelos</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="d-flex align-items-center p-3 bg-light-warning rounded">
+                                        <i class="fas fa-cog text-warning fs-2x me-3"></i>
+                                        <div>
+                                            <h5 class="text-gray-800 mb-1">Configurações</h5>
+                                            <p class="text-muted mb-0 fs-7">Parâmetros gerais</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!--end::Body-->
+                    </div>
+                    <!--end::System Tools-->
+                </div>
+                <!--end::Col-->
+            </div>
+            <!--end::Ferramentas Administrativas Row-->
+
             <!--begin::Atividade do Sistema Row-->
             <div class="row g-5 g-xl-8 mt-5 mt-xl-10">
                 <!--begin::Col-->

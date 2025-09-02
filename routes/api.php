@@ -265,6 +265,7 @@ Route::middleware(['web', 'auth'])->prefix('proposicoes')->name('api.proposicoes
     Route::patch('/{id}/status', [App\Http\Controllers\Api\ProposicaoApiController::class, 'updateStatus'])->name('update-status');
     Route::get('/{id}/updates', [App\Http\Controllers\Api\ProposicaoApiController::class, 'updates'])->name('updates');
     Route::get('/{id}/history', [App\Http\Controllers\Api\ProposicaoApiController::class, 'statusHistory'])->name('history');
+    Route::post('/{id}/update-content', [App\Http\Controllers\Api\ProposicaoApiController::class, 'updateContent'])->name('update-content');
 });
 
 // ===== NOTIFICATIONS API ROUTES =====

@@ -377,16 +377,32 @@
                 <!--end::Anexos Card-->
 
                 <!--begin::Conteúdo Card-->
-                <div class="card shadow-sm border-0">
+                <div class="card shadow-sm border-0 content-card">
                     <div class="card-header bg-light">
                         <div class="d-flex align-items-center justify-content-between">
-                            <h3 class="card-title m-0">
-                                <i class="ki-duotone ki-document fs-2 text-success me-2">
-                                    <span class="path1"></span>
-                                    <span class="path2"></span>
-                                </i>
-                                Conteúdo da Proposição
-                            </h3>
+                            <div class="d-flex align-items-center">
+                                <h3 class="card-title m-0">
+                                    <i class="ki-duotone ki-document fs-2 text-success me-2">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                    </i>
+                                    Conteúdo da Proposição
+                                </h3>
+                                <!-- Badge de origem do conteúdo -->
+                                <span v-if="proposicao.conteudo_origem" 
+                                      :class="proposicao.conteudo_origem === 'onlyoffice' ? 'badge-light-success' : 'badge-light-primary'"
+                                      class="badge ms-2">
+                                    <i :class="proposicao.conteudo_origem === 'onlyoffice' ? 'ki-duotone ki-file-up' : 'ki-duotone ki-data'">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                    </i>
+                                    @{{ proposicao.conteudo_origem === 'onlyoffice' ? 'OnlyOffice' : 'Database' }}
+                                    <span v-if="proposicao.conteudo_timestamp" 
+                                          class="text-muted ms-1">
+                                        (@{{ formatTimestamp(proposicao.conteudo_timestamp) }})
+                                    </span>
+                                </span>
+                            </div>
                             <div class="d-flex align-items-center" v-if="proposicao.conteudo && proposicao.conteudo.length > 500">
                                 <button 
                                     @click="toggleContent" 
@@ -401,6 +417,24 @@
                         </div>
                     </div>
                     <div class="card-body">
+                        <!-- Notificação de origem do conteúdo -->
+                        <div v-if="proposicao.conteudo_origem === 'onlyoffice'" 
+                             class="alert alert-light-success d-flex align-items-center p-5 mb-4">
+                            <i class="ki-duotone ki-check-circle fs-2hx text-success me-4">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                            </i>
+                            <div class="d-flex flex-column">
+                                <h5 class="mb-1">Conteúdo atualizado do OnlyOffice</h5>
+                                <span class="fs-7 fw-normal text-muted">
+                                    Este conteúdo foi extraído em tempo real do arquivo salvo no OnlyOffice.
+                                    <span v-if="proposicao.conteudo_timestamp">
+                                        Última modificação: @{{ formatTimestamp(proposicao.conteudo_timestamp) }}
+                                    </span>
+                                </span>
+                            </div>
+                        </div>
+                        
                         <div class="content-display" v-if="proposicao.conteudo">
                             <div v-if="proposicao.conteudo.length <= 500" class="fs-6 text-gray-700 lh-lg">
                                 @{{ proposicao.conteudo }}
@@ -1123,8 +1157,38 @@ createApp({
         async checkForUpdates() {
             if (!this.proposicao?.id || this.loading) return;
             
-            // Simply reload data periodically using Laravel web routes
+            // Capturar estado anterior para comparação
+            const conteudoAnterior = this.proposicao.conteudo;
+            const timestampAnterior = this.proposicao.ultima_modificacao;
+            
+            // Recarregar dados
             await this.loadProposicao();
+            
+            // Verificar se houve mudança no conteúdo
+            if (this.proposicao.conteudo !== conteudoAnterior) {
+                // Mostrar notificação de sincronização
+                this.showToast(
+                    'Conteúdo atualizado automaticamente via OnlyOffice', 
+                    'success', 
+                    'ki-duotone ki-arrows-loop'
+                );
+                
+                // Adicionar efeito visual temporário
+                this.highlightContentUpdate();
+            }
+        },
+
+        highlightContentUpdate() {
+            // Destacar temporariamente a seção de conteúdo
+            const contentCard = document.querySelector('.content-card');
+            if (contentCard) {
+                contentCard.classList.add('border-success');
+                contentCard.style.transition = 'all 0.3s ease';
+                
+                setTimeout(() => {
+                    contentCard.classList.remove('border-success');
+                }, 3000);
+            }
         },
         
         async forceRefresh() {
@@ -1225,6 +1289,30 @@ createApp({
         // Utility Methods
         toggleContent() {
             this.showFullContent = !this.showFullContent;
+        },
+
+        formatTimestamp(timestamp) {
+            if (!timestamp) return '';
+            
+            const date = new Date(timestamp * 1000); // Convert from Unix timestamp
+            const now = new Date();
+            const diffMs = now - date;
+            const diffMins = Math.floor(diffMs / 60000);
+            const diffHours = Math.floor(diffMs / 3600000);
+            const diffDays = Math.floor(diffMs / 86400000);
+            
+            if (diffMins < 1) return 'agora';
+            if (diffMins < 60) return `${diffMins}min atrás`;
+            if (diffHours < 24) return `${diffHours}h atrás`;
+            if (diffDays < 7) return `${diffDays}d atrás`;
+            
+            return date.toLocaleDateString('pt-BR', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
         },
         
         getFileIcon(extension) {

@@ -3190,6 +3190,14 @@ Status: ".ucfirst(str_replace('_', ' ', $proposicao->status))."\par
 
                 // OTIMIZAÇÃO: Update sem recarregar relações desnecessárias
                 $proposicao->updateQuietly($updateData); // Sem disparar eventos
+                
+                // 🔄 NOVA FUNCIONALIDADE: Extração automática de conteúdo
+                Log::info('🔄 Iniciando extração automática de conteúdo', [
+                    'proposicao_id' => $proposicao->id,
+                    'arquivo_salvo' => $updateData['arquivo_path'] ?? 'não definido'
+                ]);
+                
+                $this->extrairESincronizarConteudo($proposicao);
 
                 // AUDITORIA: Registrar histórico da alteração
                 try {
@@ -4454,5 +4462,257 @@ Status: ".ucfirst(str_replace('_', ' ', $proposicao->status))."\par
         ]);
         
         return trim($conteudoLimpo);
+    }
+
+    /**
+     * Extrair conteúdo do arquivo OnlyOffice e sincronizar com banco
+     */
+    private function extrairESincronizarConteudo($proposicao)
+    {
+        try {
+            // Buscar arquivo mais recente
+            $arquivos = [];
+            
+            // Buscar em múltiplas localizações
+            $caminhos = [
+                "proposicoes/{$proposicao->id}.rtf",
+                "proposicoes/{$proposicao->id}.docx", 
+                "private/proposicoes/{$proposicao->id}.rtf",
+                "private/proposicoes/{$proposicao->id}.docx"
+            ];
+
+            foreach ($caminhos as $caminho) {
+                if (Storage::disk('local')->exists($caminho)) {
+                    $arquivos[] = [
+                        'caminho' => $caminho,
+                        'modificacao' => Storage::disk('local')->lastModified($caminho)
+                    ];
+                }
+            }
+
+            if (empty($arquivos)) {
+                Log::warning('⚠️ Nenhum arquivo encontrado para extração', [
+                    'proposicao_id' => $proposicao->id
+                ]);
+                return false;
+            }
+
+            // Ordenar por data de modificação (mais recente primeiro)
+            usort($arquivos, function($a, $b) {
+                return $b['modificacao'] - $a['modificacao'];
+            });
+
+            $arquivoMaisRecente = $arquivos[0];
+            $caminho = $arquivoMaisRecente['caminho'];
+
+            Log::info('📄 Extraindo conteúdo do arquivo mais recente', [
+                'proposicao_id' => $proposicao->id,
+                'arquivo' => $caminho,
+                'modificacao' => date('Y-m-d H:i:s', $arquivoMaisRecente['modificacao'])
+            ]);
+
+            // Extrair conteúdo baseado na extensão
+            $conteudoExtraido = null;
+            if (str_ends_with($caminho, '.rtf')) {
+                $conteudoExtraido = $this->extrairTextoRTFCompleto($caminho);
+            } elseif (str_ends_with($caminho, '.docx')) {
+                $conteudoExtraido = $this->extrairTextoDOCXCompleto($caminho);
+            }
+
+            if ($conteudoExtraido && $this->isConteudoExtraidoValido($conteudoExtraido)) {
+                // Atualizar banco com conteúdo extraído
+                $proposicao->updateQuietly([
+                    'conteudo' => $conteudoExtraido,
+                    'ultima_modificacao' => now()
+                ]);
+
+                // Limpar cache
+                Cache::forget("proposicao_cache_{$proposicao->id}");
+
+                Log::info('✅ Conteúdo sincronizado com sucesso', [
+                    'proposicao_id' => $proposicao->id,
+                    'tamanho_conteudo' => strlen($conteudoExtraido),
+                    'preview' => substr($conteudoExtraido, 0, 100) . '...'
+                ]);
+
+                return true;
+
+            } else {
+                Log::warning('⚠️ Conteúdo extraído inválido ou corrompido', [
+                    'proposicao_id' => $proposicao->id,
+                    'conteudo_size' => strlen($conteudoExtraido ?? ''),
+                    'preview' => substr($conteudoExtraido ?? '', 0, 50)
+                ]);
+                return false;
+            }
+
+        } catch (\Exception $e) {
+            Log::error('❌ Erro na extração de conteúdo', [
+                'proposicao_id' => $proposicao->id,
+                'error' => $e->getMessage()
+            ]);
+            return false;
+        }
+    }
+
+    /**
+     * Extrair texto de arquivo RTF com limpeza avançada
+     */
+    private function extrairTextoRTFCompleto($caminho)
+    {
+        try {
+            $conteudo = Storage::disk('local')->get($caminho);
+            
+            if (!$conteudo) {
+                return null;
+            }
+
+            // Método 1: Remover tags RTF básicas
+            $texto = preg_replace('/\{\\\\[^}]*\}/', '', $conteudo);
+            $texto = preg_replace('/\\\\[a-zA-Z]+\d*/', '', $texto);
+            $texto = preg_replace('/\{|\}/', '', $texto);
+            $texto = trim($texto);
+
+            // Se ainda tem muitos caracteres de controle, tentar método alternativo
+            if (preg_match('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', $texto)) {
+                // Método 2: Buscar texto entre \pard e \par
+                if (preg_match_all('/\\\\pard[^\\\\]*(.+?)\\\\par/', $conteudo, $matches)) {
+                    $texto = implode("\n", $matches[1]);
+                    $texto = preg_replace('/\\\\[a-zA-Z]+\d*/', '', $texto);
+                    $texto = preg_replace('/\{|\}/', '', $texto);
+                    $texto = trim($texto);
+                }
+            }
+
+            // Método 3: Usar limpeza ultra robusta existente
+            if (strlen($texto) < 50 || $this->temMuitoLixoBinario($texto)) {
+                $texto = $this->limpezaUltraRobustaRTF($conteudo);
+            }
+
+            return strlen($texto) > 10 ? $texto : null;
+
+        } catch (\Exception $e) {
+            Log::error('Erro na extração RTF', [
+                'caminho' => $caminho,
+                'error' => $e->getMessage()
+            ]);
+            return null;
+        }
+    }
+
+    /**
+     * Extrair texto de arquivo DOCX
+     */
+    private function extrairTextoDOCXCompleto($caminho)
+    {
+        try {
+            $caminhoCompleto = Storage::disk('local')->path($caminho);
+            
+            if (!file_exists($caminhoCompleto)) {
+                return null;
+            }
+
+            $zip = new \ZipArchive;
+            if ($zip->open($caminhoCompleto) !== TRUE) {
+                return null;
+            }
+
+            $xml = $zip->getFromName('word/document.xml');
+            if (!$xml) {
+                $zip->close();
+                return null;
+            }
+
+            $zip->close();
+
+            // Extrair texto do XML
+            $dom = new \DOMDocument();
+            if (!@$dom->loadXML($xml)) {
+                return null;
+            }
+
+            $xpath = new \DOMXPath($dom);
+            $nodes = $xpath->query('//w:t');
+            
+            $texto = '';
+            foreach ($nodes as $node) {
+                $texto .= $node->textContent;
+            }
+
+            // Processar quebras de linha
+            $paragraphs = $xpath->query('//w:p');
+            if ($paragraphs->length > 1) {
+                $textoComParagrafos = '';
+                foreach ($paragraphs as $paragraph) {
+                    $textNodes = $xpath->query('.//w:t', $paragraph);
+                    $paragraphText = '';
+                    foreach ($textNodes as $textNode) {
+                        $paragraphText .= $textNode->textContent;
+                    }
+                    if (trim($paragraphText)) {
+                        $textoComParagrafos .= trim($paragraphText) . "\n\n";
+                    }
+                }
+                $texto = trim($textoComParagrafos);
+            }
+
+            return trim($texto);
+
+        } catch (\Exception $e) {
+            Log::error('Erro na extração DOCX', [
+                'caminho' => $caminho,
+                'error' => $e->getMessage()
+            ]);
+            return null;
+        }
+    }
+
+    /**
+     * Validar se conteúdo extraído é válido
+     */
+    private function isConteudoExtraidoValido($conteudo)
+    {
+        if (!$conteudo || strlen($conteudo) < 10) {
+            return false;
+        }
+
+        // Verificar se tem muitos caracteres binários/de controle
+        $caracteresControle = preg_match_all('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', $conteudo);
+        $proporcaoControle = $caracteresControle / strlen($conteudo);
+        
+        if ($proporcaoControle > 0.1) { // Mais de 10% caracteres de controle
+            return false;
+        }
+
+        // Verificar se não é principalmente hexadecimal
+        $hexMatches = preg_match_all('/[0-9a-fA-F]{8,}/', $conteudo);
+        if ($hexMatches > 5) {
+            return false;
+        }
+
+        // Verificar se tem texto legível (pelo menos 30% caracteres alfanuméricos)
+        $caracteresLegivel = preg_match_all('/[a-zA-Z0-9À-ÿ\s]/', $conteudo);
+        $proporcaoLegivel = $caracteresLegivel / strlen($conteudo);
+        
+        if ($proporcaoLegivel < 0.3) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Verificar se texto tem muito lixo binário
+     */
+    private function temMuitoLixoBinario($texto)
+    {
+        // Verificar caracteres de controle
+        $caracteresControle = preg_match_all('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', $texto);
+        $proporcaoControle = strlen($texto) > 0 ? $caracteresControle / strlen($texto) : 0;
+        
+        // Verificar sequências hexadecimais longas
+        $hexLongas = preg_match_all('/[0-9a-fA-F]{16,}/', $texto);
+        
+        return $proporcaoControle > 0.05 || $hexLongas > 3;
     }
 }
