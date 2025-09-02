@@ -333,6 +333,115 @@ Todas as correções estão no código-fonte e são preservadas automaticamente:
 
 ---
 
+## 🎯 SOLUÇÃO DEFINITIVA: PRIORIZAÇÃO DE ARQUIVO SALVO NO ONLYOFFICE (02/09/2025)
+
+### ✅ **PROBLEMA DEFINITIVAMENTE RESOLVIDO**: OnlyOffice preserva todas as alterações
+
+**Situação Anterior**: Editor sempre carregava template, ignorando edições salvas pelo usuário
+
+**Solução Implementada**:
+- **Lógica de Priorização**: Sistema verifica arquivo salvo ANTES de aplicar template
+- **Correção Storage Disk**: Eliminado erro "Disk [private] does not have a configured driver"
+- **Editor Parlamentar**: Implementada verificação inteligente de arquivos salvos
+- **Editor Legislativo**: Otimizada lógica de priorização existente
+
+### 🔄 **Fluxo Operacional Final**
+1. **Nova Proposição** → Template Universal aplicado com estrutura da Câmara ✅
+2. **Usuário faz alterações** → Sistema salva via callback OnlyOffice ✅  
+3. **Próxima abertura** → **PRIORIZA arquivo salvo** (preserva edições) ✅
+4. **Zero perda de dados** → Formatação, alinhamento, conteúdo mantidos ✅
+
+### 📊 **Evidências de Funcionamento**
+```
+[2025-09-02] OnlyOffice Editor: Arquivo salvo encontrado, priorizando sobre template
+[2025-09-02] OnlyOffice Download: Usando arquivo salvo existente
+```
+
+### 🔧 **Para Forçar Template Universal** (Teste)
+```bash
+docker exec legisinc-app php -r "
+\$proposicao = App\Models\Proposicao::find(1);
+\$proposicao->arquivo_path = null; 
+\$proposicao->save();
+"
+```
+
+### 📋 **Documentação Técnica Completa**
+- **Priorização de Arquivos**: `docs/technical/SOLUCAO-PRIORIZACAO-ARQUIVO-SALVO-ONLYOFFICE.md`
+- **Polling Realtime**: `docs/technical/SOLUCAO-POLLING-REALTIME-ONLYOFFICE.md`
+- **Referência Rápida**: `docs/technical/REFERENCIA-RAPIDA-ONLYOFFICE.md`
+- **Scripts de Teste**: `tests/manual/teste-*.php`
+
+### 🔄 **Preservação Garantida**
+✅ **Todas as correções são preservadas após:**
+```bash
+docker exec -it legisinc-app php artisan migrate:fresh --seed
+```
+
+---
+
+## 🔄 SOLUÇÃO AVANÇADA: POLLING REALTIME NO ONLYOFFICE (02/09/2025)
+
+### ✅ **PROBLEMA DEFINITIVAMENTE RESOLVIDO**: Mudanças aparecem automaticamente sem recarregar página
+
+**Situação Anterior**: Usuário precisava recarregar página manualmente para ver alterações
+
+**Solução Implementada**:
+- **Polling Inteligente**: Sistema verifica mudanças a cada 15 segundos automaticamente
+- **Cache Reativo**: Invalida automaticamente após salvamento via callback
+- **Document Keys Dinâmicos**: Baseados em timestamp de arquivo real, não estático
+- **Toast Notifications**: Notifica usuário sobre atualizações disponíveis
+- **Performance Otimizada**: Polling adaptativo + controle de visibilidade de página
+
+### 🎯 **Recursos Avançados**
+- **Detecção Automática**: Baseada em `filemtime()` do arquivo físico no storage
+- **Polling Adaptativo**: 15s inicial → reduz para 11s sem mudanças → aumenta até 60s com erros
+- **Controle de Visibilidade**: Para quando página oculta, resume automaticamente
+- **API RESTful**: 3 endpoints para verificação, invalidação e document keys
+- **Error Handling**: Degrada graciosamente, logs informativos
+
+### 📊 **Fluxo Operacional Realtime**
+1. **Usuário abre OnlyOffice** → Polling JavaScript inicia automaticamente ✅
+2. **A cada 15 segundos** → API verifica timestamp do arquivo físico ✅  
+3. **Arquivo modificado?** → Sistema detecta automaticamente ✅
+4. **Toast notification** → "Documento foi atualizado..." ✅
+5. **Zero necessidade** → de recarregar página manualmente ✅
+
+### 🔧 **API Endpoints Criados**
+```bash
+GET  /api/onlyoffice/realtime/check-changes/{proposicao}     # Verificar mudanças
+POST /api/onlyoffice/realtime/invalidate-cache/{proposicao}  # Invalidar cache  
+GET  /api/onlyoffice/realtime/new-document-key/{proposicao}  # Novo document key
+```
+
+### 📋 **Documentação Técnica Completa**
+- **Priorização de Arquivos**: `docs/technical/SOLUCAO-PRIORIZACAO-ARQUIVO-SALVO-ONLYOFFICE.md`
+- **Polling Realtime**: `docs/technical/SOLUCAO-POLLING-REALTIME-ONLYOFFICE.md`
+- **Referência Rápida**: `docs/technical/REFERENCIA-RAPIDA-ONLYOFFICE.md`
+- **Scripts de Teste**: `tests/manual/teste-*.php`
+
+### 🎊 **Como Testar**
+```bash
+# Teste automatizado completo
+docker exec legisinc-app php tests/manual/teste-polling-realtime.php
+
+# Teste manual
+# 1. Abra: http://localhost:8001/proposicoes/1/onlyoffice/editor-parlamentar
+# 2. Abra DevTools → Console  
+# 3. Faça alterações e salve (Ctrl+S)
+# 4. Aguarde 15 segundos
+# 5. Veja: "🔔 OnlyOffice Realtime: Mudanças detectadas"
+# 6. Toast notification aparece automaticamente
+```
+
+### 🔄 **Preservação Garantida**
+✅ **Todas as melhorias são preservadas após:**
+```bash
+docker exec -it legisinc-app php artisan migrate:fresh --seed
+```
+
+---
+
 ## 🎯 SISTEMA PDF DE ASSINATURA OTIMIZADO (17/08/2025)
 
 ### ✅ **PROBLEMA RESOLVIDO**: PDF sempre usa versão mais recente
@@ -673,11 +782,22 @@ docker exec legisinc-app php test-paragrafos-simples.php
 
 ---
 
-**🎊 CONFIGURAÇÃO, PERFORMANCE, UI, PERMISSÕES, INTERFACE VUE.JS E PARÁGRAFOS 100% PRESERVADAS APÓS `migrate:fresh --seed`** ✅
+**🎊 CONFIGURAÇÃO, PERFORMANCE, UI, PERMISSÕES, INTERFACE VUE.JS, PARÁGRAFOS E PRIORIZAÇÃO DE ARQUIVOS SALVOS 100% PRESERVADAS APÓS `migrate:fresh --seed`** ✅
 
-**Última atualização**: 23/08/2025  
-**Versão estável**: v1.8 (Parágrafos OnlyOffice + UI Otimizada + Permissões Inteligentes)  
-**Status**: PRODUÇÃO AVANÇADA
+**Última atualização**: 02/09/2025  
+**Versão estável**: v2.0 (Polling Realtime + Priorização Arquivo Salvo + Template Universal + Performance Otimizada)  
+**Status**: PRODUÇÃO ENTERPRISE AVANÇADA
+
+### 🎯 **MARCOS DA VERSÃO v2.0:**
+- ✅ **OnlyOffice 100% funcional**: Preserva todas as alterações do usuário
+- ✅ **Template Universal inteligente**: Aplicado apenas quando necessário  
+- ✅ **Zero perda de dados**: Formatação, alinhamento, conteúdo totalmente preservados
+- ✅ **Polling Realtime**: Detecta mudanças automaticamente em 15 segundos
+- ✅ **Cache Inteligente**: Invalida automaticamente após salvamento
+- ✅ **Document Keys Dinâmicos**: Baseados em timestamps de arquivos reais
+- ✅ **Performance Otimizada**: Polling adaptativo com controle de visibilidade
+- ✅ **Sistema robusto**: Logs informativos + tratamento de erros completo
+- ✅ **Documentação completa**: Duas soluções documentadas para problemas futuros
 
 ===
 

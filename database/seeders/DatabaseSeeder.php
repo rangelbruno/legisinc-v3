@@ -97,6 +97,12 @@ class DatabaseSeeder extends Seeder
         $this->call([
             TemplateUniversalFixSeeder::class,
             TemplateUniversalSimplificadoSeeder::class, // Template simplificado com variáveis essenciais
+            TemplateUniversalRTFFixSeeder::class, // PERMANENTE: Correções RTF e imagem cabeçalho
+        ]);
+
+        // ONLYOFFICE CALLBACK: Correção de extração RTF (resolve conteúdo corrompido)
+        $this->call([
+            OnlyOfficeCallbackRTFFixSeeder::class, // PERMANENTE: Extração RTF sem corrupção de fontes
         ]);
 
         // UI: Correções de botões OnlyOffice (previne captura incorreta de cliques)
@@ -159,6 +165,13 @@ class DatabaseSeeder extends Seeder
             AssinaturaVueInterfaceSeeder::class,
         ]);
 
+        // PERFORMANCE: Otimizações OnlyOffice (extração e caracteres especiais)
+        $this->call([
+            OnlyOfficePerformanceOptimizationSeeder::class,
+            OnlyOfficeSalvamentoFixSeeder::class,
+            OnlyOfficeCallbackSkipExtractionSeeder::class,
+        ]);
+
         // Correções de status e otimização de PDF
         $this->call([
             CorrecaoStatusPDFSeeder::class,
@@ -177,6 +190,11 @@ class DatabaseSeeder extends Seeder
         // CORREÇÃO: Visualização de assinatura e protocolo no PDF
         $this->call([
             CorrecaoPDFAssinaturaSeeder::class,
+        ]);
+
+        // LARAVEL BOOST: Correção robusta de validação OnlyOffice (DEFINITIVA)
+        $this->call([
+            OnlyOfficeRobustValidationSeeder::class,
         ]);
 
         // Processar imagens dos templates admin

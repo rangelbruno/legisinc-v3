@@ -38,57 +38,16 @@ class VueInterfaceSeeder extends Seeder
     }
 
     /**
-     * Garantir dados de teste
+     * Garantir dados de teste - REMOVIDO: Não criar proposições automáticas
+     * O sistema agora usa apenas o Template Universal quando necessário
      */
     private function ensureTestData(): void
     {
-        $this->command->info('📊 Verificando dados de teste...');
-
-        // Verificar se existe pelo menos uma proposição
-        $proposicoes = DB::table('proposicoes')->count();
+        $this->command->info('📊 Sistema configurado para usar Template Universal...');
         
-        if ($proposicoes === 0) {
-            $this->command->info('📝 Criando proposição de teste...');
-            
-            // Buscar usuário admin ou criar um temporário
-            $user = DB::table('users')->where('email', 'bruno@sistema.gov.br')->first();
-            
-            if (!$user) {
-                $user = DB::table('users')->where('email', 'like', '%admin%')->first();
-            }
-            
-            if (!$user) {
-                $user = DB::table('users')->first();
-            }
-            
-            if ($user) {
-                DB::table('proposicoes')->insert([
-                    'tipo' => 'Moção',
-                    'ementa' => 'Demonstração da nova interface Vue.js com atualizações em tempo real',
-                    'conteudo' => 'Esta proposição foi criada para demonstrar a nova interface Vue.js implementada no sistema. A interface oferece:
-
-• Atualizações em tempo real via polling inteligente
-• Cache otimizado para melhor performance 
-• Interface responsiva e moderna
-• Notificações automáticas de mudanças de status
-• APIs RESTful para dados dinâmicos
-• Permissões por perfil de usuário
-
-O sistema agora oferece uma experiência muito mais fluida e eficiente para todos os usuários.',
-                    'status' => 'em_edicao',
-                    'autor_id' => $user->id,
-                    'template_id' => 6, // Template padrão de moção
-                    'ano' => date('Y'), // Campo obrigatório
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                    'ultima_modificacao' => now()
-                ]);
-                
-                $this->command->info('✅ Proposição de teste criada');
-            }
-        } else {
-            $this->command->info('✅ Dados de teste já existem (' . $proposicoes . ' proposições)');
-        }
+        // Verificar se existe pelo menos uma proposição para referência
+        $proposicoes = DB::table('proposicoes')->count();
+        $this->command->info('✅ Proposições existentes: ' . $proposicoes . ' (Template Universal será usado)');
     }
 
     /**

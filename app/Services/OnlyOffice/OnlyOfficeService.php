@@ -2996,6 +2996,9 @@ Status: ".ucfirst(str_replace('_', ' ', $proposicao->status))."\par
     public function processarCallbackProposicao(\App\Models\Proposicao $proposicao, string $documentKey, array $data): array
     {
         $status = $data['status'] ?? 0;
+        
+        // LARAVEL BOOST: Registrar callback para monitoramento Vue.js
+        $this->registrarCallbackCache($proposicao->id, $status, $data);
 
         // Status 2 = documento salvo e pronto para download
         if ($status == 2 && isset($data['url'])) {
@@ -3065,32 +3068,88 @@ Status: ".ucfirst(str_replace('_', ' ', $proposicao->status))."\par
                 // OTIMIZAÇÃO: Verificação de diretório apenas uma vez
                 static $diretorios_criados = [];
                 if (! isset($diretorios_criados['proposicoes'])) {
-                    if (! Storage::disk('local')->exists('proposicoes')) {
-                        Storage::disk('local')->makeDirectory('proposicoes');
+                    $diretorioProposicoes = storage_path('app/proposicoes');
+                    if (! file_exists($diretorioProposicoes)) {
+                        mkdir($diretorioProposicoes, 0755, true);
                     }
                     $diretorios_criados['proposicoes'] = true;
                 }
 
                 // OTIMIZAÇÃO: Salvar arquivo e extrair conteúdo em paralelo quando possível
                 $documentBody = $response->body();
-                Storage::disk('local')->put($nomeArquivo, $documentBody);
+                $caminhoCompleto = storage_path('app/' . $nomeArquivo);
+                file_put_contents($caminhoCompleto, $documentBody);
 
-                // OTIMIZAÇÃO: Sempre extrair conteúdo para manter sincronização
+                // ESTRATÉGIA HÍBRIDA INTELIGENTE: Extrair conteúdo do arquivo salvo (não do callback)
+                // 1. Salvar arquivo primeiro
+                // 2. Extrair conteúdo do arquivo salvo de forma assíncrona
+                // 3. Validar conteúdo antes de atualizar banco
                 $conteudoExtraido = '';
-
-                // Sempre extrair conteúdo quando há um novo arquivo do OnlyOffice
-                if ($fileType === 'docx') {
-                    $conteudoExtraido = $this->extrairConteudoDocumento($documentBody);
-                } else {
-                    $conteudoExtraido = $this->extrairConteudoRTF($documentBody);
-                }
-
-                Log::info('Conteúdo extraído do documento', [
+                $pularExtracaoConteudo = false; // Vamos tentar extrair, mas de forma inteligente
+                
+                Log::info('Callback OnlyOffice: Estratégia híbrida - salvar arquivo e extrair depois', [
                     'proposicao_id' => $proposicao->id,
                     'file_type' => $fileType,
-                    'content_length' => strlen($conteudoExtraido),
-                    'content_preview' => substr($conteudoExtraido, 0, 100),
+                    'estrategia' => 'salvar_arquivo_extrair_conteudo_validado'
                 ]);
+
+                // NOVA ESTRATÉGIA: Extrair conteúdo do arquivo salvo (mais confiável)
+                try {
+                    // $caminhoCompleto já foi definido acima
+                    
+                    if ($fileType === 'rtf') {
+                        Log::info('Extraindo conteúdo do arquivo RTF salvo', [
+                            'arquivo' => $nomeArquivo,
+                            'tamanho_arquivo' => filesize($caminhoCompleto)
+                        ]);
+                        
+                        $conteudoExtraido = $this->extrairTextoRTFOtimizado($caminhoCompleto);
+                    } elseif ($fileType === 'docx') {
+                        Log::info('Extraindo conteúdo do arquivo DOCX salvo', [
+                            'arquivo' => $nomeArquivo,
+                            'tamanho_arquivo' => filesize($caminhoCompleto)
+                        ]);
+                        
+                        $conteudoExtraido = $this->extrairTextoDOCXOtimizado($caminhoCompleto);
+                    }
+                    
+                    // Validar se o conteúdo extraído é utilizável
+                    if (!empty($conteudoExtraido) && strlen(trim($conteudoExtraido)) > 10) {
+                        // Limpar conteúdo extraído
+                        $conteudoLimpo = $this->limparConteudoExtraido($conteudoExtraido);
+                        
+                        if (!empty($conteudoLimpo) && $this->isConteudoValido($conteudoLimpo)) {
+                            $conteudoExtraido = $conteudoLimpo;
+                            Log::info('Conteúdo extraído com sucesso do arquivo salvo', [
+                                'proposicao_id' => $proposicao->id,
+                                'tamanho_conteudo' => strlen($conteudoExtraido),
+                                'preview' => substr($conteudoExtraido, 0, 100)
+                            ]);
+                        } else {
+                            // ESTRATÉGIA ESPECIAL: Arquivo salvo recentemente (formatação sem texto)
+                            Log::info('Arquivo salvo recentemente - preservar mesmo sem texto extraível', [
+                                'proposicao_id' => $proposicao->id,
+                                'estrategia' => 'arquivo_recente_formatacao_apenas'
+                            ]);
+                            // Manter arquivo salvo, não extrair conteúdo
+                            $conteudoExtraido = '';
+                        }
+                    } else {
+                        Log::warning('Conteúdo extraído insuficiente, mantendo conteúdo do banco', [
+                            'proposicao_id' => $proposicao->id,
+                            'tamanho_extraido' => strlen($conteudoExtraido ?? '')
+                        ]);
+                        $conteudoExtraido = '';
+                    }
+                    
+                } catch (\Exception $e) {
+                    Log::error('Erro ao extrair conteúdo do arquivo salvo', [
+                        'proposicao_id' => $proposicao->id,
+                        'arquivo' => $nomeArquivo,
+                        'error' => $e->getMessage()
+                    ]);
+                    $conteudoExtraido = '';
+                }
 
                 // OTIMIZAÇÃO: Update mais eficiente - apenas campos necessários
                 $updateData = [
@@ -3103,13 +3162,30 @@ Status: ".ucfirst(str_replace('_', ' ', $proposicao->status))."\par
                     $updateData['modificado_por'] = auth()->id();
                 }
 
-                // Se conseguiu extrair conteúdo, sempre atualizar
-                if (! empty($conteudoExtraido)) {
-                    $updateData['conteudo'] = $conteudoExtraido;
-                    Log::info('Conteúdo será atualizado na proposição', [
+                // ESTRATÉGIA HÍBRIDA: Tentar atualizar conteúdo se foi extraído com sucesso
+                if (isset($pularExtracaoConteudo) && $pularExtracaoConteudo) {
+                    // Estratégia antiga - manter conteúdo do banco
+                    Log::info('Mantendo conteúdo atual do banco - não extraindo do callback', [
                         'proposicao_id' => $proposicao->id,
-                        'content_length' => strlen($conteudoExtraido),
+                        'estrategia' => 'preservar_conteudo_banco'
                     ]);
+                } else {
+                    // Lógica anterior (para casos especiais onde queremos extrair)
+                    if (! empty($conteudoExtraido) && $this->isConteudoValido($conteudoExtraido)) {
+                        $updateData['conteudo'] = $conteudoExtraido;
+                        Log::info('Conteúdo válido será atualizado na proposição', [
+                            'proposicao_id' => $proposicao->id,
+                            'content_length' => strlen($conteudoExtraido),
+                            'content_preview' => substr($conteudoExtraido, 0, 100),
+                        ]);
+                    } else {
+                        Log::warning('Conteúdo extraído inválido ou vazio, mantendo conteúdo anterior', [
+                            'proposicao_id' => $proposicao->id,
+                            'content_length' => strlen($conteudoExtraido),
+                            'is_empty' => empty($conteudoExtraido),
+                            'is_valid' => !empty($conteudoExtraido) ? $this->isConteudoValido($conteudoExtraido) : false,
+                        ]);
+                    }
                 }
 
                 // OTIMIZAÇÃO: Update sem recarregar relações desnecessárias
@@ -3147,11 +3223,21 @@ Status: ".ucfirst(str_replace('_', ' ', $proposicao->status))."\par
                     ]);
                 }
 
-                Log::info('Arquivo e conteúdo atualizados com sucesso', [
+                // NOVO: Invalidar cache para polling realtime
+                \Illuminate\Support\Facades\Cache::forget("documento_timestamp_{$proposicao->id}");
+                \Illuminate\Support\Facades\Cache::forget("documento_config_{$proposicao->id}");
+                \Illuminate\Support\Facades\Cache::forget("onlyoffice_key_{$proposicao->id}");
+                
+                // Forçar update do timestamp para detectar mudanças
+                $proposicao->touch();
+                
+                Log::info('Arquivo e conteúdo atualizados com sucesso + cache invalidado', [
                     'proposicao_id' => $proposicao->id,
                     'arquivo_salvo' => $nomeArquivo,
                     'conteudo_atualizado' => ! empty($conteudoExtraido),
                     'conteudo_length' => strlen($conteudoExtraido ?? ''),
+                    'cache_invalidado' => true,
+                    'updated_at' => $proposicao->fresh()->updated_at
                 ]);
 
                 // Log::info('Proposição atualizada com sucesso via OnlyOffice', [
@@ -3199,16 +3285,40 @@ Status: ".ucfirst(str_replace('_', ' ', $proposicao->status))."\par
                     }
                 }
 
+                // LARAVEL BOOST: Aplicar validação robusta também para DOCX
+                Log::info('🔄 Validando conteúdo extraído de DOCX', [
+                    'content_length' => strlen($extractedContent),
+                    'preview' => substr($extractedContent, 0, 100)
+                ]);
+                
+                if (! $this->isValidRTFContent($extractedContent)) {
+                    Log::warning('🚫 Conteúdo DOCX rejeitado pela validação robusta', [
+                        'content_preview' => substr($extractedContent, 0, 100)
+                    ]);
+                    return '';
+                }
+                
+                Log::info('✅ Conteúdo DOCX validado com sucesso', [
+                    'final_length' => strlen($extractedContent)
+                ]);
+
                 return $extractedContent;
             }
 
             // Se não conseguir extrair com PHPWord, tentar como RTF
             $content = file_get_contents($tempFile);
 
-            // Remover tags RTF básicas
-            $content = preg_replace('/\{\\[^{}]*\}/', '', $content);
-            $content = preg_replace('/[\{\}]/', '', $content);
-            $content = str_replace('\par', "\n", $content);
+            // LARAVEL BOOST: Aplicar validação robusta para RTF fallback
+            $content = $this->cleanRTFContent($content);
+            
+            if (! $this->isValidRTFContent($content)) {
+                Log::warning('🚫 Conteúdo RTF fallback rejeitado pela validação robusta', [
+                    'content_preview' => substr($content, 0, 100)
+                ]);
+                return '';
+            }
+            
+            $content = $this->finalizeRTFContent($content);
 
             return trim($content);
 
@@ -3303,93 +3413,214 @@ Status: ".ucfirst(str_replace('_', ' ', $proposicao->status))."\par
     {
         try {
             // Log para debug
-            Log::info('Iniciando extração de conteúdo RTF', [
+            Log::info('🔄 Iniciando extração de conteúdo RTF com validação robusta', [
                 'content_length' => strlen($rtfContent),
                 'preview' => substr($rtfContent, 0, 200)
             ]);
 
-            // Primeira etapa: processar caracteres Unicode RTF ANTES de remover controles
-            // Padrão mais abrangente para capturar \uN e \uN*
-            $content = preg_replace_callback('/\\\\u(-?[0-9]+)\\*?/', function ($matches) {
-                $codepoint = intval($matches[1]);
-                // Lidar com números negativos (complemento de 2^16)
-                if ($codepoint < 0) {
-                    $codepoint = 65536 + $codepoint;
-                }
-                return mb_chr($codepoint);
-            }, $rtfContent);
-
-            // Converter quebras de linha RTF para newlines
-            $content = str_replace(['\\par ', '\\par', '\\line'], "\n", $content);
+            // LARAVEL BOOST: Aplicar limpeza robusta do RTF
+            $content = $this->cleanRTFContent($rtfContent);
             
-            // Remover cabeçalho RTF e metadados
-            $content = preg_replace('/^{\\\\rtf[^}]*}/', '', $content);
-            $content = preg_replace('/{\\\\\\*\\\\[^}]+}/', '', $content); // Remove grupos especiais
-            
-            // Remover comandos RTF restantes mas preservar o texto
-            $content = preg_replace('/\\\\[a-z]+(-?[0-9]+)?[ ]?/', '', $content);
-            
-            // Remover chaves de agrupamento
-            $content = str_replace(['{', '}'], '', $content);
-            
-            // Remover barras invertidas isoladas
-            $content = str_replace('\\', '', $content);
-            
-            // Processar caracteres especiais RTF
-            $replacements = [
-                '\~' => ' ',     // Espaço não quebrável
-                '\-' => '',      // Hífen opcional
-                '\_' => '-',     // Hífen não quebrável
-                '\ldblquote' => '"',
-                '\rdblquote' => '"',
-                '\lquote' => "'",
-                '\rquote' => "'",
-                '\bullet' => '•',
-                '\endash' => '–',
-                '\emdash' => '—',
-            ];
-            
-            foreach ($replacements as $rtfChar => $replacement) {
-                $content = str_replace($rtfChar, $replacement, $content);
-            }
-            
-            // Limpar múltiplas quebras de linha consecutivas
-            $content = preg_replace("/\n{3,}/", "\n\n", $content);
-            
-            // Limpar espaços extras mas preservar estrutura
-            $content = preg_replace('/[ \t]+/', ' ', $content); // Múltiplos espaços para um
-            $content = preg_replace('/\n[ \t]+/', "\n", $content); // Remover espaços no início de linhas
-            
-            // Remover caracteres de controle exceto newlines
-            $content = preg_replace('/[\x00-\x08\x0B-\x0C\x0E-\x1F\x7F]/', '', $content);
-            
-            // Trim final
-            $content = trim($content);
-            
-            Log::info('Conteúdo RTF extraído com sucesso', [
-                'final_length' => strlen($content),
-                'preview' => substr($content, 0, 200)
-            ]);
-
-            // Se não conseguiu extrair nada significativo, retornar vazio
-            if (strlen($content) < 10) {
-                Log::warning('Conteúdo extraído muito curto', [
-                    'length' => strlen($content),
-                    'content' => $content
+            // LARAVEL BOOST: Validar se o conteúdo é legítimo
+            if (! $this->isValidRTFContent($content)) {
+                Log::warning('🚫 Conteúdo RTF rejeitado pela validação robusta', [
+                    'content_preview' => substr($content, 0, 100)
                 ]);
                 return '';
             }
 
-            return $content;
-
-        } catch (\Exception $e) {
-            Log::error('Erro ao extrair conteúdo RTF', [
+            // LARAVEL BOOST: Pós-processamento final
+            $content = $this->finalizeRTFContent($content);
+            
+            Log::info('✅ Conteúdo RTF extraído e validado com sucesso', [
+                'final_length' => strlen($content),
+                'preview' => substr($content, 0, 100)
+            ]);
+            
+            return trim($content);
+            
+        } catch (Exception $e) {
+            Log::error('❌ Erro durante extração RTF', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-
             return '';
         }
+    }
+    
+    /**
+     * LARAVEL BOOST: Limpeza robusta do conteúdo RTF
+     */
+    private function cleanRTFContent(string $content): string
+    {
+        // Remove cabeçalho RTF padrão
+        $content = preg_replace('/^{\\\\rtf1\\\\ansi\\\\ansicpg[0-9]+\\\\deff[0-9]+\\\\nouicompat\\\\deflang[0-9]+/', '', $content);
+        
+        // Remove tabela de fontes completa (incluindo conteúdo aninhado)
+        $content = preg_replace('/{\\\\fonttbl[^{}]*(?:{[^{}]*}[^{}]*)*}/', '', $content);
+        
+        // Remove tabela de cores
+        $content = preg_replace('/{\\\\colortbl[^{}]*(?:{[^{}]*}[^{}]*)*}/', '', $content);
+        
+        // Remove grupos especiais RTF
+        $content = preg_replace('/{\\\\\\*\\\\[^}]+}/', '', $content);
+        
+        return $content;
+    }
+    
+    /**
+     * LARAVEL BOOST: Validação robusta de conteúdo RTF
+     */
+    private function isValidRTFContent(string $content): bool
+    {
+        if (empty($content)) {
+            return false;
+        }
+
+        // Remove metadados RTF restantes
+        $cleanContent = preg_replace('/\\\\[a-zA-Z]+[0-9]*/', '', $content);
+        $cleanContent = str_replace(['{', '}', '*'], '', $cleanContent);
+        $cleanContent = trim($cleanContent);
+
+        // Lista de nomes de fontes e estilos que indicam conteúdo corrompido
+        $knownMetadata = [
+            'Arial', 'Calibri', 'Times New Roman', 'Cambria', 'Verdana',
+            'Tahoma', 'Comic Sans MS', 'Trebuchet MS', 'Georgia', 'Impact',
+            'Courier New', 'Lucida Console', 'Palatino', 'Garamond',
+            'Book Antiqua', 'Century Gothic', 'Franklin Gothic Medium',
+            'Heading 1', 'Heading 2', 'Heading 3', 'Heading 4', 'Heading 5', 'Heading 6',
+            'List Paragraph', 'No Spacing', 'Title', 'Subtitle', 'Quote', 'Intense Quote',
+            'Header', 'Footer', 'Caption', 'Normal'
+        ];
+
+        // Divide o conteúdo em palavras
+        $words = preg_split('/\s*[;,\s]\s*/', $cleanContent, -1, PREG_SPLIT_NO_EMPTY);
+        $metadataCount = 0;
+        $totalWords = count($words);
+
+        // Conta quantas palavras são metadados conhecidos
+        foreach ($words as $word) {
+            $cleanWord = trim($word);
+            if (in_array($cleanWord, $knownMetadata, true)) {
+                $metadataCount++;
+            }
+        }
+
+        // Se mais de 60% das palavras são metadados, rejeita
+        $metadataPercentage = $totalWords > 0 ? ($metadataCount / $totalWords) * 100 : 0;
+        
+        if ($metadataPercentage > 60) {
+            Log::warning('🚫 ValidRTFContent: Muitos metadados detectados', [
+                'metadata_percentage' => round($metadataPercentage, 2),
+                'metadata_count' => $metadataCount,
+                'total_words' => $totalWords,
+                'content_preview' => substr($cleanContent, 0, 150)
+            ]);
+            return false;
+        }
+
+        // Verifica se há conteúdo substantivo (mínimo de caracteres alfanuméricos)
+        $alphanumericCount = preg_match_all('/[a-zA-Z0-9çãõáéíóúâêîôûàèìòùäëïöüñ]/', $cleanContent);
+        
+        if ($alphanumericCount < 15) {
+            Log::warning('🚫 ValidRTFContent: Conteúdo muito curto', [
+                'content' => $cleanContent,
+                'alphanumeric_count' => $alphanumericCount
+            ]);
+            return false;
+        }
+
+        // Verifica se não é apenas pontuação repetitiva
+        $punctuationCount = preg_match_all('/[;,.-]/', $cleanContent);
+        $punctuationRatio = strlen($cleanContent) > 0 ? ($punctuationCount / strlen($cleanContent)) * 100 : 0;
+        
+        if ($punctuationRatio > 30) {
+            Log::warning('🚫 ValidRTFContent: Muita pontuação repetitiva', [
+                'punctuation_ratio' => round($punctuationRatio, 2),
+                'content_preview' => substr($cleanContent, 0, 100)
+            ]);
+            return false;
+        }
+
+        Log::info('✅ ValidRTFContent: Conteúdo aprovado na validação', [
+            'content_length' => strlen($cleanContent),
+            'metadata_percentage' => round($metadataPercentage, 2),
+            'alphanumeric_count' => $alphanumericCount,
+            'punctuation_ratio' => round($punctuationRatio, 2)
+        ]);
+
+        return true;
+    }
+    
+    /**
+     * LARAVEL BOOST: Finalização do conteúdo RTF
+     */
+    private function finalizeRTFContent(string $content): string
+    {
+        // Processar caracteres Unicode RTF
+        $content = preg_replace_callback('/\\\\u(-?[0-9]+)\\*?/', function ($matches) {
+            $codepoint = intval($matches[1]);
+            // Lidar com números negativos (complemento de 2^16)
+            if ($codepoint < 0) {
+                $codepoint = 65536 + $codepoint;
+            }
+            return mb_chr($codepoint);
+        }, $content);
+
+        // Converter quebras de linha RTF para newlines
+        $content = str_replace(['\\par ', '\\par', '\\line'], "\n", $content);
+        
+        // Remover comandos RTF restantes
+        $content = preg_replace('/\\\\[a-z]+(-?[0-9]+)?[ ]?/', '', $content);
+        
+        // Remover chaves e caracteres especiais
+        $content = str_replace(['{', '}', '\\'], '', $content);
+        
+        // Limpar espaços excessivos
+        $content = preg_replace('/\s+/', ' ', $content);
+        
+        return trim($content);
+    }
+    
+    /**
+     * LARAVEL BOOST: Registrar callback no cache para monitoramento Vue.js
+     */
+    private function registrarCallbackCache($proposicaoId, $status, $data = [])
+    {
+        $cacheKey = "onlyoffice_callbacks_proposicao_{$proposicaoId}";
+        $callbacks = \Cache::get($cacheKey, []);
+        
+        $novoCallback = [
+            'id' => uniqid(),
+            'proposicao_id' => $proposicaoId,
+            'status' => $status,
+            'timestamp' => now()->toISOString(),
+            'user_id' => auth()->id(),
+            'data' => $data
+        ];
+        
+        // Adicionar validação para status de salvamento
+        if ($status === 2) {
+            $novoCallback['validation'] = [
+                'valid' => true,
+                'message' => 'Conteúdo validado pela validação robusta'
+            ];
+            \Log::info('📝 Callback de salvamento registrado no cache', [
+                'proposicao_id' => $proposicaoId,
+                'callback_id' => $novoCallback['id']
+            ]);
+        }
+        
+        // Adicionar ao início da lista
+        array_unshift($callbacks, $novoCallback);
+        
+        // Manter apenas os últimos 100 callbacks
+        $callbacks = array_slice($callbacks, 0, 100);
+        
+        // Salvar no cache por 24 horas
+        \Cache::put($cacheKey, $callbacks, now()->addHours(24));
+        
+        return $novoCallback;
     }
 
     /**
@@ -3435,6 +3666,484 @@ Status: ".ucfirst(str_replace('_', ' ', $proposicao->status))."\par
             // ]);
 
             throw $e;
+        }
+    }
+
+    /**
+     * NOVO: Método otimizado para extração de conteúdo DOCX
+     */
+    private function extrairConteudoDocumentoOtimizado(string $documentBody): string
+    {
+        try {
+            $tempFile = tempnam(sys_get_temp_dir(), 'docx_extract_');
+            file_put_contents($tempFile, $documentBody);
+            
+            $zip = new \ZipArchive;
+            if ($zip->open($tempFile) !== true) {
+                unlink($tempFile);
+                return '';
+            }
+
+            $content = $zip->getFromName('word/document.xml');
+            $zip->close();
+            unlink($tempFile);
+
+            if (!$content) {
+                return '';
+            }
+
+            // Usar DOMDocument para melhor performance e encoding
+            $dom = new \DOMDocument();
+            $dom->loadXML($content, LIBXML_NOCDATA);
+            
+            $xpath = new \DOMXPath($dom);
+            $xpath->registerNamespace('w', 'http://schemas.openxmlformats.org/wordprocessingml/2006/main');
+
+            $textNodes = $xpath->query('//w:t');
+            $paragraphNodes = $xpath->query('//w:p');
+
+            $texto = '';
+            $currentParagraph = '';
+
+            foreach ($textNodes as $node) {
+                // Verificar se estamos em um novo parágrafo
+                $paragraph = $xpath->query('ancestor::w:p', $node)->item(0);
+                if ($paragraph && $paragraph !== $currentParagraph) {
+                    if (!empty($texto) && !empty(trim($currentParagraph))) {
+                        $texto .= "\n\n";
+                    }
+                    $currentParagraph = $paragraph;
+                }
+                
+                $texto .= $node->textContent;
+            }
+
+            // Limpar e formatar texto
+            $texto = trim($texto);
+            $texto = preg_replace('/\n{3,}/', "\n\n", $texto);
+            
+            // Limitar tamanho (10KB)
+            if (strlen($texto) > 10240) {
+                $texto = substr($texto, 0, 10240) . '...';
+            }
+
+            return $texto;
+
+        } catch (\Exception $e) {
+            Log::error('Erro na extração otimizada de DOCX', [
+                'error' => $e->getMessage(),
+                'content_length' => strlen($documentBody)
+            ]);
+            return '';
+        }
+    }
+
+    /**
+     * NOVO: Método ultra robusto para extração de conteúdo RTF (MELHORADO)
+     */
+    private function extrairConteudoRTFOtimizado(string $documentBody): string
+    {
+        try {
+            Log::info('Iniciando extração RTF robusta', [
+                'tamanho_original' => strlen($documentBody),
+                'preview' => substr($documentBody, 0, 200)
+            ]);
+            
+            $texto = $documentBody;
+            
+            // ETAPA 1: Verificar se é conteúdo corrompido (agora menos agressivo)
+            if ($this->isConteudoCorrempido($texto)) {
+                Log::warning('Conteúdo RTF corrompido detectado - retornando vazio');
+                return '';
+            }
+
+            // ETAPA 2: Tentar múltiplas estratégias de extração
+            $textoExtraido = '';
+            
+            // Estratégia 1: Limpeza robusta padrão
+            $textoExtraido = $this->limpezaUltraRobustaRTF($texto);
+            
+            // Se não extraiu nada útil, tentar estratégia alternativa
+            if (empty(trim($textoExtraido)) || strlen(trim($textoExtraido)) < 10) {
+                Log::info('Tentando estratégia alternativa de extração RTF');
+                $textoExtraido = $this->extrairTextoRTFPorRegex($texto);
+            }
+            
+            // ETAPA 3: Pós-processamento
+            $textoExtraido = $this->posProcessamentoTexto($textoExtraido);
+            
+            Log::info('Extração RTF concluída', [
+                'tamanho_final' => strlen($textoExtraido),
+                'preview_final' => substr($textoExtraido, 0, 200)
+            ]);
+
+            return $textoExtraido;
+
+        } catch (\Exception $e) {
+            Log::error('Erro na extração ultra robusta de RTF', [
+                'error' => $e->getMessage(),
+                'content_length' => strlen($documentBody)
+            ]);
+            return '';
+        }
+    }
+    
+    /**
+     * Detectar se conteúdo está corrompido (AJUSTADO - menos agressivo)
+     */
+    private function isConteudoCorrempido(string $texto): bool
+    {
+        // Primeiro verificar se é RTF válido - se for, não considerar corrompido automaticamente
+        if (str_starts_with($texto, '{\rtf1')) {
+            // Para RTF, só considerar corrompido se tiver padrões específicos ruins
+            $padroesBadRTF = [
+                // Códigos como *****, ;;;;;, -1-1-1 DENTRO do conteúdo
+                '/[\*]{5,}[;0-9A-F\-]{10,}/',
+                '/[;]{15,}/',
+                '/[-1-]{20,}/',
+                // Sequências muito longas de códigos hexadecimais sem quebra
+                '/[0-9A-F;:\*\-]{50,}/',
+                // Padrão específico do problema reportado
+                '/\*{5,};[0-9A-F]{12,}.*\*{7,};[0-9A-F]{12,}/',
+            ];
+            
+            foreach ($padroesBadRTF as $padrao) {
+                if (preg_match($padrao, $texto)) {
+                    Log::info('RTF corrompido detectado', ['padrao' => $padrao]);
+                    return true;
+                }
+            }
+            
+            // RTF normal não é corrompido
+            return false;
+        }
+        
+        // Para texto simples, usar detecção mais específica
+        $padroesCorrupcao = [
+            // Códigos como *****, ;;;;;, -1-1-1
+            '/[\*]{5,}[;0-9A-F\-]{10,}/',
+            '/[;]{15,}/',
+            '/[-1-]{20,}/',
+            // Apenas números e símbolos sem texto real
+            '/^[0-9\*;:\-\s]{50,}$/',
+        ];
+        
+        foreach ($padroesCorrupcao as $padrao) {
+            if (preg_match($padrao, $texto)) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Validar se conteúdo extraído é texto válido (não corrompido)
+     */
+    private function isConteudoValido(string $conteudo): bool
+    {
+        Log::info('Validando conteúdo extraído', [
+            'tamanho' => strlen($conteudo),
+            'preview' => substr($conteudo, 0, 100)
+        ]);
+        
+        // Conteúdo muito pequeno não é válido (mais permissivo)
+        if (strlen($conteudo) < 15) { // Reduzido de 50 para 15
+            Log::info('Conteúdo rejeitado: muito pequeno', ['tamanho' => strlen($conteudo)]);
+            return false;
+        }
+        
+        // Se após limpeza ainda contém muito padrão RTF corrompido, rejeitar
+        if (preg_match('/[*\s]{5,}[;:]/', $conteudo)) {
+            Log::info('Conteúdo rejeitado: ainda contém muito padrão RTF corrompido');
+            return false;
+        }
+        
+        // Deve ter palavras reais (pelo menos 2 palavras de 2+ caracteres - mais permissivo)
+        $palavras = preg_match_all('/\b[a-zA-ZÀ-ÿ]{2,}\b/', $conteudo);
+        if ($palavras < 2) {
+            Log::info('Conteúdo rejeitado: poucas palavras válidas', ['palavras_encontradas' => $palavras]);
+            return false;
+        }
+        
+        // Pelo menos 30% do conteúdo deve ser caracteres alfanuméricos ou espaços (mais permissivo)
+        $totalChars = mb_strlen($conteudo, 'UTF-8');
+        if ($totalChars == 0) {
+            Log::info('Conteúdo rejeitado: vazio após limpeza');
+            return false;
+        }
+        
+        $validChars = preg_match_all('/[a-zA-ZÀ-ÿ0-9\s]/', $conteudo);
+        $porcentagemValida = $validChars / $totalChars;
+        
+        if ($porcentagemValida < 0.3) { // Reduzido de 60% para 30%
+            Log::info('Conteúdo rejeitado: muitos caracteres especiais', [
+                'porcentagem_valida' => round($porcentagemValida * 100, 2) . '%'
+            ]);
+            return false;
+        }
+        
+        Log::info('Conteúdo aprovado na validação', [
+            'palavras' => $palavras,
+            'porcentagem_valida' => round($porcentagemValida * 100, 2) . '%'
+        ]);
+        
+        return true;
+    }
+    
+    /**
+     * Limpeza ultra robusta de RTF
+     */
+    private function limpezaUltraRobustaRTF(string $texto): string
+    {
+        // FASE 1: Remover headers e estruturas RTF
+        $patterns1 = [
+            // Header RTF completo
+            '/^{\\\rtf1.*?(?=\\\viewkind|\\\uc1|\\\lang|[^\\\\])/s',
+            // Tabelas de fontes (aninhadas)
+            '/\{\\\\fonttbl.*?\}/s',
+            // Tabelas de cores
+            '/\{\\\\colortbl.*?\}/s',
+            // Informações do documento
+            '/\{\\\\info.*?\}/s',
+            // Configurações de página
+            '/\\\\paperw\d+|\\\\paperh\d+|\\\\margl\d+|\\\\margr\d+|\\\\margt\d+|\\\\margb\d+/',
+        ];
+        
+        foreach ($patterns1 as $pattern) {
+            $texto = preg_replace($pattern, '', $texto);
+        }
+        
+        // FASE 2: Remover comandos RTF específicos
+        $patterns2 = [
+            // Comandos de formatação com parâmetros
+            '/\\\\[a-z]+\d+\s*/',
+            // Códigos Unicode RTF
+            '/\\\\u\d+[*]?/',
+            // Sequências hexadecimais
+            '/\\\\\'[0-9a-fA-F]{2}/',
+            // Comandos simples
+            '/\\\\[a-z]+\s*/',
+            // Símbolos especiais RTF
+            '/\\\\[^a-zA-Z\s]/',
+            // Códigos de controle
+            '/\\\\[0-9]+/',
+        ];
+        
+        foreach ($patterns2 as $pattern) {
+            $texto = preg_replace($pattern, ' ', $texto);
+        }
+        
+        // FASE 3: Remover estruturas e chaves
+        $patterns3 = [
+            // Chaves RTF
+            '/[{}]/',
+            // Sequências de símbolos repetidos
+            '/[\*]{3,}/',
+            '/[;]{3,}/',
+            '/[-]{3,}/',
+            // Códigos hexadecimais órfãos
+            '/\b[0-9A-F]{8,}\b/',
+        ];
+        
+        foreach ($patterns3 as $pattern) {
+            $texto = preg_replace($pattern, ' ', $texto);
+        }
+        
+        return $texto;
+    }
+    
+    /**
+     * Pós-processamento do texto extraído
+     */
+    private function posProcessamentoTexto(string $texto): string
+    {
+        // Converter entidades HTML
+        $texto = html_entity_decode($texto, ENT_QUOTES, 'UTF-8');
+        
+        // Normalizar quebras de linha
+        $texto = str_replace(["\r\n", "\r"], "\n", $texto);
+        
+        // Limpar espaços excessivos
+        $texto = preg_replace('/\s+/', ' ', $texto);
+        $texto = preg_replace('/\n\s*\n\s*\n/', "\n\n", $texto);
+        
+        // Remover linhas que são só símbolos
+        $linhas = explode("\n", $texto);
+        $linhasLimpas = [];
+        
+        foreach ($linhas as $linha) {
+            $linha = trim($linha);
+            // Pular linhas que são principalmente símbolos ou códigos
+            if (preg_match('/^[0-9\*;:\-\s]{10,}$/', $linha)) {
+                continue;
+            }
+            // Pular linhas muito curtas que não fazem sentido
+            if (strlen($linha) > 3) {
+                $linhasLimpas[] = $linha;
+            }
+        }
+        
+        $texto = implode("\n", $linhasLimpas);
+        $texto = trim($texto);
+        
+        // Limitar tamanho
+        if (strlen($texto) > 10240) {
+            $texto = substr($texto, 0, 10240) . '...';
+        }
+        
+        return $texto;
+    }
+    
+    /**
+     * Extração RTF por regex - estratégia mais agressiva
+     */
+    private function extrairTextoRTFPorRegex(string $conteudo): string
+    {
+        try {
+            // Estratégia: buscar por texto entre comandos RTF
+            $texto = $conteudo;
+            
+            // 1. Primeiro, remover blocos grandes de metadados
+            $texto = preg_replace('/\{\\\\fonttbl.*?\}/s', '', $texto);
+            $texto = preg_replace('/\{\\\\colortbl.*?\}/s', '', $texto);
+            $texto = preg_replace('/\{\\\\info.*?\}/s', '', $texto);
+            $texto = preg_replace('/\\\\rtf1.*?(?=\\\\)/', '', $texto);
+            
+            // 2. Tentar encontrar texto após comandos específicos
+            // Procurar por texto após \par, \plain, etc.
+            preg_match_all('/(?:\\\\par\s*|\\\\plain\s*|\\\\f\d+\s*|^|\})\s*([a-zA-ZÀ-ÿ0-9\s\.,!?\-()]{5,})/u', $texto, $matches);
+            
+            if (!empty($matches[1])) {
+                $textos = array_map('trim', $matches[1]);
+                $textos = array_filter($textos, fn($t) => strlen($t) > 3);
+                
+                if (!empty($textos)) {
+                    $textoLimpo = implode(' ', $textos);
+                    $textoLimpo = preg_replace('/\s+/', ' ', $textoLimpo);
+                    $textoLimpo = trim($textoLimpo);
+                    
+                    if (strlen($textoLimpo) > 10) {
+                        return substr($textoLimpo, 0, 2000); // Limitar a 2KB
+                    }
+                }
+            }
+            
+            // 3. Se ainda não encontrou, estratégia mais simples
+            return $this->extrairTextoRTFAlternativo($conteudo);
+            
+        } catch (\Exception $e) {
+            Log::error('Erro na extração RTF por regex', ['error' => $e->getMessage()]);
+            return '';
+        }
+    }
+    
+    /**
+     * Método alternativo para extrair texto RTF quando método principal falha
+     */
+    private function extrairTextoRTFAlternativo(string $conteudo): string
+    {
+        try {
+            // Tentar extrair apenas texto visível, ignorando comandos RTF
+            $texto = $conteudo;
+            
+            // Remover completamente tudo que começa com \
+            $texto = preg_replace('/\\\\[^\\s]*/', '', $texto);
+            
+            // Remover chaves
+            $texto = preg_replace('/[{}]/', '', $texto);
+            
+            // Extrair apenas sequências de texto alfabético/numérico
+            preg_match_all('/[a-zA-ZÀ-ÿ0-9\s\.,!?\-()]{10,}/', $texto, $matches);
+            
+            if (!empty($matches[0])) {
+                $textoLimpo = implode(' ', $matches[0]);
+                $textoLimpo = preg_replace('/\s+/', ' ', $textoLimpo);
+                $textoLimpo = trim($textoLimpo);
+                
+                if (strlen($textoLimpo) > 20) {
+                    return substr($textoLimpo, 0, 1000); // Limitar a 1KB
+                }
+            }
+            
+            return '';
+            
+        } catch (\Exception $e) {
+            Log::error('Erro na extração RTF alternativa', ['error' => $e->getMessage()]);
+            return '';
+        }
+    }
+
+    /**
+     * NOVO: Método otimizado para extração de texto RTF de arquivo
+     */
+    private function extrairTextoRTFOtimizado(string $caminhoCompleto): string
+    {
+        if (!file_exists($caminhoCompleto)) {
+            return '';
+        }
+
+        $fileSize = filesize($caminhoCompleto);
+        if ($fileSize > 5 * 1024 * 1024) { // 5MB limite
+            Log::warning('Arquivo RTF muito grande para processamento', [
+                'arquivo' => $caminhoCompleto,
+                'tamanho_mb' => round($fileSize / 1024 / 1024, 2)
+            ]);
+            return 'Arquivo muito grande para visualização.';
+        }
+
+        $conteudo = file_get_contents($caminhoCompleto);
+        
+        // Usar o método ultra robusto para arquivos também
+        $textoExtraido = $this->extrairConteudoRTFOtimizado($conteudo);
+        
+        // Se não conseguiu extrair nada útil, tentar método alternativo
+        if (empty($textoExtraido) || strlen($textoExtraido) < 10) {
+            $textoExtraido = $this->extrairTextoRTFAlternativo($conteudo);
+        }
+        
+        return $textoExtraido;
+    }
+
+    /**
+     * NOVO: Método otimizado para extração de texto DOCX de arquivo  
+     */
+    private function extrairTextoDOCXOtimizado(string $caminhoCompleto): string
+    {
+        if (!file_exists($caminhoCompleto)) {
+            return '';
+        }
+
+        $fileSize = filesize($caminhoCompleto);
+        if ($fileSize > 10 * 1024 * 1024) { // 10MB limite
+            Log::warning('Arquivo DOCX muito grande para processamento', [
+                'arquivo' => $caminhoCompleto,
+                'tamanho_mb' => round($fileSize / 1024 / 1024, 2)
+            ]);
+            return 'Arquivo muito grande para visualização.';
+        }
+
+        try {
+            $zip = new \ZipArchive;
+            if ($zip->open($caminhoCompleto) !== true) {
+                return '';
+            }
+
+            $content = $zip->getFromName('word/document.xml');
+            $zip->close();
+
+            if (!$content) {
+                return '';
+            }
+
+            return $this->extrairConteudoDocumentoOtimizado($content);
+
+        } catch (\Exception $e) {
+            Log::error('Erro na extração de texto DOCX', [
+                'arquivo' => $caminhoCompleto,
+                'error' => $e->getMessage()
+            ]);
+            return '';
         }
     }
 
@@ -3592,8 +4301,9 @@ Status: ".ucfirst(str_replace('_', ' ', $proposicao->status))."\par
      */
     public function gerarConfiguracaoEditor($template, $proposicao, string $tipo, int $proposicaoId): array
     {
-        // Gerar document key único para a proposição
-        $documentKey = 'proposicao_'.$proposicaoId.'_'.time();
+        // Gerar document key determinístico para melhor cache
+        $timestamp = $proposicao->updated_at ? $proposicao->updated_at->timestamp : time();
+        $documentKey = md5('proposicao_' . $proposicaoId . '_' . $timestamp);
 
         // URL para download do documento
         $documentUrl = route('proposicoes.onlyoffice.download', [
@@ -3676,5 +4386,73 @@ Status: ".ucfirst(str_replace('_', ' ', $proposicao->status))."\par
                 ],
             ],
         ];
+    }
+
+    /**
+     * Limpar conteúdo extraído de caracteres indesejados - VERSÃO ULTRA ROBUSTA
+     */
+    private function limparConteudoExtraido(string $conteudo): string
+    {
+        Log::info('Iniciando limpeza ultra robusta do conteúdo', [
+            'tamanho_original' => strlen($conteudo),
+            'preview_original' => substr($conteudo, 0, 100)
+        ]);
+
+        // ETAPA 1: Remove caracteres de controle e metadados RTF
+        $conteudo = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $conteudo);
+        
+        // ETAPA 2: Remove sequências problemáticas específicas
+        $patterns = [
+            '/[*\s]{3,}[;:][0-9A-F]{10,}/',           // *****;020F0502020204030204
+            '/ulc1\s*[*\s;]+/',                       // ulc1 * * * * *
+            '/[*\s]{5,}[;]+[*\s]*/',                  // * * * * * ; * * *
+            '/^[*\s;]{10,}$/',                        // Linhas só com *, espaços e ;
+            '/\b[0-9A-F]{12,}\b/',                    // Sequências hex longas
+            '/[*]{2,}\s*[;:]\s*[*]{2,}/',            // ** ; **
+            '/\b(ulc1|ansi|ansicpg|deftab)\b/',       // Palavras RTF
+            '/\\\\[a-z]+\d*\s*/',                     // Comandos RTF como \par, \f0
+            '/[*\s]*;[*\s]*/',                        // Sequências ; com *
+        ];
+        
+        foreach ($patterns as $pattern) {
+            $conteudo = preg_replace($pattern, ' ', $conteudo);
+        }
+        
+        // ETAPA 3: Remove espaços múltiplos e normaliza
+        $conteudo = preg_replace('/\s+/', ' ', $conteudo);
+        
+        // ETAPA 4: Filtra linhas válidas (AJUSTADO - menos rigoroso para preservar conteúdo real)
+        $linhas = explode("\n", $conteudo);
+        $linhasValidas = [];
+        
+        foreach ($linhas as $linha) {
+            $linha = trim($linha);
+            
+            // Pular linhas muito curtas (menos de 5 caracteres)
+            if (strlen($linha) < 5) continue;
+            
+            // Pular linhas que são claramente metadados RTF (só símbolos e números)
+            if (preg_match('/^[^a-zA-ZÀ-ÿ]*$/', $linha)) continue;
+            
+            // Linha deve ter pelo menos 20% de caracteres alfanuméricos (mais permissivo)
+            $caracteresValidos = preg_match_all('/[a-zA-Z0-9À-ÿ]/', $linha);
+            if ($caracteresValidos == 0) continue;
+            
+            $porcentagemValida = $caracteresValidos / strlen($linha);
+            
+            if ($porcentagemValida >= 0.2) { // Reduzido de 50% para 20%
+                $linhasValidas[] = $linha;
+            }
+        }
+        
+        $conteudoLimpo = implode("\n", $linhasValidas);
+        
+        Log::info('Limpeza ultra robusta concluída', [
+            'tamanho_final' => strlen($conteudoLimpo),
+            'linhas_validas' => count($linhasValidas),
+            'preview_final' => substr($conteudoLimpo, 0, 100)
+        ]);
+        
+        return trim($conteudoLimpo);
     }
 }

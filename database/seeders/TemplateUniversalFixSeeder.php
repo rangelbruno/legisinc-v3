@@ -74,73 +74,36 @@ class TemplateUniversalFixSeeder extends Seeder
     }
 
     /**
-     * Gerar conteúdo RTF correto (sem corrupção)
+     * Gerar conteúdo RTF correto (sem corrupção) - usa template simples como base
      */
     private function gerarConteudoRTFCorreto(): string
     {
+        // Usar o mesmo template simplificado do TemplateUniversalSimplificadoSeeder
+        // Não criar conteúdo mockado
         return <<<'RTF'
-{\rtf1\ansi\ansicpg65001\deff0 {\fonttbl {\f0 Arial;}}
-\f0\fs24\sl360\slmult1 
+{\rtf1\ansi\ansicpg1252\deff0\nouicompat\deflang1046{\fonttbl{\f0\fnil\fcharset0 Arial;}{\f1\fnil\fcharset0 Times New Roman;}}
+{\colortbl ;\red0\green0\blue0;}
+{\*\generator Legisinc}\viewkind4\uc1
+\pard\sa200\sl276\slmult1\qc\f0\fs24\lang22
 
-\b\fs28 TEMPLATE UNIVERSAL - PROPOSIÇÕES LEGISLATIVAS\b0\fs24\par
-\par
+${imagem_cabecalho}
 
-\b CABEÇALHO INSTITUCIONAL:\b0\par
-${imagem_cabecalho}\par
-${cabecalho_nome_camara}\par
-${cabecalho_endereco}\par
-Tel: ${cabecalho_telefone} - ${cabecalho_website}\par
-CNPJ: ${cnpj_camara}\par
 \par
-
-\line\par
 \par
-
-\qc\b\fs26 ${tipo_proposicao} N° ${numero_proposicao}\b0\fs24\par
-\ql\par
-
-\b EMENTA:\b0 ${ementa}\par
+\b\fs28 ${tipo_proposicao} N\u176* ${numero_proposicao}\b0\fs24
 \par
-
-\b PREÂMBULO DINÂMICO:\b0\par
-[Este campo se adapta automaticamente ao tipo de proposição]\par
 \par
-
-\b CONTEÚDO PRINCIPAL:\b0\par
-${texto}\par
+\b EMENTA:\b0  ${ementa}
 \par
-
-\b JUSTIFICATIVA:\b0\par
-${justificativa}\par
 \par
-
-\b ARTICULADO (Para Projetos de Lei):\b0\par
-Art. 1° [Disposição principal]\par
+\b CONTE\u218*DO PRINCIPAL:\b0
 \par
-Parágrafo único. [Detalhamento se necessário]\par
+${texto}
 \par
-Art. 2° [Disposições complementares]\par
 \par
-Art. 3° Esta lei entra em vigor na data de sua publicação.\par
 \par
-
-\line\par
+${rodape_texto}
 \par
-
-\b ÁREA DE ASSINATURA:\b0\par
-${municipio}, ${dia} de ${mes_extenso} de ${ano_atual}.\par
-\par
-${assinatura_padrao}\par
-${autor_nome}\par
-${autor_cargo}\par
-\par
-
-\b RODAPÉ INSTITUCIONAL:\b0\par
-${rodape_texto}\par
-${endereco_camara}, ${endereco_bairro} - CEP: ${endereco_cep}\par
-${municipio}/${municipio_uf} - Tel: ${telefone_camara}\par
-${website_camara} - ${email_camara}\par
-
 }
 RTF;
     }

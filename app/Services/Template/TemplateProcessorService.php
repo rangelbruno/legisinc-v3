@@ -286,9 +286,44 @@ class TemplateProcessorService
     }
     
     /**
-     * Converter texto UTF-8 para códigos RTF Unicode
+     * Converter texto UTF-8 para códigos RTF Unicode (OTIMIZADO)
      */
     private function converterParaRTF(string $texto): string
+    {
+        // Cache estático para evitar reprocessamento
+        static $cache = [];
+        $cacheKey = md5($texto);
+        
+        if (isset($cache[$cacheKey])) {
+            return $cache[$cacheKey];
+        }
+        
+        $textoProcessado = '';
+        $length = mb_strlen($texto, 'UTF-8');
+        
+        // Otimização: processar em chunks para textos grandes
+        if ($length > 1000) {
+            $chunks = str_split($texto, 1000);
+            foreach ($chunks as $chunk) {
+                $textoProcessado .= $this->processarChunkRTF($chunk);
+            }
+        } else {
+            $textoProcessado = $this->processarChunkRTF($texto);
+        }
+        
+        // Cache do resultado
+        if (count($cache) > 100) { // Limitar cache
+            $cache = array_slice($cache, -50, null, true);
+        }
+        $cache[$cacheKey] = $textoProcessado;
+        
+        return $textoProcessado;
+    }
+    
+    /**
+     * Processar chunk de texto para RTF
+     */
+    private function processarChunkRTF(string $texto): string
     {
         $textoProcessado = '';
         $length = mb_strlen($texto, 'UTF-8');
@@ -310,8 +345,17 @@ class TemplateProcessorService
                 // Gerar sequência RTF Unicode correta: \uN*
                 $textoProcessado .= '\\u' . $codepoint . '*';
             } else {
-                // Caracteres ASCII normais
-                $textoProcessado .= $char;
+                // Escapar caracteres especiais RTF
+                if ($char === '\\') {
+                    $textoProcessado .= '\\\\';
+                } else if ($char === '{') {
+                    $textoProcessado .= '\\{';
+                } else if ($char === '}') {
+                    $textoProcessado .= '\\}';
+                } else {
+                    // Caracteres ASCII normais
+                    $textoProcessado .= $char;
+                }
             }
         }
         

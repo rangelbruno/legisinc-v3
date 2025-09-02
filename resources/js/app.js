@@ -1,8 +1,9 @@
 import './bootstrap';
-import { initLegalEditor, LegalEditorConfig } from './editor/index.js';
+import { createApp } from 'vue';
+import OnlyOfficeMonitor from './components/OnlyOfficeMonitor.vue';
 
-// Disponibilizar globalmente
-window.LegalEditor = {
-  init: initLegalEditor,
-  config: LegalEditorConfig
-};
+// Registrar componente Vue globalmente
+window.Vue = { createApp };
+window.OnlyOfficeMonitorComponent = OnlyOfficeMonitor;
+
+console.log('✅ Vue.js e OnlyOfficeMonitor carregados');

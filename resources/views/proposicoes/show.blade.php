@@ -1016,64 +1016,13 @@ createApp({
         },
 
         cleanProposicaoData() {
-            // Clean initial proposição data from template elements
+            // Simplificar a limpeza dos dados - apenas garantir que temos valores válidos
             if (!this.proposicao) return;
             
             let ementa = this.proposicao.ementa || '';
             let conteudo = this.proposicao.conteudo || '';
             
-            // Check if content contains template elements
-            if (conteudo.includes('assinatura_digital_info') || 
-                conteudo.includes('qrcode_html') || 
-                conteudo.includes('EMENTA:')) {
-                
-                // Extract ementa from content if present
-                const ementaMatch = conteudo.match(/EMENTA:\s*([^A]+?)\s*A Câmara/s);
-                if (ementaMatch) {
-                    const extractedEmenta = ementaMatch[1].trim();
-                    if (extractedEmenta) {
-                        ementa = extractedEmenta;
-                    }
-                }
-                
-                // Extract main content (text between "A Câmara Municipal manifesta:" and "Resolve dirigir")
-                const conteudoMatch = conteudo.match(/A Câmara Municipal manifesta:\s*(.*?)\s*Resolve dirigir/s);
-                if (conteudoMatch) {
-                    const extractedConteudo = conteudoMatch[1].trim();
-                    if (extractedConteudo) {
-                        conteudo = extractedConteudo;
-                    }
-                } else {
-                    // Try to extract text between other common markers
-                    const altMatch = conteudo.match(/manifesta:\s*(.*?)\s*(?:Caraguatatuba|____)/s);
-                    if (altMatch) {
-                        const extractedConteudo = altMatch[1].trim();
-                        if (extractedConteudo) {
-                            conteudo = extractedConteudo;
-                        }
-                    }
-                }
-                
-                // Remove template elements
-                const elementsToRemove = [
-                    'assinatura_digital_info',
-                    'qrcode_html',
-                    'MOÇÃO Nº [AGUARDANDO PROTOCOLO]',
-                    '____________________________________',
-                    'Câmara Municipal de Caraguatatuba - Documento Oficial'
-                ];
-                
-                elementsToRemove.forEach(element => {
-                    conteudo = conteudo.replace(new RegExp(element, 'g'), '');
-                    ementa = ementa.replace(new RegExp(element, 'g'), '');
-                });
-                
-                // Clean extra spaces and line breaks
-                conteudo = conteudo.replace(/\s+/g, ' ').trim();
-                ementa = ementa.replace(/\s+/g, ' ').trim();
-            }
-            
-            // Fallbacks for empty data
+            // Fallbacks simples para dados vazios
             if (!ementa || ementa === 'Criado pelo Parlamentar') {
                 ementa = 'Moção em elaboração';
             }
@@ -1082,7 +1031,7 @@ createApp({
                 conteudo = 'Conteúdo em elaboração pelo parlamentar';
             }
             
-            // Update the proposição data
+            // Atualizar apenas se necessário
             this.proposicao.ementa = ementa;
             this.proposicao.conteudo = conteudo;
         },

@@ -56,8 +56,8 @@ class TemplateUniversalService
         // Preparar dados da proposição
         $dadosProposicao = $this->prepararDadosProposicao($proposicao, $tipoProposicao);
 
-        // Aplicar substituições diretamente no conteúdo do template (sem usar aplicarParaTipo)
-        $conteudoProcessado = $this->substituirVariaveisSimples($template->conteudo, $dadosProposicao);
+        // Usar TemplateProcessorService para processar variáveis corretamente (RTF + acentuação + imagem)
+        $conteudoProcessado = $this->templateProcessor->processarVariaveisRTF($template->conteudo, $dadosProposicao);
 
         Log::info('Template universal aplicado com sucesso', [
             'proposicao_id' => $proposicao->id,
@@ -114,7 +114,14 @@ class TemplateUniversalService
         
         // Combinar dados da proposição com variáveis globais do sistema
         // Dados da proposição têm precedência sobre as globais
-        return array_merge($variaveisGlobais, $dados);
+        $todasVariaveis = array_merge($variaveisGlobais, $dados);
+        
+        // Garantir que a imagem do cabeçalho seja processada corretamente
+        if (!isset($todasVariaveis['imagem_cabecalho']) || empty($todasVariaveis['imagem_cabecalho'])) {
+            $todasVariaveis['imagem_cabecalho'] = 'template/cabecalho.png';
+        }
+        
+        return $todasVariaveis;
     }
 
     /**

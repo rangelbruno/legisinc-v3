@@ -14,6 +14,11 @@ Route::post('/onlyoffice/callback/legislativo/{proposicao}/{documentKey}', [App\
 // OnlyOffice force save
 Route::post('/onlyoffice/force-save/proposicao/{proposicao}', [App\Http\Controllers\OnlyOfficeController::class, 'forceSave'])->name('api.onlyoffice.force-save');
 
+// OnlyOffice realtime updates
+Route::get('/onlyoffice/realtime/check-changes/{proposicao}', [App\Http\Controllers\Api\OnlyOfficeRealtimeController::class, 'checkDocumentChanges'])->name('api.onlyoffice.realtime.check-changes');
+Route::post('/onlyoffice/realtime/invalidate-cache/{proposicao}', [App\Http\Controllers\Api\OnlyOfficeRealtimeController::class, 'invalidateDocumentCache'])->name('api.onlyoffice.realtime.invalidate-cache');
+Route::get('/onlyoffice/realtime/new-document-key/{proposicao}', [App\Http\Controllers\Api\OnlyOfficeRealtimeController::class, 'getNewDocumentKey'])->name('api.onlyoffice.realtime.new-document-key');
+
 // API Routes para busca de câmaras (sem CSRF protection)
 Route::get('/camaras/buscar', function () {
     return app(App\Http\Controllers\Api\CamaraInfoController::class)->buscarPorNome(request());
@@ -43,6 +48,13 @@ Route::prefix('ai')->name('api.ai.')->middleware(['web'])->group(function () {
     Route::post('/test-connection', [App\Http\Controllers\Api\AIController::class, 'testarConexao'])->name('test-connection');
     Route::get('/configurations', [App\Http\Controllers\Api\AIController::class, 'listarConfiguracoes'])->name('configurations');
     Route::get('/stats', [App\Http\Controllers\Api\AIController::class, 'estatisticas'])->name('stats');
+});
+
+// OnlyOffice Callbacks API routes
+Route::prefix('onlyoffice')->name('api.onlyoffice.')->middleware(['web', 'auth'])->group(function () {
+    Route::get('/callbacks/{proposicaoId}', [App\Http\Controllers\Api\OnlyOfficeCallbackApiController::class, 'getCallbacks'])->name('callbacks');
+    Route::post('/force-save/{proposicaoId}', [App\Http\Controllers\Api\OnlyOfficeCallbackApiController::class, 'forceSave'])->name('force-save');
+    Route::get('/status/{proposicaoId}', [App\Http\Controllers\Api\OnlyOfficeCallbackApiController::class, 'getStatus'])->name('status');
 });
 
 // Progress Schedule API routes

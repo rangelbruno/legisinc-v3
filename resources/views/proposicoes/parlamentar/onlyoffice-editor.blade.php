@@ -19,6 +19,15 @@
     :proposicao-id="$proposicao->id"
     :custom-actions="[]"
 >
+    {{-- LARAVEL BOOST: Monitor de callbacks OnlyOffice Vue.js --}}
+    <div id="onlyoffice-monitor-app" class="mb-4">
+        <onlyoffice-monitor
+            :proposicao-id="{{ $proposicao->id }}"
+            :document-key="'{{ $config['document']['key'] }}'"
+            @refresh-content="refreshProposicaoContent"
+        ></onlyoffice-monitor>
+    </div>
+
     {{-- Scripts adicionais específicos para o parlamentar --}}
     @push('scripts')
     <script>
@@ -186,6 +195,40 @@
                 onlyofficeEditor.forceSave();
             }
         }, 60000); // Auto-save a cada minuto
+    </script>
+
+    {{-- LARAVEL BOOST: Vue.js app para monitor OnlyOffice --}}
+    <script type="module">
+        document.addEventListener('DOMContentLoaded', function() {
+            // Aguardar Vue.js carregar
+            if (typeof window.Vue !== 'undefined' && window.OnlyOfficeMonitorComponent) {
+                const { createApp } = window.Vue;
+                
+                const app = createApp({
+                    components: {
+                        'onlyoffice-monitor': window.OnlyOfficeMonitorComponent
+                    },
+                    methods: {
+                        refreshProposicaoContent() {
+                            // Método chamado quando o monitor solicita atualização
+                            console.log('🔄 Atualizando conteúdo da proposição via Vue.js monitor...');
+                            if (window.docEditor) {
+                                window.docEditor.downloadAs();
+                            }
+                            // Forçar reload se necessário
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 2000);
+                        }
+                    }
+                });
+                
+                app.mount('#onlyoffice-monitor-app');
+                console.log('✅ Vue.js OnlyOffice Monitor inicializado');
+            } else {
+                console.warn('⚠️ Vue.js ou OnlyOfficeMonitor não encontrado');
+            }
+        });
     </script>
     @endpush
 </x-onlyoffice-editor>

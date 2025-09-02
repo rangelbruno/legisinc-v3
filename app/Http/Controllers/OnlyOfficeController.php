@@ -285,13 +285,45 @@ class OnlyOfficeController extends Controller
             'from_container' => str_contains($request->ip(), '172.') || $request->ip() === 'onlyoffice'
         ]);
 
-        // INTEGRAÇÃO: Usar Template Universal Service (conforme CLAUDE.md)
+        // INTEGRAÇÃO: Priorizar arquivo salvo, depois Template Universal (conforme CLAUDE.md)
         try {
             // Buscar proposição sem falhar por problemas de conexão
             $proposicao = Proposicao::with(['tipoProposicao', 'autor'])->find($id);
             
             if (!$proposicao) {
                 throw new \Exception("Proposição não encontrada: {$id}");
+            }
+            
+            // NOVA LÓGICA: Verificar se existe arquivo salvo PRIMEIRO
+            if ($proposicao->arquivo_path) {
+                $caminhosPossiveis = [
+                    storage_path('app/' . $proposicao->arquivo_path),
+                    storage_path('app/private/' . $proposicao->arquivo_path),
+                    storage_path('app/local/' . $proposicao->arquivo_path),
+                ];
+                
+                foreach ($caminhosPossiveis as $caminho) {
+                    if (file_exists($caminho)) {
+                        Log::info('OnlyOffice Download: Usando arquivo salvo existente', [
+                            'proposicao_id' => $id,
+                            'arquivo_path' => $proposicao->arquivo_path,
+                            'caminho_completo' => $caminho,
+                            'tamanho_arquivo' => filesize($caminho)
+                        ]);
+                        
+                        return response()->download($caminho, "proposicao_{$id}.rtf", [
+                            'Content-Type' => 'application/rtf; charset=UTF-8',
+                            'Cache-Control' => 'no-cache, no-store, must-revalidate',
+                            'Pragma' => 'no-cache'
+                        ]);
+                    }
+                }
+                
+                Log::warning('Arquivo salvo não encontrado, usando template universal', [
+                    'proposicao_id' => $id,
+                    'arquivo_path' => $proposicao->arquivo_path,
+                    'caminhos_testados' => $caminhosPossiveis
+                ]);
             }
             
             // Usar TemplateUniversalService para determinar se deve usar template universal
@@ -703,40 +735,68 @@ Sistema funcionando!\par
             $tipoProposicao = TipoProposicao::where('nome', $proposicao->tipo)->first();
         }
         
-        $deveUsarUniversal = $tipoProposicao 
-            ? $this->templateUniversalService->deveUsarTemplateUniversal($tipoProposicao)
-            : false;
+        // NOVA LÓGICA: Verificar arquivo salvo PRIMEIRO, antes de template universal
+        $temArquivoSalvo = false;
+        if ($proposicao->arquivo_path) {
+            $caminhosPossiveis = [
+                storage_path('app/' . $proposicao->arquivo_path),
+                storage_path('app/private/' . $proposicao->arquivo_path),
+                storage_path('app/local/' . $proposicao->arquivo_path),
+            ];
+            
+            foreach ($caminhosPossiveis as $caminho) {
+                if (file_exists($caminho)) {
+                    $temArquivoSalvo = true;
+                    Log::info('OnlyOffice Editor: Arquivo salvo encontrado, priorizando sobre template', [
+                        'proposicao_id' => $proposicao->id,
+                        'arquivo_path' => $proposicao->arquivo_path,
+                        'caminho_completo' => $caminho,
+                        'tamanho_arquivo' => filesize($caminho)
+                    ]);
+                    break;
+                }
+            }
+        }
         
-        if ($deveUsarUniversal) {
-            Log::info('OnlyOffice Editor: Usando template universal', [
-                'proposicao_id' => $proposicao->id,
-                'tipo_proposicao' => $tipoProposicao ? $tipoProposicao->nome : $proposicao->tipo,
-                'template_id_anterior' => $proposicao->template_id
-            ]);
-            
-            // Usar template universal através do serviço
+        if ($temArquivoSalvo) {
+            // PRIORIDADE 1: Usar arquivo salvo existente
             $config = $this->generateOnlyOfficeConfigWithUniversalTemplate($proposicao);
-        } else if ($proposicao->template_id && $proposicao->template) {
-            Log::info('OnlyOffice Editor: Usando template específico', [
-                'proposicao_id' => $proposicao->id,
-                'template_id' => $proposicao->template_id
-            ]);
-            
-            $config = $this->onlyOfficeService->gerarConfiguracaoEditor(
-                $proposicao->template,
-                $proposicao,
-                'proposicao',
-                $proposicao->id
-            );
         } else {
-            Log::info('OnlyOffice Editor: Usando fallback básico', [
-                'proposicao_id' => $proposicao->id,
-                'sem_template_universal' => !$deveUsarUniversal,
-                'sem_template_especifico' => !$proposicao->template_id
-            ]);
+            $deveUsarUniversal = $tipoProposicao 
+                ? $this->templateUniversalService->deveUsarTemplateUniversal($tipoProposicao)
+                : false;
             
-            // Fallback para proposições sem qualquer template
-            $config = $this->generateOnlyOfficeConfig($proposicao);
+            if ($deveUsarUniversal) {
+                Log::info('OnlyOffice Editor: Usando template universal (sem arquivo salvo)', [
+                    'proposicao_id' => $proposicao->id,
+                    'tipo_proposicao' => $tipoProposicao ? $tipoProposicao->nome : $proposicao->tipo,
+                    'template_id_anterior' => $proposicao->template_id
+                ]);
+                
+                // PRIORIDADE 2: Usar template universal quando não há arquivo salvo
+                $config = $this->generateOnlyOfficeConfigWithUniversalTemplate($proposicao);
+            } else if ($proposicao->template_id && $proposicao->template) {
+                Log::info('OnlyOffice Editor: Usando template específico', [
+                    'proposicao_id' => $proposicao->id,
+                    'template_id' => $proposicao->template_id
+                ]);
+                
+                $config = $this->onlyOfficeService->gerarConfiguracaoEditor(
+                    $proposicao->template,
+                    $proposicao,
+                    'proposicao',
+                    $proposicao->id
+                );
+            } else {
+                Log::info('OnlyOffice Editor: Usando fallback básico', [
+                    'proposicao_id' => $proposicao->id,
+                    'sem_template_universal' => isset($deveUsarUniversal) ? !$deveUsarUniversal : true,
+                    'sem_template_especifico' => !$proposicao->template_id
+                ]);
+                
+                // Fallback para proposições sem qualquer template
+                $config = $this->generateOnlyOfficeConfig($proposicao);
+            }
         }
 
         // Usar view específica para parlamentares
@@ -760,17 +820,43 @@ Sistema funcionando!\par
     }
 
     /**
+     * Obter timestamp do arquivo físico do documento
+     */
+    private function getDocumentFileTimestamp(Proposicao $proposicao): ?int
+    {
+        if (!$proposicao->arquivo_path) {
+            return null;
+        }
+        
+        $caminhosPossiveis = [
+            storage_path('app/' . $proposicao->arquivo_path),
+            storage_path('app/private/' . $proposicao->arquivo_path),
+            storage_path('app/local/' . $proposicao->arquivo_path),
+        ];
+        
+        foreach ($caminhosPossiveis as $caminho) {
+            if (file_exists($caminho)) {
+                $timestamp = filemtime($caminho);
+                return $timestamp ?: null;
+            }
+        }
+        
+        return null;
+    }
+    
+    /**
      * Gerar configuração OnlyOffice usando Template Universal
      */
     private function generateOnlyOfficeConfigWithUniversalTemplate(Proposicao $proposicao)
     {
-        // OTIMIZAÇÃO: Document key mais simples e deterministic para melhor cache
-        $lastModified = $proposicao->ultima_modificacao ? 
+        // OTIMIZAÇÃO: Document key baseado no timestamp do arquivo físico para realtime
+        $fileTimestamp = $this->getDocumentFileTimestamp($proposicao);
+        $lastModified = $fileTimestamp ?: ($proposicao->ultima_modificacao ? 
                        $proposicao->ultima_modificacao->timestamp : 
-                       $proposicao->updated_at->timestamp;
+                       $proposicao->updated_at->timestamp);
         
-        // Usar hash mais simples para permitir cache
-        $documentKey = 'universal_' . $proposicao->id . '_' . time() . '_' . substr(md5($proposicao->id . time()), 0, 8);
+        // Document key que muda quando arquivo é modificado (realtime)
+        $documentKey = 'realtime_' . $proposicao->id . '_' . $lastModified . '_' . substr(md5($proposicao->id . $lastModified), 0, 8);
         
         // OTIMIZAÇÃO: Token mais eficiente
         $version = $lastModified;

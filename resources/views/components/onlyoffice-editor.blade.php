@@ -530,9 +530,18 @@
                     this.showToast('Editor carregado e pronto para uso', 'success', 3000);
                 }
                 this.documentModified = false;
+                
+                // LARAVEL BOOST: Emitir evento para Vue.js
+                window.dispatchEvent(new CustomEvent('onlyoffice:ready', {
+                    detail: { proposicaoId: this.proposicaoId }
+                }));
+                
                 if (typeof this.updateStatusBadge === 'function') {
                     this.updateStatusBadge('saved');
                 }
+                
+                // NOVO: Inicializar polling realtime após documento estar pronto
+                this.initRealtimePolling();
                 
                 // Força o redimensionamento após carregar
                 setTimeout(() => {
@@ -545,6 +554,14 @@
                 if (event && event.data) {
                     this.documentModified = true;
                     this.updateStatusBadge('modified');
+                    
+                    // LARAVEL BOOST: Emitir evento para Vue.js
+                    window.dispatchEvent(new CustomEvent('onlyoffice:modified', {
+                        detail: { 
+                            proposicaoId: this.proposicaoId,
+                            modified: true
+                        }
+                    }));
                 }
             },
             
@@ -579,6 +596,11 @@
             onRequestSave: function() {
                 console.info('🔵 OnlyOffice: Save requested by editor');
                 this.updateStatusBadge('saving');
+                
+                // LARAVEL BOOST: Emitir evento para Vue.js
+                window.dispatchEvent(new CustomEvent('onlyoffice:saving', {
+                    detail: { proposicaoId: this.proposicaoId }
+                }));
             },
             
             forceSave: function() {
@@ -592,6 +614,14 @@
                         // Este método deve gerar um callback com status 6 (force save)
                         this.docEditor.serviceCommand("forcesave", null);
                         console.info('🟢 OnlyOffice: serviceCommand forcesave executed successfully');
+                        
+                        // LARAVEL BOOST: Emitir evento para Vue.js
+                        window.dispatchEvent(new CustomEvent('onlyoffice:saved', {
+                            detail: { 
+                                proposicaoId: this.proposicaoId,
+                                forceSave: true
+                            }
+                        }));
                         
                         // Aguardar resposta do callback
                         setTimeout(() => {
@@ -753,6 +783,119 @@
                         }
                     }
                 }
+            },
+            
+            // NOVO: Sistema de Polling Realtime para Atualizações
+            initRealtimePolling: function() {
+                if (!this.proposicaoId) return;
+                
+                console.info('🔄 OnlyOffice Realtime: Iniciando polling inteligente');
+                
+                let lastTimestamp = 0;
+                let pollInterval = 15000; // 15 segundos inicial
+                let consecutiveErrors = 0;
+                let isPolling = true;
+                let pollTimeoutId = null;
+                
+                const realtimePoller = {
+                    checkForChanges: async () => {
+                        if (!isPolling || document.hidden) return;
+                        
+                        try {
+                            const response = await fetch(`/api/onlyoffice/realtime/check-changes/{{ $proposicaoId ?? 0 }}?last_check=${lastTimestamp}`, {
+                                headers: {
+                                    'Cache-Control': 'no-cache',
+                                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                                }
+                            });
+                            
+                            if (!response.ok) {
+                                throw new Error(`HTTP ${response.status}`);
+                            }
+                            
+                            const data = await response.json();
+                            
+                            if (data.has_changes) {
+                                console.info('🔔 OnlyOffice Realtime: Mudanças detectadas no documento', data);
+                                
+                                // Notificar usuário sobre mudanças
+                                if (typeof onlyofficeEditor.showToast === 'function') {
+                                    onlyofficeEditor.showToast(
+                                        'Documento foi atualizado. As próximas alterações refletirão a versão mais recente.',
+                                        'info',
+                                        5000
+                                    );
+                                }
+                                
+                                // Atualizar timestamp
+                                lastTimestamp = data.current_timestamp;
+                                
+                                // Emitir evento personalizado
+                                window.dispatchEvent(new CustomEvent('onlyoffice:document-updated', {
+                                    detail: {
+                                        proposicaoId: onlyofficeEditor.proposicaoId,
+                                        timestamp: data.current_timestamp,
+                                        lastModified: data.last_modified
+                                    }
+                                }));
+                            } else {
+                                lastTimestamp = data.current_timestamp;
+                            }
+                            
+                            consecutiveErrors = 0;
+                            pollInterval = Math.max(15000, pollInterval - 2000); // Reduzir intervalo gradualmente
+                            
+                        } catch (error) {
+                            consecutiveErrors++;
+                            console.warn('⚠️ OnlyOffice Realtime: Erro no polling', error);
+                            
+                            if (consecutiveErrors >= 3) {
+                                pollInterval = Math.min(60000, pollInterval * 1.5); // Aumentar intervalo após erros
+                                
+                                if (consecutiveErrors === 3) {
+                                    console.warn('🚨 OnlyOffice Realtime: Múltiplos erros detectados, reduzindo frequência');
+                                }
+                            }
+                        }
+                        
+                        // Agendar próxima verificação
+                        pollTimeoutId = setTimeout(() => {
+                            realtimePoller.checkForChanges();
+                        }, pollInterval);
+                    },
+                    
+                    start: () => {
+                        isPolling = true;
+                        realtimePoller.checkForChanges();
+                        console.info('✅ OnlyOffice Realtime: Polling iniciado');
+                    },
+                    
+                    stop: () => {
+                        isPolling = false;
+                        if (pollTimeoutId) {
+                            clearTimeout(pollTimeoutId);
+                        }
+                        console.info('⏹️ OnlyOffice Realtime: Polling parado');
+                    }
+                };
+                
+                // Controle baseado na visibilidade da página
+                document.addEventListener('visibilitychange', () => {
+                    if (document.hidden) {
+                        realtimePoller.stop();
+                    } else {
+                        setTimeout(() => {
+                            realtimePoller.start();
+                        }, 1000); // Pequeno delay ao retomar
+                    }
+                });
+                
+                // Iniciar polling após documento estar pronto
+                setTimeout(() => {
+                    realtimePoller.start();
+                }, 3000); // 3 segundos após inicialização
+                
+                return realtimePoller;
             }
         };
         

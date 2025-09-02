@@ -1876,28 +1876,31 @@ class ProposicaoController extends Controller implements HasMiddleware
             return $conteudoBackup;
         }
 
-        // Fallback 2: Usar template padrão baseado no tipo de proposição
-        $templatePadrao = $this->obterTemplatePadrao($template->tipoProposicao->nome ?? 'mocao');
-        if ($templatePadrao) {
-            // Log::info('Usando template padrão como fallback', [
-            //     'template_id' => $template->id,
-            //     'tipo_proposicao' => $template->tipoProposicao->nome ?? 'mocao'
-            // ]);
+        // Fallback 2: Tentar usar Template Universal
+        $templateUniversal = $this->buscarTemplateUniversal();
+        if ($templateUniversal) {
+            \Log::info('Usando Template Universal como fallback', [
+                'template_id' => $template->id,
+                'template_universal_id' => $templateUniversal->id ?? 'sem_id'
+            ]);
 
-            // Salvar template padrão como novo template
+            // Salvar template universal como novo template
             if ($template->arquivo_path) {
-                \Storage::disk('local')->put($template->arquivo_path, $templatePadrao);
+                \Storage::disk('local')->put($template->arquivo_path, $templateUniversal);
             }
 
-            return $templatePadrao;
+            return $templateUniversal;
         }
 
-        // Fallback 3: Template mínimo de emergência
-        // Log::error('Usando template de emergência', [
-        //     'template_id' => $template->id
-        // ]);
+        // Fallback 3: Erro - Nenhum template disponível
+        $mensagemErro = "❌ ERRO: Nenhum template válido encontrado para a proposição ID {$template->id}";
+        \Log::error($mensagemErro, [
+            'template_id' => $template->id,
+            'arquivo_path' => $template->arquivo_path,
+            'tipo_proposicao' => $template->tipoProposicao->nome ?? 'indefinido'
+        ]);
 
-        return $this->obterTemplateEmergencia();
+        throw new \Exception($mensagemErro);
     }
 
     /**
@@ -1969,91 +1972,31 @@ class ProposicaoController extends Controller implements HasMiddleware
     }
 
     /**
-     * Obter template padrão baseado no tipo de proposição
+     * Buscar Template Universal do banco de dados
      */
-    private function obterTemplatePadrao($tipoProposicao)
+    private function buscarTemplateUniversal()
     {
-        $templates = [
-            'mocao' => '{\rtf1\ansi\ansicpg1252\deff0\deflang1046 {\fonttbl {\f0 Times New Roman;}}
-{\colortbl;\red0\green0\blue0;}
-\f0\fs24
+        try {
+            $templateUniversal = \App\Models\TemplateUniversal::first();
+            if ($templateUniversal && $templateUniversal->conteudo) {
+                \Log::info('Template Universal encontrado', [
+                    'template_id' => $templateUniversal->id,
+                    'nome' => $templateUniversal->nome,
+                    'tamanho_conteudo' => strlen($templateUniversal->conteudo)
+                ]);
+                return $templateUniversal->conteudo;
+            }
 
-{\qc\b\fs28 MOÇÃO Nº ${numero_proposicao}\par}
-\par
-{\qc Data: ${data_atual}\par}
-{\qc Autor: ${autor_nome}\par}
-{\qc Município: ${municipio}\par}
-\par
-\par
-{\b EMENTA:\par}
-\par
-${ementa}
-\par
-\par
-{\b TEXTO:\par}
-\par
-${texto}
-\par
-\par
-{\qr Câmara Municipal de ${municipio}\par}
-{\qr ${data_atual}\par}
-}',
-            'projeto_lei_ordinaria' => '{\rtf1\ansi\ansicpg1252\deff0\deflang1046 {\fonttbl {\f0 Times New Roman;}}
-{\colortbl;\red0\green0\blue0;}
-\f0\fs24
-
-{\qc\b\fs28 PROJETO DE LEI ORDINÁRIA Nº ${numero_proposicao}\par}
-\par
-{\qc Data: ${data_atual}\par}
-{\qc Autor: ${autor_nome}\par}
-{\qc Município: ${municipio}\par}
-\par
-\par
-{\b EMENTA:\par}
-\par
-${ementa}
-\par
-\par
-{\b TEXTO:\par}
-\par
-${texto}
-\par
-\par
-{\qr Câmara Municipal de ${municipio}\par}
-{\qr ${data_atual}\par}
-}',
-        ];
-
-        return $templates[$tipoProposicao] ?? $templates['mocao'];
-    }
-
-    /**
-     * Template mínimo de emergência
-     */
-    private function obterTemplateEmergencia()
-    {
-        return '{\rtf1\ansi\ansicpg1252\deff0\deflang1046 {\fonttbl {\f0 Times New Roman;}}
-{\colortbl;\red0\green0\blue0;}
-\f0\fs24
-
-{\qc\b\fs28 ${tipo_proposicao} Nº ${numero_proposicao}\par}
-\par
-{\qc Data: ${data_atual}\par}
-{\qc Autor: ${autor_nome}\par}
-\par
-\par
-{\b EMENTA:\par}
-\par
-${ementa}
-\par
-\par
-{\b TEXTO:\par}
-\par
-${texto}
-\par
-\par
-{\qr ${municipio}, ${data_atual}\par}
-}';
+            \Log::warning('Template Universal não encontrado ou sem conteúdo');
+            return null;
+        } catch (\Exception $e) {
+            \Log::error('Erro ao buscar Template Universal', [
+                'erro' => $e->getMessage(),
+                'arquivo' => $e->getFile(),
+                'linha' => $e->getLine()
+            ]);
+            return null;
+        }
     }
 
     /**
@@ -6116,6 +6059,15 @@ ${texto}
         $ementa = $proposicao->ementa ?? '';
         $conteudo = $proposicao->conteudo ?? '';
 
+        // Verificar se o conteúdo contém códigos RTF corrompidos
+        if (str_contains($conteudo, 'Arial;Calibri;Times New Roman') || 
+            str_contains($conteudo, 'Heading 1;') ||
+            str_contains($conteudo, ';;;;;;;;;;;;')) {
+            
+            // Conteúdo RTF corrompido - usar apenas a ementa ou criar conteúdo básico
+            $conteudo = 'Conteúdo da proposição disponível no editor. Para visualizar o conteúdo completo, utilize o editor OnlyOffice.';
+        }
+
         // Se o conteúdo contém elementos de template, extrair dados úteis
         if (str_contains($conteudo, 'assinatura_digital_info') ||
             str_contains($conteudo, 'qrcode_html') ||
@@ -6164,13 +6116,16 @@ ${texto}
             $ementa = preg_replace('/\s+/', ' ', trim($ementa));
         }
 
+        // Aplicar limpeza adicional para códigos RTF
+        $conteudo = $this->limparConteudoRTF($conteudo);
+
         // Fallbacks para dados vazios
         if (empty($ementa) || $ementa === 'Criado pelo Parlamentar') {
             $ementa = 'Moção em elaboração';
         }
 
-        if (empty($conteudo)) {
-            $conteudo = 'Conteúdo em elaboração pelo parlamentar';
+        if (empty($conteudo) || strlen(trim($conteudo)) < 10) {
+            $conteudo = 'Conteúdo em elaboração pelo parlamentar. Para visualizar ou editar o conteúdo completo, utilize o editor OnlyOffice.';
         }
 
         return [
@@ -6203,6 +6158,29 @@ ${texto}
      */
     private function limparConteudoRTF(string $conteudo): string
     {
+        // Verificar padrões específicos de corrupção RTF
+        $padroesCorrompidos = [
+            'Arial;Calibri;Times New Roman',
+            'Heading 1;',
+            ';;;;;;;;;;;;',
+            'List Paragraph;',
+            'No Spacing;',
+            'Title;',
+            'Subtitle;',
+            'Quote;',
+            'Intense Quote;',
+            'Header;',
+            'Footer;',
+            'Caption;'
+        ];
+
+        foreach ($padroesCorrompidos as $padrao) {
+            if (str_contains($conteudo, $padrao)) {
+                // Conteúdo está corrompido - retornar mensagem informativa
+                return 'Conteúdo da proposição disponível no editor. Para visualizar o conteúdo completo, utilize o editor OnlyOffice.';
+            }
+        }
+
         // Se não é RTF, retornar como está
         if (! str_contains($conteudo, '{\rtf')) {
             return $conteudo;
@@ -6233,7 +6211,14 @@ ${texto}
             return strlen($linhaLimpa) > 10 && ! preg_match('/^[\s\*\-;]+$/', $linhaLimpa);
         });
 
-        return trim(implode("\n", $linhasLimpas));
+        $conteudoLimpo = trim(implode("\n", $linhasLimpas));
+
+        // Se após a limpeza o conteúdo ficou muito pequeno ou vazio, retornar mensagem informativa
+        if (strlen($conteudoLimpo) < 20) {
+            return 'Conteúdo da proposição disponível no editor. Para visualizar o conteúdo completo, utilize o editor OnlyOffice.';
+        }
+
+        return $conteudoLimpo;
     }
 
     /**
