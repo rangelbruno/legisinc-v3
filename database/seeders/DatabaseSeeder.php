@@ -19,8 +19,9 @@ class DatabaseSeeder extends Seeder
             RolesAndPermissionsSeeder::class,
         ]);
 
-        // PRESERVAÇÃO DE DADOS CRÍTICOS: Sistema automático de backup e preservação
+        // PRESERVAÇÃO INTELIGENTE: Sistema automático v2.0 que detecta e preserva melhorias
         $this->call([
+            SmartPreservationSeeder::class,
             PreservarDadosCriticosSeeder::class,
         ]);
 
@@ -249,6 +250,18 @@ class DatabaseSeeder extends Seeder
         $this->command->info('✅ OnlyOffice integrado e operacional');
         $this->command->info('✅ Sistema de Assinatura Digital e QR Code configurado');
         $this->command->info('✅ Variáveis de assinatura disponíveis no editor de templates');
+        $this->command->info('');
+        // RESTAURAÇÃO AUTOMÁTICA: Recuperar melhorias que podem ter sido sobrescritas
+        $smartSeeder = new SmartPreservationSeeder();
+        $smartSeeder->setCommand($this->command);
+        $smartSeeder->restaurarPreservacoes();
+        
+        $this->command->info('');
+        $this->command->info('🛡️ ===== SISTEMA DE PRESERVAÇÃO AUTOMÁTICA =====');
+        $this->command->info('✅ Melhorias detectadas e preservadas automaticamente');
+        $this->command->info('✅ Sistema inteligente de backup/restore ativado');
+        $this->command->info('📋 Use: php artisan migrate:safe --fresh --seed');
+        $this->command->info('🔍 Detectar mudanças: php artisan melhorias:generate --auto');
         $this->command->info('');
         $this->command->info('🚀 Sistema pronto para uso! Acesse: http://localhost:8001');
         $this->command->info('');

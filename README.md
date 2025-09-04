@@ -8,11 +8,9 @@ O sistema agora possui **backup automático** dos dados críticos (proposições
 
 ### ✅ **1. Rodar do zero COM BACKUP AUTOMÁTICO (Recomendado)**
 ```bash
-# ✅ COMANDO SEGURO - Com backup automático
-docker exec -it legisinc-app php artisan migrate:fresh-backup --seed
-
-# ❌ COMANDO ANTIGO - Pode perder dados críticos
-docker exec -it legisinc-app php artisan migrate:fresh --seed
+ ./migrate-safe
+  OU
+  docker exec legisinc-app php artisan migrate:safe --fresh --seed --generate-seeders
 ```
 
 **🛡️ Proteção:** Este comando agora inclui:
