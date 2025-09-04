@@ -1,0 +1,27 @@
+{
+  "name": "legisinc-db-mcp",
+  "version": "1.0.0",
+  "description": "MCP Server para acesso ao banco de dados do Legisinc",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx watch src/index.ts"
+  },
+  "keywords": ["mcp", "database", "legisinc", "postgresql"],
+  "author": "Legisinc Team",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.5.0",
+    "pg": "^8.11.3",
+    "dotenv": "^16.3.1",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/pg": "^8.10.9",
+    "tsx": "^4.6.2",
+    "typescript": "^5.3.3"
+  }
+}
