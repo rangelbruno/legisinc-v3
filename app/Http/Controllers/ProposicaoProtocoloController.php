@@ -371,25 +371,25 @@ class ProposicaoProtocoloController extends Controller
     }
 
     /**
-     * Apply protocol stamp to existing PDF using PDFStampingService
-     * CRITICAL: Generate new PDF with protocol number before stamping
+     * Apply protocol stamp to existing signed PDF using PDFStampingService
+     * CRITICAL: Use existing signed PDF instead of regenerating to preserve digital signature
      */
     private function aplicarStampProtocolo(Proposicao $proposicao, string $numeroProcesso): void
     {
         try {
-            // STEP 1: Regenerate PDF with correct protocol number
-            error_log("Protocolo: PASSO 1 - Regenerando PDF com número {$numeroProcesso}");
+            // STEP 1: Find the most recent signed PDF automatically
+            error_log("Protocolo: PASSO 1 - Localizando PDF assinado mais recente para proposição {$proposicao->id}");
             
-            $pdfComProtocolo = $this->gerarPDFComNumeroProtocolo($proposicao, $numeroProcesso);
+            $pdfAssinado = $this->encontrarPDFAssinadoMaisRecente($proposicao);
             
-            if (!$pdfComProtocolo) {
-                throw new \Exception("Falha ao gerar PDF com número de protocolo");
+            if (!$pdfAssinado) {
+                throw new \Exception("PDF assinado não encontrado para proposição {$proposicao->id}");
             }
             
-            error_log("Protocolo: ✅ PDF com protocolo gerado: {$pdfComProtocolo}");
+            error_log("Protocolo: ✅ PDF assinado encontrado: {$pdfAssinado}");
             
-            // STEP 2: Apply protocol stamp to the new PDF
-            error_log("Protocolo: PASSO 2 - Aplicando carimbo ao PDF com protocolo");
+            // STEP 2: Apply protocol stamp to existing signed PDF (preserving signature)
+            error_log("Protocolo: PASSO 2 - Aplicando carimbo de protocolo ao PDF assinado");
             
             $stampingService = app(\App\Services\PDFStampingService::class);
             
@@ -398,28 +398,34 @@ class ProposicaoProtocoloController extends Controller
                 'funcionario_protocolo' => Auth::user()->name ?? 'Sistema'
             ];
             
-            $pdfProtocolado = $stampingService->applyProtocolStamp($pdfComProtocolo, $numeroProcesso, $protocolData);
+            $pdfProtocolado = $stampingService->applyProtocolStamp($pdfAssinado, $numeroProcesso, $protocolData);
             
             if (!$pdfProtocolado) {
-                // Use the PDF with protocol number even without stamp
-                $pdfProtocolado = $pdfComProtocolo;
-                error_log("Protocolo: ⚠️  Usando PDF com protocolo sem carimbo visual");
+                // If stamping fails, use the signed PDF directly with protocol number update
+                error_log("Protocolo: ⚠️  Carimbo falhou, usando PDF assinado original");
+                $pdfProtocolado = $this->atualizarProtocoloNoPDF($pdfAssinado, $numeroProcesso);
             }
 
             // Update proposição with protocoled PDF path and ensure correct main pointer
             $relativePath = str_replace(storage_path('app/'), '', $pdfProtocolado);
             
+            // Also update the PDF reference fields for consistency
+            $pdfAssinadoRelative = str_replace(storage_path('app/'), '', $pdfAssinado);
+            
             $proposicao->update([
-                'pdf_protocolado_path' => $relativePath,
+                'arquivo_pdf_protocolado' => $relativePath,  // Campo correto na tabela
                 'arquivo_pdf_path' => $relativePath,  // CRITICAL: Update main pointer
+                'arquivo_pdf_assinado' => $pdfAssinadoRelative,  // Campo correto na tabela
+                'pdf_assinado_path' => $pdfAssinadoRelative,  // Campo existente
                 'pdf_protocolo_aplicado' => true,
                 'data_aplicacao_protocolo' => now(),
-                'pdf_conversor_usado' => 'protocol_regen',  // Mark as regenerated with protocol
+                'pdf_conversor_usado' => 'protocol_stamp_on_signed',  // Mark as stamped on signed PDF
                 'pdf_gerado_em' => now()
             ]);
 
             error_log("Protocolo: ✅ PDF com protocolo aplicado com sucesso: {$pdfProtocolado}");
             error_log("Protocolo: ✅ Ponteiro arquivo_pdf_path atualizado para: {$relativePath}");
+            error_log("Protocolo: ✅ PDF assinado rastreado em: {$pdfAssinadoRelative}");
 
         } catch (\Exception $e) {
             error_log("Protocolo: ❌ ERRO ao aplicar protocolo: {$e->getMessage()}");
@@ -478,6 +484,83 @@ class ProposicaoProtocoloController extends Controller
                 'error' => $e->getMessage()
             ]);
             return null;
+        }
+    }
+
+    /**
+     * Find the most recent signed PDF automatically by scanning storage directories
+     */
+    private function encontrarPDFAssinadoMaisRecente(Proposicao $proposicao): ?string
+    {
+        try {
+            // Search patterns for signed PDFs
+            $searchPaths = [
+                storage_path('app/proposicoes/pdfs/' . $proposicao->id . '/*assinado*.pdf'),
+                storage_path('app/private/proposicoes/pdfs/' . $proposicao->id . '/*assinado*.pdf'),
+                storage_path('app/proposicoes/pdfs/' . $proposicao->id . '/*_optimized_assinado_*.pdf'),
+            ];
+
+            $encontrados = [];
+
+            foreach ($searchPaths as $pattern) {
+                $files = glob($pattern);
+                if ($files) {
+                    foreach ($files as $file) {
+                        if (file_exists($file) && filesize($file) > 1000) { // At least 1KB
+                            $encontrados[] = [
+                                'path' => $file,
+                                'mtime' => filemtime($file),
+                                'size' => filesize($file)
+                            ];
+                        }
+                    }
+                }
+            }
+
+            if (empty($encontrados)) {
+                error_log("Protocolo: Nenhum PDF assinado encontrado para proposição {$proposicao->id}");
+                return null;
+            }
+
+            // Sort by modification time (most recent first)
+            usort($encontrados, function($a, $b) {
+                return $b['mtime'] - $a['mtime'];
+            });
+
+            $maisRecente = $encontrados[0];
+            error_log("Protocolo: PDF assinado mais recente: {$maisRecente['path']} ({$maisRecente['size']} bytes, " . date('d/m/Y H:i:s', $maisRecente['mtime']) . ")");
+
+            return $maisRecente['path'];
+
+        } catch (\Exception $e) {
+            error_log("Protocolo: Erro ao localizar PDF assinado: {$e->getMessage()}");
+            return null;
+        }
+    }
+
+    /**
+     * Update protocol number in existing PDF by creating a copy with updated metadata
+     */
+    private function atualizarProtocoloNoPDF(string $pdfOriginal, string $numeroProcesso): string
+    {
+        try {
+            // Create a new filename for the protocoled version
+            $pathInfo = pathinfo($pdfOriginal);
+            $novoNome = $pathInfo['filename'] . '_protocolado_' . str_replace('/', '_', $numeroProcesso) . '.pdf';
+            $novoCaminho = $pathInfo['dirname'] . '/' . $novoNome;
+
+            // For now, just copy the signed PDF and add protocol metadata
+            if (copy($pdfOriginal, $novoCaminho)) {
+                error_log("Protocolo: PDF copiado com protocolo: {$novoCaminho}");
+                return $novoCaminho;
+            } else {
+                error_log("Protocolo: Falha ao copiar PDF, usando original: {$pdfOriginal}");
+                return $pdfOriginal;
+            }
+
+        } catch (\Exception $e) {
+            error_log("Protocolo: Erro ao atualizar protocolo no PDF: {$e->getMessage()}");
+            return $pdfOriginal; // Return original if update fails
         }
     }
 

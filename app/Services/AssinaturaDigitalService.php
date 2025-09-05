@@ -56,15 +56,27 @@ class AssinaturaDigitalService
                     throw new \Exception('Tipo de certificado não suportado: ' . $dadosAssinatura['tipo_certificado']);
             }
 
-            if ($pdfAssinado && file_exists($pdfAssinado)) {
-                Log::info('PDF assinado com sucesso', [
-                    'pdf_original' => $caminhoPDF,
-                    'pdf_assinado' => $pdfAssinado,
-                    'tamanho_original' => filesize($caminhoPDF),
-                    'tamanho_assinado' => filesize($pdfAssinado)
-                ]);
+            if ($pdfAssinado) {
+                // Check if file exists using both direct path and Storage
+                $fileExists = file_exists($pdfAssinado);
+                if (!$fileExists) {
+                    // Try checking via Storage (relative path)
+                    $relativePath = str_replace(storage_path('app/'), '', $pdfAssinado);
+                    $fileExists = Storage::exists($relativePath);
+                }
                 
-                return $pdfAssinado;
+                if ($fileExists) {
+                    Log::info('PDF assinado com sucesso', [
+                        'pdf_original' => $caminhoPDF,
+                        'pdf_assinado' => $pdfAssinado,
+                        'tamanho_original' => filesize($caminhoPDF),
+                        'tamanho_assinado' => Storage::exists(str_replace(storage_path('app/'), '', $pdfAssinado)) 
+                            ? Storage::size(str_replace(storage_path('app/'), '', $pdfAssinado)) 
+                            : (file_exists($pdfAssinado) ? filesize($pdfAssinado) : 0)
+                    ]);
+                    
+                    return $pdfAssinado;
+                }
             }
 
             throw new \Exception('Falha ao gerar PDF assinado');
@@ -185,8 +197,17 @@ class AssinaturaDigitalService
             
             $pdfAssinado = $stampingService->applySignatureStamp($caminhoPDF, $dadosAssinatura);
             
-            if ($pdfAssinado && file_exists($pdfAssinado)) {
-                return $pdfAssinado;
+            if ($pdfAssinado) {
+                // Check if file exists using both direct path and Storage
+                $fileExists = file_exists($pdfAssinado);
+                if (!$fileExists) {
+                    $relativePath = str_replace(storage_path('app/'), '', $pdfAssinado);
+                    $fileExists = Storage::exists($relativePath);
+                }
+                
+                if ($fileExists) {
+                    return $pdfAssinado;
+                }
             }
 
             // Fallback to old method if stamping fails
@@ -220,8 +241,11 @@ class AssinaturaDigitalService
             // Adicionar metadados de assinatura
             $pdfAssinado = $this->adicionarMetadadosAssinatura($conteudoPDF, $dadosAssinatura);
             
-            // Salvar PDF assinado
-            if (file_put_contents($caminhoPDFAssinado, $pdfAssinado)) {
+            // Salvar PDF assinado usando Laravel Storage
+            // Converter caminho absoluto para relativo
+            $caminhoRelativo = str_replace(storage_path('app/'), '', $caminhoPDFAssinado);
+            
+            if (Storage::put($caminhoRelativo, $pdfAssinado)) {
                 return $caminhoPDFAssinado;
             }
 
@@ -252,8 +276,17 @@ class AssinaturaDigitalService
             
             $pdfAssinado = $stampingService->applySignatureStamp($caminhoPDF, $dadosAssinatura);
             
-            if ($pdfAssinado && file_exists($pdfAssinado)) {
-                return $pdfAssinado;
+            if ($pdfAssinado) {
+                // Check if file exists using both direct path and Storage
+                $fileExists = file_exists($pdfAssinado);
+                if (!$fileExists) {
+                    $relativePath = str_replace(storage_path('app/'), '', $pdfAssinado);
+                    $fileExists = Storage::exists($relativePath);
+                }
+                
+                if ($fileExists) {
+                    return $pdfAssinado;
+                }
             }
 
             // Fallback to old method if stamping fails
@@ -287,8 +320,11 @@ class AssinaturaDigitalService
             // Adicionar metadados de assinatura simulada
             $pdfAssinado = $this->adicionarMetadadosAssinatura($conteudoPDF, $dadosAssinatura, false);
             
-            // Salvar PDF assinado
-            if (file_put_contents($caminhoPDFAssinado, $pdfAssinado)) {
+            // Salvar PDF assinado usando Laravel Storage
+            // Converter caminho absoluto para relativo
+            $caminhoRelativo = str_replace(storage_path('app/'), '', $caminhoPDFAssinado);
+            
+            if (Storage::put($caminhoRelativo, $pdfAssinado)) {
                 return $caminhoPDFAssinado;
             }
 
@@ -396,11 +432,16 @@ class AssinaturaDigitalService
      */
     private function gerarCaminhoPDFAssinado(string $caminhoPDF): string
     {
-        $diretorio = dirname($caminhoPDF);
+        // Trabalhar apenas com caminhos relativos para o Storage
+        $caminhoRelativo = str_replace(storage_path('app/'), '', $caminhoPDF);
+        $diretorio = dirname($caminhoRelativo);
         $nomeArquivo = pathinfo($caminhoPDF, PATHINFO_FILENAME);
         $extensao = pathinfo($caminhoPDF, PATHINFO_EXTENSION);
         
-        return $diretorio . '/' . $nomeArquivo . '_assinado_' . time() . '.' . $extensao;
+        $caminhoAssinadoRelativo = $diretorio . '/' . $nomeArquivo . '_assinado_' . time() . '.' . $extensao;
+        
+        // Retornar caminho absoluto para compatibilidade
+        return storage_path('app/' . $caminhoAssinadoRelativo);
     }
 
     /**
@@ -433,6 +474,10 @@ class AssinaturaDigitalService
                 if (empty($dadosAssinatura['arquivo_pfx']) || empty($dadosAssinatura['senha_pfx'])) {
                     throw new \Exception('Arquivo PFX e senha são obrigatórios');
                 }
+                break;
+                
+            case 'SIMULADO':
+                // Para assinatura simulada, senha é opcional
                 break;
         }
     }

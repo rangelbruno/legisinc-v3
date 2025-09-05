@@ -51,16 +51,24 @@ class PDFStampingService
                 }
             }
 
-            // Save the stamped PDF
-            $pdf->Output($outputPath, 'F');
+            // Save the stamped PDF using Laravel Storage
+            $pdfContent = $pdf->Output('', 'S'); // Get as string
+            
+            // Convert absolute path to relative path for Storage
+            $relativePath = str_replace(storage_path('app/'), '', $outputPath);
+            
+            // Save using Laravel Storage
+            if (!Storage::put($relativePath, $pdfContent)) {
+                throw new \Exception('Failed to save signed PDF');
+            }
 
-            if (!file_exists($outputPath)) {
+            if (!Storage::exists($relativePath)) {
                 throw new \Exception('Failed to create signed PDF');
             }
 
             Log::info('Signature stamp applied successfully', [
                 'original_size' => filesize($existingPdfPath),
-                'signed_size' => filesize($outputPath)
+                'signed_size' => Storage::size($relativePath)
             ]);
 
             return $outputPath;
@@ -118,17 +126,25 @@ class PDFStampingService
                 }
             }
 
-            // Save the stamped PDF
-            $pdf->Output($outputPath, 'F');
+            // Save the stamped PDF using Laravel Storage
+            $pdfContent = $pdf->Output('', 'S'); // Get as string
+            
+            // Convert absolute path to relative path for Storage
+            $relativePath = str_replace(storage_path('app/'), '', $outputPath);
+            
+            // Save using Laravel Storage
+            if (!Storage::put($relativePath, $pdfContent)) {
+                throw new \Exception('Failed to save protocoled PDF');
+            }
 
-            if (!file_exists($outputPath)) {
+            if (!Storage::exists($relativePath)) {
                 throw new \Exception('Failed to create protocoled PDF');
             }
 
             Log::info('Protocol stamp applied successfully', [
                 'protocol_number' => $protocolNumber,
                 'original_size' => filesize($existingPdfPath),
-                'protocoled_size' => filesize($outputPath)
+                'protocoled_size' => Storage::size($relativePath)
             ]);
 
             return $outputPath;

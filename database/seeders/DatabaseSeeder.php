@@ -19,6 +19,11 @@ class DatabaseSeeder extends Seeder
             RolesAndPermissionsSeeder::class,
         ]);
 
+        // BACKUP RTFs OnlyOffice ANTES de qualquer reset
+        $this->call([
+            BackupRTFsOnlyOfficeSeeder::class,
+        ]);
+
         // PRESERVAÇÃO INTELIGENTE: Sistema automático v2.0 que detecta e preserva melhorias
         $this->call([
             SmartPreservationSeeder::class,
@@ -97,8 +102,11 @@ class DatabaseSeeder extends Seeder
         // TEMPLATE UNIVERSAL: Correção automática do problema de codificação
         $this->call([
             TemplateUniversalFixSeeder::class,
+            TemplateUniversalPrioridadeSeeder::class, // ✅ Garantir prioridade sempre
             TemplateUniversalSimplificadoSeeder::class, // Template simplificado com variáveis essenciais
             TemplateUniversalRTFFixSeeder::class, // PERMANENTE: Correções RTF e imagem cabeçalho
+            RegenerarRTFProposicoesSeeder::class, // ✅ Regenerar RTFs após reset
+            RestaurarRTFsOnlyOfficeSeeder::class, // ✅ Restaurar RTFs OnlyOffice do backup
         ]);
 
         // ONLYOFFICE CALLBACK: Correção de extração RTF (resolve conteúdo corrompido)
@@ -139,6 +147,66 @@ class DatabaseSeeder extends Seeder
         // PRESERVAÇÃO AUTOMÁTICA: Melhorias detectadas automaticamente
         $this->call([
             PreservarMelhorias6Seeder::class,
+        ]);
+
+        // PRESERVAÇÃO AUTOMÁTICA: Melhorias detectadas automaticamente
+        $this->call([
+            PreservarMelhorias12Seeder::class,
+        ]);
+
+        // PRESERVAÇÃO AUTOMÁTICA: Melhorias detectadas automaticamente
+        $this->call([
+            PreservarMelhorias14Seeder::class,
+        ]);
+
+        // PRESERVAÇÃO AUTOMÁTICA: Melhorias detectadas automaticamente
+        $this->call([
+            PreservarMelhorias16Seeder::class,
+        ]);
+
+        // PRESERVAÇÃO AUTOMÁTICA: Melhorias detectadas automaticamente
+        $this->call([
+            PreservarMelhorias18Seeder::class,
+        ]);
+
+        // PRESERVAÇÃO AUTOMÁTICA: Melhorias detectadas automaticamente
+        $this->call([
+            PreservarMelhorias20Seeder::class,
+        ]);
+
+        // PRESERVAÇÃO AUTOMÁTICA: Melhorias detectadas automaticamente
+        $this->call([
+            PreservarMelhorias22Seeder::class,
+        ]);
+
+        // PRESERVAÇÃO AUTOMÁTICA: Melhorias detectadas automaticamente
+        $this->call([
+            PreservarMelhorias24Seeder::class,
+        ]);
+
+        // PRESERVAÇÃO AUTOMÁTICA: Melhorias detectadas automaticamente
+        $this->call([
+            PreservarMelhorias26Seeder::class,
+        ]);
+
+        // PRESERVAÇÃO AUTOMÁTICA: Melhorias detectadas automaticamente
+        $this->call([
+            PreservarMelhorias28Seeder::class,
+        ]);
+
+        // PRESERVAÇÃO AUTOMÁTICA: Melhorias detectadas automaticamente
+        $this->call([
+            PreservarMelhorias30Seeder::class,
+        ]);
+
+        // PRESERVAÇÃO AUTOMÁTICA: Melhorias detectadas automaticamente
+        $this->call([
+            PreservarMelhorias32Seeder::class,
+        ]);
+
+        // PRESERVAÇÃO AUTOMÁTICA: Melhorias detectadas automaticamente
+        $this->call([
+            PreservarMelhorias34Seeder::class,
         ]);
 
         // ÚLTIMO: Correções HTML de estrutura de botões (DEVE ser executado POR ÚLTIMO)
@@ -191,6 +259,7 @@ class DatabaseSeeder extends Seeder
         // Correções de status e otimização de PDF
         $this->call([
             CorrecaoStatusPDFSeeder::class,
+            PreservarCorrecoesPDFSeeder::class, // ✅ Validar correções críticas v2.1
         ]);
 
         // Correções de formatação do Legislativo no PDF

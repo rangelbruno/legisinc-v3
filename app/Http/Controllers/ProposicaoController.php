@@ -4150,6 +4150,11 @@ class ProposicaoController extends Controller implements HasMiddleware
 
             // Alterar o status para 'retornado_legislativo' - proposição volta para o parlamentar assinar
             $proposicao->status = 'retornado_legislativo';
+            
+            // IMPORTANTE: Invalidar PDF antigo para forçar regeneração com últimas alterações
+            $proposicao->arquivo_pdf_path = null;
+            $proposicao->pdf_gerado_em = null;
+            
             $proposicao->save();
 
             // Log::info('Proposição devolvida para parlamentar', [
@@ -4205,6 +4210,10 @@ class ProposicaoController extends Controller implements HasMiddleware
             $proposicao->update([
                 'status' => 'aprovado_assinatura',
                 'data_aprovacao_autor' => now(),
+                // CRÍTICO: Invalidar PDF antigo para forçar regeneração com últimas alterações do OnlyOffice
+                'arquivo_pdf_path' => null,
+                'pdf_gerado_em' => null,
+                'pdf_conversor_usado' => null,
             ]);
 
             // Log::info('Edições do legislativo aprovadas pelo parlamentar', [
@@ -4878,30 +4887,68 @@ class ProposicaoController extends Controller implements HasMiddleware
             // 1. Usar precedência clara para encontrar PDF oficial
             $relativePath = $this->caminhoPdfOficial($proposicao);
             if ($relativePath) {
-                // Determinar caminho absoluto correto
-                $absolutePath = Storage::exists($relativePath) 
-                    ? Storage::path($relativePath)
-                    : storage_path('app/' . ltrim($relativePath, '/'));
-                
-                // Add ETag based on RTF file timestamp to force refresh when content changes
-                $etag = 'pdf-' . $proposicao->id . '-' . time();
+                // CRÍTICO: Verificar se RTF foi modificado após PDF
+                $pdfEstaDesatualizado = false;
                 if ($proposicao->arquivo_path && Storage::exists($proposicao->arquivo_path)) {
                     $rtfPath = Storage::path($proposicao->arquivo_path);
-                    if (file_exists($rtfPath)) {
-                        $etag = 'pdf-' . $proposicao->id . '-' . filemtime($rtfPath);
+                    $pdfPath = Storage::exists($relativePath) ? Storage::path($relativePath) : storage_path('app/' . ltrim($relativePath, '/'));
+                    
+                    if (file_exists($rtfPath) && file_exists($pdfPath)) {
+                        $rtfModificado = filemtime($rtfPath);
+                        $pdfGerado = filemtime($pdfPath);
+                        
+                        if ($rtfModificado > $pdfGerado) {
+                            $pdfEstaDesatualizado = true;
+                            Log::info('PDF está desatualizado - RTF mais novo', [
+                                'proposicao_id' => $proposicao->id,
+                                'rtf_timestamp' => $rtfModificado,
+                                'pdf_timestamp' => $pdfGerado,
+                                'diferenca_segundos' => $rtfModificado - $pdfGerado
+                            ]);
+                        }
                     }
                 }
                 
-                return response()->file($absolutePath, [
-                    'Content-Type' => 'application/pdf',
-                    'Content-Disposition' => 'inline; filename="proposicao_' . $proposicao->id . '.pdf"',
-                    'Cache-Control' => 'no-cache, no-store, must-revalidate',
-                    'Pragma' => 'no-cache',
-                    'Expires' => '0',
-                    'ETag' => $etag,
-                    'X-PDF-Generator' => $proposicao->pdf_conversor_usado ?? 'official',
-                    'X-PDF-Source' => basename($relativePath)
-                ]);
+                // Se PDF está desatualizado, não servir - forçar regeneração abaixo
+                if (!$pdfEstaDesatualizado) {
+                    // Determinar caminho absoluto correto
+                    $absolutePath = Storage::exists($relativePath) 
+                        ? Storage::path($relativePath)
+                        : storage_path('app/' . ltrim($relativePath, '/'));
+                    
+                    // Add ETag based on RTF file timestamp to force refresh when content changes
+                    $etag = 'pdf-' . $proposicao->id . '-' . time();
+                    if ($proposicao->arquivo_path && Storage::exists($proposicao->arquivo_path)) {
+                        $rtfPath = Storage::path($proposicao->arquivo_path);
+                        if (file_exists($rtfPath)) {
+                            $etag = 'pdf-' . $proposicao->id . '-' . filemtime($rtfPath);
+                        }
+                    }
+                    
+                    return response()->file($absolutePath, [
+                        'Content-Type' => 'application/pdf',
+                        'Content-Disposition' => 'inline; filename="proposicao_' . $proposicao->id . '.pdf"',
+                        'Cache-Control' => 'no-cache, no-store, must-revalidate',
+                        'Pragma' => 'no-cache',
+                        'Expires' => '0',
+                        'ETag' => $etag,
+                        'X-PDF-Generator' => $proposicao->pdf_conversor_usado ?? 'official',
+                        'X-PDF-Source' => basename($relativePath)
+                    ]);
+                } else {
+                    Log::info('PDF desatualizado detectado - invalidando cache e forçando regeneração', [
+                        'proposicao_id' => $proposicao->id
+                    ]);
+                    
+                    // Invalidar cache PDF para forçar regeneração
+                    $proposicao->update([
+                        'arquivo_pdf_path' => null,
+                        'pdf_gerado_em' => null,
+                        'pdf_conversor_usado' => null,
+                    ]);
+                    
+                    // Continuar para lógica de regeneração abaixo
+                }
             }
 
             // 2. NUNCA use geradores HTML/DomPDF para status oficiais
@@ -4924,8 +4971,33 @@ class ProposicaoController extends Controller implements HasMiddleware
                     'arquivo_path' => $proposicao->arquivo_path
                 ]);
                 
-                // Tentar gerar PDF do OnlyOffice
-                $pdfGerado = $this->gerarPDFSobDemanda($proposicao);
+                // CRÍTICO: Verificar se RTF foi modificado após último PDF gerado
+                $forcarRegeneracao = false;
+                if ($proposicao->arquivo_path && Storage::exists($proposicao->arquivo_path) && $proposicao->pdf_gerado_em) {
+                    $rtfPath = Storage::path($proposicao->arquivo_path);
+                    if (file_exists($rtfPath)) {
+                        $rtfModificado = filemtime($rtfPath);
+                        $pdfGerado = $proposicao->pdf_gerado_em->timestamp;
+                        
+                        if ($rtfModificado > $pdfGerado) {
+                            $forcarRegeneracao = true;
+                            Log::info('RTF foi modificado após PDF - forçando regeneração', [
+                                'proposicao_id' => $proposicao->id,
+                                'rtf_timestamp' => $rtfModificado,
+                                'pdf_timestamp' => $pdfGerado
+                            ]);
+                        }
+                    }
+                }
+                
+                // Se precisa regenerar ou não existe PDF, gerar novo
+                if ($forcarRegeneracao || !$proposicao->arquivo_pdf_path || !Storage::exists($proposicao->arquivo_pdf_path)) {
+                    // Tentar gerar PDF do OnlyOffice
+                    $pdfGerado = $this->gerarPDFSobDemanda($proposicao);
+                } else {
+                    // Usar PDF existente se estiver atualizado
+                    $pdfGerado = $proposicao->arquivo_pdf_path;
+                }
                 
                 if ($pdfGerado && Storage::exists($pdfGerado)) {
                     // Atualizar o campo arquivo_pdf_path na proposição
@@ -6763,8 +6835,14 @@ class ProposicaoController extends Controller implements HasMiddleware
         $isBad = function (?string $relativePath) use ($proposicao): bool {
             if (!$relativePath) return true;
             
-            // Verificar existência
-            if (!Storage::exists($relativePath)) return true;
+            // Verificar existência - usar file_exists como fallback
+            $exists = Storage::exists($relativePath);
+            if (!$exists) {
+                // Tentar caminho absoluto como fallback
+                $absolutePath = storage_path('app/' . ltrim($relativePath, '/'));
+                $exists = file_exists($absolutePath);
+            }
+            if (!$exists) return true;
             
             // BLACKLIST: Padrões que indicam PDF inválido/mockado
             $filename = strtolower(basename($relativePath));
@@ -6780,7 +6858,9 @@ class ProposicaoController extends Controller implements HasMiddleware
             }
             
             // Verificar tamanho mínimo (PDFs mockados são pequenos)
-            $absolutePath = Storage::path($relativePath);
+            $absolutePath = Storage::exists($relativePath) 
+                ? Storage::path($relativePath) 
+                : storage_path('app/' . ltrim($relativePath, '/'));
             if (file_exists($absolutePath)) {
                 $size = filesize($absolutePath);
                 
@@ -6819,24 +6899,40 @@ class ProposicaoController extends Controller implements HasMiddleware
                             }
                         }
                         
-                        // PDF protocolado deve conter número de protocolo (menos rígido se tem assinatura)
+                        // PDF protocolado - ser mais flexível com validação
                         if ($proposicao->status === 'protocolado') {
-                            $temProtocolo = $proposicao->numero_protocolo && stripos($content, $proposicao->numero_protocolo) !== false;
-                            $temPlaceholder = stripos($content, '[AGUARDANDO PROTOCOLO]') !== false;
-                            $temAssinatura = stripos($content, 'assinado digitalmente por') !== false ||
-                                           ($proposicao->codigo_validacao && stripos($content, $proposicao->codigo_validacao) !== false);
+                            // Se o arquivo tem "_protocolado_" no nome E foi gravado pelo sistema de protocolo
+                            if (str_contains($filename, '_protocolado_') && 
+                                str_contains($filename, $proposicao->tipo)) {
+                                // Verificar se tem algum número de protocolo no conteúdo
+                                if ($proposicao->numero_protocolo) {
+                                    $numeroSimples = explode('/', $proposicao->numero_protocolo)[2] ?? null;
+                                    if ($numeroSimples && stripos($content, $numeroSimples) !== false) {
+                                        return false; // Arquivo válido - tem número de protocolo
+                                    }
+                                }
+                                
+                                // Se tem "Protocolo:" no início, provavelmente é válido
+                                if (stripos($content, 'Protocolo:') !== false) {
+                                    return false; // Arquivo válido
+                                }
+                            }
                             
-                            // Se tem assinatura, ser menos rígido com protocolo
-                            if ($temAssinatura && $proposicao->numero_protocolo) {
-                                // Para PDFs assinados, aceitar se não tem placeholder
-                                if ($temPlaceholder) {
-                                    return true;
+                            // Para outros casos, aceitar se não tem placeholder em posição problemática
+                            // (o placeholder pode estar em outras partes sem invalidar o documento)
+                            $temPlaceholderProblematico = preg_match('/^.{0,200}\[AGUARDANDO PROTOCOLO\]/i', $content);
+                            
+                            if ($temPlaceholderProblematico) {
+                                // Mas aceitar se também tem número de protocolo real
+                                if ($proposicao->numero_protocolo && stripos($content, $proposicao->numero_protocolo) !== false) {
+                                    return false; // Arquivo válido mesmo com placeholder antigo
                                 }
-                            } else {
-                                // Para PDFs normais, exigir protocolo completo
-                                if (!$temProtocolo || $temPlaceholder) {
-                                    return true;
-                                }
+                                return true; // Arquivo inválido
+                            }
+                            
+                            // Se chegou aqui e tem número de protocolo, aceitar
+                            if ($proposicao->numero_protocolo) {
+                                return false; // Arquivo válido
                             }
                         }
                     }
@@ -6848,11 +6944,11 @@ class ProposicaoController extends Controller implements HasMiddleware
 
         // PRECEDÊNCIA ESTRITA: protocolado > assinado > oficial
         $candidatos = [
-            $proposicao->pdf_protocolado_path ?? $proposicao->arquivo_pdf_protocolado,  // 1º: PDF protocolado
-            $proposicao->pdf_assinado_path ?? $proposicao->arquivo_pdf_assinado,        // 2º: PDF assinado
-            $proposicao->pdf_oficial_path,                                               // 3º: PDF oficial
-            $proposicao->arquivo_pdf_path,                                               // 4º: PDF principal
-            $proposicao->arquivo_pdf_path,         // 5º: PDF básico (somente se não for fallback HTML)
+            $proposicao->arquivo_pdf_protocolado,        // 1º: PDF protocolado (campo correto)
+            $proposicao->arquivo_pdf_assinado,           // 2º: PDF assinado (campo correto)
+            $proposicao->pdf_assinado_path,              // 3º: PDF assinado alternativo
+            $proposicao->arquivo_pdf_path,               // 4º: PDF principal
+            $proposicao->pdf_path,                       // 5º: PDF path alternativo
         ];
 
         // Procurar o primeiro candidato válido

@@ -69,6 +69,11 @@ class AssinaturaDigitalController extends Controller
                 'senha_pfx' => 'required_if:tipo_certificado,PFX|nullable|string|min:1'
             ]);
             
+            // Validação adicional para tipos que requerem senha
+            if (in_array($request->tipo_certificado, ['A1', 'A3']) && empty($request->senha)) {
+                return back()->withErrors(['senha' => 'Senha é obrigatória para certificados A1/A3.']);
+            }
+            
             // Validação específica para arquivo PFX
             if ($request->tipo_certificado === 'PFX') {
                 if (!$request->hasFile('arquivo_pfx')) {

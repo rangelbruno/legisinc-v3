@@ -129,10 +129,78 @@ docker exec -it legisinc-app php artisan migrate:fresh --seed
 - `tests/manual/teste-*.php` - Scripts de debug
 - `scripts/tests/*.sh` - Validação Shell
 
+## 🔧 Correções Críticas v2.1 (PRESERVAR SEMPRE)
+
+### **1. Invalidação PDF após Aprovação Legislativa**
+**Arquivo**: `app/Http/Controllers/ProposicaoController.php`
+**Método**: `aprovarEdicoesLegislativo()` - linhas ~4210-4217
+
+```php
+$proposicao->update([
+    'status' => 'aprovado_assinatura',
+    'data_aprovacao_autor' => now(),
+    // CRÍTICO: Invalidar PDF antigo para forçar regeneração
+    'arquivo_pdf_path' => null,
+    'pdf_gerado_em' => null,
+    'pdf_conversor_usado' => null,
+]);
+```
+
+### **2. Detecção RTF mais Novo que PDF**
+**Arquivo**: `app/Http/Controllers/ProposicaoController.php`
+**Método**: `servePDF()` - linhas ~4890-4951
+
+```php
+// CRÍTICO: Verificar se RTF foi modificado após PDF
+if ($rtfModificado > $pdfGerado) {
+    $pdfEstaDesatualizado = true;
+    // Invalidar cache PDF para forçar regeneração
+    $proposicao->update([
+        'arquivo_pdf_path' => null,
+        'pdf_gerado_em' => null,
+        'pdf_conversor_usado' => null,
+    ]);
+}
+```
+
+### **3. Assinatura Digital - Verificação Dupla**
+**Arquivo**: `app/Services/AssinaturaDigitalService.php`
+
+```php
+// Check if file exists using both direct path and Storage
+$fileExists = file_exists($pdfAssinado);
+if (!$fileExists) {
+    $relativePath = str_replace(storage_path('app/'), '', $pdfAssinado);
+    $fileExists = Storage::exists($relativePath);
+}
+```
+
+### **4. Template Universal - Prioridade Garantida**
+**Seeder**: `TemplateUniversalPrioridadeSeeder`
+**Problema**: Templates específicos criados depois tinham prioridade sobre universal
+
+```bash
+# Sempre que rodar migrate:safe, garantir que template universal seja mais recente
+$universal->touch(); // Atualiza updated_at para now()
+```
+
+### **5. RTFs Órfãos após Reset - Auto Regeneração**
+**Seeder**: `RegenerarRTFProposicoesSeeder`
+**Problema**: Após reset, proposições ficam com RTFs inexistentes, causando PDFs desatualizados
+
+```php
+// Auto-detecção e regeneração de RTFs perdidos
+if (!Storage::exists($proposicao->arquivo_path)) {
+    $conteudoRTF = $templateService->aplicarTemplateParaProposicao($proposicao);
+    Storage::put($novoRTF, $conteudoRTF);
+    $proposicao->update(['arquivo_path' => $novoRTF, 'arquivo_pdf_path' => null]);
+}
+```
+
 ---
 
-**🎊 SISTEMA 100% OPERACIONAL - VERSÃO v2.0 ENTERPRISE**
+**🎊 SISTEMA 100% OPERACIONAL - VERSÃO v2.1 ENTERPRISE**
 
-**Status**: Produção com Polling Realtime + Priorização Arquivo Salvo + Template Universal + Performance Otimizada
+**Status**: Produção com Polling Realtime + Priorização Arquivo Salvo + Template Universal + Performance Otimizada + Correções Críticas PDF
 
-**Última atualização**: 02/09/2025
+**Última atualização**: 05/09/2025
