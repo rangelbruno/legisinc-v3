@@ -136,6 +136,11 @@ class DatabaseSeeder extends Seeder
             PreservarMelhorias4Seeder::class,
         ]);
 
+        // PRESERVAÇÃO AUTOMÁTICA: Melhorias detectadas automaticamente
+        $this->call([
+            PreservarMelhorias6Seeder::class,
+        ]);
+
         // ÚLTIMO: Correções HTML de estrutura de botões (DEVE ser executado POR ÚLTIMO)
         $this->call([
             HTMLButtonsFixSeeder::class,

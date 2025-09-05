@@ -8,6 +8,7 @@ use App\Services\OnlyOffice\OnlyOfficeService;
 use App\Services\Template\TemplateUniversalService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
@@ -23,13 +24,8 @@ class OnlyOfficeController extends Controller
      */
     public function editorLegislativo(Proposicao $proposicao)
     {
-        // Log simplificado
-        Log::info('OnlyOffice Editor Access - Legislativo', [
-            'user_id' => Auth::id(),
-            'proposicao_id' => $proposicao->id,
-            'proposicao_status' => $proposicao->status,
-            'proposicao_arquivo_path' => $proposicao->arquivo_path
-        ]);
+        // Log temporariamente desabilitado por problemas de permissão
+        // Log::info('OnlyOffice Editor Access - Legislativo', ...);
         
         // Verificar permissões
         $user = Auth::user();
@@ -61,11 +57,8 @@ class OnlyOfficeController extends Controller
                            file_exists(storage_path('app/' . $proposicao->arquivo_path)));
         
         if ($temArquivoSalvo) {
-            Log::info('OnlyOffice Editor Legislativo: Usando arquivo salvo existente', [
-                'proposicao_id' => $proposicao->id,
-                'arquivo_path' => $proposicao->arquivo_path,
-                'status' => $proposicao->status
-            ]);
+            // Log temporariamente desabilitado
+            // Log::info('OnlyOffice Editor Legislativo: Usando arquivo salvo existente', ...);
             
             // Usar configuração padrão que carrega o arquivo salvo (RÁPIDO)
             $config = $this->generateOnlyOfficeConfig($proposicao);
@@ -87,17 +80,13 @@ class OnlyOfficeController extends Controller
                 : false;
             
             if ($deveUsarUniversal) {
-                Log::info('OnlyOffice Editor Legislativo: Usando template universal (sem arquivo salvo)', [
-                    'proposicao_id' => $proposicao->id,
-                    'tipo_proposicao' => $tipoProposicao ? $tipoProposicao->nome : $proposicao->tipo
-                ]);
+                // Log temporariamente desabilitado
+                // Log::info('OnlyOffice Editor Legislativo: Usando template universal', ...);
                 
                 $config = $this->generateOnlyOfficeConfigWithUniversalTemplate($proposicao);
             } else if ($proposicao->template_id && $proposicao->template) {
-                Log::info('OnlyOffice Editor Legislativo: Usando template específico', [
-                    'proposicao_id' => $proposicao->id,
-                    'template_id' => $proposicao->template_id
-                ]);
+                // Log temporariamente desabilitado
+                // Log::info('OnlyOffice Editor Legislativo: Usando template específico', ...);
                 
                 $config = $this->onlyOfficeService->gerarConfiguracaoEditor(
                     $proposicao->template,
@@ -122,13 +111,12 @@ class OnlyOfficeController extends Controller
      */
     private function generateOnlyOfficeConfig(Proposicao $proposicao)
     {
-        // OTIMIZAÇÃO: Document key mais simples e deterministic para melhor cache
+        // ✅ LÓGICA INTELIGENTE DE DOCUMENT_KEY (baseada no Template Universal)
+        $documentKey = $this->generateIntelligentDocumentKey($proposicao);
+        
         $lastModified = $proposicao->ultima_modificacao ? 
                        $proposicao->ultima_modificacao->timestamp : 
                        $proposicao->updated_at->timestamp;
-        
-        // Usar hash mais simples - sem random_bytes para permitir cache (com timestamp atual para forçar nova configuração)
-        $documentKey = $proposicao->id . '_' . time() . '_' . substr(md5($proposicao->id . time()), 0, 8);
 
         // OTIMIZAÇÃO: Token mais eficiente
         $version = $lastModified;
@@ -311,10 +299,22 @@ class OnlyOfficeController extends Controller
                             'tamanho_arquivo' => filesize($caminho)
                         ]);
                         
+                        // ✅ HEADERS ANTI-CACHE AGRESSIVOS (baseados no Template Universal)
+                        $etag = md5(file_get_contents($caminho) . filemtime($caminho));
+                        $lastModified = gmdate('D, d M Y H:i:s', filemtime($caminho)) . ' GMT';
+                        
                         return response()->download($caminho, "proposicao_{$id}.rtf", [
                             'Content-Type' => 'application/rtf; charset=UTF-8',
-                            'Cache-Control' => 'no-cache, no-store, must-revalidate',
-                            'Pragma' => 'no-cache'
+                            'Cache-Control' => 'no-cache, no-store, must-revalidate, max-age=0, private',
+                            'Pragma' => 'no-cache',
+                            'Expires' => 'Thu, 01 Jan 1970 00:00:00 GMT',
+                            'Last-Modified' => $lastModified,
+                            'ETag' => '"' . $etag . '"',
+                            'X-Content-Type-Options' => 'nosniff',
+                            'X-Frame-Options' => 'SAMEORIGIN',
+                            'Vary' => 'Accept-Encoding',
+                            // Forçar OnlyOffice a sempre baixar nova versão
+                            'X-OnlyOffice-Force-Refresh' => 'true',
                         ]);
                     }
                 }
@@ -359,10 +359,21 @@ class OnlyOfficeController extends Controller
             $tempFile = tempnam(sys_get_temp_dir(), 'template_universal_') . '.rtf';
             file_put_contents($tempFile, $rtfContent);
             
+            // ✅ HEADERS ANTI-CACHE AGRESSIVOS
+            $etag = md5($rtfContent . time());
+            $lastModified = gmdate('D, d M Y H:i:s') . ' GMT';
+            
             return response()->download($tempFile, "proposicao_{$id}.rtf", [
                 'Content-Type' => 'application/rtf; charset=UTF-8',
-                'Cache-Control' => 'no-cache, no-store, must-revalidate',
-                'Pragma' => 'no-cache'
+                'Cache-Control' => 'no-cache, no-store, must-revalidate, max-age=0, private',
+                'Pragma' => 'no-cache',
+                'Expires' => 'Thu, 01 Jan 1970 00:00:00 GMT',
+                'Last-Modified' => $lastModified,
+                'ETag' => '"' . $etag . '"',
+                'X-Content-Type-Options' => 'nosniff',
+                'X-Frame-Options' => 'SAMEORIGIN',
+                'Vary' => 'Accept-Encoding',
+                'X-OnlyOffice-Force-Refresh' => 'true',
             ])->deleteFileAfterSend(true);
             
         } catch (\Exception $e) {
@@ -582,6 +593,9 @@ Sistema funcionando!\par
                 $callbackStart = microtime(true);
                 $resultado = $this->onlyOfficeService->processarCallbackProposicao($proposicao, $documentKey, $data);
                 $callbackTime = microtime(true) - $callbackStart;
+                
+                // ✅ LIMPAR CACHE após salvamento para forçar refresh
+                $this->clearProposicaoCache($proposicao);
                 
                 Log::info('OnlyOffice callback processamento concluído', [
                     'proposicao_id' => $proposicao->id,
@@ -849,14 +863,13 @@ Sistema funcionando!\par
      */
     private function generateOnlyOfficeConfigWithUniversalTemplate(Proposicao $proposicao)
     {
-        // OTIMIZAÇÃO: Document key baseado no timestamp do arquivo físico para realtime
+        // ✅ LÓGICA INTELIGENTE DE DOCUMENT_KEY (baseada no Template Universal)
+        $documentKey = $this->generateIntelligentDocumentKey($proposicao);
+        
         $fileTimestamp = $this->getDocumentFileTimestamp($proposicao);
         $lastModified = $fileTimestamp ?: ($proposicao->ultima_modificacao ? 
                        $proposicao->ultima_modificacao->timestamp : 
                        $proposicao->updated_at->timestamp);
-        
-        // Document key que muda quando arquivo é modificado (realtime)
-        $documentKey = 'realtime_' . $proposicao->id . '_' . $lastModified . '_' . substr(md5($proposicao->id . $lastModified), 0, 8);
         
         // OTIMIZAÇÃO: Token mais eficiente
         $version = $lastModified;
@@ -948,5 +961,44 @@ Sistema funcionando!\par
             'height' => '100%',
             'width' => '100%'
         ];
+    }
+
+    /**
+     * Gerar document_key inteligente para proposições (versão sem cache por problemas de permissão)
+     */
+    private function generateIntelligentDocumentKey(Proposicao $proposicao): string
+    {
+        // ✅ DOCUMENT KEY DETERMINÍSTICO: Baseado no conteúdo, não no tempo
+        // Isso garante que o mesmo conteúdo sempre gere a mesma key
+        // evitando regeneração desnecessária no OnlyOffice
+        
+        // Hash baseado no conteúdo e arquivo_path para detectar mudanças
+        $contentForHash = ($proposicao->conteudo ?? '') . 
+                         ($proposicao->arquivo_path ?? '') . 
+                         ($proposicao->ementa ?? '') .
+                         ($proposicao->updated_at ? $proposicao->updated_at->timestamp : '');
+        
+        $currentContentHash = md5($contentForHash);
+        $hashSuffix = substr($currentContentHash, 0, 8);
+        
+        // Key determinística que só muda quando o conteúdo muda
+        $documentKey = "proposicao_{$proposicao->id}_{$hashSuffix}";
+        
+        // Log removido para evitar problemas de permissão
+        // Log::info('Document key inteligente gerada', ...);
+        
+        return $documentKey;
+    }
+
+    /**
+     * Limpar cache da proposição após salvamento (versão sem cache)
+     */
+    private function clearProposicaoCache(Proposicao $proposicao): void
+    {
+        // Versão sem cache - apenas atualizar timestamp para forçar nova document key
+        $proposicao->touch();
+        
+        // Log removido para evitar problemas de permissão
+        // Log::info('Proposição atualizada após salvamento', ...);
     }
 }
