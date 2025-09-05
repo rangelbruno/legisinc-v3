@@ -1,5 +1,47 @@
 # Melhorias Automáticas Detectadas
 
+## Melhoria #41 - 2025-09-05 14:46:44
+
+**Arquivos alterados:** 5
+
+- `app/Http/Controllers/ProposicaoAssinaturaController.php` (modificado)
+- `app/Http/Controllers/ProposicaoProtocoloController.php` (modificado)
+- `app/Models/Proposicao.php` (modificado)
+- `resources/views/proposicoes/assinatura/assinar-pdf-vue.blade.php` (modificado)
+- `resources/views/proposicoes/pdf/template-optimized.blade.php` (modificado)
+
+**Seeder criado:** `PreservarMelhorias41Seeder`
+
+---
+
+## Melhoria #39 - 2025-09-05 14:34:54
+
+**Arquivos alterados:** 5
+
+- `app/Http/Controllers/ProposicaoAssinaturaController.php` (modificado)
+- `app/Http/Controllers/ProposicaoProtocoloController.php` (modificado)
+- `app/Models/Proposicao.php` (modificado)
+- `resources/views/proposicoes/assinatura/assinar-pdf-vue.blade.php` (modificado)
+- `resources/views/proposicoes/pdf/template-optimized.blade.php` (modificado)
+
+**Seeder criado:** `PreservarMelhorias39Seeder`
+
+---
+
+## Melhoria #37 - 2025-09-05 14:26:14
+
+**Arquivos alterados:** 5
+
+- `app/Http/Controllers/ProposicaoAssinaturaController.php` (modificado)
+- `app/Http/Controllers/ProposicaoProtocoloController.php` (modificado)
+- `app/Models/Proposicao.php` (modificado)
+- `resources/views/proposicoes/assinatura/assinar-pdf-vue.blade.php` (modificado)
+- `resources/views/proposicoes/pdf/template-optimized.blade.php` (modificado)
+
+**Seeder criado:** `PreservarMelhorias37Seeder`
+
+---
+
 ## Melhoria #35 - 2025-09-05 14:15:33
 
 **Arquivos alterados:** 5
