@@ -107,7 +107,7 @@ class GenerateMelhoriasSeeders extends Command
         }
 
         if (!empty($alteracoes)) {
-            $this->info("📝 Detectadas {count($alteracoes)} alterações:");
+            $this->info("📝 Detectadas " . count($alteracoes) . " alterações:");
             foreach ($alteracoes as $alteracao) {
                 $this->line("   • {$alteracao['arquivo']} ({$alteracao['tipo']})");
             }
@@ -208,7 +208,6 @@ class GenerateMelhoriasSeeders extends Command
         $alteracoesJson = json_encode($this->arquivosAlterados, JSON_PRETTY_PRINT);
         
         $backupFiles = $this->gerarCodigoBackupFiles();
-        $restoreFiles = $this->gerarCodigoRestoreFiles();
         
         return <<<PHP
 <?php

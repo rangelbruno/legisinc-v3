@@ -32,6 +32,10 @@ class Proposicao extends Model
         'certificado_digital',
         'data_assinatura',
         'ip_assinatura',
+        'codigo_validacao',
+        'url_validacao',
+        'qr_code_validacao',
+        'dados_assinatura_validacao',
         'data_aprovacao_autor',
         // Campos de protocolo
         'numero_protocolo',
@@ -50,6 +54,11 @@ class Proposicao extends Model
         'momento_sessao',
         'tem_parecer',
         'parecer_id',
+        // PDF stamping fields
+        'arquivo_pdf_assinado',
+        'arquivo_pdf_protocolado',
+        'pdf_protocolo_aplicado',
+        'data_aplicacao_protocolo',
         // Campos temporariamente comentados até migração ser executada:
         'numero',
         'variaveis_template',
@@ -73,6 +82,8 @@ class Proposicao extends Model
         'variaveis_template' => 'array',
         'anexos' => 'array',
         'total_anexos' => 'integer',
+        'pdf_protocolo_aplicado' => 'boolean',
+        'data_aplicacao_protocolo' => 'datetime',
     ];
 
     /**

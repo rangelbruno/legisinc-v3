@@ -142,21 +142,28 @@ class ProposicaoAssinaturaController extends Controller implements HasMiddleware
             'ip_assinatura' => $request->ip(),
         ]);
 
-        // TODO: Implementar sistema de tramitação quando disponível
-        // $proposicao->adicionarTramitacao(
-        //     'Proposição assinada digitalmente',
-        //     'aprovado_assinatura',
-        //     'assinado'
-        // );
+        // Generate validation data for signature
+        $validacaoService = app(\App\Services\AssinaturaValidacaoService::class);
+        $dadosValidacao = $validacaoService->processarValidacaoAssinatura($proposicao, [
+            'assinatura' => $request->assinatura_digital,
+            'certificado' => $request->certificado_digital,
+        ]);
 
-        // Regenerar PDF com assinatura digital
+        // Log successful validation setup
+        Log::info('Assinatura digital com validação processada', [
+            'proposicao_id' => $proposicao->id,
+            'codigo_validacao' => $dadosValidacao['codigo_validacao'],
+            'url_validacao' => $dadosValidacao['url_validacao']
+        ]);
+
+        // Regenerar PDF com assinatura digital e QR code
         try {
-            $this->regenerarPDFAtualizado($proposicao);
+            $this->regenerarPDFAtualizado($proposicao->fresh());
         } catch (\Exception $e) {
-            // Log::warning('Falha ao regenerar PDF após assinatura', [
-            //     'proposicao_id' => $proposicao->id,
-            //     'error' => $e->getMessage()
-            // ]);
+            Log::warning('Falha ao regenerar PDF após assinatura', [
+                'proposicao_id' => $proposicao->id,
+                'error' => $e->getMessage()
+            ]);
         }
 
         // Enviar automaticamente para protocolo após assinatura
@@ -707,24 +714,74 @@ class ProposicaoAssinaturaController extends Controller implements HasMiddleware
                     $this->criarPDFComMetodoHTML($caminhoPdfAbsoluto, $proposicao);
                 }
 
-                // Limpar arquivo temporário
-                if (file_exists($docxTemporario)) {
-                    unlink($docxTemporario);
-                }
+                // Update proposição with new PDF path (only for non-official status)
+                $proposicao->update([
+                    'arquivo_pdf_path' => $caminhoPdfRelativo,
+                    'pdf_conversor_usado' => 'regeneration_draft',
+                    'pdf_gerado_em' => now()
+                ]);
 
-                // Atualizar proposição com novo caminho do PDF
-                $proposicao->arquivo_pdf_path = $caminhoPdfRelativo;
-                $proposicao->save();
-
-                error_log('PDF Assinatura: PDF regenerado com formatação preservada! Tamanho: '.filesize($caminhoPdfAbsoluto).' bytes');
+                error_log("PDF Assinatura: ✅ PDF regenerado com sucesso (draft): {$caminhoPdfAbsoluto}");
             } else {
-                error_log('PDF Assinatura: Nenhum arquivo encontrado para regeneração');
-                throw new \Exception('Nenhum arquivo encontrado para regeneração do PDF');
+                error_log('PDF Assinatura: ❌ Nenhum arquivo encontrado para regeneração');
+                throw new \Exception("Nenhum arquivo fonte encontrado para regeneração");
             }
 
+            // Clean old PDFs
+            $this->limparPDFsAntigos($proposicao->id);
+
         } catch (\Exception $e) {
-            error_log('PDF Assinatura: Erro ao regenerar PDF: '.$e->getMessage());
+            error_log("PDF Assinatura: ❌ ERRO na regeneração de PDF para proposição {$proposicao->id}: {$e->getMessage()}");
             throw $e;
+        }
+    }
+    
+    /**
+     * Process RTF file to PDF (for non-official documents only)
+     */
+    private function processarRTFParaPDF(string $caminhoPdfAbsoluto, array $arquivoMaisRecente, Proposicao $proposicao): void
+    {
+        try {
+            $rtfContent = file_get_contents($arquivoMaisRecente['path']);
+            $conteudoExtraido = \App\Services\RTFTextExtractor::extract($rtfContent);
+            
+            if (!empty($conteudoExtraido) && strlen($conteudoExtraido) > 100) {
+                $conteudoProcessado = $this->processarPlaceholdersDocumento($conteudoExtraido, $proposicao);
+                $this->criarPDFComConteudoRTFProcessado($caminhoPdfAbsoluto, $proposicao, $conteudoProcessado);
+            } else {
+                throw new \Exception("RTF vazio ou corrompido");
+            }
+        } catch (\Exception $e) {
+            error_log("PDF Assinatura: ERRO ao processar RTF: {$e->getMessage()}");
+            throw $e;
+        }
+    }
+    
+    /**
+     * Process DOCX file to PDF (for non-official documents only)
+     */
+    private function processarDOCXParaPDF(string $caminhoPdfAbsoluto, array $arquivoMaisRecente, Proposicao $proposicao): void
+    {
+        $docxTemporario = null;
+        try {
+            // Create temporary DOCX copy
+            $docxTemporario = sys_get_temp_dir().'/proposicao_'.$proposicao->id.'_temp_'.time().'.docx';
+            copy($arquivoMaisRecente['path'], $docxTemporario);
+
+            // Process placeholders directly in DOCX
+            $this->processarPlaceholdersNoDOCX($docxTemporario, $proposicao);
+
+            // Convert DOCX to PDF preserving formatting
+            if ($this->libreOfficeDisponivel()) {
+                $this->criarPDFComFormatacaoOnlyOffice($caminhoPdfAbsoluto, $proposicao, $docxTemporario);
+            } else {
+                throw new \Exception("LibreOffice não disponível para conversão DOCX");
+            }
+        } finally {
+            // Clean temporary file
+            if ($docxTemporario && file_exists($docxTemporario)) {
+                unlink($docxTemporario);
+            }
         }
     }
 

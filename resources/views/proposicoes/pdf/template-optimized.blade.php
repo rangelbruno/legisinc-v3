@@ -150,7 +150,35 @@
         @endif
     </div>
 
-    @if($proposicao->data_assinatura)
+    @if($proposicao->data_assinatura && $proposicao->codigo_validacao)
+    <div class="signature-area digital-signature">
+        <div style="border: 1px solid #ccc; padding: 15px; margin-top: 30px;">
+            @php
+                $validacaoService = app(\App\Services\AssinaturaValidacaoService::class);
+                $textoAssinatura = $validacaoService->gerarTextoAssinaturaPadrao($proposicao);
+            @endphp
+            
+            <div style="display: table; width: 100%;">
+                <div style="display: table-cell; width: 70%; vertical-align: top;">
+                    <p style="font-size: 9pt; line-height: 1.4; margin: 0;">
+                        {!! nl2br(e($textoAssinatura)) !!}
+                    </p>
+                </div>
+                
+                @if($proposicao->qr_code_validacao)
+                <div style="display: table-cell; width: 30%; text-align: right; vertical-align: top;">
+                    <img src="data:image/png;base64,{{ $proposicao->qr_code_validacao }}" 
+                         style="width: 80px; height: 80px;" 
+                         alt="QR Code para validação">
+                    <p style="font-size: 7pt; text-align: center; margin-top: 5px;">
+                        Validação Digital
+                    </p>
+                </div>
+                @endif
+            </div>
+        </div>
+    </div>
+    @elseif($proposicao->data_assinatura)
     <div class="signature-area">
         <p><strong>DOCUMENTO ASSINADO DIGITALMENTE</strong></p>
         <p>Data da Assinatura: {{ $proposicao->data_assinatura->format('d/m/Y H:i:s') }}</p>
@@ -160,7 +188,7 @@
     </div>
     @else
     <div class="signature-area">
-        <p>Caraguatatuba, {{ now()->format('d') }} de {{ $this->getMesExtenso(now()->month) }} de {{ now()->format('Y') }}.</p>
+        <p>Caraguatatuba, {{ now()->format('d') }} de {{ now()->locale('pt_BR')->translatedFormat('F') }} de {{ now()->format('Y') }}.</p>
         <br><br>
         <div class="signature-line"></div>
         <p>{{ $proposicao->autor->name ?? 'Autor' }}</p>

@@ -126,6 +126,16 @@ class DatabaseSeeder extends Seeder
             CorrecaoPDFProtocoloAssinaturaSeeder::class,
         ]);
 
+        // PRESERVAÇÃO AUTOMÁTICA: Melhorias detectadas automaticamente
+        $this->call([
+            PreservarMelhorias2Seeder::class,
+        ]);
+
+        // PRESERVAÇÃO AUTOMÁTICA: Melhorias detectadas automaticamente
+        $this->call([
+            PreservarMelhorias4Seeder::class,
+        ]);
+
         // ÚLTIMO: Correções HTML de estrutura de botões (DEVE ser executado POR ÚLTIMO)
         $this->call([
             HTMLButtonsFixSeeder::class,

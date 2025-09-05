@@ -170,9 +170,41 @@ class AssinaturaDigitalService
     }
 
     /**
-     * Adicionar assinatura digital ao PDF
+     * Adicionar assinatura digital ao PDF usando stamping service
      */
     private function adicionarAssinaturaDigitalAoPDF(string $caminhoPDF, array $dadosAssinatura, $certificado = null): ?string
+    {
+        try {
+            // Use PDF stamping service to apply signature over existing PDF
+            $stampingService = app(\App\Services\PDFStampingService::class);
+            
+            // Add identificador to signature data if not present
+            if (!isset($dadosAssinatura['identificador'])) {
+                $dadosAssinatura['identificador'] = $this->gerarIdentificadorAssinatura();
+            }
+            
+            $pdfAssinado = $stampingService->applySignatureStamp($caminhoPDF, $dadosAssinatura);
+            
+            if ($pdfAssinado && file_exists($pdfAssinado)) {
+                return $pdfAssinado;
+            }
+
+            // Fallback to old method if stamping fails
+            Log::warning('PDF stamping failed, falling back to metadata method');
+            return $this->adicionarAssinaturaDigitalFallback($caminhoPDF, $dadosAssinatura);
+
+        } catch (\Exception $e) {
+            Log::error('Erro ao adicionar assinatura digital: ' . $e->getMessage());
+            
+            // Fallback to old method
+            return $this->adicionarAssinaturaDigitalFallback($caminhoPDF, $dadosAssinatura);
+        }
+    }
+
+    /**
+     * Fallback method for signature (old approach)
+     */
+    private function adicionarAssinaturaDigitalFallback(string $caminhoPDF, array $dadosAssinatura): ?string
     {
         try {
             // Gerar caminho para PDF assinado
@@ -196,15 +228,50 @@ class AssinaturaDigitalService
             return null;
 
         } catch (\Exception $e) {
-            Log::error('Erro ao adicionar assinatura digital: ' . $e->getMessage());
+            Log::error('Erro no fallback de assinatura digital: ' . $e->getMessage());
             return null;
         }
     }
 
     /**
-     * Adicionar assinatura simulada ao PDF
+     * Adicionar assinatura simulada ao PDF usando stamping service
      */
     private function adicionarAssinaturaSimuladaAoPDF(string $caminhoPDF, array $dadosAssinatura): ?string
+    {
+        try {
+            // Use PDF stamping service for simulated signature
+            $stampingService = app(\App\Services\PDFStampingService::class);
+            
+            // Add identificador to signature data if not present
+            if (!isset($dadosAssinatura['identificador'])) {
+                $dadosAssinatura['identificador'] = $this->gerarIdentificadorAssinatura();
+            }
+            
+            // Mark as simulated
+            $dadosAssinatura['tipo_certificado'] = 'SIMULADO';
+            
+            $pdfAssinado = $stampingService->applySignatureStamp($caminhoPDF, $dadosAssinatura);
+            
+            if ($pdfAssinado && file_exists($pdfAssinado)) {
+                return $pdfAssinado;
+            }
+
+            // Fallback to old method if stamping fails
+            Log::warning('PDF stamping failed for simulated signature, falling back to metadata method');
+            return $this->adicionarAssinaturaSimuladaFallback($caminhoPDF, $dadosAssinatura);
+
+        } catch (\Exception $e) {
+            Log::error('Erro ao adicionar assinatura simulada: ' . $e->getMessage());
+            
+            // Fallback to old method
+            return $this->adicionarAssinaturaSimuladaFallback($caminhoPDF, $dadosAssinatura);
+        }
+    }
+
+    /**
+     * Fallback method for simulated signature
+     */
+    private function adicionarAssinaturaSimuladaFallback(string $caminhoPDF, array $dadosAssinatura): ?string
     {
         try {
             // Gerar caminho para PDF assinado
@@ -228,7 +295,7 @@ class AssinaturaDigitalService
             return null;
 
         } catch (\Exception $e) {
-            Log::error('Erro ao adicionar assinatura simulada: ' . $e->getMessage());
+            Log::error('Erro no fallback de assinatura simulada: ' . $e->getMessage());
             return null;
         }
     }

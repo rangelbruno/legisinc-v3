@@ -19,7 +19,10 @@
         "laravel/sanctum": "*",
         "laravel/tinker": "^2.10.1",
         "phpoffice/phpword": "^1.3",
-        "spatie/laravel-permission": "^6.20"
+        "setasign/fpdf": "^1.8",
+        "setasign/fpdi": "^2.6",
+        "spatie/laravel-permission": "^6.20",
+        "tecnickcom/tcpdf": "^6.10"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",

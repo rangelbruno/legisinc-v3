@@ -4,8 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Models\Proposicao;
 use App\Models\User;
+use App\Services\DocumentConversionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
 
 class ProposicaoLegislativoController extends Controller
@@ -257,28 +261,35 @@ class ProposicaoLegislativoController extends Controller
             ], 400);
         }
 
-        $proposicao->update([
-            'status' => 'aprovado_assinatura',
-            'tipo_retorno' => 'aprovado_assinatura',
-            'analise_constitucionalidade' => $request->analise_constitucionalidade,
-            'analise_juridicidade' => $request->analise_juridicidade,
-            'analise_regimentalidade' => $request->analise_regimentalidade,
-            'analise_tecnica_legislativa' => $request->analise_tecnica_legislativa,
-            'parecer_tecnico' => $request->parecer_tecnico,
-            'observacoes_internas' => $request->observacoes_internas,
-            'data_revisao' => now(),
-        ]);
+        DB::transaction(function () use ($request, $proposicao) {
+            // 1. Atualizar status e dados da proposição
+            $proposicao->update([
+                'status' => 'aprovado',
+                'tipo_retorno' => 'aprovado_assinatura',
+                'analise_constitucionalidade' => $request->analise_constitucionalidade,
+                'analise_juridicidade' => $request->analise_juridicidade,
+                'analise_regimentalidade' => $request->analise_regimentalidade,
+                'analise_tecnica_legislativa' => $request->analise_tecnica_legislativa,
+                'parecer_tecnico' => $request->parecer_tecnico,
+                'observacoes_internas' => $request->observacoes_internas,
+                'data_revisao' => now(),
+            ]);
 
-        $proposicao->adicionarTramitacao(
-            'Proposição aprovada para assinatura',
-            'em_revisao',
-            'aprovado_assinatura',
-            $request->parecer_tecnico
-        );
+            // 2. GERAR PDF AUTOMATICAMENTE
+            $this->gerarPDFAposAprovacao($proposicao);
+
+            // 3. Adicionar tramitação
+            $proposicao->adicionarTramitacao(
+                'Proposição aprovada - PDF gerado automaticamente',
+                'em_revisao',
+                'aprovado',
+                $request->parecer_tecnico
+            );
+        });
 
         return response()->json([
             'success' => true,
-            'message' => 'Proposição aprovada para assinatura!'
+            'message' => 'Proposição aprovada e PDF gerado com sucesso!'
         ]);
     }
 
@@ -569,5 +580,136 @@ class ProposicaoLegislativoController extends Controller
             ->paginate(15);
 
         return view('proposicoes.legislativo.aguardando-protocolo', compact('proposicoes'));
+    }
+
+    /**
+     * Gera PDF após aprovação preservando formatação do template
+     */
+    private function gerarPDFAposAprovacao(Proposicao $proposicao): void
+    {
+        try {
+            // Log início do processo
+            Log::info('Iniciando geração de PDF após aprovação', [
+                'proposicao_id' => $proposicao->id,
+                'arquivo_path' => $proposicao->arquivo_path,
+                'status' => $proposicao->status
+            ]);
+
+            if (empty($proposicao->arquivo_path) || !Storage::exists($proposicao->arquivo_path)) {
+                // Para documentos oficiais, isso é erro crítico
+                if (in_array($proposicao->status, ['aprovado', 'protocolado'])) {
+                    Log::critical('Documento oficial sem arquivo fonte', [
+                        'proposicao_id' => $proposicao->id,
+                        'status' => $proposicao->status
+                    ]);
+                }
+                return;
+            }
+
+            $fileHash = hash('sha256', Storage::get($proposicao->arquivo_path));
+            $pdfPath = "proposicoes/pdfs/{$proposicao->id}/proposicao_{$proposicao->id}_{$fileHash}.pdf";
+
+            // Verificar cache
+            if (Storage::exists($pdfPath)) {
+                Log::info('PDF já existe com mesmo hash, reutilizando', [
+                    'proposicao_id' => $proposicao->id,
+                    'pdf_path' => $pdfPath
+                ]);
+                
+                // Atualizar apenas o caminho no banco
+                $proposicao->update([
+                    'arquivo_pdf_path' => $pdfPath,
+                    'pdf_gerado_em' => now()
+                ]);
+                return;
+            }
+
+            // Converter passando o status para governança
+            $converter = app(DocumentConversionService::class);
+            $result = $converter->convertToPDF(
+                $proposicao->arquivo_path, 
+                $pdfPath,
+                $proposicao->status  // ← Status para governança
+            );
+
+            if ($result['success']) {
+                $proposicao->update([
+                    'arquivo_pdf_path' => $pdfPath,
+                    'pdf_gerado_em' => now(),
+                    'pdf_conversor_usado' => $result['converter'],
+                    'pdf_tamanho' => $result['output_bytes'],
+                    'pdf_erro_geracao' => null, // Limpar erros anteriores
+                ]);
+
+                Log::info('PDF oficial gerado com sucesso', [
+                    'proposicao_id' => $proposicao->id,
+                    'pdf_path' => $pdfPath,
+                    'converter' => $result['converter'],
+                    'duration_ms' => $result['duration'],
+                    'size_bytes' => $result['output_bytes']
+                ]);
+
+                // Limpeza segura com retenção
+                $this->limparPDFsAntigosComRetencao($proposicao->id, $pdfPath);
+
+            } else {
+                // Para documentos oficiais, falha na conversão é erro crítico
+                if (in_array($proposicao->status, ['aprovado', 'protocolado'])) {
+                    Log::critical('Falha crítica na geração de PDF oficial', [
+                        'proposicao_id' => $proposicao->id,
+                        'status' => $proposicao->status,
+                        'error' => $result['error']
+                    ]);
+                }
+                
+                $proposicao->update([
+                    'pdf_erro_geracao' => $result['error'],
+                    'pdf_tentativa_em' => now()
+                ]);
+            }
+
+        } catch (\Exception $e) {
+            Log::critical('Erro crítico na geração de PDF', [
+                'proposicao_id' => $proposicao->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+        }
+    }
+
+    /**
+     * Limpeza com retenção para auditoria
+     */
+    private function limparPDFsAntigosComRetencao(int $proposicaoId, string $pdfAtual): void
+    {
+        try {
+            $diretorio = "proposicoes/pdfs/{$proposicaoId}/";
+            $arquivos = collect(Storage::files($diretorio))
+                ->filter(fn($arquivo) => pathinfo($arquivo, PATHINFO_EXTENSION) === 'pdf')
+                ->filter(fn($arquivo) => $arquivo !== $pdfAtual)
+                ->map(fn($arquivo) => [
+                    'path' => $arquivo,
+                    'modified' => Storage::lastModified($arquivo)
+                ])
+                ->sortBy('modified');
+            
+            // Manter últimas 3 versões + PDFs dos últimos 30 dias
+            $cutoffDate = now()->subDays(30)->timestamp;
+            $toKeep = $arquivos->filter(fn($item) => $item['modified'] > $cutoffDate)
+                              ->merge($arquivos->reverse()->take(3));
+            
+            $toDelete = $arquivos->reject(fn($item) => $toKeep->contains('path', $item['path']));
+            
+            foreach ($toDelete as $item) {
+                Storage::delete($item['path']);
+                Log::debug('PDF antigo removido com retenção', [
+                    'arquivo' => $item['path'],
+                    'data_modificacao' => date('Y-m-d H:i:s', $item['modified'])
+                ]);
+            }
+            
+        } catch (\Exception $e) {
+            Log::warning('Erro na limpeza com retenção', ['error' => $e->getMessage()]);
+        }
     }
 }

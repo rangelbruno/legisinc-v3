@@ -334,6 +334,15 @@ class AssinaturaDigitalController extends Controller
      */
     private function gerarPDFParaAssinatura(Proposicao $proposicao): void
     {
+        // Se já existe PDF oficial, não regenerar
+        if ($proposicao->pdf_oficial_path && Storage::exists($proposicao->pdf_oficial_path)) {
+            Log::info('PDF oficial já existe, não regenerando', [
+                'proposicao_id' => $proposicao->id,
+                'pdf_path' => $proposicao->pdf_oficial_path
+            ]);
+            return;
+        }
+
         // Gerar nome único para PDF
         $nomePdf = 'proposicao_' . $proposicao->id . '_assinatura_' . time() . '.pdf';
         $diretorioPdf = 'proposicoes/pdfs/' . $proposicao->id;
@@ -347,23 +356,83 @@ class AssinaturaDigitalController extends Controller
 
         Log::info('Gerando PDF para assinatura', [
             'proposicao_id' => $proposicao->id,
-            'pdf_path' => $caminhoPdfRelativo
+            'pdf_path' => $caminhoPdfRelativo,
+            'arquivo_origem' => $proposicao->arquivo_path
         ]);
 
-        // Buscar arquivo DOCX mais recente
+        // Verificar se temos arquivo OnlyOffice (RTF/DOCX)
+        if ($proposicao->arquivo_path && Storage::exists($proposicao->arquivo_path)) {
+            $caminhoArquivo = Storage::path($proposicao->arquivo_path);
+            $extensao = strtolower(pathinfo($caminhoArquivo, PATHINFO_EXTENSION));
+            
+            Log::info('Arquivo OnlyOffice encontrado', [
+                'arquivo' => $proposicao->arquivo_path,
+                'extensao' => $extensao,
+                'tamanho' => filesize($caminhoArquivo)
+            ]);
+            
+            // Usar DocumentConversionService para converter corretamente
+            try {
+                $conversionService = app(\App\Services\DocumentConversionService::class);
+                $resultado = $conversionService->convertToPDF(
+                    $proposicao->arquivo_path,
+                    $caminhoPdfRelativo,
+                    $proposicao->status
+                );
+                
+                if ($resultado['success']) {
+                    Log::info('PDF gerado com sucesso via DocumentConversionService', [
+                        'proposicao_id' => $proposicao->id,
+                        'converter' => $resultado['converter'] ?? 'unknown'
+                    ]);
+                    
+                    // Atualizar proposição com caminho do PDF
+                    $proposicao->update([
+                        'arquivo_pdf_path' => $caminhoPdfRelativo,
+                        'pdf_oficial_path' => $caminhoPdfRelativo,
+                        'pdf_gerado_em' => now(),
+                        'pdf_conversor_usado' => $resultado['converter'] ?? 'libreoffice'
+                    ]);
+                    
+                    return;
+                } else {
+                    Log::error('Falha na conversão para PDF', [
+                        'proposicao_id' => $proposicao->id,
+                        'erro' => $resultado['error'] ?? 'desconhecido'
+                    ]);
+                }
+            } catch (\Exception $e) {
+                Log::error('Exceção ao converter para PDF', [
+                    'proposicao_id' => $proposicao->id,
+                    'erro' => $e->getMessage()
+                ]);
+            }
+        }
+
+        // Fallback: Buscar arquivo DOCX mais recente
         $arquivoDocx = $this->encontrarArquivoDocxMaisRecente($proposicao);
         
         if ($arquivoDocx && file_exists($arquivoDocx)) {
             // Converter DOCX para PDF usando LibreOffice
             $this->converterDocxParaPdf($arquivoDocx, $caminhoPdfAbsoluto);
+            
+            // Atualizar proposição
+            $proposicao->update([
+                'arquivo_pdf_path' => $caminhoPdfRelativo,
+                'pdf_oficial_path' => $caminhoPdfRelativo,
+                'pdf_gerado_em' => now()
+            ]);
         } else {
-            // Gerar PDF a partir do conteúdo do banco
+            // Último recurso: Gerar PDF a partir do conteúdo do banco
             $this->gerarPdfDoConteudo($proposicao, $caminhoPdfAbsoluto);
+            
+            // Atualizar proposição
+            $proposicao->update([
+                'arquivo_pdf_path' => $caminhoPdfRelativo,
+                'pdf_oficial_path' => $caminhoPdfRelativo,
+                'pdf_gerado_em' => now()
+            ]);
         }
-
-        // Atualizar proposição com caminho do PDF
-        $proposicao->arquivo_pdf_path = $caminhoPdfRelativo;
-        $proposicao->save();
     }
 
     /**

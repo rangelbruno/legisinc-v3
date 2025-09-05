@@ -6,15 +6,20 @@ use App\Models\DocumentoTemplate;
 use App\Models\Proposicao;
 use App\Models\TipoProposicao;
 use App\Models\TipoProposicaoTemplate;
+use App\Services\DocumentConversionService;
 use App\Services\Template\TemplateInstanceService;
 use App\Services\Template\TemplateParametrosService;
 use App\Services\Template\TemplateProcessorService;
 use App\Services\Template\TemplateUniversalService;
 use App\Services\TemplateVariablesService;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 class ProposicaoController extends Controller implements HasMiddleware
 {
@@ -4869,18 +4874,162 @@ class ProposicaoController extends Controller implements HasMiddleware
             }
         }
 
-        // Buscar o PDF mais recente para a proposição
-        $pdfPath = $this->encontrarPDFMaisRecente($proposicao);
+        try {
+            // 1. Usar precedência clara para encontrar PDF oficial
+            $relativePath = $this->caminhoPdfOficial($proposicao);
+            if ($relativePath) {
+                // Determinar caminho absoluto correto
+                $absolutePath = Storage::exists($relativePath) 
+                    ? Storage::path($relativePath)
+                    : storage_path('app/' . ltrim($relativePath, '/'));
+                
+                // Add ETag based on RTF file timestamp to force refresh when content changes
+                $etag = 'pdf-' . $proposicao->id . '-' . time();
+                if ($proposicao->arquivo_path && Storage::exists($proposicao->arquivo_path)) {
+                    $rtfPath = Storage::path($proposicao->arquivo_path);
+                    if (file_exists($rtfPath)) {
+                        $etag = 'pdf-' . $proposicao->id . '-' . filemtime($rtfPath);
+                    }
+                }
+                
+                return response()->file($absolutePath, [
+                    'Content-Type' => 'application/pdf',
+                    'Content-Disposition' => 'inline; filename="proposicao_' . $proposicao->id . '.pdf"',
+                    'Cache-Control' => 'no-cache, no-store, must-revalidate',
+                    'Pragma' => 'no-cache',
+                    'Expires' => '0',
+                    'ETag' => $etag,
+                    'X-PDF-Generator' => $proposicao->pdf_conversor_usado ?? 'official',
+                    'X-PDF-Source' => basename($relativePath)
+                ]);
+            }
 
-        if (! $pdfPath) {
-            abort(404, 'PDF não encontrado.');
+            // 2. NUNCA use geradores HTML/DomPDF para status oficiais
+            Log::warning('PDF oficial não encontrado', [
+                'proposicao_id' => $proposicao->id,
+                'status' => $proposicao->status,
+                'campos_verificados' => [
+                    'pdf_protocolado_path' => $proposicao->pdf_protocolado_path ?? 'NULL',
+                    'pdf_assinado_path' => $proposicao->pdf_assinado_path ?? 'NULL',
+                    'pdf_oficial_path' => $proposicao->pdf_oficial_path ?? 'NULL',
+                    'arquivo_pdf_path' => $proposicao->arquivo_pdf_path ?? 'NULL'
+                ]
+            ]);
+            
+            // Para status oficiais (aprovado, assinado, protocolado), forçar geração de PDF real
+            if (in_array($proposicao->status, ['aprovado', 'assinado', 'protocolado', 'aprovado_assinatura'])) {
+                Log::info('Forçando geração de PDF oficial para status oficial', [
+                    'proposicao_id' => $proposicao->id,
+                    'status' => $proposicao->status,
+                    'arquivo_path' => $proposicao->arquivo_path
+                ]);
+                
+                // Tentar gerar PDF do OnlyOffice
+                $pdfGerado = $this->gerarPDFSobDemanda($proposicao);
+                
+                if ($pdfGerado && Storage::exists($pdfGerado)) {
+                    // Atualizar o campo arquivo_pdf_path na proposição
+                    $proposicao->update(['arquivo_pdf_path' => $pdfGerado]);
+                    
+                    $absolutePath = Storage::path($pdfGerado);
+                    
+                    // Add ETag based on RTF file timestamp
+                    $etag = 'pdf-' . $proposicao->id . '-' . time();
+                    if ($proposicao->arquivo_path && Storage::exists($proposicao->arquivo_path)) {
+                        $rtfPath = Storage::path($proposicao->arquivo_path);
+                        if (file_exists($rtfPath)) {
+                            $etag = 'pdf-' . $proposicao->id . '-' . filemtime($rtfPath);
+                        }
+                    }
+                    
+                    Log::info('PDF oficial gerado com sucesso', [
+                        'proposicao_id' => $proposicao->id,
+                        'pdf_path' => $pdfGerado
+                    ]);
+                    
+                    return response()->file($absolutePath, [
+                        'Content-Type' => 'application/pdf',
+                        'Content-Disposition' => 'inline; filename="proposicao_' . $proposicao->id . '.pdf"',
+                        'Cache-Control' => 'no-cache, no-store, must-revalidate',
+                        'Pragma' => 'no-cache',
+                        'Expires' => '0',
+                        'ETag' => $etag,
+                        'X-PDF-Generator' => 'onlyoffice-forced',
+                        'X-PDF-Source' => basename($pdfGerado)
+                    ]);
+                }
+                
+                // Se mesmo assim não conseguiu gerar, retornar erro
+                Log::error('PDF oficial obrigatório não pôde ser gerado para status oficial', [
+                    'proposicao_id' => $proposicao->id,
+                    'status' => $proposicao->status
+                ]);
+                
+                return response()->json([
+                    'error' => 'PDF oficial não disponível',
+                    'message' => 'O documento oficial não pôde ser processado. Verifique se há conteúdo editado no OnlyOffice.',
+                    'status' => $proposicao->status
+                ], 404, [
+                    'Content-Type' => 'application/json',
+                    'X-PDF-Generator' => 'error-no-official'
+                ]);
+            }
+
+            // 3. Para outros status, também tentar gerar PDF real ao invés de placeholder
+            Log::info('Tentando gerar PDF para status não oficial', [
+                'proposicao_id' => $proposicao->id,
+                'status' => $proposicao->status
+            ]);
+            
+            $pdfGerado = $this->gerarPDFSobDemanda($proposicao);
+            
+            if ($pdfGerado && Storage::exists($pdfGerado)) {
+                // Atualizar o campo arquivo_pdf_path na proposição
+                $proposicao->update(['arquivo_pdf_path' => $pdfGerado]);
+                
+                $absolutePath = Storage::path($pdfGerado);
+                
+                // Add ETag based on RTF file timestamp
+                $etag = 'pdf-' . $proposicao->id . '-' . time();
+                if ($proposicao->arquivo_path && Storage::exists($proposicao->arquivo_path)) {
+                    $rtfPath = Storage::path($proposicao->arquivo_path);
+                    if (file_exists($rtfPath)) {
+                        $etag = 'pdf-' . $proposicao->id . '-' . filemtime($rtfPath);
+                    }
+                }
+                
+                Log::info('PDF gerado com sucesso para status não oficial', [
+                    'proposicao_id' => $proposicao->id,
+                    'pdf_path' => $pdfGerado
+                ]);
+                
+                return response()->file($absolutePath, [
+                    'Content-Type' => 'application/pdf',
+                    'Content-Disposition' => 'inline; filename="proposicao_' . $proposicao->id . '.pdf"',
+                    'Cache-Control' => 'no-cache, no-store, must-revalidate',
+                    'Pragma' => 'no-cache',
+                    'Expires' => '0',
+                    'ETag' => $etag,
+                    'X-PDF-Generator' => 'onlyoffice-dynamic',
+                    'X-PDF-Source' => basename($pdfGerado)
+                ]);
+            }
+            
+            // Só usar placeholder se realmente não conseguiu gerar nada
+            Log::warning('Não foi possível gerar PDF real, usando placeholder temporário', [
+                'proposicao_id' => $proposicao->id,
+                'status' => $proposicao->status
+            ]);
+            return $this->gerarPDFBasicoComAviso($proposicao);
+
+        } catch (\Exception $e) {
+            Log::error('Erro ao servir PDF', [
+                'proposicao_id' => $proposicao->id,
+                'error' => $e->getMessage()
+            ]);
+
+            abort(500, 'Erro interno ao gerar PDF. Contate o suporte.');
         }
-
-        // Servir o arquivo PDF
-        return response()->file($pdfPath, [
-            'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'inline; filename="proposicao_'.$proposicao->id.'.pdf"',
-        ]);
     }
 
     /**
@@ -6473,5 +6622,356 @@ class ProposicaoController extends Controller implements HasMiddleware
         }
 
         return false;
+    }
+
+    /**
+     * Gera PDF sob demanda quando não encontrado
+     */
+    private function gerarPDFSobDemanda(Proposicao $proposicao): ?string
+    {
+        try {
+            if (empty($proposicao->arquivo_path) || !Storage::exists($proposicao->arquivo_path)) {
+                Log::warning('PDF sob demanda: arquivo fonte não encontrado', [
+                    'proposicao_id' => $proposicao->id,
+                    'arquivo_path' => $proposicao->arquivo_path
+                ]);
+                return null;
+            }
+
+            $fileHash = hash('sha256', Storage::get($proposicao->arquivo_path));
+            $pdfPath = "proposicoes/pdfs/{$proposicao->id}/proposicao_{$proposicao->id}_{$fileHash}.pdf";
+
+            $converter = app(DocumentConversionService::class);
+            $result = $converter->convertToPDF(
+                $proposicao->arquivo_path,
+                $pdfPath,
+                $proposicao->status
+            );
+
+            if ($result['success']) {
+                $proposicao->update([
+                    'arquivo_pdf_path' => $pdfPath,
+                    'pdf_gerado_em' => now(),
+                    'pdf_conversor_usado' => $result['converter'],
+                    'pdf_tamanho' => $result['output_bytes'],
+                    'pdf_erro_geracao' => null,
+                ]);
+
+                Log::info('PDF sob demanda gerado com sucesso', [
+                    'proposicao_id' => $proposicao->id,
+                    'converter' => $result['converter']
+                ]);
+
+                return $pdfPath;
+            }
+
+            Log::error('PDF sob demanda: falha na conversão', [
+                'proposicao_id' => $proposicao->id,
+                'error' => $result['error']
+            ]);
+
+            return null;
+
+        } catch (\Exception $e) {
+            Log::error('PDF sob demanda: exceção', [
+                'proposicao_id' => $proposicao->id,
+                'error' => $e->getMessage()
+            ]);
+            return null;
+        }
+    }
+
+    /**
+     * Gera PDF básico com aviso quando conversão falha
+     */
+    private function gerarPDFBasicoComAviso(Proposicao $proposicao): Response
+    {
+        $html = "
+        <div style='text-align: center; margin-top: 100px; font-family: Arial, sans-serif;'>
+            <h2 style='color: #d32f2f;'>⚠️ DOCUMENTO EM PROCESSAMENTO</h2>
+            <p><strong>Proposição:</strong> {$proposicao->numero_proposicao}</p>
+            <p><strong>Ementa:</strong> {$proposicao->ementa}</p>
+            <p style='color: #666; margin-top: 50px;'>
+                O documento está sendo processado e estará disponível em breve.<br>
+                Por favor, tente novamente em alguns minutos.
+            </p>
+            <p style='font-size: 12px; color: #999; margin-top: 50px;'>
+                Sistema LegisInc - Câmara Municipal<br>
+                Documento gerado em: " . now()->format('d/m/Y H:i:s') . "
+            </p>
+        </div>";
+
+        try {
+            $dompdf = new \Dompdf\Dompdf([
+                'isHtml5ParserEnabled' => true,
+                'isPhpEnabled' => false,
+                'tempDir' => storage_path('app/temp')
+            ]);
+
+            $dompdf->loadHtml($html);
+            $dompdf->setPaper('A4', 'portrait');
+            $dompdf->render();
+
+            Log::warning('PDF temporário gerado (não salvo no storage)', [
+                'proposicao_id' => $proposicao->id,
+                'razao' => 'pdf_oficial_nao_encontrado'
+            ]);
+
+            return response($dompdf->output(), 202, [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'inline; filename="proposicao_' . $proposicao->id . '_processando.pdf"',
+                'Cache-Control' => 'no-store, max-age=0',
+                'X-PDF-Generator' => 'placeholder-temp'
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Falha ao gerar PDF básico com aviso', [
+                'proposicao_id' => $proposicao->id,
+                'error' => $e->getMessage()
+            ]);
+
+            abort(500, 'Erro interno do servidor');
+        }
+    }
+
+    /**
+     * Identifica o tipo de PDF pelo nome do arquivo
+     */
+    private function identificarTipoPdf(?string $relativePath): string
+    {
+        if (!$relativePath) return 'desconhecido';
+        
+        $name = strtolower(basename($relativePath));
+        
+        if (str_contains($name, 'protocolado')) return 'protocolado';
+        if (str_contains($name, 'assinado')) return 'assinado';
+        if (str_contains($name, 'oficial')) return 'oficial';
+        if (str_contains($name, 'onlyoffice')) return 'onlyoffice';
+        if (str_contains($name, 'libreoffice')) return 'libreoffice';
+        
+        return 'outro';
+    }
+
+    /**
+     * Determina o caminho do PDF oficial com precedência clara
+     * Prioridade: protocolado → assinado → oficial → arquivo_pdf_path
+     * Nunca retorna arquivos placeholder, DomPDF ou temporários
+     */
+    private function caminhoPdfOficial(Proposicao $proposicao): ?string
+    {
+        // CRITICAL: Blindagem total contra PDFs mockados/temporários
+        $isBad = function (?string $relativePath) use ($proposicao): bool {
+            if (!$relativePath) return true;
+            
+            // Verificar existência
+            if (!Storage::exists($relativePath)) return true;
+            
+            // BLACKLIST: Padrões que indicam PDF inválido/mockado
+            $filename = strtolower(basename($relativePath));
+            $suspiciousPatterns = ['process', 'tempor', 'fallback', 'dompdf', 'padrao', 'html', 'mock'];
+            
+            // EXCEÇÃO: PDFs com template_universal são válidos mesmo tendo 'template' no nome
+            $isTemplateUniversal = str_contains($filename, 'template_universal');
+            
+            foreach ($suspiciousPatterns as $pattern) {
+                if (str_contains($filename, $pattern) && !$isTemplateUniversal) {
+                    return true;
+                }
+            }
+            
+            // Verificar tamanho mínimo (PDFs mockados são pequenos)
+            $absolutePath = Storage::path($relativePath);
+            if (file_exists($absolutePath)) {
+                $size = filesize($absolutePath);
+                
+                // 1. PDFs muito pequenos (<15KB) são suspeitos, exceto se explicitamente otimizados
+                if ($size < 15 * 1024 && !str_contains($filename, 'otimizado') && !str_contains($filename, 'stamp')) {
+                    return true;
+                }
+                
+                // 2. Verificar conteúdo do cabeçalho para detectar DomPDF ou HTML markers
+                $handle = fopen($absolutePath, 'r');
+                if ($handle) {
+                    $header = fread($handle, 2048); // Ler mais para capturar metadados
+                    fclose($handle);
+                    
+                    $htmlMarkers = ['dompdf', 'barryvdh', 'html5', 'temporary', 'temporÁrio', 'fallback'];
+                    foreach ($htmlMarkers as $marker) {
+                        if (stripos($header, $marker) !== false) {
+                            return true; // É PDF HTML/DomPDF
+                        }
+                    }
+                }
+                
+                // 3. Para status oficiais, verificar se o PDF contém marcações necessárias
+                if (in_array($proposicao->status, ['assinado', 'protocolado'])) {
+                    $content = shell_exec("pdftotext '{$absolutePath}' - 2>/dev/null");
+                    if ($content) {
+                        // PDF assinado deve conter marca de assinatura (vários padrões aceitos)
+                        if ($proposicao->status === 'assinado') {
+                            $temAssinatura = stripos($content, 'ASSINATURA DIGITAL') !== false ||
+                                           stripos($content, 'DOCUMENTO ASSINADO DIGITALMENTE') !== false ||
+                                           stripos($content, 'assinado digitalmente por') !== false ||
+                                           ($proposicao->codigo_validacao && stripos($content, $proposicao->codigo_validacao) !== false);
+                            
+                            if (!$temAssinatura) {
+                                return true;
+                            }
+                        }
+                        
+                        // PDF protocolado deve conter número de protocolo (menos rígido se tem assinatura)
+                        if ($proposicao->status === 'protocolado') {
+                            $temProtocolo = $proposicao->numero_protocolo && stripos($content, $proposicao->numero_protocolo) !== false;
+                            $temPlaceholder = stripos($content, '[AGUARDANDO PROTOCOLO]') !== false;
+                            $temAssinatura = stripos($content, 'assinado digitalmente por') !== false ||
+                                           ($proposicao->codigo_validacao && stripos($content, $proposicao->codigo_validacao) !== false);
+                            
+                            // Se tem assinatura, ser menos rígido com protocolo
+                            if ($temAssinatura && $proposicao->numero_protocolo) {
+                                // Para PDFs assinados, aceitar se não tem placeholder
+                                if ($temPlaceholder) {
+                                    return true;
+                                }
+                            } else {
+                                // Para PDFs normais, exigir protocolo completo
+                                if (!$temProtocolo || $temPlaceholder) {
+                                    return true;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            return false; // Arquivo válido
+        };
+
+        // PRECEDÊNCIA ESTRITA: protocolado > assinado > oficial
+        $candidatos = [
+            $proposicao->pdf_protocolado_path ?? $proposicao->arquivo_pdf_protocolado,  // 1º: PDF protocolado
+            $proposicao->pdf_assinado_path ?? $proposicao->arquivo_pdf_assinado,        // 2º: PDF assinado
+            $proposicao->pdf_oficial_path,                                               // 3º: PDF oficial
+            $proposicao->arquivo_pdf_path,                                               // 4º: PDF principal
+            $proposicao->arquivo_pdf_path,         // 5º: PDF básico (somente se não for fallback HTML)
+        ];
+
+        // Procurar o primeiro candidato válido
+        foreach ($candidatos as $relativePath) {
+            if ($relativePath && !$isBad($relativePath)) {
+                Log::info('PDF oficial selecionado', [
+                    'proposicao_id' => $proposicao->id,
+                    'arquivo' => $relativePath,
+                    'tipo' => $this->identificarTipoPdf($relativePath)
+                ]);
+                return $relativePath;
+            }
+        }
+
+        // Se nenhum candidato válido, avisar
+        Log::warning('Nenhum PDF oficial válido encontrado', [
+            'proposicao_id' => $proposicao->id,
+            'candidatos_verificados' => array_filter($candidatos)
+        ]);
+
+        // IMPORTANTE: Para proposições assinadas e protocoladas, NÃO usar arquivos OnlyOffice antigos
+        if ($proposicao->data_assinatura && $proposicao->status === 'protocolado') {
+            Log::info('Proposição assinada e protocolada - não usar OnlyOffice antigo', [
+                'proposicao_id' => $proposicao->id
+            ]);
+            return null;
+        }
+
+        // Se não encontrou nos campos específicos, procurar arquivo OnlyOffice mais recente
+        $onlyOfficePattern = 'private/proposicoes/pdfs/' . $proposicao->id . '/proposicao_' . $proposicao->id . '_onlyoffice_*.pdf';
+        $files = Storage::files('proposicoes/pdfs/' . $proposicao->id);
+        
+        // Filtrar arquivos OnlyOffice
+        $onlyOfficeFiles = array_filter($files, function($file) {
+            return str_contains($file, '_onlyoffice_') && str_ends_with($file, '.pdf');
+        });
+        
+        if (!empty($onlyOfficeFiles)) {
+            // Ordenar por timestamp no nome (mais recente primeiro)
+            usort($onlyOfficeFiles, function($a, $b) {
+                preg_match('/_(\d+)\.pdf$/', $a, $matchesA);
+                preg_match('/_(\d+)\.pdf$/', $b, $matchesB);
+                return ($matchesB[1] ?? 0) <=> ($matchesA[1] ?? 0);
+            });
+            
+            $maisRecente = $onlyOfficeFiles[0];
+            if (Storage::exists($maisRecente)) {
+                return $maisRecente;
+            }
+        }
+
+        // Buscar também no diretório private
+        if (Storage::disk('local')->exists('proposicoes/pdfs/' . $proposicao->id)) {
+            $privateFiles = Storage::disk('local')->files('proposicoes/pdfs/' . $proposicao->id);
+            $onlyOfficePrivate = array_filter($privateFiles, function($file) {
+                return str_contains($file, '_onlyoffice_') && str_ends_with($file, '.pdf');
+            });
+            
+            if (!empty($onlyOfficePrivate)) {
+                usort($onlyOfficePrivate, function($a, $b) {
+                    preg_match('/_(\d+)\.pdf$/', $a, $matchesA);
+                    preg_match('/_(\d+)\.pdf$/', $b, $matchesB);
+                    return ($matchesB[1] ?? 0) <=> ($matchesA[1] ?? 0);
+                });
+                
+                return $onlyOfficePrivate[0];
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Serve PDF via URL temporária com token
+     */
+    public function servePDFTemporary(string $token): Response
+    {
+        try {
+            $cacheKey = "pdf_temp_token_{$token}";
+            $proposicaoId = Cache::get($cacheKey);
+
+            if (!$proposicaoId) {
+                abort(404, 'Token não encontrado ou expirado');
+            }
+
+            $proposicao = Proposicao::findOrFail($proposicaoId);
+
+            if (!empty($proposicao->arquivo_pdf_path) && Storage::exists($proposicao->arquivo_pdf_path)) {
+                $pdfContent = Storage::get($proposicao->arquivo_pdf_path);
+                
+                return response($pdfContent, 200, [
+                    'Content-Type' => 'application/pdf',
+                    'Content-Disposition' => 'inline; filename="proposicao_' . $proposicao->id . '.pdf"',
+                    'Cache-Control' => 'no-cache, no-store, must-revalidate',
+                    'Pragma' => 'no-cache',
+                    'Expires' => '0'
+                ]);
+            }
+
+            $pdfPath = $this->gerarPDFSobDemanda($proposicao);
+
+            if ($pdfPath && Storage::exists($pdfPath)) {
+                $pdfContent = Storage::get($pdfPath);
+                
+                return response($pdfContent, 200, [
+                    'Content-Type' => 'application/pdf',
+                    'Content-Disposition' => 'inline; filename="proposicao_' . $proposicao->id . '.pdf"'
+                ]);
+            }
+
+            return $this->gerarPDFBasicoComAviso($proposicao);
+
+        } catch (\Exception $e) {
+            Log::error('Erro ao servir PDF temporário', [
+                'token' => $token,
+                'error' => $e->getMessage()
+            ]);
+
+            abort(500, 'Erro interno do servidor');
+        }
     }
 }

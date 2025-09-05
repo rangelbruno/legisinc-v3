@@ -17,6 +17,16 @@ Route::get('/', function () {
     return redirect()->route('login');
 });
 
+// Public routes for signature validation
+Route::get('/conferir_assinatura', [App\Http\Controllers\AssinaturaValidacaoController::class, 'mostrarFormulario'])
+    ->name('validacao.assinatura.formulario');
+Route::post('/conferir_assinatura', [App\Http\Controllers\AssinaturaValidacaoController::class, 'validarAssinatura'])
+    ->name('validacao.assinatura.validar');
+Route::get('/certificado_validacao/{codigo}', [App\Http\Controllers\AssinaturaValidacaoController::class, 'certificadoValidacao'])
+    ->name('validacao.assinatura.certificado');
+Route::get('/qr_validacao/{codigo}', [App\Http\Controllers\AssinaturaValidacaoController::class, 'qrCodeValidacao'])
+    ->name('validacao.assinatura.qr');
+
 // Authentication routes - com middleware guest para prevenir acesso quando autenticado
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
@@ -1396,3 +1406,8 @@ Route::prefix('proposicoes/{proposicao}/assinatura-digital')->name('proposicoes.
 Route::get('/proposicoes/{proposicao}/pdf-publico', [\App\Http\Controllers\ProposicaoController::class, 'servePDFPublico'])
     ->name('proposicoes.pdf.publico')
     ->where('proposicao', '[0-9]+');
+
+// ===== ROTA PARA URLs TEMPORÁRIAS DE PDF COM TOKEN =====
+Route::get('/pdf-temp/{token}', [\App\Http\Controllers\ProposicaoController::class, 'servePDFTemporary'])
+    ->name('proposicoes.pdf.temporary')
+    ->where('token', '[a-zA-Z0-9]{64}');
