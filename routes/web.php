@@ -276,6 +276,7 @@ Route::prefix('admin/usuarios')->name('admin.usuarios.')->middleware(['auth', 'c
 // Admin Documentation routes (protected with auth - Admin only)
 Route::prefix('admin/docs')->name('admin.docs.')->middleware(['auth', 'check.screen.permission'])->group(function () {
     Route::get('/fluxo-proposicoes', [App\Http\Controllers\DocsController::class, 'fluxoProposicoes'])->name('fluxo-proposicoes');
+    Route::get('/fluxo-documentos', [App\Http\Controllers\DocsController::class, 'fluxoDocumentos'])->name('fluxo-documentos');
 });
 
 // Screen Permissions routes (protected with auth - Admin only)

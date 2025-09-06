@@ -1,5 +1,19 @@
 # Melhorias Automáticas Detectadas
 
+## Melhoria #43 - 2025-09-05 14:48:20
+
+**Arquivos alterados:** 5
+
+- `app/Http/Controllers/ProposicaoAssinaturaController.php` (modificado)
+- `app/Http/Controllers/ProposicaoProtocoloController.php` (modificado)
+- `app/Models/Proposicao.php` (modificado)
+- `resources/views/proposicoes/assinatura/assinar-pdf-vue.blade.php` (modificado)
+- `resources/views/proposicoes/pdf/template-optimized.blade.php` (modificado)
+
+**Seeder criado:** `PreservarMelhorias43Seeder`
+
+---
+
 ## Melhoria #41 - 2025-09-05 14:46:44
 
 **Arquivos alterados:** 5

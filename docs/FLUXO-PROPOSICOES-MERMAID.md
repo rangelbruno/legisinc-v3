@@ -768,11 +768,11 @@ flowchart TD
     Analysis --> Encoding[Encoding incorreto<br/>text/plain vs application/rtf]
     Analysis --> Structure[Estrutura inválida<br/>Headers malformados]
     
-    Corrupted --> Fix1[corrigirRTFCorrompido()<br/>• Corrige headers RTF<br/>• Valida estrutura<br/>• Ajusta formatação]
+    Corrupted --> Fix1[corrigirRTFCorrompido<br/>Corrige headers RTF<br/>Valida estrutura<br/>Ajusta formatação]
     
-    Encoding --> Fix2[Headers HTTP corretos<br/>• Content-Type: application/rtf<br/>• charset=utf-8<br/>• fileType: 'rtf']
+    Encoding --> Fix2[Headers HTTP corretos<br/>Content-Type: application/rtf<br/>charset=utf-8<br/>fileType: rtf]
     
-    Structure --> Fix3[garantirRTFValido()<br/>• Validar início RTF<br/>• Codificação UTF-8<br/>• Estrutura completa]
+    Structure --> Fix3[garantirRTFValido<br/>Validar início RTF<br/>Codificação UTF-8<br/>Estrutura completa]
     
     Fix1 --> Test[🧪 Teste Automático<br/>debug_template_universal.php]
     Fix2 --> Test

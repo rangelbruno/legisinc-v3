@@ -499,10 +499,17 @@
                                     </div>
                                     @endif
                                     <div class="menu-item">
-                                        <a class="menu-link {{ request()->routeIs('admin.docs.*') ? 'active' : '' }}" href="{{ route('admin.docs.fluxo-proposicoes') }}">
+                                        <a class="menu-link {{ request()->routeIs('admin.docs.fluxo-proposicoes') ? 'active' : '' }}" href="{{ route('admin.docs.fluxo-proposicoes') }}">
                                             <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
                                             <span class="menu-title">Fluxo de Proposições</span>
                                             <span class="badge badge-light-success badge-sm ms-auto">NOVO</span>
+                                        </a>
+                                    </div>
+                                    <div class="menu-item">
+                                        <a class="menu-link {{ request()->routeIs('admin.docs.fluxo-documentos') ? 'active' : '' }}" href="{{ route('admin.docs.fluxo-documentos') }}">
+                                            <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                            <span class="menu-title">Fluxo de Documentos</span>
+                                            <span class="badge badge-light-info badge-sm ms-auto">NOVO</span>
                                         </a>
                                     </div>
                                 </div>
