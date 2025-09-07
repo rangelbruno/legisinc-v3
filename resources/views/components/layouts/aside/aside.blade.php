@@ -785,7 +785,7 @@
                             </a>
                         </div>
                         <div class="menu-item">
-                            <a class="menu-link" href="#" onclick="showComingSoon('Configurações do Sistema')">
+                            <a class="menu-link {{ request()->routeIs('admin.system-configuration.*') ? 'active' : '' }}" href="{{ route('admin.system-configuration.index') }}">
                                 <span class="menu-bullet">
                                     <span class="bullet bullet-dot"></span>
                                 </span>

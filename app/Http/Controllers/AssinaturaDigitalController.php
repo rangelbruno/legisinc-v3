@@ -66,8 +66,16 @@ class AssinaturaDigitalController extends Controller
             $request->validate([
                 'tipo_certificado' => 'required|in:A1,A3,PFX,SIMULADO',
                 'senha' => 'required_if:tipo_certificado,A1,A3|nullable|string|min:4',
-                'senha_pfx' => 'required_if:tipo_certificado,PFX|nullable|string|min:1'
+                'senha_pfx' => 'nullable|string|min:1',
+                'senha_certificado' => 'nullable|string|min:1'
             ]);
+            
+            // Validação customizada para PFX - deve ter pelo menos um dos campos de senha
+            if ($request->tipo_certificado === 'PFX') {
+                if (empty($request->senha_pfx) && empty($request->senha_certificado)) {
+                    return back()->withErrors(['senha_certificado' => 'Senha é obrigatória para certificados PFX.']);
+                }
+            }
             
             // Validação adicional para tipos que requerem senha
             if (in_array($request->tipo_certificado, ['A1', 'A3']) && empty($request->senha)) {
@@ -115,7 +123,8 @@ class AssinaturaDigitalController extends Controller
                 $arquivoPFX = $request->file('arquivo_pfx');
                 $caminhoPFX = $this->salvarArquivoPFX($arquivoPFX, $proposicao);
                 $dadosAssinatura['arquivo_pfx'] = $caminhoPFX;
-                $dadosAssinatura['senha_pfx'] = $request->senha_pfx;
+                // Aceitar senha de ambos os campos (senha_pfx ou senha_certificado)
+                $dadosAssinatura['senha_pfx'] = $request->senha_pfx ?: $request->senha_certificado;
             }
             
             // Gerar identificador e checksum

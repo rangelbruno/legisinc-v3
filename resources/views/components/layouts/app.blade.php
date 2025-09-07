@@ -217,6 +217,18 @@
                     @endif
                 </div>
                 <!--end::Content-->
+                
+                <!--begin::Debug Logger Component-->
+                @if(App\Helpers\DebugHelper::isDebugLoggerActive())
+                <div id="debug-logger"></div>
+                
+                <!-- Fallback Debug Button (caso Vue.js não carregue) -->
+                <div id="debug-fallback" class="debug-toggle-fallback" onclick="initializeDebugLogger()" style="display: block;">
+                    🔧
+                </div>
+                @endif
+                <!--end::Debug Logger Component-->
+                
                 <!--begin::Footer-->
                 <x-layouts.footer />
                 <!--end::Footer-->
@@ -2557,6 +2569,12 @@
     <!--begin::Page Specific Scripts-->
     @stack('scripts')
     <!--end::Page Specific Scripts-->
+    
+    <!--begin::Debug Logger System-->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    @include('partials.debug-logger')
+    <!--end::Debug Logger System-->
 
     <!--begin::Notifications System-->
     <script>

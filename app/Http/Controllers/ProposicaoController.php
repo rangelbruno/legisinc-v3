@@ -4982,6 +4982,40 @@ class ProposicaoController extends Controller implements HasMiddleware
                     'arquivo_path' => $proposicao->arquivo_path
                 ]);
                 
+                // ESPECIAL: Para status "aprovado", primeiro tentar usar PDF mais recente existente
+                if ($proposicao->status === 'aprovado') {
+                    $files = Storage::files('proposicoes/pdfs/' . $proposicao->id);
+                    $onlyOfficeFiles = array_filter($files, function($file) {
+                        return str_contains($file, '_onlyoffice_') && str_ends_with($file, '.pdf');
+                    });
+                    
+                    if (!empty($onlyOfficeFiles)) {
+                        // Ordenar por timestamp (mais recente primeiro)
+                        usort($onlyOfficeFiles, function($a, $b) {
+                            preg_match('/_(\d+)\.pdf$/', $a, $matchesA);
+                            preg_match('/_(\d+)\.pdf$/', $b, $matchesB);
+                            return ($matchesB[1] ?? 0) <=> ($matchesA[1] ?? 0);
+                        });
+                        
+                        $pdfMaisRecente = $onlyOfficeFiles[0];
+                        if (Storage::exists($pdfMaisRecente)) {
+                            $absolutePath = Storage::path($pdfMaisRecente);
+                            
+                            Log::info('PDF aprovado: usando OnlyOffice mais recente', [
+                                'proposicao_id' => $proposicao->id,
+                                'arquivo_usado' => $pdfMaisRecente
+                            ]);
+                            
+                            return response()->file($absolutePath, [
+                                'Content-Type' => 'application/pdf',
+                                'Content-Disposition' => 'inline; filename="proposicao_' . $proposicao->id . '.pdf"',
+                                'Cache-Control' => 'no-cache, no-store, must-revalidate',
+                                'X-PDF-Source' => 'onlyoffice-recent'
+                            ]);
+                        }
+                    }
+                }
+                
                 // CRÍTICO: Usar mesma estratégia que funciona na assinatura digital
                 // Verificar arquivo_path do banco primeiro (mesma lógica de encontrarArquivoMaisRecente)
                 if (!empty($proposicao->arquivo_path) && Storage::exists($proposicao->arquivo_path)) {
@@ -6196,10 +6230,21 @@ class ProposicaoController extends Controller implements HasMiddleware
             }
 
             $oldStatus = $proposicao->status;
-            $proposicao->update([
+            
+            // CRÍTICO: Se status mudou para aprovado, invalidar cache PDF para forçar regeneração
+            $updateData = [
                 'status' => $request->status,
                 'ultima_modificacao' => now(),
-            ]);
+            ];
+            
+            if ($request->status === 'aprovado' && $oldStatus !== 'aprovado') {
+                // Invalidar PDF antigo para forçar regeneração com últimas alterações do OnlyOffice
+                $updateData['arquivo_pdf_path'] = null;
+                $updateData['pdf_gerado_em'] = null;
+                $updateData['pdf_conversor_usado'] = null;
+            }
+            
+            $proposicao->update($updateData);
 
             $statusTexts = [
                 'rascunho' => 'Rascunho',
@@ -6880,9 +6925,17 @@ class ProposicaoController extends Controller implements HasMiddleware
             // Verificar existência - usar file_exists como fallback
             $exists = Storage::exists($relativePath);
             if (!$exists) {
-                // Tentar caminho absoluto como fallback
-                $absolutePath = storage_path('app/' . ltrim($relativePath, '/'));
-                $exists = file_exists($absolutePath);
+                // Para caminhos que começam com 'private/', verificar no disco local
+                if (str_starts_with($relativePath, 'private/')) {
+                    $relativePath = str_replace('private/', '', $relativePath);
+                    $exists = Storage::disk('local')->exists($relativePath);
+                }
+                
+                if (!$exists) {
+                    // Tentar caminho absoluto como fallback
+                    $absolutePath = storage_path('app/' . ltrim($relativePath, '/'));
+                    $exists = file_exists($absolutePath);
+                }
             }
             if (!$exists) return true;
             
@@ -6890,8 +6943,15 @@ class ProposicaoController extends Controller implements HasMiddleware
             $filename = strtolower(basename($relativePath));
             $suspiciousPatterns = ['process', 'tempor', 'fallback', 'dompdf', 'padrao', 'html', 'mock'];
             
-            // EXCEÇÃO: PDFs com template_universal são válidos mesmo tendo 'template' no nome
+            // EXCEÇÕES: PDFs válidos mesmo com padrões suspeitos
             $isTemplateUniversal = str_contains($filename, 'template_universal');
+            $isAssinado = str_contains($filename, '_assinado_');
+            $isProtocolado = str_contains($filename, '_protocolado_');
+            
+            // PDFs assinados e protocolados são sempre válidos
+            if ($isAssinado || $isProtocolado) {
+                return false; // É um PDF válido
+            }
             
             foreach ($suspiciousPatterns as $pattern) {
                 if (str_contains($filename, $pattern) && !$isTemplateUniversal) {

@@ -43,7 +43,8 @@
         },
         "files": [
             "app/helpers.php",
-            "app/Helpers/StringHelper.php"
+            "app/Helpers/StringHelper.php",
+            "app/Helpers/DebugHelper.php"
         ]
     },
     "autoload-dev": {

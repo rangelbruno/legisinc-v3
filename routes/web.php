@@ -3,6 +3,7 @@
 use App\Http\Controllers\ApiDocumentationController;
 use App\Http\Controllers\Auth\TokenController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\DebugController;
 use App\Http\Controllers\DocumentationController;
 use App\Http\Controllers\Parlamentar\ParlamentarController;
 use App\Http\Controllers\ProgressController;
@@ -105,6 +106,19 @@ Route::get('/admin/dashboard', function () {
 
     return view('admin.dashboard');
 })->name('admin.dashboard')->middleware('auth');
+
+// System Configuration routes (protected)
+Route::prefix('admin/system-configuration')->name('admin.system-configuration.')->middleware(['auth', 'check.screen.permission'])->group(function () {
+    Route::get('/', [App\Http\Controllers\Admin\SystemConfigurationController::class, 'index'])
+        ->name('index')->middleware('check.permission:admin.view');
+    Route::post('/', [App\Http\Controllers\Admin\SystemConfigurationController::class, 'update'])
+        ->name('update')->middleware('check.permission:admin.manage');
+    Route::get('/test-debug-logger', [App\Http\Controllers\Admin\SystemConfigurationController::class, 'testDebugLogger'])
+        ->name('test-debug-logger')->middleware('check.permission:admin.view');
+    Route::post('/clear-cache', [App\Http\Controllers\Admin\SystemConfigurationController::class, 'clearCache'])
+        ->name('clear-cache')->middleware('check.permission:admin.manage');
+});
+
 Route::get('/home', function () {
     return view('welcome');
 })->name('home');
@@ -1426,3 +1440,32 @@ Route::get('/proposicoes/{proposicao}/pdf-publico', [\App\Http\Controllers\Propo
 Route::get('/pdf-temp/{token}', [\App\Http\Controllers\ProposicaoController::class, 'servePDFTemporary'])
     ->name('proposicoes.pdf.temporary')
     ->where('token', '[a-zA-Z0-9]{64}');
+
+// ===== DEBUG LOGGER ROUTES =====
+Route::middleware(['auth'])->prefix('debug')->name('debug.')->group(function () {
+    Route::post('/start', [DebugController::class, 'start'])->name('start');
+    Route::post('/stop', [DebugController::class, 'stop'])->name('stop');
+    Route::get('/status', [DebugController::class, 'status'])->name('status');
+    Route::get('/logs', [DebugController::class, 'getLogs'])->name('logs');
+    Route::post('/export', [DebugController::class, 'exportLogs'])->name('export');
+    Route::delete('/cleanup', [DebugController::class, 'cleanup'])->name('cleanup');
+});
+
+// Rota pública para servir arquivos de debug exportados
+Route::get('/debug/exports/{filename}', function ($filename) {
+    $path = storage_path("app/debug_exports/{$filename}");
+    
+    if (!file_exists($path)) {
+        abort(404);
+    }
+    
+    return response()->file($path, [
+        'Content-Type' => 'text/plain',
+        'Content-Disposition' => 'attachment; filename="' . $filename . '"'
+    ]);
+})->name('debug.download');
+
+// Rota de teste para o debug logger
+Route::middleware(['web', 'auth'])->get('/test-debug', function () {
+    return view('test-debug');
+})->name('test.debug.logger');

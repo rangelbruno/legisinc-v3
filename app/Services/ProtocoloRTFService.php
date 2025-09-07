@@ -18,9 +18,18 @@ class ProtocoloRTFService
             // Obter o arquivo RTF atual
             $rtfPath = $proposicao->arquivo_path;
             
+            // Verificar se o arquivo RTF existe
+            if (!$rtfPath) {
+                Log::error('RTF path não encontrado para protocolo', [
+                    'proposicao_id' => $proposicao->id,
+                    'arquivo_path' => $rtfPath
+                ]);
+                return false;
+            }
+            
             // Check if RTF exists using both Storage and direct file access
             $rtfFullPath = storage_path('app/' . $rtfPath);
-            if (!$rtfPath || (!Storage::exists($rtfPath) && !file_exists($rtfFullPath))) {
+            if (!Storage::exists($rtfPath) && !file_exists($rtfFullPath)) {
                 Log::error('RTF não encontrado para atualização de protocolo', [
                     'proposicao_id' => $proposicao->id,
                     'rtf_path' => $rtfPath,
@@ -34,13 +43,26 @@ class ProtocoloRTFService
             // Ler o conteúdo RTF (use file_get_contents if Storage fails)
             $conteudoRTF = Storage::exists($rtfPath) ? Storage::get($rtfPath) : file_get_contents($rtfFullPath);
             
-            // Substituir as variáveis de protocolo
+            // Substituir as variáveis de protocolo com mais padrões
             $substituicoes = [
                 '[AGUARDANDO PROTOCOLO]' => $numeroProtocolo,
                 '\\[AGUARDANDO PROTOCOLO\\]' => $numeroProtocolo,
                 '${numero_proposicao}' => $numeroProtocolo,
                 '\\$\\{numero_proposicao\\}' => $numeroProtocolo,
+                '$numero_proposicao' => $numeroProtocolo,
                 'numero_proposicao' => $numeroProtocolo,
+                // Formatos adicionais que podem aparecer em RTF processado pelo OnlyOffice
+                '$\\{numero_proposicao\\}' => $numeroProtocolo,
+                '\\$\\{numero\\\_proposicao\\}' => $numeroProtocolo,
+                // Padrões específicos de protocolo
+                '${numero_protocolo}' => $numeroProtocolo,
+                '$numero_protocolo' => $numeroProtocolo,
+                'numero_protocolo' => $numeroProtocolo,
+                '\\$\\{numero_protocolo\\}' => $numeroProtocolo,
+                // Formatação visual comum
+                'N° [AGUARDANDO PROTOCOLO]' => 'N° ' . $numeroProtocolo,
+                'Nº [AGUARDANDO PROTOCOLO]' => 'Nº ' . $numeroProtocolo,
+                'No [AGUARDANDO PROTOCOLO]' => 'No ' . $numeroProtocolo,
             ];
             
             $conteudoAtualizado = $conteudoRTF;
@@ -120,26 +142,38 @@ class ProtocoloRTFService
             // Obter o RTF atualizado
             $rtfPath = $proposicao->arquivo_path;
             
-            // Check if RTF exists using both Storage and direct file access
-            $rtfFullPath = storage_path('app/' . $rtfPath);
-            
-            // Also check in private disk location
-            $rtfPrivatePath = storage_path('app/private/' . $rtfPath);
-            
+            // Check if RTF exists using multiple possible paths
             if (!$rtfPath) {
                 throw new \Exception('Caminho do RTF não definido');
             }
             
+            // Try multiple possible locations for the RTF file
+            $rtfFullPath = null;
+            $possiblePaths = [
+                storage_path('app/' . $rtfPath),
+                storage_path('app/private/' . $rtfPath),
+                Storage::path($rtfPath),
+            ];
+            
+            // Also check if Storage can find it
             if (Storage::exists($rtfPath)) {
-                // Use Storage to get content, which handles disk properly
                 $rtfFullPath = Storage::path($rtfPath);
-            } elseif (file_exists($rtfFullPath)) {
-                // File exists in app/ directly
-                $rtfFullPath = $rtfFullPath;
-            } elseif (file_exists($rtfPrivatePath)) {
-                // File exists in private/
-                $rtfFullPath = $rtfPrivatePath;
             } else {
+                // Try each possible path
+                foreach ($possiblePaths as $path) {
+                    if (file_exists($path)) {
+                        $rtfFullPath = $path;
+                        break;
+                    }
+                }
+            }
+            
+            if (!$rtfFullPath || !file_exists($rtfFullPath)) {
+                Log::error('RTF protocolado não encontrado em nenhum dos caminhos', [
+                    'rtf_path' => $rtfPath,
+                    'tentativas' => $possiblePaths,
+                    'storage_exists' => Storage::exists($rtfPath)
+                ]);
                 throw new \Exception('RTF protocolado não encontrado: ' . $rtfPath);
             }
             

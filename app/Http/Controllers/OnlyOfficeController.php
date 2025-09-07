@@ -222,12 +222,19 @@ class OnlyOfficeController extends Controller
             'editorConfig' => [
                 'callbackUrl' => $callbackUrl,
                 'lang' => 'pt-BR',
+                'region' => 'pt-BR',
+                'documentLang' => 'pt-BR',
                 'mode' => 'edit',
                 'user' => [
                     'id' => (string) Auth::id(),
                     'name' => Auth::user()->name
                 ],
                 'customization' => [
+                    'spellcheck' => [
+                        'mode' => true,
+                        'lang' => ['pt-BR'],
+                    ],
+                    'documentLanguage' => 'pt-BR',
                     'autosave' => true,
                     'autosaveTimeout' => 30000, // 30 segundos
                     'chat' => false,
@@ -927,9 +934,16 @@ Sistema funcionando!\par
             'documentType' => 'word',
             'editorConfig' => [
                 'mode' => 'edit',
-                'lang' => 'pt',
+                'lang' => 'pt-BR',
+                'region' => 'pt-BR',
+                'documentLang' => 'pt-BR',
                 'callbackUrl' => $callbackUrl,
                 'customization' => [
+                    'spellcheck' => [
+                        'mode' => true,
+                        'lang' => ['pt-BR'],
+                    ],
+                    'documentLanguage' => 'pt-BR',
                     'autosave' => true,
                     'chat' => false,
                     'comments' => true,

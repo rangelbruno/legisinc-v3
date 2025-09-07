@@ -309,39 +309,85 @@ class PDFStampingService
      */
     private function addSignatureStampToPage(Fpdi $pdf, array $signatureData, array $pageSize): void
     {
-        // Set font for signature
-        $pdf->SetFont('Arial', '', 9);
-        $pdf->SetTextColor(0, 0, 0);
+        // Calcular posição mais precisa baseada no tamanho da página
+        $margemBase = 20;
+        $alturaAssinatura = 30;
+        $larguraAssinatura = min(160, $pageSize['width'] - 2 * $margemBase);
+        
+        // Posicionar no canto inferior direito, mas com margem adequada
+        $x = $pageSize['width'] - $larguraAssinatura - $margemBase;
+        $y = $pageSize['height'] - $alturaAssinatura - $margemBase;
+        
+        // Ajustar se a posição ficar muito baixa (para páginas pequenas)
+        if ($y < 50) {
+            $y = $pageSize['height'] - 50;
+        }
 
-        // Position signature at bottom of page
-        $x = 20;
-        $y = $pageSize['height'] - 40;
-        $width = $pageSize['width'] - 40;
+        // Background com cor mais suave e bordas arredondadas simuladas
+        $pdf->SetFillColor(248, 249, 250); // Cinza muito claro
+        $pdf->Rect($x, $y, $larguraAssinatura, $alturaAssinatura, 'F');
 
-        // Draw signature box background
-        $pdf->SetFillColor(240, 240, 240);
-        $pdf->Rect($x, $y, $width, 25, 'F');
+        // Borda mais elegante
+        $pdf->SetDrawColor(200, 200, 200); // Cinza claro
+        $pdf->SetLineWidth(0.3);
+        $pdf->Rect($x, $y, $larguraAssinatura, $alturaAssinatura, 'D');
 
-        // Draw border
-        $pdf->SetDrawColor(0, 0, 0);
-        $pdf->Rect($x, $y, $width, 25, 'D');
-
-        // Add signature text
+        // Título da seção com fonte em negrito
+        $pdf->SetFont('Arial', 'B', 8);
+        $pdf->SetTextColor(60, 60, 60); // Cinza escuro
         $pdf->SetXY($x + 5, $y + 3);
-        $pdf->Cell(0, 4, 'ASSINATURA DIGITAL', 0, 1, 'L');
+        $pdf->Cell($larguraAssinatura - 10, 4, 'DOCUMENTO ASSINADO DIGITALMENTE', 0, 1, 'C');
+
+        // Linha divisória
+        $pdf->SetDrawColor(220, 220, 220);
+        $pdf->Line($x + 10, $y + 9, $x + $larguraAssinatura - 10, $y + 9);
+
+        // Informações da assinatura com fonte normal
+        $pdf->SetFont('Arial', '', 7);
+        $pdf->SetTextColor(80, 80, 80);
         
-        $nomeAssinante = $signatureData['nome_assinante'] ?? 'Usuário';
-        $dataAssinatura = now()->format('d/m/Y H:i');
-        $tipoAssinatura = $signatureData['tipo_certificado'] ?? 'DIGITAL';
+        $nomeAssinante = $signatureData['nome_assinante'] ?? 'Usuário do Sistema';
+        $dataAssinatura = now()->format('d/m/Y \à\s H:i');
+        $tipoAssinatura = $this->formatarTipoCertificado($signatureData['tipo_certificado'] ?? 'DIGITAL');
         
-        $pdf->SetXY($x + 5, $y + 8);
-        $pdf->Cell(0, 4, "Assinado eletronicamente por: {$nomeAssinante}", 0, 1, 'L');
+        $pdf->SetXY($x + 5, $y + 12);
+        $pdf->Cell($larguraAssinatura - 10, 3, "Por: {$nomeAssinante}", 0, 1, 'L');
         
-        $pdf->SetXY($x + 5, $y + 13);
-        $pdf->Cell(0, 4, "Data/Hora: {$dataAssinatura}", 0, 1, 'L');
+        $pdf->SetXY($x + 5, $y + 16);
+        $pdf->Cell($larguraAssinatura - 10, 3, "Em: {$dataAssinatura}", 0, 1, 'L');
         
-        $pdf->SetXY($x + 5, $y + 18);
-        $pdf->Cell(0, 4, "Tipo: {$tipoAssinatura} | ID: {$signatureData['identificador']}", 0, 1, 'L');
+        $pdf->SetXY($x + 5, $y + 20);
+        $pdf->Cell($larguraAssinatura - 10, 3, "Certificado: {$tipoAssinatura}", 0, 1, 'L');
+        
+        // Hash/ID de verificação se disponível
+        if (isset($signatureData['identificador']) && !empty($signatureData['identificador'])) {
+            $pdf->SetFont('Arial', '', 6);
+            $pdf->SetTextColor(120, 120, 120);
+            $pdf->SetXY($x + 5, $y + 24);
+            $identificador = substr($signatureData['identificador'], 0, 20) . '...';
+            $pdf->Cell($larguraAssinatura - 10, 3, "ID: {$identificador}", 0, 1, 'L');
+        }
+        
+        // Restaurar configurações padrão
+        $pdf->SetLineWidth(0.2);
+        $pdf->SetDrawColor(0, 0, 0);
+        $pdf->SetTextColor(0, 0, 0);
+    }
+    
+    /**
+     * Formatar tipo de certificado para exibição
+     */
+    private function formatarTipoCertificado(string $tipo): string
+    {
+        $tipos = [
+            'PFX' => 'ICP-Brasil PFX',
+            'A1' => 'ICP-Brasil A1',
+            'A3' => 'ICP-Brasil A3',
+            'SIMULADO' => 'Desenvolvimento',
+            'DIGITAL' => 'Assinatura Digital'
+        ];
+        
+        return $tipos[$tipo] ?? $tipo;
     }
 
     /**

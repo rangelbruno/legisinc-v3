@@ -335,6 +335,18 @@
         <script src="{{ asset('assets/js/custom/authentication/sign-in/general.js') }}"></script>
         <!--end::Custom Javascript-->
         <!--end::Javascript-->
+        
+        <!--begin::Debug Logger Component-->
+        @if(App\Helpers\DebugHelper::isDebugLoggerActive())
+        <div id="debug-logger"></div>
+        <div id="debug-fallback" class="debug-toggle-fallback" onclick="initializeDebugLogger()" style="display: block;">
+            🔧
+        </div>
+        <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+        <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+        @endif
+        @include('partials.debug-logger')
+        <!--end::Debug Logger Component-->
     </body>
     <!--end::Body-->
 </html>
