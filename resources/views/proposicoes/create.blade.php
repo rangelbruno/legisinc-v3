@@ -1180,20 +1180,12 @@ $(document).ready(function() {
                     const modeloPadrao = modelos[0];
                     $('#modelo').val(modeloPadrao.id);
                     
-                    // Verificar se é template universal e ajustar a mensagem
-                    if (modeloPadrao.is_universal) {
-                        $('#template-info-nome').html(`
-                            <span class="badge bg-primary me-2">Universal</span>
-                            ${modeloPadrao.nome}
-                        `);
-                        $('.alert .small').text('Usando template universal configurado pelo sistema para formatação padrão');
-                    } else {
-                        $('#template-info-nome').html(`
-                            <span class="badge bg-info me-2">Específico</span>
-                            ${modeloPadrao.nome}
-                        `);
-                        $('.alert .small').text('Usando template específico configurado para este tipo de proposição');
-                    }
+                    // Sempre usar template universal
+                    $('#template-info-nome').html(`
+                        <span class="badge bg-primary me-2">Universal</span>
+                        ${modeloPadrao.nome}
+                    `);
+                    $('.alert .small').text('Usando template universal configurado pelo sistema para formatação padrão');
                     
                     console.log('Modelo automático selecionado:', {
                         id: modeloPadrao.id,

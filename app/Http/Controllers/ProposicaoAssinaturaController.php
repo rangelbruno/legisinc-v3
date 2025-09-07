@@ -434,9 +434,10 @@ class ProposicaoAssinaturaController extends Controller implements HasMiddleware
                 }
 
                 // SEMPRE usar conversão DOCX → HTML para preservar formatação do OnlyOffice
-                if ($arquivoEncontrado && str_contains($arquivoPath, '.docx')) {
+                if ($arquivoEncontrado && (str_contains($arquivoPath, '.docx') || str_contains($arquivoPath, '.rtf'))) {
                     try {
-                        error_log('PDF Assinatura: Convertendo DOCX → HTML para preservar formatação OnlyOffice');
+                        error_log('PDF Assinatura: Convertendo arquivo → PDF para preservar formatação OnlyOffice');
+                        error_log('PDF Assinatura: Tipo de arquivo: ' . pathinfo($arquivoPath, PATHINFO_EXTENSION));
 
                         // Verificar se LibreOffice está disponível
                         if ($this->libreOfficeDisponivel()) {
@@ -1402,14 +1403,27 @@ class ProposicaoAssinaturaController extends Controller implements HasMiddleware
     private function criarPDFComFormatacaoOnlyOffice(string $caminhoPdfAbsoluto, Proposicao $proposicao, string $arquivoPath): void
     {
         try {
-            error_log('PDF Assinatura: Iniciando conversão DOCX → PDF com formatação OnlyOffice');
+            error_log('PDF Assinatura: Iniciando conversão arquivo → PDF com formatação OnlyOffice');
+            
+            // Verificar se o arquivo existe antes de tentar converter
+            if (!file_exists($arquivoPath)) {
+                error_log("PDF Assinatura: Arquivo não encontrado para conversão: {$arquivoPath}");
+                // Tentar usar arquivo_path do banco
+                if ($proposicao->arquivo_path) {
+                    $arquivoPath = storage_path('app/' . $proposicao->arquivo_path);
+                    if (!file_exists($arquivoPath)) {
+                        throw new \Exception("Arquivo não encontrado para conversão PDF");
+                    }
+                }
+            }
 
-            // 1. PRIORIDADE ALTA: Conversão direta DOCX → PDF via LibreOffice (mais confiável)
+            // 1. PRIORIDADE ALTA: Conversão direta arquivo → PDF via LibreOffice (mais confiável)
             if ($this->libreOfficeDisponivel()) {
-                error_log('PDF Assinatura: Tentando conversão direta DOCX → PDF via LibreOffice');
+                error_log('PDF Assinatura: Tentando conversão direta arquivo → PDF via LibreOffice');
 
                 $tempDir = sys_get_temp_dir();
-                $tempFile = $tempDir.'/proposicao_'.$proposicao->id.'_temp.docx';
+                $extension = pathinfo($arquivoPath, PATHINFO_EXTENSION);
+                $tempFile = $tempDir.'/proposicao_'.$proposicao->id.'_temp.'.$extension;
                 $outputDir = $tempDir.'/pdf_output_'.$proposicao->id;
 
                 // Criar diretório de saída
@@ -1417,9 +1431,9 @@ class ProposicaoAssinaturaController extends Controller implements HasMiddleware
                     mkdir($outputDir, 0755, true);
                 }
 
-                // Copiar arquivo DOCX para diretório temporário
+                // Copiar arquivo para diretório temporário
                 if (! copy($arquivoPath, $tempFile)) {
-                    throw new \Exception('Falha ao copiar arquivo DOCX para diretório temporário');
+                    throw new \Exception('Falha ao copiar arquivo para diretório temporário');
                 }
 
                 // Comando LibreOffice para conversão direta DOCX → PDF
@@ -1579,6 +1593,125 @@ class ProposicaoAssinaturaController extends Controller implements HasMiddleware
             }
 
             error_log('PDF Assinatura: Erro na conversão OnlyOffice: '.$e->getMessage());
+            
+            // FALLBACK FINAL: Tentar gerar PDF básico com dados do banco
+            try {
+                error_log('PDF Assinatura: Tentando gerar PDF básico como fallback final');
+                $this->gerarPDFBasico($proposicao, $caminhoPdfAbsoluto);
+                return; // PDF básico gerado com sucesso
+            } catch (\Exception $e2) {
+                error_log('PDF Assinatura: Falha total na geração de PDF: '.$e2->getMessage());
+                throw $e; // Lançar erro original
+            }
+        }
+    }
+    
+    /**
+     * Gerar PDF básico com dados do banco (fallback final)
+     */
+    private function gerarPDFBasico(Proposicao $proposicao, string $caminhoPdfAbsoluto): void
+    {
+        try {
+            error_log('PDF Básico: Gerando PDF com dados do banco para proposição ' . $proposicao->id);
+            
+            // Preparar conteúdo básico
+            $numero = $proposicao->numero ?: '[AGUARDANDO PROTOCOLO]';
+            $ementa = $proposicao->ementa ?: 'Sem ementa';
+            $texto = $proposicao->texto ?: $proposicao->conteudo ?: 'Documento em processamento';
+            $autor = $proposicao->autor ? $proposicao->autor->name : 'Autor não identificado';
+            
+            // HTML básico mas bem formatado
+            $html = '<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            line-height: 1.6; 
+            margin: 40px;
+        }
+        .header { 
+            text-align: center; 
+            margin-bottom: 30px;
+            border-bottom: 2px solid #333;
+            padding-bottom: 20px;
+        }
+        .header h1 { 
+            margin: 0; 
+            font-size: 18px;
+            text-transform: uppercase;
+        }
+        .header p { 
+            margin: 5px 0; 
+            font-size: 14px;
+        }
+        .content { 
+            margin-top: 30px; 
+            text-align: justify;
+        }
+        .ementa { 
+            margin: 20px 0; 
+            padding: 15px;
+            background: #f5f5f5;
+            border-left: 3px solid #333;
+        }
+        .ementa strong { 
+            display: block; 
+            margin-bottom: 10px;
+        }
+        .texto { 
+            margin-top: 30px; 
+            white-space: pre-wrap;
+        }
+        .footer { 
+            margin-top: 50px; 
+            text-align: center;
+            padding-top: 20px;
+            border-top: 1px solid #ccc;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>CÂMARA MUNICIPAL DE CARAGUATATUBA</h1>
+        <p>Estado de São Paulo</p>
+        <p style="margin-top: 20px; font-weight: bold;">
+            PROPOSIÇÃO Nº ' . $numero . '/' . $proposicao->ano . '
+        </p>
+    </div>
+    
+    <div class="ementa">
+        <strong>EMENTA:</strong>
+        ' . nl2br(htmlspecialchars($ementa)) . '
+    </div>
+    
+    <div class="content">
+        <div class="texto">
+            ' . nl2br(htmlspecialchars($texto)) . '
+        </div>
+    </div>
+    
+    <div class="footer">
+        <p>Autor: ' . htmlspecialchars($autor) . '</p>
+        <p>Data: ' . now()->format('d/m/Y') . '</p>
+    </div>
+</body>
+</html>';
+
+            // Gerar PDF com DomPDF
+            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($html);
+            $pdf->setPaper('A4', 'portrait');
+            $pdf->save($caminhoPdfAbsoluto);
+            
+            if (file_exists($caminhoPdfAbsoluto) && filesize($caminhoPdfAbsoluto) > 1000) {
+                error_log('PDF Básico: PDF gerado com sucesso - ' . filesize($caminhoPdfAbsoluto) . ' bytes');
+            } else {
+                throw new \Exception('PDF básico gerado mas com tamanho inválido');
+            }
+            
+        } catch (\Exception $e) {
+            error_log('PDF Básico: Erro ao gerar PDF básico: ' . $e->getMessage());
             throw $e;
         }
     }
@@ -1762,14 +1895,29 @@ class ProposicaoAssinaturaController extends Controller implements HasMiddleware
     private function encontrarArquivoMaisRecente(Proposicao $proposicao): ?array
     {
         try {
+            // PRIORIDADE 1: Usar arquivo_path do banco se existir e for válido
+            if (!empty($proposicao->arquivo_path)) {
+                $caminhoArquivoBanco = storage_path('app/' . $proposicao->arquivo_path);
+                if (file_exists($caminhoArquivoBanco)) {
+                    error_log("PDF Assinatura: Usando arquivo do banco de dados: {$proposicao->arquivo_path}");
+                    return [
+                        'path' => $caminhoArquivoBanco,
+                        'relative_path' => $proposicao->arquivo_path,
+                        'modified' => date('Y-m-d H:i:s', filemtime($caminhoArquivoBanco)),
+                        'size' => filesize($caminhoArquivoBanco),
+                    ];
+                }
+            }
+
+            // PRIORIDADE 2: Buscar arquivo mais recente nos diretórios
             // Diretórios onde buscar arquivos, em ordem de prioridade
             $diretoriosParaBuscar = [
-                '/var/www/html/storage/app/private/proposicoes/',
-                '/var/www/html/storage/app/proposicoes/',
-                '/var/www/html/storage/app/public/proposicoes/',
-                storage_path('app/private/proposicoes/'),
                 storage_path('app/proposicoes/'),
+                storage_path('app/private/proposicoes/'),
                 storage_path('app/public/proposicoes/'),
+                '/var/www/html/storage/app/proposicoes/',
+                '/var/www/html/storage/app/private/proposicoes/',
+                '/var/www/html/storage/app/public/proposicoes/',
             ];
 
             $arquivoMaisRecente = null;
@@ -1780,22 +1928,31 @@ class ProposicaoAssinaturaController extends Controller implements HasMiddleware
                     continue;
                 }
 
-                // Buscar arquivos que contenham o ID da proposição
-                $padrao = $diretorio.'proposicao_'.$proposicao->id.'_*';
-                $arquivos = glob($padrao);
+                // Buscar TODOS os arquivos relacionados à proposição (com diferentes padrões)
+                $padroes = [
+                    $diretorio.'proposicao_'.$proposicao->id.'_*.docx',
+                    $diretorio.'proposicao_'.$proposicao->id.'_*.rtf',
+                    $diretorio.'proposicao_'.$proposicao->id.'_*.doc',
+                    $diretorio.'*proposicao_'.$proposicao->id.'*.docx',
+                    $diretorio.'*proposicao_'.$proposicao->id.'*.rtf',
+                ];
 
-                foreach ($arquivos as $arquivo) {
-                    if (is_file($arquivo)) {
-                        $timestamp = filemtime($arquivo);
+                foreach ($padroes as $padrao) {
+                    $arquivos = glob($padrao);
+                    
+                    foreach ($arquivos as $arquivo) {
+                        if (is_file($arquivo)) {
+                            $timestamp = filemtime($arquivo);
 
-                        if ($timestamp > $timestampMaisRecente) {
-                            $timestampMaisRecente = $timestamp;
-                            $arquivoMaisRecente = [
-                                'path' => $arquivo,
-                                'relative_path' => str_replace('/var/www/html/storage/app/', '', $arquivo),
-                                'modified' => date('Y-m-d H:i:s', $timestamp),
-                                'size' => filesize($arquivo),
-                            ];
+                            if ($timestamp > $timestampMaisRecente) {
+                                $timestampMaisRecente = $timestamp;
+                                $arquivoMaisRecente = [
+                                    'path' => $arquivo,
+                                    'relative_path' => str_replace([storage_path('app/'), '/var/www/html/storage/app/'], '', $arquivo),
+                                    'modified' => date('Y-m-d H:i:s', $timestamp),
+                                    'size' => filesize($arquivo),
+                                ];
+                            }
                         }
                     }
                 }
@@ -2136,8 +2293,18 @@ class ProposicaoAssinaturaController extends Controller implements HasMiddleware
                 $conteudoRaw = $this->extrairConteudoDOCX($caminhoDocx);
             }
 
+            // FALLBACK: Se ainda não tiver conteúdo, usar o conteúdo do banco
             if (empty($conteudoRaw)) {
-                throw new \Exception('Não foi possível extrair conteúdo do arquivo OnlyOffice');
+                error_log('PDF OnlyOffice: Usando conteúdo do banco como fallback');
+                $conteudoRaw = $proposicao->conteudo ?: $proposicao->texto ?: '';
+                
+                // Se ainda não tiver conteúdo, tentar gerar um PDF básico
+                if (empty($conteudoRaw)) {
+                    $numeroProposicao = $proposicao->numero ?: '[AGUARDANDO PROTOCOLO]';
+                    $conteudoRaw = "PROPOSIÇÃO Nº {$numeroProposicao}/{$proposicao->ano}\n\n";
+                    $conteudoRaw .= "EMENTA: " . ($proposicao->ementa ?: 'Sem ementa') . "\n\n";
+                    $conteudoRaw .= "TEXTO: " . ($proposicao->texto ?: 'Documento em processamento');
+                }
             }
 
             error_log('PDF OnlyOffice: Conteúdo extraído - '.strlen($conteudoRaw).' caracteres');

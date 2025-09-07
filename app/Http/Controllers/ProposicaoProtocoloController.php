@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Proposicao;
 use App\Services\NumeroProcessoService;
+use App\Services\ProtocoloRTFService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -11,10 +12,12 @@ use Illuminate\Support\Facades\Log;
 class ProposicaoProtocoloController extends Controller
 {
     private NumeroProcessoService $numeroProcessoService;
+    private ProtocoloRTFService $protocoloRTFService;
 
-    public function __construct(NumeroProcessoService $numeroProcessoService)
+    public function __construct(NumeroProcessoService $numeroProcessoService, ProtocoloRTFService $protocoloRTFService)
     {
         $this->numeroProcessoService = $numeroProcessoService;
+        $this->protocoloRTFService = $protocoloRTFService;
     }
 
     /**
@@ -98,21 +101,26 @@ class ProposicaoProtocoloController extends Controller
             'verificacoes_realizadas' => $verificacoes,
         ]);
 
-        // Apply protocol stamp to existing PDF - NEVER fallback to HTML regeneration
+        // Update RTF with protocol number and regenerate PDF preserving digital signature
         try {
-            error_log("Protocolo: Aplicando stamp de protocolo para proposição {$proposicao->id} com protocolo {$numeroProcesso}");
+            error_log("Protocolo: Atualizando RTF com protocolo para proposição {$proposicao->id} com protocolo {$numeroProcesso}");
             
-            $this->aplicarStampProtocolo($proposicao->fresh(), $numeroProcesso);
-            error_log("Protocolo: Stamp de protocolo aplicado com sucesso para proposição {$proposicao->id}");
+            $this->atualizarRTFComProtocolo($proposicao->fresh(), $numeroProcesso);
+            error_log("Protocolo: RTF atualizado e PDF regenerado com sucesso para proposição {$proposicao->id}");
             
             // Validar se PDF foi gerado corretamente (validação robusta)
             $this->validarPDFGerado($proposicao->fresh(), $numeroProcesso);
             
         } catch (\Exception $e) {
-            error_log("Protocolo: ERRO CRÍTICO ao aplicar stamp de protocolo para proposição {$proposicao->id}: ".$e->getMessage());
+            error_log("Protocolo: ERRO CRÍTICO ao atualizar protocolo no RTF para proposição {$proposicao->id}: ".$e->getMessage());
             
-            // NÃO fazer fallback para HTML - interromper com erro
-            throw new \Exception("Falha ao aplicar protocolo no PDF assinado. Documento ainda não foi assinado ou arquivo corrompido. Erro: " . $e->getMessage());
+            // Fallback to PDF stamping if RTF update fails
+            error_log("Protocolo: Tentando fallback para stamp PDF");
+            try {
+                $this->aplicarStampProtocolo($proposicao->fresh(), $numeroProcesso);
+            } catch (\Exception $stampError) {
+                throw new \Exception("Falha ao aplicar protocolo tanto no RTF quanto no PDF. RTF: " . $e->getMessage() . " | PDF: " . $stampError->getMessage());
+            }
         }
 
         // TODO: Implementar sistema de tramitação quando disponível
@@ -304,18 +312,22 @@ class ProposicaoProtocoloController extends Controller
                 'observacoes_protocolo' => 'Protocolado automaticamente pelo sistema',
             ]);
 
-            // Apply protocol stamp - NEVER regenerate from HTML
+            // Update RTF with protocol and regenerate PDF
             try {
-                $this->aplicarStampProtocolo($proposicao->fresh(), $numeroProcesso);
+                $this->atualizarRTFComProtocolo($proposicao->fresh(), $numeroProcesso);
             } catch (\Exception $e) {
-                Log::error('ERRO CRÍTICO: Falha ao aplicar stamp de protocolo', [
+                Log::error('ERRO CRÍTICO: Falha ao atualizar protocolo no RTF', [
                     'proposicao_id' => $proposicao->id,
                     'numero_protocolo' => $numeroProcesso,
                     'error' => $e->getMessage()
                 ]);
                 
-                // NÃO fazer fallback para regeneração HTML - isso destruiria o PDF assinado
-                throw new \Exception("Impossível protocolar: PDF assinado não encontrado ou corrompido. Erro: " . $e->getMessage());
+                // Fallback to PDF stamping
+                try {
+                    $this->aplicarStampProtocolo($proposicao->fresh(), $numeroProcesso);
+                } catch (\Exception $stampError) {
+                    throw new \Exception("Impossível protocolar: Falha em RTF e PDF. RTF: " . $e->getMessage() . " | PDF: " . $stampError->getMessage());
+                }
             }
 
             return response()->json([
@@ -371,8 +383,100 @@ class ProposicaoProtocoloController extends Controller
     }
 
     /**
+     * Update RTF with protocol number and regenerate PDF while preserving digital signature
+     * This replaces [AGUARDANDO PROTOCOLO] variable in the RTF template
+     */
+    private function atualizarRTFComProtocolo(Proposicao $proposicao, string $numeroProcesso): void
+    {
+        try {
+            error_log("Protocolo RTF: Iniciando atualização RTF para proposição {$proposicao->id} com protocolo {$numeroProcesso}");
+            
+            // Step 1: Update RTF with protocol number
+            $rtfAtualizado = $this->protocoloRTFService->atualizarRTFComProtocolo($proposicao, $numeroProcesso);
+            
+            if (!$rtfAtualizado) {
+                throw new \Exception("Falha ao atualizar RTF com protocolo");
+            }
+            
+            error_log("Protocolo RTF: ✅ RTF atualizado com protocolo");
+            
+            // Step 2: Generate new PDF from updated RTF
+            $pdfProtocolado = $this->protocoloRTFService->gerarPDFProtocolado($proposicao->fresh());
+            
+            if (!$pdfProtocolado) {
+                throw new \Exception("Falha ao gerar PDF a partir do RTF protocolado");
+            }
+            
+            error_log("Protocolo RTF: ✅ PDF gerado a partir do RTF protocolado: {$pdfProtocolado}");
+            
+            // Step 3: If proposal was signed, apply digital signature to new PDF
+            if ($proposicao->assinatura_digital && $proposicao->certificado_digital_path) {
+                $pdfAssinado = $this->aplicarAssinaturaDigitalAoPDF($pdfProtocolado, $proposicao);
+                if ($pdfAssinado) {
+                    $pdfProtocolado = $pdfAssinado;
+                    error_log("Protocolo RTF: ✅ Assinatura digital aplicada ao PDF protocolado");
+                }
+            }
+            
+            // Step 4: Update proposição paths
+            $relativePath = str_replace(storage_path('app/'), '', $pdfProtocolado);
+            
+            $proposicao->update([
+                'arquivo_pdf_path' => $relativePath,
+                'arquivo_pdf_protocolado' => $relativePath,
+                'pdf_protocolo_aplicado' => true,
+                'data_aplicacao_protocolo' => now(),
+                'pdf_conversor_usado' => 'rtf_protocol_replacement',
+                'pdf_gerado_em' => now()
+            ]);
+            
+            error_log("Protocolo RTF: ✅ Protocolo aplicado via substituição RTF com sucesso para proposição {$proposicao->id}");
+            
+        } catch (\Exception $e) {
+            error_log("Protocolo RTF: ❌ ERRO ao atualizar RTF com protocolo: {$e->getMessage()}");
+            throw $e;
+        }
+    }
+
+    /**
+     * Apply digital signature to a PDF if proposal was previously signed
+     */
+    private function aplicarAssinaturaDigitalAoPDF(string $pdfPath, Proposicao $proposicao): ?string
+    {
+        try {
+            if (!$proposicao->assinatura_digital || !$proposicao->certificado_digital_path) {
+                return null;
+            }
+
+            error_log("Protocolo RTF: Aplicando assinatura digital ao PDF protocolado");
+
+            $assinaturaService = app(\App\Services\AssinaturaDigitalService::class);
+            
+            // Use the existing signature data
+            $pdfAssinado = $assinaturaService->assinarPDF(
+                $pdfPath, 
+                [
+                    'nome_assinante' => $proposicao->autor->name ?? 'Autor',
+                    'cargo_assinante' => 'Vereador',
+                    'data_assinatura' => $proposicao->data_assinatura ?? now(),
+                    'motivo_assinatura' => 'Proposição protocolada',
+                    'certificado_path' => $proposicao->certificado_digital_path,
+                    'certificado_senha' => $proposicao->certificado_senha ?? ''
+                ]
+            );
+
+            return $pdfAssinado;
+
+        } catch (\Exception $e) {
+            error_log("Protocolo RTF: ERRO ao aplicar assinatura digital: {$e->getMessage()}");
+            return null; // Return null if signature fails, so original PDF is used
+        }
+    }
+
+    /**
      * Apply protocol stamp to existing signed PDF using PDFStampingService
      * CRITICAL: Use existing signed PDF instead of regenerating to preserve digital signature
+     * This is the FALLBACK method when RTF update fails
      */
     private function aplicarStampProtocolo(Proposicao $proposicao, string $numeroProcesso): void
     {

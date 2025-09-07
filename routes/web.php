@@ -1047,6 +1047,20 @@ Route::prefix('expediente')->name('expediente.')->middleware(['auth', 'check.scr
     Route::get('/relatorio', [App\Http\Controllers\ExpedienteController::class, 'relatorio'])->name('relatorio');
 });
 
+// GERADOR DE MÓDULOS (ADMIN)
+Route::prefix('admin/module-generator')->name('admin.module-generator.')->middleware(['auth', 'check.screen.permission'])->group(function () {
+    Route::get('/', [App\Http\Controllers\Admin\ModuleGeneratorController::class, 'index'])->name('index');
+    Route::get('/create', [App\Http\Controllers\Admin\ModuleGeneratorController::class, 'create'])->name('create');
+    Route::post('/', [App\Http\Controllers\Admin\ModuleGeneratorController::class, 'store'])->name('store');
+    Route::get('/{generatedModule}', [App\Http\Controllers\Admin\ModuleGeneratorController::class, 'show'])->name('show');
+    Route::get('/{generatedModule}/edit', [App\Http\Controllers\Admin\ModuleGeneratorController::class, 'edit'])->name('edit');
+    Route::put('/{generatedModule}', [App\Http\Controllers\Admin\ModuleGeneratorController::class, 'update'])->name('update');
+    Route::delete('/{generatedModule}', [App\Http\Controllers\Admin\ModuleGeneratorController::class, 'destroy'])->name('destroy');
+    Route::post('/{generatedModule}/generate', [App\Http\Controllers\Admin\ModuleGeneratorController::class, 'generate'])->name('generate');
+    Route::get('/{generatedModule}/preview', [App\Http\Controllers\Admin\ModuleGeneratorController::class, 'preview'])->name('preview');
+    Route::get('/api/table-structure', [App\Http\Controllers\Admin\ModuleGeneratorController::class, 'getTableStructure'])->name('table-structure');
+});
+
 // ROTAS DE ADMINISTRAÇÃO - TEMPLATES
 Route::prefix('admin/templates')->name('admin.templates.')->middleware(['auth', 'check.screen.permission'])->group(function () {
     // Template Universal (Nova funcionalidade)

@@ -188,6 +188,14 @@ class DocumentConversionService
                 if ($pdfContent !== false && strlen($pdfContent) > 1024) {
                     Storage::put($outputPath, $pdfContent);
                     
+                    // CRÍTICO: Definir ownership correto para PDFs (www-data:www-data)
+                    $absolutePath = storage_path('app/' . $outputPath);
+                    if (file_exists($absolutePath)) {
+                        chown($absolutePath, 'www-data');
+                        chgrp($absolutePath, 'www-data');
+                        chmod($absolutePath, 0666);
+                    }
+                    
                     // Reset circuit breaker em caso de sucesso
                     $this->circuitBreakerFailures = 0;
                     
@@ -239,16 +247,17 @@ class DocumentConversionService
                 mkdir($outputDir, 0755, true);
             }
 
-            // Comando otimizado
+            // Comando otimizado com variável de ambiente correta
             $command = sprintf(
-                'XDG_RUNTIME_DIR=/tmp soffice --headless --invisible --nodefault --nolockcheck --nologo --norestore --convert-to pdf:writer_pdf_Export --outdir %s %s 2>&1',
+                'soffice --headless --invisible --nodefault --nolockcheck --nologo --norestore --convert-to pdf:writer_pdf_Export --outdir %s %s 2>&1',
                 escapeshellarg($outputDir),
                 escapeshellarg($inputAbsolute)
             );
 
-            // Executar com timeout
+            // Executar com timeout e variável de ambiente
             $timeout = env('ONLYOFFICE_TIMEOUT', 60);
-            exec("timeout {$timeout} {$command}", $output, $returnCode);
+            $fullCommand = "export XDG_RUNTIME_DIR=/tmp && timeout {$timeout} {$command}";
+            exec($fullCommand, $output, $returnCode);
 
             if ($returnCode === 0) {
                 // LibreOffice gera PDF com mesmo nome
@@ -257,6 +266,13 @@ class DocumentConversionService
                 if (file_exists($generatedPdf)) {
                     if ($generatedPdf !== $outputAbsolute) {
                         rename($generatedPdf, $outputAbsolute);
+                    }
+                    
+                    // CRÍTICO: Definir ownership correto para PDFs (www-data:www-data)
+                    if (file_exists($outputAbsolute)) {
+                        chown($outputAbsolute, 'www-data');
+                        chgrp($outputAbsolute, 'www-data');
+                        chmod($outputAbsolute, 0666);
                     }
                     
                     Log::info('LibreOffice conversion successful', [
@@ -305,6 +321,14 @@ class DocumentConversionService
             ]);
 
             Storage::put($outputPath, $pdf->output());
+            
+            // CRÍTICO: Definir ownership correto para PDFs (www-data:www-data)
+            $absolutePath = storage_path('app/' . $outputPath);
+            if (file_exists($absolutePath)) {
+                chown($absolutePath, 'www-data');
+                chgrp($absolutePath, 'www-data');
+                chmod($absolutePath, 0666);
+            }
 
             Log::info('DomPDF conversion completed (TEMPORARY - basic formatting)', [
                 'output' => $outputPath
@@ -355,12 +379,13 @@ class DocumentConversionService
             $outputDir = dirname(Storage::path($docxPath));
 
             $command = sprintf(
-                'XDG_RUNTIME_DIR=/tmp soffice --headless --convert-to docx --outdir %s %s 2>/dev/null',
+                'soffice --headless --convert-to docx --outdir %s %s 2>/dev/null',
                 escapeshellarg($outputDir),
                 escapeshellarg($inputAbsolute)
             );
 
-            exec($command, $output, $returnCode);
+            $fullCommand = "export XDG_RUNTIME_DIR=/tmp && {$command}";
+            exec($fullCommand, $output, $returnCode);
             
             return $returnCode === 0 && Storage::exists($docxPath);
 

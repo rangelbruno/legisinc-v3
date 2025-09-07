@@ -512,6 +512,13 @@
                                             <span class="badge badge-light-info badge-sm ms-auto">NOVO</span>
                                         </a>
                                     </div>
+                                    <div class="menu-item">
+                                        <a class="menu-link {{ request()->routeIs('admin.module-generator.*') ? 'active' : '' }}" href="{{ route('admin.module-generator.index') }}">
+                                            <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                            <span class="menu-title">Gerador de Módulos</span>
+                                            <span class="badge badge-light-primary badge-sm ms-auto">NOVO</span>
+                                        </a>
+                                    </div>
                                 </div>
                             </div>
                             @endif

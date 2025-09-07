@@ -388,47 +388,22 @@ class ProposicaoController extends Controller implements HasMiddleware
 
             $modelosArray = [];
 
-            // PRIORITÁRIO: Verificar se deve usar template universal (conforme CLAUDE.md)
-            if ($this->templateUniversalService->deveUsarTemplateUniversal($tipoProposicao)) {
-                // Buscar template universal
-                $templateUniversal = \App\Models\TemplateUniversal::where('ativo', true)->first();
-                
-                if ($templateUniversal) {
-                    $modelosArray[] = [
-                        'id' => 'template_universal_' . $templateUniversal->id,
-                        'nome' => $tipoProposicao->nome . ' - Template Universal',
-                        'descricao' => 'Template universal configurado para ' . $tipoProposicao->nome,
-                        'is_template' => true,
-                        'template_id' => 'universal_' . $templateUniversal->id,
-                        'document_key' => $templateUniversal->document_key ?? null,
-                        'arquivo_path' => $templateUniversal->arquivo_path ?? null,
-                        'is_universal' => true,
-                    ];
-                }
-            }
-
-            // FALLBACK: Se não usar template universal, buscar templates específicos
-            if (empty($modelosArray)) {
-                $templates = \App\Models\TipoProposicaoTemplate::where('tipo_proposicao_id', $tipoProposicao->id)
-                    ->where('ativo', true)
-                    ->get();
-
-                foreach ($templates as $template) {
-                    $modelosArray[] = [
-                        'id' => 'template_' . $template->id,
-                        'nome' => $tipoProposicao->nome . ' - Template #' . $template->id,
-                        'descricao' => 'Template específico para ' . $tipoProposicao->nome,
-                        'is_template' => true,
-                        'template_id' => $template->id,
-                        'document_key' => $template->document_key,
-                        'arquivo_path' => $template->arquivo_path,
-                        'is_universal' => false,
-                    ];
-                }
-            }
-
-            // ÚLTIMO RECURSO: Opção básica se nenhum template existe
-            if (empty($modelosArray)) {
+            // SEMPRE usar apenas template universal - removendo templates específicos
+            $templateUniversal = \App\Models\TemplateUniversal::where('ativo', true)->first();
+            
+            if ($templateUniversal) {
+                $modelosArray[] = [
+                    'id' => 'template_universal_' . $templateUniversal->id,
+                    'nome' => $tipoProposicao->nome . ' - Template Universal',
+                    'descricao' => 'Template universal configurado para ' . $tipoProposicao->nome,
+                    'is_template' => true,
+                    'template_id' => 'universal_' . $templateUniversal->id,
+                    'document_key' => $templateUniversal->document_key ?? null,
+                    'arquivo_path' => $templateUniversal->arquivo_path ?? null,
+                    'is_universal' => true,
+                ];
+            } else {
+                // Se não houver template universal, criar opção básica
                 $modelosArray[] = [
                     'id' => 'template_basic',
                     'nome' => $tipoProposicao->nome . ' - Documento Básico',
@@ -4884,9 +4859,28 @@ class ProposicaoController extends Controller implements HasMiddleware
         }
 
         try {
+            Log::info('DEBUG: servePDF iniciado', [
+                'proposicao_id' => $proposicao->id,
+                'status' => $proposicao->status,
+                'arquivo_path' => $proposicao->arquivo_path
+            ]);
+            
             // 1. Usar precedência clara para encontrar PDF oficial
             $relativePath = $this->caminhoPdfOficial($proposicao);
+            
+            Log::info('DEBUG: caminhoPdfOficial retornou', [
+                'proposicao_id' => $proposicao->id,
+                'relative_path' => $relativePath ? $relativePath : 'NULL'
+            ]);
+            
             if ($relativePath) {
+                Log::info('DEBUG: Arquivo PDF encontrado, verificando timestamps', [
+                    'proposicao_id' => $proposicao->id,
+                    'pdf_path' => $relativePath,
+                    'pdf_existe' => Storage::exists($relativePath),
+                    'rtf_path' => $proposicao->arquivo_path,
+                    'rtf_existe' => $proposicao->arquivo_path ? Storage::exists($proposicao->arquivo_path) : false
+                ]);
                 // CRÍTICO: Verificar se RTF foi modificado após PDF
                 $pdfEstaDesatualizado = false;
                 if ($proposicao->arquivo_path && Storage::exists($proposicao->arquivo_path)) {
@@ -4911,10 +4905,21 @@ class ProposicaoController extends Controller implements HasMiddleware
                 
                 // Se PDF está desatualizado, não servir - forçar regeneração abaixo
                 if (!$pdfEstaDesatualizado) {
+                    Log::info('DEBUG: PDF não está desatualizado, servindo arquivo', [
+                        'proposicao_id' => $proposicao->id,
+                        'pdf_path' => $relativePath
+                    ]);
+                    
                     // Determinar caminho absoluto correto
                     $absolutePath = Storage::exists($relativePath) 
                         ? Storage::path($relativePath)
                         : storage_path('app/' . ltrim($relativePath, '/'));
+                    
+                    Log::info('DEBUG: Caminho absoluto determinado', [
+                        'proposicao_id' => $proposicao->id,
+                        'absolute_path' => $absolutePath,
+                        'file_exists' => file_exists($absolutePath)
+                    ]);
                     
                     // Add ETag based on RTF file timestamp to force refresh when content changes
                     $etag = 'pdf-' . $proposicao->id . '-' . time();
@@ -4924,6 +4929,12 @@ class ProposicaoController extends Controller implements HasMiddleware
                             $etag = 'pdf-' . $proposicao->id . '-' . filemtime($rtfPath);
                         }
                     }
+                    
+                    Log::info('DEBUG: Servindo arquivo PDF', [
+                        'proposicao_id' => $proposicao->id,
+                        'absolute_path' => $absolutePath,
+                        'file_size' => file_exists($absolutePath) ? filesize($absolutePath) : 'FILE_NOT_EXISTS'
+                    ]);
                     
                     return response()->file($absolutePath, [
                         'Content-Type' => 'application/pdf',
@@ -4970,6 +4981,37 @@ class ProposicaoController extends Controller implements HasMiddleware
                     'status' => $proposicao->status,
                     'arquivo_path' => $proposicao->arquivo_path
                 ]);
+                
+                // CRÍTICO: Usar mesma estratégia que funciona na assinatura digital
+                // Verificar arquivo_path do banco primeiro (mesma lógica de encontrarArquivoMaisRecente)
+                if (!empty($proposicao->arquivo_path) && Storage::exists($proposicao->arquivo_path)) {
+                    Log::info('Arquivo RTF encontrado - forçando regeneração PDF', [
+                        'proposicao_id' => $proposicao->id,
+                        'arquivo_path' => $proposicao->arquivo_path
+                    ]);
+                    
+                    // Tentar gerar PDF do OnlyOffice
+                    $pdfGerado = $this->gerarPDFSobDemanda($proposicao);
+                    
+                    if ($pdfGerado && Storage::exists($pdfGerado)) {
+                        $absolutePath = Storage::path($pdfGerado);
+                        
+                        Log::info('PDF oficial gerado com sucesso via estratégia melhorada', [
+                            'proposicao_id' => $proposicao->id,
+                            'pdf_path' => $pdfGerado
+                        ]);
+                        
+                        return response()->file($absolutePath, [
+                            'Content-Type' => 'application/pdf',
+                            'Content-Disposition' => 'inline; filename="proposicao_' . $proposicao->id . '.pdf"',
+                            'Cache-Control' => 'no-cache, no-store, must-revalidate',
+                            'Pragma' => 'no-cache',
+                            'Expires' => '0',
+                            'X-PDF-Generator' => 'onlyoffice-improved',
+                            'X-PDF-Source' => basename($pdfGerado)
+                        ]);
+                    }
+                }
                 
                 // CRÍTICO: Verificar se RTF foi modificado após último PDF gerado
                 $forcarRegeneracao = false;
@@ -6952,7 +6994,13 @@ class ProposicaoController extends Controller implements HasMiddleware
         ];
 
         // Procurar o primeiro candidato válido
-        foreach ($candidatos as $relativePath) {
+        foreach ($candidatos as $index => $relativePath) {
+            Log::info("DEBUG: Testando candidato {$index}", [
+                'proposicao_id' => $proposicao->id,
+                'candidato' => $relativePath ?? 'NULL',
+                'tem_valor' => $relativePath ? 'SIM' : 'NAO'
+            ]);
+            
             if ($relativePath && !$isBad($relativePath)) {
                 Log::info('PDF oficial selecionado', [
                     'proposicao_id' => $proposicao->id,
@@ -6960,6 +7008,11 @@ class ProposicaoController extends Controller implements HasMiddleware
                     'tipo' => $this->identificarTipoPdf($relativePath)
                 ]);
                 return $relativePath;
+            } elseif ($relativePath) {
+                Log::info("DEBUG: Candidato {$index} rejeitado por isBad", [
+                    'proposicao_id' => $proposicao->id,
+                    'candidato' => $relativePath
+                ]);
             }
         }
 
@@ -6981,10 +7034,23 @@ class ProposicaoController extends Controller implements HasMiddleware
         $onlyOfficePattern = 'private/proposicoes/pdfs/' . $proposicao->id . '/proposicao_' . $proposicao->id . '_onlyoffice_*.pdf';
         $files = Storage::files('proposicoes/pdfs/' . $proposicao->id);
         
+        Log::info('DEBUG: Procurando arquivos OnlyOffice', [
+            'proposicao_id' => $proposicao->id,
+            'diretorio_buscado' => 'proposicoes/pdfs/' . $proposicao->id,
+            'arquivos_encontrados' => $files,
+            'total_arquivos' => count($files)
+        ]);
+        
         // Filtrar arquivos OnlyOffice
         $onlyOfficeFiles = array_filter($files, function($file) {
             return str_contains($file, '_onlyoffice_') && str_ends_with($file, '.pdf');
         });
+        
+        Log::info('DEBUG: Arquivos OnlyOffice filtrados', [
+            'proposicao_id' => $proposicao->id,
+            'arquivos_onlyoffice' => $onlyOfficeFiles,
+            'total_onlyoffice' => count($onlyOfficeFiles)
+        ]);
         
         if (!empty($onlyOfficeFiles)) {
             // Ordenar por timestamp no nome (mais recente primeiro)
@@ -6995,6 +7061,12 @@ class ProposicaoController extends Controller implements HasMiddleware
             });
             
             $maisRecente = $onlyOfficeFiles[0];
+            Log::info('DEBUG: Arquivo OnlyOffice mais recente selecionado', [
+                'proposicao_id' => $proposicao->id,
+                'arquivo_selecionado' => $maisRecente,
+                'existe' => Storage::exists($maisRecente)
+            ]);
+            
             if (Storage::exists($maisRecente)) {
                 return $maisRecente;
             }

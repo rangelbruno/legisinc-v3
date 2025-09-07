@@ -54,16 +54,79 @@ class PDFStampingService
             // Save the stamped PDF using Laravel Storage
             $pdfContent = $pdf->Output('', 'S'); // Get as string
             
+            if (empty($pdfContent)) {
+                throw new \Exception('Failed to generate PDF content from FPDI');
+            }
+            
             // Convert absolute path to relative path for Storage
-            $relativePath = str_replace(storage_path('app/'), '', $outputPath);
+            $storagePath = storage_path('app/');
+            if (strpos($outputPath, $storagePath) === 0) {
+                // Remove the storage/app/ prefix
+                $relativePath = substr($outputPath, strlen($storagePath));
+                // Remove 'private/' prefix if it exists (Storage adds it automatically for private disk)
+                if (strpos($relativePath, 'private/') === 0) {
+                    $relativePath = substr($relativePath, 8); // Remove 'private/'
+                }
+            } else {
+                // If outputPath doesn't start with storage path, make it relative
+                $relativePath = str_replace(storage_path('app/private/'), '', $outputPath);
+            }
+            
+            // Ensure directory exists
+            $directory = dirname($relativePath);
+            if (!Storage::exists($directory)) {
+                Storage::makeDirectory($directory);
+            }
             
             // Save using Laravel Storage
-            if (!Storage::put($relativePath, $pdfContent)) {
+            Log::info('Attempting to save PDF', [
+                'relative_path' => $relativePath,
+                'content_size' => strlen($pdfContent),
+                'directory' => $directory,
+                'directory_exists' => Storage::exists($directory)
+            ]);
+            
+            $result = Storage::put($relativePath, $pdfContent);
+            
+            Log::info('Storage::put result', [
+                'result' => $result,
+                'relative_path' => $relativePath,
+                'file_exists_after_put' => Storage::exists($relativePath)
+            ]);
+            
+            if (!$result) {
+                Log::error('Storage::put failed', [
+                    'relative_path' => $relativePath,
+                    'last_error' => error_get_last()
+                ]);
                 throw new \Exception('Failed to save signed PDF');
             }
+            
+            // CRÍTICO: Definir ownership correto para PDFs assinados (www-data:www-data)
+            // Use Storage::path para obter o caminho absoluto correto
+            $absoluteSignedPath = Storage::path($relativePath);
+            
+            // Aguardar um momento para garantir que o arquivo foi escrito
+            usleep(100000); // 100ms
+            
+            if (file_exists($absoluteSignedPath)) {
+                // Não podemos mudar ownership no container, apenas permissões
+                @chmod($absoluteSignedPath, 0666);
+                Log::info('Permissões ajustadas para PDF assinado', [
+                    'path' => $absoluteSignedPath,
+                    'exists' => file_exists($absoluteSignedPath),
+                    'permissions' => decoct(fileperms($absoluteSignedPath) & 0777)
+                ]);
+            } else {
+                Log::warning('Arquivo não encontrado após Storage::put', [
+                    'absolute_path' => $absoluteSignedPath,
+                    'relative_path' => $relativePath,
+                    'storage_exists' => Storage::exists($relativePath)
+                ]);
+            }
 
-            if (!Storage::exists($relativePath)) {
-                throw new \Exception('Failed to create signed PDF');
+            if (!Storage::exists($relativePath) && !file_exists($absoluteSignedPath)) {
+                throw new \Exception('Failed to create signed PDF - file does not exist after save');
             }
 
             Log::info('Signature stamp applied successfully', [
@@ -85,6 +148,10 @@ class PDFStampingService
 
     /**
      * Apply protocol number stamp to existing PDF
+     * 
+     * NOTE: This method is now primarily a FALLBACK. The preferred approach is to use 
+     * ProtocoloRTFService to replace variables in RTF templates before PDF generation.
+     * This visual stamping should only be used when RTF variable replacement fails.
      */
     public function applyProtocolStamp(string $existingPdfPath, string $protocolNumber, array $additionalData = []): ?string
     {
@@ -129,12 +196,45 @@ class PDFStampingService
             // Save the stamped PDF using Laravel Storage
             $pdfContent = $pdf->Output('', 'S'); // Get as string
             
+            if (empty($pdfContent)) {
+                throw new \Exception('Failed to generate PDF content from FPDI');
+            }
+            
             // Convert absolute path to relative path for Storage
-            $relativePath = str_replace(storage_path('app/'), '', $outputPath);
+            $storagePath = storage_path('app/');
+            if (strpos($outputPath, $storagePath) === 0) {
+                // Remove the storage/app/ prefix
+                $relativePath = substr($outputPath, strlen($storagePath));
+                // Remove 'private/' prefix if it exists (Storage adds it automatically for private disk)
+                if (strpos($relativePath, 'private/') === 0) {
+                    $relativePath = substr($relativePath, 8); // Remove 'private/'
+                }
+            } else {
+                // If outputPath doesn't start with storage path, make it relative
+                $relativePath = str_replace(storage_path('app/private/'), '', $outputPath);
+            }
+            
+            // Ensure directory exists
+            $directory = dirname($relativePath);
+            if (!Storage::exists($directory)) {
+                Storage::makeDirectory($directory);
+            }
             
             // Save using Laravel Storage
             if (!Storage::put($relativePath, $pdfContent)) {
                 throw new \Exception('Failed to save protocoled PDF');
+            }
+            
+            // CRÍTICO: Definir ownership correto para PDFs protocolados (www-data:www-data)
+            // Use Storage::path para obter o caminho absoluto correto
+            $absoluteProtocoledPath = Storage::path($relativePath);
+            if (file_exists($absoluteProtocoledPath)) {
+                // Não podemos mudar ownership no container, apenas permissões
+                @chmod($absoluteProtocoledPath, 0666);
+                Log::info('Permissões ajustadas para PDF protocolado', [
+                    'path' => $absoluteProtocoledPath,
+                    'permissions' => decoct(fileperms($absoluteProtocoledPath) & 0777)
+                ]);
             }
 
             if (!Storage::exists($relativePath)) {
@@ -250,31 +350,59 @@ class PDFStampingService
     private function addProtocolStampToPage(Fpdi $pdf, string $protocolNumber, array $additionalData, array $pageSize): void
     {
         // Set font for protocol number
-        $pdf->SetFont('Arial', 'B', 12);
+        $pdf->SetFont('Arial', 'B', 10);
         $pdf->SetTextColor(0, 0, 0);
 
-        // Position protocol number at top-right area (common location for protocol numbers)
-        $x = $pageSize['width'] - 120;
-        $y = 30;
+        // Position protocol stamp at top-right corner (não sobrepor o título)
+        $x = $pageSize['width'] - 80;
+        $y = 10; // Bem no topo da página
 
-        // Draw white background to cover any placeholder text
-        $pdf->SetFillColor(255, 255, 255);
-        $pdf->Rect($x - 5, $y - 2, 110, 20, 'F');
+        // Draw a subtle border box for the protocol
+        $pdf->SetDrawColor(200, 200, 200);
+        $pdf->SetFillColor(250, 250, 250);
+        $pdf->Rect($x - 5, $y - 2, 75, 15, 'FD');
 
-        // Add protocol number
+        // Add protocol label and number
+        $pdf->SetFont('Arial', '', 8);
         $pdf->SetXY($x, $y);
-        $pdf->Cell(100, 8, "Protocolo: {$protocolNumber}", 0, 1, 'C');
+        $pdf->Cell(65, 4, "PROTOCOLO", 0, 1, 'C');
         
-        // Add protocol date if available
+        // Add protocol number
+        $pdf->SetFont('Arial', 'B', 9);
+        $pdf->SetXY($x, $y + 4);
+        // Formatar o número do protocolo
+        $numeroFormatado = $this->formatarNumeroProtocolo($protocolNumber);
+        $pdf->Cell(65, 4, $numeroFormatado, 0, 1, 'C');
+        
+        // Add protocol date if available (smaller, below)
         if (isset($additionalData['data_protocolo'])) {
-            $pdf->SetFont('Arial', '', 10);
-            $pdf->SetXY($x, $y + 10);
-            $pdf->Cell(100, 6, $additionalData['data_protocolo'], 0, 1, 'C');
+            $pdf->SetFont('Arial', '', 7);
+            $pdf->SetXY($x, $y + 8);
+            $pdf->Cell(65, 3, $additionalData['data_protocolo'], 0, 1, 'C');
         }
 
-        // Alternative: Try to replace [AGUARDANDO PROTOCOLO] placeholder
-        // Note: FPDI doesn't support text replacement in existing PDFs directly
-        // This is a visual overlay approach
+        // IMPORTANTE: Não cobrir o título do documento
+        // O carimbo fica discreto no canto superior direito
+    }
+    
+    /**
+     * Formatar número de protocolo para exibição
+     */
+    private function formatarNumeroProtocolo(string $protocolNumber): string
+    {
+        // Remove prefixos longos como "projeto_lei_ordinaria/2025/"
+        // e mantém apenas o número essencial
+        if (strpos($protocolNumber, '/') !== false) {
+            $partes = explode('/', $protocolNumber);
+            // Pegar ano e número
+            if (count($partes) >= 2) {
+                $ano = $partes[count($partes) - 2];
+                $numero = $partes[count($partes) - 1];
+                return "{$numero}/{$ano}";
+            }
+        }
+        
+        return $protocolNumber;
     }
 
     /**

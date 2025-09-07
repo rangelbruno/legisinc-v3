@@ -266,28 +266,7 @@ RTF;
      */
     public function deveUsarTemplateUniversal(TipoProposicao $tipo): bool
     {
-        $template = TemplateUniversal::getDefault();
-
-        // Se não há template universal padrão ativo, usar sistema antigo
-        if (! $template || ! $template->ativo) {
-            return false;
-        }
-
-        // Verificar se o tipo específico tem um template customizado mais recente
-        $templateEspecifico = $tipo->template;
-        if ($templateEspecifico &&
-            $templateEspecifico->ativo &&
-            $templateEspecifico->updated_at > $template->updated_at) {
-
-            Log::info('Usando template específico em vez do universal', [
-                'tipo_id' => $tipo->id,
-                'template_especifico' => $templateEspecifico->updated_at,
-                'template_universal' => $template->updated_at,
-            ]);
-
-            return false;
-        }
-
+        // SEMPRE usar template universal - removendo lógica de templates específicos
         return true;
     }
 
