@@ -969,6 +969,8 @@ Route::prefix('proposicoes')->name('proposicoes.')->middleware(['auth', 'check.s
     Route::get('/limpar-sessao-teste', [App\Http\Controllers\ProposicaoController::class, 'limparSessaoTeste'])->name('limpar-sessao-teste'); // Temporário para desenvolvimento
     Route::get('/{proposicao}/status', [App\Http\Controllers\ProposicaoController::class, 'statusTramitacao'])->name('status-tramitacao');
     Route::get('/notificacoes', [App\Http\Controllers\ProposicaoController::class, 'buscarNotificacoes'])->name('notificacoes');
+    Route::get('/{proposicao}/pdf-debug', [App\Http\Controllers\ProposicaoController::class, 'debugPDF'])->name('debug-pdf');
+    Route::get('/{proposicao}/pdf-viewer', [App\Http\Controllers\ProposicaoController::class, 'viewPDFWithDebug'])->name('pdf-viewer');
     Route::get('/{proposicao}/pdf', [App\Http\Controllers\ProposicaoController::class, 'servePDF'])->name('serve-pdf');
 
     // ===== ANEXOS =====

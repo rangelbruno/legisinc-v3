@@ -1,9 +1,17 @@
 @if(App\Helpers\DebugHelper::isDebugLoggerActive())
 <script>
-    // Componente Vue para Debug Logger
-    const { createApp } = Vue;
+    // Encapsular em try-catch para evitar quebrar outras funcionalidades
+    try {
+        
+    // Verificar se Vue está disponível e evitar redeclaração
+    if (typeof Vue === 'undefined') {
+        console.error('Debug Logger: Vue.js não está carregado');
+    } else if (window.debugLoggerApp) {
+        console.log('Debug Logger: Componente já inicializado, pulando redeclaração');
+    } else {
+        // Componente Vue para Debug Logger (global para evitar conflitos)
     
-    const UserActionLogger = {
+    window.UserActionLogger = {
         template: `
             <div class="debug-logger-container">
                 <div v-if="isVisible" class="debug-panel">
@@ -32,6 +40,9 @@
                                 @{{ isRecording ? '🔴 Gravando' : '⚫ Parado' }}
                             </span>
                             <span class="badge badge-info">@{{ actions.length }} ações</span>
+                            <span v-if="sessionId" class="badge badge-warning" :title="'Sessão: ' + sessionId">
+                                📱 Persistente
+                            </span>
                         </div>
                         
                         <div class="debug-filters" v-if="actions.length > 0">
@@ -72,8 +83,19 @@
         },
         mounted() {
             console.log('Debug Logger: Componente Vue montado');
+            this.loadPersistedState();
             this.setupEventListeners();
             this.checkDebugStatus();
+            this.setupPeriodicCheck();
+            this.setupPageChangeDetection();
+            
+            // Log de inicialização se estiver gravando
+            if (this.isRecording) {
+                this.logAction('system', 'Debug Logger reinicializado na nova página', { 
+                    url: location.href,
+                    timestamp: new Date().toISOString()
+                });
+            }
         },
         computed: {
             filteredActions() {
@@ -84,18 +106,189 @@
                 return [...new Set(this.actions.map(action => action.type))];
             }
         },
+        watch: {
+            // Observar mudanças e persistir automaticamente
+            isRecording(newVal, oldVal) {
+                if (newVal !== oldVal) {
+                    this.persistState();
+                }
+            },
+            isVisible(newVal, oldVal) {
+                if (newVal !== oldVal) {
+                    this.persistState();
+                }
+            },
+            sessionId(newVal, oldVal) {
+                if (newVal !== oldVal) {
+                    this.persistState();
+                }
+            }
+        },
         methods: {
+            loadPersistedState() {
+                // Carregar estado persistido do localStorage
+                const persistedState = localStorage.getItem('debugLogger_state');
+                if (persistedState) {
+                    try {
+                        const state = JSON.parse(persistedState);
+                        this.isVisible = state.isVisible || false;
+                        this.isMinimized = state.isMinimized || false;
+                        this.isRecording = state.isRecording || false;
+                        this.sessionId = state.sessionId || null;
+                        console.log('Debug Logger: Estado carregado do localStorage', state);
+                    } catch (e) {
+                        console.warn('Debug Logger: Erro ao carregar estado persistido', e);
+                    }
+                }
+                
+                // Carregar logs persistidos
+                this.loadPersistedLogs();
+            },
+            loadPersistedLogs() {
+                if (!this.sessionId) return;
+                
+                const persistedLogs = localStorage.getItem(`debugLogger_logs_${this.sessionId}`);
+                if (persistedLogs) {
+                    try {
+                        const logs = JSON.parse(persistedLogs);
+                        this.actions = logs;
+                        console.log(`Debug Logger: ${logs.length} logs carregados do localStorage`);
+                    } catch (e) {
+                        console.warn('Debug Logger: Erro ao carregar logs persistidos', e);
+                        this.actions = [];
+                    }
+                } else {
+                    this.actions = [];
+                }
+            },
+            persistState() {
+                // Salvar estado no localStorage
+                const state = {
+                    isVisible: this.isVisible,
+                    isMinimized: this.isMinimized,
+                    isRecording: this.isRecording,
+                    sessionId: this.sessionId,
+                    lastUpdate: new Date().toISOString()
+                };
+                localStorage.setItem('debugLogger_state', JSON.stringify(state));
+            },
+            persistLogs() {
+                // Salvar logs no localStorage (associados ao sessionId)
+                if (this.sessionId && this.actions.length > 0) {
+                    try {
+                        localStorage.setItem(`debugLogger_logs_${this.sessionId}`, JSON.stringify(this.actions));
+                    } catch (e) {
+                        console.warn('Debug Logger: Erro ao salvar logs no localStorage', e);
+                        // Se localStorage estiver cheio, remover logs mais antigos
+                        this.cleanupOldLogs();
+                    }
+                }
+            },
+            cleanupOldLogs() {
+                // Limpar logs antigos do localStorage se necessário
+                const keys = Object.keys(localStorage);
+                const logKeys = keys.filter(key => key.startsWith('debugLogger_logs_'));
+                
+                // Se há muitas sessões de log, remover as mais antigas
+                if (logKeys.length > 5) {
+                    logKeys.sort().slice(0, logKeys.length - 5).forEach(key => {
+                        localStorage.removeItem(key);
+                    });
+                }
+            },
+            setupPeriodicCheck() {
+                // Verificar status a cada 10 segundos para manter sincronizado (menos frequente)
+                setInterval(() => {
+                    if (this.isRecording) {
+                        this.checkDebugStatus();
+                    }
+                }, 10000);
+                
+                // Verificação adicional mais espaçada para detectar mudanças não capturadas
+                setInterval(() => {
+                    if (this.isRecording) {
+                        console.log('Debug Logger: Verificação de saúde - ainda gravando');
+                    }
+                }, 30000);
+            },
+            setupPageChangeDetection() {
+                // Detectar mudanças de página e reconfigurar interceptadores
+                const self = this;
+                
+                // Detectar popstate (botão voltar/avançar)
+                window.addEventListener('popstate', () => {
+                    if (self.isRecording) {
+                        console.log('Debug Logger: Detectada mudança de página (popstate)');
+                        setTimeout(() => {
+                            self.reinitializeInterceptors();
+                        }, 100);
+                    }
+                });
+                
+                // Observar mudanças no DOM (para SPAs e carregamento dinâmico)
+                if (typeof MutationObserver !== 'undefined') {
+                    const observer = new MutationObserver((mutations) => {
+                        if (self.isRecording) {
+                            // Verificar se houve mudanças significativas no DOM
+                            let significantChange = false;
+                            mutations.forEach((mutation) => {
+                                if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+                                    for (let node of mutation.addedNodes) {
+                                        if (node.nodeType === 1 && (
+                                            node.tagName === 'MAIN' || 
+                                            node.className.includes('container') ||
+                                            node.className.includes('content')
+                                        )) {
+                                            significantChange = true;
+                                            break;
+                                        }
+                                    }
+                                }
+                            });
+                            
+                            if (significantChange) {
+                                console.log('Debug Logger: Detectada mudança significativa no DOM');
+                                setTimeout(() => {
+                                    self.reinitializeInterceptors();
+                                }, 100);
+                            }
+                        }
+                    });
+                    
+                    observer.observe(document.body, {
+                        childList: true,
+                        subtree: true
+                    });
+                }
+            },
+            reinitializeInterceptors() {
+                console.log('Debug Logger: Reinicializando interceptadores após mudança de página');
+                
+                // Resetar flags de interceptação
+                window.fetchIntercepted = false;
+                window.xhrIntercepted = false;
+                window.historyIntercepted = false;
+                
+                // Reconfigrar interceptadores
+                this.interceptFetch();
+                this.interceptXHR();
+                this.setupHistoryInterception();
+                this.setupDocumentListeners();
+            },
             show() {
                 this.isVisible = true;
+                this.persistState();
             },
             close() {
                 this.isVisible = false;
                 if (this.isRecording) {
                     this.stopRecording();
                 }
+                this.persistState();
             },
             minimize() {
                 this.isMinimized = !this.isMinimized;
+                this.persistState();
             },
             async toggleRecording() {
                 if (this.isRecording) {
@@ -109,7 +302,13 @@
                     const response = await axios.post('/debug/start');
                     this.isRecording = true;
                     this.sessionId = response.data.session_id;
+                    
+                    // Carregar logs existentes desta sessão (se houver)
+                    this.loadPersistedLogs();
+                    
                     this.logAction('system', 'Debug iniciado', { sessionId: this.sessionId });
+                    this.persistState();
+                    console.log('Debug Logger: Gravação iniciada', response.data);
                 } catch (error) {
                     console.error('Erro ao iniciar debug:', error);
                 }
@@ -118,7 +317,10 @@
                 try {
                     await axios.post('/debug/stop');
                     this.isRecording = false;
+                    this.sessionId = null;
                     this.logAction('system', 'Debug parado');
+                    this.persistState();
+                    console.log('Debug Logger: Gravação parada');
                 } catch (error) {
                     console.error('Erro ao parar debug:', error);
                 }
@@ -126,22 +328,53 @@
             async checkDebugStatus() {
                 try {
                     const response = await axios.get('/debug/status');
-                    this.isRecording = response.data.active;
-                    this.sessionId = response.data.session_id;
+                    const serverActive = response.data.active;
+                    const serverSessionId = response.data.session_id;
+                    
+                    // Sincronizar com o servidor apenas se houver discrepância
+                    if (this.isRecording !== serverActive || this.sessionId !== serverSessionId) {
+                        console.log('Debug Logger: Sincronizando com servidor', {
+                            local: { isRecording: this.isRecording, sessionId: this.sessionId },
+                            server: { active: serverActive, sessionId: serverSessionId }
+                        });
+                        
+                        // Se sessionId mudou, carregar logs da nova sessão
+                        if (this.sessionId !== serverSessionId) {
+                            this.sessionId = serverSessionId;
+                            this.loadPersistedLogs();
+                        }
+                        
+                        this.isRecording = serverActive;
+                        this.persistState();
+                        
+                        if (serverActive && !this.isVisible) {
+                            // Se debug está ativo no servidor mas painel está oculto, mostrar
+                            this.isVisible = true;
+                            this.persistState();
+                        }
+                    }
                 } catch (error) {
                     console.error('Erro ao verificar status:', error);
                 }
             },
             setupEventListeners() {
+                this.setupDocumentListeners();
+                this.setupHistoryInterception();
+                this.interceptFetch();
+                this.interceptXHR();
+            },
+            setupDocumentListeners() {
+                // Eventos de documento que precisam ser reconfigurados
+                document.removeEventListener('click', this.handleClick);
+                document.removeEventListener('submit', this.handleFormSubmit);
+                
+                document.addEventListener('click', this.handleClick.bind(this));
+                document.addEventListener('submit', this.handleFormSubmit.bind(this));
+            },
+            setupHistoryInterception() {
                 const self = this;
                 
-                // Clicks - usar bind para manter contexto
-                document.addEventListener('click', this.handleClick.bind(this));
-                
-                // Form submissions
-                document.addEventListener('submit', this.handleFormSubmit.bind(this));
-                
-                // Navigation
+                // Navigation - só interceptar se ainda não foi interceptado
                 if (!window.historyIntercepted) {
                     window.historyIntercepted = true;
                     const originalPushState = history.pushState;
@@ -161,10 +394,6 @@
                         }
                     };
                 }
-                
-                // AJAX requests intercept
-                this.interceptFetch();
-                this.interceptXHR();
             },
             handleClick(event) {
                 if (!this.isRecording) return;
@@ -210,6 +439,12 @@
                     if (self.isRecording) {
                         try {
                             const url = typeof args[0] === 'string' ? args[0] : args[0].url;
+                            
+                            // Ignorar requisições internas do debug logger
+                            if (url && url.includes('/debug/')) {
+                                return response;
+                            }
+                            
                             const method = args[1]?.method || 'GET';
                             const isError = response.status >= 400;
                             
@@ -247,6 +482,11 @@
                     this.addEventListener('load', function() {
                         if (self.isRecording) {
                             try {
+                                // Ignorar requisições internas do debug logger
+                                if (xhr._debugUrl && xhr._debugUrl.includes('/debug/')) {
+                                    return;
+                                }
+                                
                                 const isError = xhr.status >= 400;
                                 self.logAction('ajax', `Requisição XHR: ${xhr._debugMethod} ${xhr._debugUrl}`, {
                                     url: xhr._debugUrl,
@@ -267,20 +507,25 @@
                 
                 const action = {
                     time: new Date().toLocaleTimeString(),
+                    timestamp: new Date().toISOString(),
                     type,
                     details,
                     url: extra.url || location.href,
                     method: extra.method || 'GET',
                     isError: extra.isError || false,
+                    sessionId: this.sessionId,
                     ...extra
                 };
                 
                 this.actions.push(action);
                 
-                // Manter apenas últimas 100 ações
-                if (this.actions.length > 100) {
-                    this.actions = this.actions.slice(-100);
+                // Manter apenas últimas 200 ações (aumentei o limite)
+                if (this.actions.length > 200) {
+                    this.actions = this.actions.slice(-200);
                 }
+                
+                // Persistir logs automaticamente após cada nova ação
+                this.persistLogs();
             },
             copyLogs() {
                 const logs = this.actions.map((action, index) => {
@@ -292,16 +537,62 @@
                 });
             },
             clearLogs() {
-                this.actions = [];
+                if (confirm('Deseja limpar todos os logs desta sessão de debug? Esta ação não pode ser desfeita.')) {
+                    this.actions = [];
+                    // Também remover do localStorage
+                    if (this.sessionId) {
+                        localStorage.removeItem(`debugLogger_logs_${this.sessionId}`);
+                    }
+                    console.log('Debug Logger: Logs limpos completamente');
+                }
+            },
+            clearPersistedState() {
+                localStorage.removeItem('debugLogger_state');
+                // Também limpar logs da sessão atual se existir
+                if (this.sessionId) {
+                    localStorage.removeItem(`debugLogger_logs_${this.sessionId}`);
+                }
+                console.log('Debug Logger: Estado e logs persistidos limpos');
+            },
+            clearAllPersistedData() {
+                // Limpar todos os dados de debug do localStorage
+                const keys = Object.keys(localStorage);
+                const debugKeys = keys.filter(key => key.startsWith('debugLogger_'));
+                debugKeys.forEach(key => localStorage.removeItem(key));
+                console.log(`Debug Logger: ${debugKeys.length} chaves de dados limpos do localStorage`);
+            },
+            // Método público para reiniciar manualmente
+            forceReinitialize() {
+                console.log('Debug Logger: Reinicialização forçada');
+                this.reinitializeInterceptors();
+                this.checkDebugStatus();
             }
         }
     };
     
     // Variável global para controlar se já foi inicializado
     window.debugLoggerApp = null;
+    
+    // Função global para reinicializar debug logger manualmente
+    window.reinitializeDebugLogger = function() {
+        if (window.debugLoggerApp && window.debugLoggerApp._instance) {
+            window.debugLoggerApp._instance.proxy.forceReinitialize();
+        }
+    };
 
-    // Função fallback para inicializar debug
-    function initializeDebugLogger() {
+    } // Fim da condição de inicialização
+
+    // Funções sempre disponíveis
+    
+    // Função para verificar se componente está disponível  
+    window.isDebugLoggerAvailable = function() {
+        return typeof Vue !== 'undefined' && 
+               window.UserActionLogger && 
+               document.getElementById('debug-logger');
+    };
+    
+    // Função fallback para inicializar debug (sempre disponível)
+    window.initializeDebugLogger = function initializeDebugLogger() {
         // Se já foi inicializado, apenas mostrar o painel
         if (window.debugLoggerApp && window.debugLoggerApp._instance) {
             window.debugLoggerApp._instance.proxy.show();
@@ -311,12 +602,11 @@
         const fallback = document.getElementById('debug-fallback');
         const debugElement = document.getElementById('debug-logger');
         
-        if (debugElement && typeof Vue !== 'undefined') {
+        if (window.isDebugLoggerAvailable && window.isDebugLoggerAvailable()) {
             try {
-                const { createApp } = Vue;
                 // Limpar o elemento antes de montar
                 debugElement.innerHTML = '';
-                window.debugLoggerApp = createApp(UserActionLogger);
+                window.debugLoggerApp = Vue.createApp(window.UserActionLogger);
                 window.debugLoggerApp.mount('#debug-logger');
                 console.log('Debug Logger: Componente inicializado');
                 
@@ -329,9 +619,16 @@
                 if (fallback) fallback.style.display = 'block';
             }
         } else {
-            console.error('Debug Logger: Vue.js não carregado ou elemento não encontrado');
+            console.error('Debug Logger: Vue.js não carregado, componente não definido ou elemento não encontrado');
+            // Tentar novamente após um tempo
+            setTimeout(() => {
+                if (window.isDebugLoggerAvailable && window.isDebugLoggerAvailable() && !window.debugLoggerApp) {
+                    console.log('Debug Logger: Tentando inicializar novamente...');
+                    window.initializeDebugLogger();
+                }
+            }, 1000);
         }
-    }
+    };
 
     // Inicializar componente quando página carregar
     document.addEventListener('DOMContentLoaded', function() {
@@ -340,11 +637,10 @@
             const debugElement = document.getElementById('debug-logger');
             const fallback = document.getElementById('debug-fallback');
             
-            if (!window.debugLoggerApp && debugElement && typeof Vue !== 'undefined') {
+            if (!window.debugLoggerApp && window.isDebugLoggerAvailable && window.isDebugLoggerAvailable()) {
                 console.log('Debug Logger: Inicializando componente Vue.js');
                 try {
-                    const { createApp } = Vue;
-                    window.debugLoggerApp = createApp(UserActionLogger);
+                    window.debugLoggerApp = Vue.createApp(window.UserActionLogger);
                     window.debugLoggerApp.mount('#debug-logger');
                     console.log('Debug Logger: Componente inicializado com sucesso');
                     
@@ -357,11 +653,22 @@
                     if (fallback) fallback.style.display = 'block';
                 }
             } else if (!window.debugLoggerApp) {
-                console.log('Debug Logger: Vue.js não disponível, mantendo fallback');
+                console.log('Debug Logger: Vue.js não disponível ou componente não definido, mantendo fallback');
                 if (fallback) fallback.style.display = 'block';
             }
         }, 100);
     });
+    
+    } catch (debugLoggerError) {
+        console.error('Debug Logger: Erro crítico durante inicialização', debugLoggerError);
+        // Garantir que as funções básicas estejam disponíveis mesmo com erro
+        window.initializeDebugLogger = window.initializeDebugLogger || function() { 
+            console.warn('Debug Logger: Função fallback - componente não inicializado'); 
+        };
+        window.reinitializeDebugLogger = window.reinitializeDebugLogger || function() { 
+            console.warn('Debug Logger: Função fallback - componente não inicializado'); 
+        };
+    }
 </script>
 
 <style>

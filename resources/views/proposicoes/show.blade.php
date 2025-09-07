@@ -662,14 +662,24 @@
                             <!--begin::View PDF-->
                             <div v-if="proposicao.has_pdf">
                                 <a 
-                                    :href="'/proposicoes/' + proposicao.id + '/pdf'"
-                                    target="_blank"
-                                    class="btn btn-light-danger w-100 mb-3">
+                                    :href="'/proposicoes/' + proposicao.id + '/pdf-viewer'"
+                                    class="btn btn-light-danger w-100 mb-3"
+                                    @click="logPDFClick">
                                     <i class="ki-duotone ki-file-down fs-3 me-2">
                                         <span class="path1"></span>
                                         <span class="path2"></span>
                                     </i>
-                                    Visualizar PDF
+                                    Visualizar PDF (com Debug)
+                                </a>
+                                <a 
+                                    :href="'/proposicoes/' + proposicao.id + '/pdf'"
+                                    target="_blank"
+                                    class="btn btn-light-secondary w-100 mb-3">
+                                    <i class="ki-duotone ki-file fs-3 me-2">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                    </i>
+                                    PDF Direto (nova aba)
                                 </a>
                             </div>
                             <!--end::View PDF-->
@@ -1041,6 +1051,36 @@ createApp({
                 'Accept': 'application/json',
                 'Content-Type': 'application/json'
             };
+        },
+
+        logPDFClick() {
+            // Log específico para debug quando usuário clica para visualizar PDF
+            const proposicaoId = this.proposicao?.id || 'N/A';
+            const status = this.proposicao?.status || 'N/A';
+            const hasPdf = this.proposicao?.has_pdf || false;
+            
+            console.log('🔴 DEBUG PDF: Usuário clicou para visualizar PDF', {
+                proposicao_id: proposicaoId,
+                status: status,
+                has_pdf: hasPdf,
+                url: `/proposicoes/${proposicaoId}/pdf`,
+                timestamp: new Date().toISOString(),
+                user_action: 'click_visualizar_pdf'
+            });
+            
+            // Se debug logger estiver ativo, registrar ação também lá
+            if (window.debugLoggerApp && window.debugLoggerApp._instance) {
+                const debugInstance = window.debugLoggerApp._instance.proxy;
+                if (debugInstance.isRecording) {
+                    debugInstance.logAction('user_interaction', `Clique em "Visualizar PDF" - Proposição ${proposicaoId}`, {
+                        proposicao_id: proposicaoId,
+                        status: status,
+                        has_pdf: hasPdf,
+                        url: `/proposicoes/${proposicaoId}/pdf`,
+                        action_type: 'pdf_view_request'
+                    });
+                }
+            }
         },
 
         cleanProposicaoData() {

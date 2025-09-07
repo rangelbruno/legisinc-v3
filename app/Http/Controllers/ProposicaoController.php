@@ -4836,8 +4836,66 @@ class ProposicaoController extends Controller implements HasMiddleware
     /**
      * Servir arquivo PDF da proposição com controle de acesso
      */
+    public function viewPDFWithDebug(Proposicao $proposicao)
+    {
+        // Verificar permissões (mesmas que servePDF)
+        $user = Auth::user();
+        if (! $user->isLegislativo() && $proposicao->autor_id !== $user->id && ! $user->isAssessorJuridico() && ! $user->isProtocolo()) {
+            abort(403, 'Acesso negado.');
+        }
+
+        return view('proposicoes.pdf-viewer', [
+            'proposicao' => $proposicao
+        ]);
+    }
+
+    public function debugPDF(Proposicao $proposicao)
+    {
+        // Verificar permissões (mesmas que servePDF)
+        $user = Auth::user();
+        if (! $user->isLegislativo() && $proposicao->autor_id !== $user->id && ! $user->isAssessorJuridico() && ! $user->isProtocolo()) {
+            abort(403, 'Acesso negado.');
+        }
+
+        // Coletar informações de debug sobre o PDF
+        $debugInfo = [
+            'proposicao_id' => $proposicao->id,
+            'status' => $proposicao->status,
+            'autor_id' => $proposicao->autor_id,
+            'arquivo_path' => $proposicao->arquivo_path,
+            'arquivo_pdf_path' => $proposicao->arquivo_pdf_path,
+            'pdf_gerado_em' => $proposicao->pdf_gerado_em,
+            'has_arquivo' => $proposicao->arquivo_path && Storage::exists($proposicao->arquivo_path),
+            'has_pdf' => $proposicao->arquivo_pdf_path && Storage::exists($proposicao->arquivo_pdf_path),
+            'pdf_oficial_path' => $this->caminhoPdfOficial($proposicao),
+            'storage_files' => []
+        ];
+
+        // Verificar arquivos no storage relacionados à proposição
+        $proposicaoDir = "proposicoes/{$proposicao->id}";
+        if (Storage::exists($proposicaoDir)) {
+            $debugInfo['storage_files'] = Storage::files($proposicaoDir);
+        }
+
+        return view('proposicoes.debug-pdf', [
+            'proposicao' => $proposicao,
+            'debugInfo' => $debugInfo
+        ]);
+    }
+
     public function servePDF(Proposicao $proposicao)
     {
+        // Log de início de requisição PDF
+        Log::info('🔴 PDF REQUEST: Iniciando servePDF', [
+            'proposicao_id' => $proposicao->id,
+            'user_id' => Auth::id(),
+            'user_email' => Auth::user()->email,
+            'user_ip' => request()->ip(),
+            'user_agent' => request()->userAgent(),
+            'status' => $proposicao->status,
+            'timestamp' => now()->toISOString()
+        ]);
+
         // Verificar se o usuário tem permissão para ver este PDF
         $user = Auth::user();
 
@@ -4847,6 +4905,12 @@ class ProposicaoController extends Controller implements HasMiddleware
         // 3. Usuários com perfil jurídico
         // 4. Usuários do protocolo
         if (! $user->isLegislativo() && $proposicao->autor_id !== $user->id && ! $user->isAssessorJuridico() && ! $user->isProtocolo()) {
+            Log::warning('🔴 PDF REQUEST: Acesso negado por permissões', [
+                'proposicao_id' => $proposicao->id,
+                'user_id' => Auth::id(),
+                'user_roles' => Auth::user()->roles->pluck('name'),
+                'proposicao_autor_id' => $proposicao->autor_id
+            ]);
             abort(403, 'Acesso negado.');
         }
 
@@ -4905,9 +4969,10 @@ class ProposicaoController extends Controller implements HasMiddleware
                 
                 // Se PDF está desatualizado, não servir - forçar regeneração abaixo
                 if (!$pdfEstaDesatualizado) {
-                    Log::info('DEBUG: PDF não está desatualizado, servindo arquivo', [
+                    Log::info('🔴 PDF REQUEST: PDF não está desatualizado, servindo arquivo', [
                         'proposicao_id' => $proposicao->id,
-                        'pdf_path' => $relativePath
+                        'pdf_path' => $relativePath,
+                        'user_id' => Auth::id()
                     ]);
                     
                     // Determinar caminho absoluto correto
@@ -4934,6 +4999,14 @@ class ProposicaoController extends Controller implements HasMiddleware
                         'proposicao_id' => $proposicao->id,
                         'absolute_path' => $absolutePath,
                         'file_size' => file_exists($absolutePath) ? filesize($absolutePath) : 'FILE_NOT_EXISTS'
+                    ]);
+                    
+                    Log::info('🔴 PDF REQUEST: Servindo PDF com sucesso', [
+                        'proposicao_id' => $proposicao->id,
+                        'absolute_path' => $absolutePath,
+                        'file_exists' => file_exists($absolutePath),
+                        'user_id' => Auth::id(),
+                        'response_status' => 'success'
                     ]);
                     
                     return response()->file($absolutePath, [
@@ -5171,9 +5244,14 @@ class ProposicaoController extends Controller implements HasMiddleware
             return $this->gerarPDFBasicoComAviso($proposicao);
 
         } catch (\Exception $e) {
-            Log::error('Erro ao servir PDF', [
+            Log::error('🔴 PDF REQUEST: Erro crítico ao servir PDF', [
                 'proposicao_id' => $proposicao->id,
-                'error' => $e->getMessage()
+                'user_id' => Auth::id(),
+                'error' => $e->getMessage(),
+                'stack_trace' => $e->getTraceAsString(),
+                'status' => $proposicao->status,
+                'arquivo_path' => $proposicao->arquivo_path,
+                'arquivo_pdf_path' => $proposicao->arquivo_pdf_path
             ]);
 
             abort(500, 'Erro interno ao gerar PDF. Contate o suporte.');
