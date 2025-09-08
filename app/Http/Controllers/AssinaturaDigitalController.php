@@ -75,6 +75,30 @@ class AssinaturaDigitalController extends Controller
                 if (empty($request->senha_pfx) && empty($request->senha_certificado)) {
                     return back()->withErrors(['senha_certificado' => 'Senha é obrigatória para certificados PFX.']);
                 }
+                
+                // Validar senha do certificado PFX antecipadamente
+                if ($request->hasFile('arquivo_pfx')) {
+                    $arquivoPFX = $request->file('arquivo_pfx');
+                    $senhaPFX = $request->senha_pfx ?: $request->senha_certificado;
+                    
+                    // Salvar temporariamente para validação usando diretório temp existente
+                    $tempFileName = 'pfx_validation_' . time() . '_' . uniqid() . '.pfx';
+                    $tempPath = $arquivoPFX->storeAs('temp', $tempFileName);
+                    $fullTempPath = Storage::path($tempPath);
+                    
+                    // Validar se a senha está correta
+                    $assinaturaService = app(\App\Services\AssinaturaDigitalService::class);
+                    if (!$this->validarSenhaPFX($fullTempPath, $senhaPFX)) {
+                        // Remover arquivo temporário
+                        Storage::delete($tempPath);
+                        return back()->withErrors([
+                            'senha_certificado' => 'Senha do certificado PFX está incorreta. Verifique a senha e tente novamente.'
+                        ]);
+                    }
+                    
+                    // Remover arquivo temporário após validação
+                    Storage::delete($tempPath);
+                }
             }
             
             // Validação adicional para tipos que requerem senha
@@ -582,6 +606,79 @@ class AssinaturaDigitalController extends Controller
         
         if (file_exists($pdfGerado) && $pdfGerado !== $caminhoPdf) {
             rename($pdfGerado, $caminhoPdf);
+        }
+    }
+
+    /**
+     * Validar senha do certificado PFX
+     */
+    private function validarSenhaPFX(string $arquivoPFX, string $senha): bool
+    {
+        try {
+            if (!file_exists($arquivoPFX)) {
+                Log::error('Arquivo PFX não encontrado para validação', ['arquivo' => $arquivoPFX]);
+                return false;
+            }
+
+            // Ler conteúdo do certificado
+            $certificateData = file_get_contents($arquivoPFX);
+            if ($certificateData === false) {
+                Log::error('Erro ao ler arquivo PFX para validação');
+                return false;
+            }
+
+            $certificates = [];
+            
+            // Tentar abrir certificado com a senha fornecida
+            $resultado = openssl_pkcs12_read($certificateData, $certificates, $senha);
+            
+            if (!$resultado) {
+                // Log do erro OpenSSL
+                $opensslError = openssl_error_string();
+                Log::info('Validação de senha PFX falhou', [
+                    'arquivo' => basename($arquivoPFX),
+                    'senha_length' => strlen($senha),
+                    'openssl_error' => $opensslError
+                ]);
+                return false;
+            }
+
+            // Verificar se o certificado contém os dados necessários
+            if (!isset($certificates['cert']) || !isset($certificates['pkey'])) {
+                Log::error('Certificado PFX inválido - dados necessários não encontrados');
+                return false;
+            }
+
+            // Verificar validade do certificado
+            $certInfo = openssl_x509_parse($certificates['cert']);
+            if (!$certInfo) {
+                Log::error('Erro ao analisar certificado X.509');
+                return false;
+            }
+
+            // Verificar se não expirou
+            $validTo = $certInfo['validTo_time_t'];
+            if ($validTo < time()) {
+                Log::error('Certificado PFX expirado', [
+                    'valido_ate' => date('d/m/Y H:i:s', $validTo)
+                ]);
+                return false;
+            }
+
+            Log::info('Validação de senha PFX bem-sucedida', [
+                'arquivo' => basename($arquivoPFX),
+                'subject' => $certInfo['subject']['CN'] ?? 'N/A',
+                'valido_ate' => date('d/m/Y H:i:s', $validTo)
+            ]);
+
+            return true;
+
+        } catch (\Exception $e) {
+            Log::error('Erro na validação de senha PFX: ' . $e->getMessage(), [
+                'arquivo' => basename($arquivoPFX ?? ''),
+                'error' => $e->getMessage()
+            ]);
+            return false;
         }
     }
 }

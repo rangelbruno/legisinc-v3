@@ -88,7 +88,8 @@ class AssinaturaDigitalService
                 'trace' => $e->getTraceAsString()
             ]);
             
-            return null;
+            // CORREÇÃO: Re-lançar exceções de validação para o controller tratar
+            throw $e;
         }
     }
 
@@ -153,7 +154,8 @@ class AssinaturaDigitalService
 
         } catch (\Exception $e) {
             Log::error('Erro na assinatura PFX: ' . $e->getMessage());
-            return null;
+            // CORREÇÃO: Re-lançar exceção para validação de senha
+            throw $e;
         }
     }
 
@@ -187,6 +189,13 @@ class AssinaturaDigitalService
     private function adicionarAssinaturaDigitalAoPDF(string $caminhoPDF, array $dadosAssinatura, $certificado = null): ?string
     {
         try {
+            // CORREÇÃO CRÍTICA: Para PFX, certificado deve estar presente e válido
+            if (isset($dadosAssinatura['tipo_certificado']) && $dadosAssinatura['tipo_certificado'] === 'PFX') {
+                if ($certificado === null) {
+                    throw new \Exception('Certificado PFX inválido ou senha incorreta');
+                }
+            }
+            
             // Use PDF stamping service to apply signature over existing PDF
             $stampingService = app(\App\Services\PDFStampingService::class);
             
@@ -455,12 +464,18 @@ class AssinaturaDigitalService
                     'openssl_error' => $opensslError
                 ]);
                 
-                // Se falhar, tentar com senha vazia (alguns certificados de teste)
-                if (!openssl_pkcs12_read($certificateData, $certificates, '')) {
-                    throw new \Exception('Senha do certificado PFX inválida ou certificado corrompido');
+                // CORREÇÃO: Não aceitar senha vazia como fallback automaticamente
+                // Apenas permitir senha vazia se foi fornecida explicitamente
+                if (empty($senha)) {
+                    // Se a senha fornecida já era vazia, tentar abrir sem senha
+                    if (!openssl_pkcs12_read($certificateData, $certificates, '')) {
+                        throw new \Exception('Senha do certificado PFX inválida ou certificado corrompido');
+                    }
+                    $senhaValida = '';
+                } else {
+                    // Se senha foi fornecida mas falhou, não tentar fallback
+                    throw new \Exception('Senha do certificado PFX inválida. Verifique se a senha está correta.');
                 }
-                // Se funcionou com senha vazia, usar essa
-                $senhaValida = '';
             } else {
                 $senhaValida = $senha;
             }

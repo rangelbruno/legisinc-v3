@@ -203,8 +203,13 @@ function logPDFLoad() {
         timestamp: new Date().toISOString()
     });
 
-    // Atualizar interface
-    document.getElementById('pdf-loading').style.display = 'none';
+    // Atualizar interface - forçar ocultação do loading
+    const loadingDiv = document.getElementById('pdf-loading');
+    if (loadingDiv) {
+        loadingDiv.style.display = 'none';
+        loadingDiv.style.visibility = 'hidden';
+        loadingDiv.classList.add('d-none');
+    }
     document.getElementById('load-time').textContent = loadTime + 'ms';
     document.getElementById('pdf-status').textContent = 'Carregado com sucesso';
     document.getElementById('pdf-status').className = 'text-success small';

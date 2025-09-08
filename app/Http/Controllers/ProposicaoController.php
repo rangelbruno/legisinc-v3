@@ -4886,7 +4886,7 @@ class ProposicaoController extends Controller implements HasMiddleware
     public function servePDF(Proposicao $proposicao)
     {
         // Log de início de requisição PDF
-        Log::info('🔴 PDF REQUEST: Iniciando servePDF', [
+        Log::info('🔴 PDF REQUEST: Iniciando servePDF - USANDO LÓGICA UNIFICADA', [
             'proposicao_id' => $proposicao->id,
             'user_id' => Auth::id(),
             'user_email' => Auth::user()->email,
@@ -4923,341 +4923,278 @@ class ProposicaoController extends Controller implements HasMiddleware
         }
 
         try {
-            Log::info('DEBUG: servePDF iniciado', [
+            // NOVA ESTRATÉGIA: Usar mesma lógica da assinatura digital para consistência
+            // Isso garante que /proposicoes/{id}/pdf e /proposicoes/{id}/assinatura-digital
+            // sempre mostrem o MESMO PDF atualizado
+            
+            Log::info('🔴 PDF REQUEST: Usando estratégia unificada com assinatura digital', [
                 'proposicao_id' => $proposicao->id,
                 'status' => $proposicao->status,
                 'arquivo_path' => $proposicao->arquivo_path
             ]);
             
-            // 1. Usar precedência clara para encontrar PDF oficial
-            $relativePath = $this->caminhoPdfOficial($proposicao);
+            // 1. Instanciar o controller de assinatura para reutilizar métodos
+            $assinaturaController = app(ProposicaoAssinaturaController::class);
             
-            Log::info('DEBUG: caminhoPdfOficial retornou', [
-                'proposicao_id' => $proposicao->id,
-                'relative_path' => $relativePath ? $relativePath : 'NULL'
-            ]);
+            // 2. Buscar arquivo DOCX/RTF mais recente (mesma lógica da assinatura)
+            // Isso garante que sempre usaremos o arquivo mais atualizado
+            $arquivoMaisRecente = null;
             
-            if ($relativePath) {
-                Log::info('DEBUG: Arquivo PDF encontrado, verificando timestamps', [
-                    'proposicao_id' => $proposicao->id,
-                    'pdf_path' => $relativePath,
-                    'pdf_existe' => Storage::exists($relativePath),
-                    'rtf_path' => $proposicao->arquivo_path,
-                    'rtf_existe' => $proposicao->arquivo_path ? Storage::exists($proposicao->arquivo_path) : false
-                ]);
-                // CRÍTICO: Verificar se RTF foi modificado após PDF
-                $pdfEstaDesatualizado = false;
-                if ($proposicao->arquivo_path && Storage::exists($proposicao->arquivo_path)) {
-                    $rtfPath = Storage::path($proposicao->arquivo_path);
-                    $pdfPath = Storage::exists($relativePath) ? Storage::path($relativePath) : storage_path('app/' . ltrim($relativePath, '/'));
+            // Verificar arquivo_path primeiro (arquivo editado no OnlyOffice)
+            if ($proposicao->arquivo_path && Storage::exists($proposicao->arquivo_path)) {
+                $caminhoCompleto = Storage::path($proposicao->arquivo_path);
+                if (file_exists($caminhoCompleto)) {
+                    $arquivoMaisRecente = [
+                        'path' => $caminhoCompleto,
+                        'relative_path' => $proposicao->arquivo_path,
+                        'tipo' => pathinfo($caminhoCompleto, PATHINFO_EXTENSION),
+                        'modificado' => filemtime($caminhoCompleto)
+                    ];
                     
-                    if (file_exists($rtfPath) && file_exists($pdfPath)) {
-                        $rtfModificado = filemtime($rtfPath);
-                        $pdfGerado = filemtime($pdfPath);
-                        
-                        if ($rtfModificado > $pdfGerado) {
-                            $pdfEstaDesatualizado = true;
-                            Log::info('PDF está desatualizado - RTF mais novo', [
-                                'proposicao_id' => $proposicao->id,
-                                'rtf_timestamp' => $rtfModificado,
-                                'pdf_timestamp' => $pdfGerado,
-                                'diferenca_segundos' => $rtfModificado - $pdfGerado
-                            ]);
-                        }
-                    }
-                }
-                
-                // Se PDF está desatualizado, não servir - forçar regeneração abaixo
-                if (!$pdfEstaDesatualizado) {
-                    Log::info('🔴 PDF REQUEST: PDF não está desatualizado, servindo arquivo', [
+                    Log::info('🔴 PDF REQUEST: Arquivo RTF/DOCX encontrado no banco', [
                         'proposicao_id' => $proposicao->id,
-                        'pdf_path' => $relativePath,
-                        'user_id' => Auth::id()
+                        'arquivo' => $proposicao->arquivo_path,
+                        'modificado' => date('Y-m-d H:i:s', $arquivoMaisRecente['modificado'])
                     ]);
-                    
-                    // Determinar caminho absoluto correto
-                    $absolutePath = Storage::exists($relativePath) 
-                        ? Storage::path($relativePath)
-                        : storage_path('app/' . ltrim($relativePath, '/'));
-                    
-                    Log::info('DEBUG: Caminho absoluto determinado', [
-                        'proposicao_id' => $proposicao->id,
-                        'absolute_path' => $absolutePath,
-                        'file_exists' => file_exists($absolutePath)
-                    ]);
-                    
-                    // Add ETag based on RTF file timestamp to force refresh when content changes
-                    $etag = 'pdf-' . $proposicao->id . '-' . time();
-                    if ($proposicao->arquivo_path && Storage::exists($proposicao->arquivo_path)) {
-                        $rtfPath = Storage::path($proposicao->arquivo_path);
-                        if (file_exists($rtfPath)) {
-                            $etag = 'pdf-' . $proposicao->id . '-' . filemtime($rtfPath);
-                        }
-                    }
-                    
-                    Log::info('DEBUG: Servindo arquivo PDF', [
-                        'proposicao_id' => $proposicao->id,
-                        'absolute_path' => $absolutePath,
-                        'file_size' => file_exists($absolutePath) ? filesize($absolutePath) : 'FILE_NOT_EXISTS'
-                    ]);
-                    
-                    Log::info('🔴 PDF REQUEST: Servindo PDF com sucesso', [
-                        'proposicao_id' => $proposicao->id,
-                        'absolute_path' => $absolutePath,
-                        'file_exists' => file_exists($absolutePath),
-                        'user_id' => Auth::id(),
-                        'response_status' => 'success'
-                    ]);
-                    
-                    return response()->file($absolutePath, [
-                        'Content-Type' => 'application/pdf',
-                        'Content-Disposition' => 'inline; filename="proposicao_' . $proposicao->id . '.pdf"',
-                        'Cache-Control' => 'no-cache, no-store, must-revalidate',
-                        'Pragma' => 'no-cache',
-                        'Expires' => '0',
-                        'ETag' => $etag,
-                        'X-PDF-Generator' => $proposicao->pdf_conversor_usado ?? 'official',
-                        'X-PDF-Source' => basename($relativePath)
-                    ]);
-                } else {
-                    Log::info('PDF desatualizado detectado - invalidando cache e forçando regeneração', [
-                        'proposicao_id' => $proposicao->id
-                    ]);
-                    
-                    // Invalidar cache PDF para forçar regeneração
-                    $proposicao->update([
-                        'arquivo_pdf_path' => null,
-                        'pdf_gerado_em' => null,
-                        'pdf_conversor_usado' => null,
-                    ]);
-                    
-                    // Continuar para lógica de regeneração abaixo
                 }
             }
-
-            // 2. NUNCA use geradores HTML/DomPDF para status oficiais
-            Log::warning('PDF oficial não encontrado', [
-                'proposicao_id' => $proposicao->id,
-                'status' => $proposicao->status,
-                'campos_verificados' => [
-                    'pdf_protocolado_path' => $proposicao->pdf_protocolado_path ?? 'NULL',
-                    'pdf_assinado_path' => $proposicao->pdf_assinado_path ?? 'NULL',
-                    'pdf_oficial_path' => $proposicao->pdf_oficial_path ?? 'NULL',
-                    'arquivo_pdf_path' => $proposicao->arquivo_pdf_path ?? 'NULL'
-                ]
-            ]);
             
-            // Para status oficiais (aprovado, assinado, protocolado), forçar geração de PDF real
-            if (in_array($proposicao->status, ['aprovado', 'assinado', 'protocolado', 'aprovado_assinatura'])) {
-                Log::info('Forçando geração de PDF oficial para status oficial', [
-                    'proposicao_id' => $proposicao->id,
-                    'status' => $proposicao->status,
-                    'arquivo_path' => $proposicao->arquivo_path
-                ]);
+            // Se não encontrou, buscar em diretórios conhecidos
+            if (!$arquivoMaisRecente) {
+                $diretorios = [
+                    storage_path('app/proposicoes'),
+                    storage_path('app/private/proposicoes')
+                ];
                 
-                // ESPECIAL: Para status "aprovado", primeiro tentar usar PDF mais recente existente
-                if ($proposicao->status === 'aprovado') {
-                    $files = Storage::files('proposicoes/pdfs/' . $proposicao->id);
-                    $onlyOfficeFiles = array_filter($files, function($file) {
-                        return str_contains($file, '_onlyoffice_') && str_ends_with($file, '.pdf');
+                $arquivos = [];
+                foreach ($diretorios as $dir) {
+                    if (is_dir($dir)) {
+                        // Buscar RTF e DOCX
+                        $patterns = [
+                            $dir . "/proposicao_{$proposicao->id}_*.rtf",
+                            $dir . "/proposicao_{$proposicao->id}_*.docx",
+                            $dir . "/proposicao_{$proposicao->id}.rtf",
+                            $dir . "/proposicao_{$proposicao->id}.docx"
+                        ];
+                        
+                        foreach ($patterns as $pattern) {
+                            $encontrados = glob($pattern);
+                            foreach ($encontrados as $arquivo) {
+                                $arquivos[] = [
+                                    'path' => $arquivo,
+                                    'relative_path' => str_replace(storage_path('app/'), '', $arquivo),
+                                    'tipo' => pathinfo($arquivo, PATHINFO_EXTENSION),
+                                    'modificado' => filemtime($arquivo)
+                                ];
+                            }
+                        }
+                    }
+                }
+                
+                if (!empty($arquivos)) {
+                    // Ordenar por data de modificação (mais recente primeiro)
+                    usort($arquivos, function($a, $b) {
+                        return $b['modificado'] - $a['modificado'];
                     });
                     
-                    if (!empty($onlyOfficeFiles)) {
-                        // Ordenar por timestamp (mais recente primeiro)
-                        usort($onlyOfficeFiles, function($a, $b) {
-                            preg_match('/_(\d+)\.pdf$/', $a, $matchesA);
-                            preg_match('/_(\d+)\.pdf$/', $b, $matchesB);
-                            return ($matchesB[1] ?? 0) <=> ($matchesA[1] ?? 0);
-                        });
-                        
-                        $pdfMaisRecente = $onlyOfficeFiles[0];
-                        if (Storage::exists($pdfMaisRecente)) {
-                            $absolutePath = Storage::path($pdfMaisRecente);
-                            
-                            Log::info('PDF aprovado: usando OnlyOffice mais recente', [
-                                'proposicao_id' => $proposicao->id,
-                                'arquivo_usado' => $pdfMaisRecente
-                            ]);
-                            
-                            return response()->file($absolutePath, [
-                                'Content-Type' => 'application/pdf',
-                                'Content-Disposition' => 'inline; filename="proposicao_' . $proposicao->id . '.pdf"',
-                                'Cache-Control' => 'no-cache, no-store, must-revalidate',
-                                'X-PDF-Source' => 'onlyoffice-recent'
-                            ]);
-                        }
-                    }
-                }
-                
-                // CRÍTICO: Usar mesma estratégia que funciona na assinatura digital
-                // Verificar arquivo_path do banco primeiro (mesma lógica de encontrarArquivoMaisRecente)
-                if (!empty($proposicao->arquivo_path) && Storage::exists($proposicao->arquivo_path)) {
-                    Log::info('Arquivo RTF encontrado - forçando regeneração PDF', [
+                    $arquivoMaisRecente = $arquivos[0];
+                    
+                    Log::info('🔴 PDF REQUEST: Arquivo RTF/DOCX encontrado via busca', [
                         'proposicao_id' => $proposicao->id,
-                        'arquivo_path' => $proposicao->arquivo_path
+                        'arquivo' => $arquivoMaisRecente['relative_path'],
+                        'modificado' => date('Y-m-d H:i:s', $arquivoMaisRecente['modificado'])
+                    ]);
+                }
+            }
+            
+            // 3. Se não encontrou arquivo RTF/DOCX, buscar PDF existente como fallback
+            if (!$arquivoMaisRecente) {
+                Log::info('🔴 PDF REQUEST: Nenhum RTF/DOCX encontrado, buscando PDF existente');
+                
+                $pdfExistente = $this->encontrarPDFMaisRecenteParaServir($proposicao);
+                
+                if ($pdfExistente) {
+                    Log::info('🔴 PDF REQUEST: Usando PDF existente como fallback', [
+                        'proposicao_id' => $proposicao->id,
+                        'pdf_path' => $pdfExistente
                     ]);
                     
-                    // Tentar gerar PDF do OnlyOffice
-                    $pdfGerado = $this->gerarPDFSobDemanda($proposicao);
+                    $absolutePath = Storage::exists($pdfExistente) 
+                        ? Storage::path($pdfExistente)
+                        : storage_path('app/' . ltrim($pdfExistente, '/'));
                     
-                    if ($pdfGerado && Storage::exists($pdfGerado)) {
-                        $absolutePath = Storage::path($pdfGerado);
-                        
-                        Log::info('PDF oficial gerado com sucesso via estratégia melhorada', [
-                            'proposicao_id' => $proposicao->id,
-                            'pdf_path' => $pdfGerado
-                        ]);
-                        
+                    if (file_exists($absolutePath)) {
                         return response()->file($absolutePath, [
                             'Content-Type' => 'application/pdf',
-                            'Content-Disposition' => 'inline; filename="proposicao_' . $proposicao->id . '.pdf"',
-                            'Cache-Control' => 'no-cache, no-store, must-revalidate',
+                            'Content-Disposition' => 'inline; filename="proposicao_' . $proposicao->id . '_' . time() . '.pdf"',
+                            'Cache-Control' => 'no-cache, no-store, must-revalidate, max-age=0',
                             'Pragma' => 'no-cache',
-                            'Expires' => '0',
-                            'X-PDF-Generator' => 'onlyoffice-improved',
-                            'X-PDF-Source' => basename($pdfGerado)
+                            'Expires' => '-1',
+                            'X-PDF-Source' => 'fallback-existing'
                         ]);
                     }
                 }
                 
-                // CRÍTICO: Verificar se RTF foi modificado após último PDF gerado
-                $forcarRegeneracao = false;
-                if ($proposicao->arquivo_path && Storage::exists($proposicao->arquivo_path) && $proposicao->pdf_gerado_em) {
-                    $rtfPath = Storage::path($proposicao->arquivo_path);
-                    if (file_exists($rtfPath)) {
-                        $rtfModificado = filemtime($rtfPath);
-                        $pdfGerado = $proposicao->pdf_gerado_em->timestamp;
-                        
-                        if ($rtfModificado > $pdfGerado) {
-                            $forcarRegeneracao = true;
-                            Log::info('RTF foi modificado após PDF - forçando regeneração', [
-                                'proposicao_id' => $proposicao->id,
-                                'rtf_timestamp' => $rtfModificado,
-                                'pdf_timestamp' => $pdfGerado
-                            ]);
-                        }
-                    }
-                }
-                
-                // Se precisa regenerar ou não existe PDF, gerar novo
-                if ($forcarRegeneracao || !$proposicao->arquivo_pdf_path || !Storage::exists($proposicao->arquivo_pdf_path)) {
-                    // Tentar gerar PDF do OnlyOffice
-                    $pdfGerado = $this->gerarPDFSobDemanda($proposicao);
-                } else {
-                    // Usar PDF existente se estiver atualizado
-                    $pdfGerado = $proposicao->arquivo_pdf_path;
-                }
-                
-                if ($pdfGerado && Storage::exists($pdfGerado)) {
-                    // Atualizar o campo arquivo_pdf_path na proposição
-                    $proposicao->update(['arquivo_pdf_path' => $pdfGerado]);
-                    
-                    $absolutePath = Storage::path($pdfGerado);
-                    
-                    // Add ETag based on RTF file timestamp
-                    $etag = 'pdf-' . $proposicao->id . '-' . time();
-                    if ($proposicao->arquivo_path && Storage::exists($proposicao->arquivo_path)) {
-                        $rtfPath = Storage::path($proposicao->arquivo_path);
-                        if (file_exists($rtfPath)) {
-                            $etag = 'pdf-' . $proposicao->id . '-' . filemtime($rtfPath);
-                        }
-                    }
-                    
-                    Log::info('PDF oficial gerado com sucesso', [
-                        'proposicao_id' => $proposicao->id,
-                        'pdf_path' => $pdfGerado
-                    ]);
-                    
-                    return response()->file($absolutePath, [
-                        'Content-Type' => 'application/pdf',
-                        'Content-Disposition' => 'inline; filename="proposicao_' . $proposicao->id . '.pdf"',
-                        'Cache-Control' => 'no-cache, no-store, must-revalidate',
-                        'Pragma' => 'no-cache',
-                        'Expires' => '0',
-                        'ETag' => $etag,
-                        'X-PDF-Generator' => 'onlyoffice-forced',
-                        'X-PDF-Source' => basename($pdfGerado)
-                    ]);
-                }
-                
-                // Se mesmo assim não conseguiu gerar, retornar erro
-                Log::error('PDF oficial obrigatório não pôde ser gerado para status oficial', [
-                    'proposicao_id' => $proposicao->id,
-                    'status' => $proposicao->status
+                // Se não há nenhum arquivo disponível
+                Log::error('🔴 PDF REQUEST: Nenhum arquivo encontrado', [
+                    'proposicao_id' => $proposicao->id
                 ]);
-                
-                return response()->json([
-                    'error' => 'PDF oficial não disponível',
-                    'message' => 'O documento oficial não pôde ser processado. Verifique se há conteúdo editado no OnlyOffice.',
-                    'status' => $proposicao->status
-                ], 404, [
-                    'Content-Type' => 'application/json',
-                    'X-PDF-Generator' => 'error-no-official'
-                ]);
+                abort(404, 'Nenhum arquivo foi encontrado para gerar o PDF desta proposição.');
             }
-
-            // 3. Para outros status, também tentar gerar PDF real ao invés de placeholder
-            Log::info('Tentando gerar PDF para status não oficial', [
+            
+            // 4. Gerar PDF do arquivo RTF/DOCX encontrado
+            Log::info('🔴 PDF REQUEST: Gerando PDF do arquivo mais recente', [
                 'proposicao_id' => $proposicao->id,
-                'status' => $proposicao->status
+                'arquivo' => $arquivoMaisRecente['relative_path'],
+                'tipo' => $arquivoMaisRecente['tipo']
             ]);
             
-            $pdfGerado = $this->gerarPDFSobDemanda($proposicao);
+            // Gerar nome único para o PDF
+            $nomePdf = 'proposicao_' . $proposicao->id . '_unified_' . time() . '.pdf';
+            $diretorioPdf = 'proposicoes/pdfs/' . $proposicao->id;
+            $caminhoPdfRelativo = $diretorioPdf . '/' . $nomePdf;
+            $caminhoPdfAbsoluto = storage_path('app/' . $caminhoPdfRelativo);
             
-            if ($pdfGerado && Storage::exists($pdfGerado)) {
-                // Atualizar o campo arquivo_pdf_path na proposição
-                $proposicao->update(['arquivo_pdf_path' => $pdfGerado]);
-                
-                $absolutePath = Storage::path($pdfGerado);
-                
-                // Add ETag based on RTF file timestamp
-                $etag = 'pdf-' . $proposicao->id . '-' . time();
-                if ($proposicao->arquivo_path && Storage::exists($proposicao->arquivo_path)) {
-                    $rtfPath = Storage::path($proposicao->arquivo_path);
-                    if (file_exists($rtfPath)) {
-                        $etag = 'pdf-' . $proposicao->id . '-' . filemtime($rtfPath);
-                    }
-                }
-                
-                Log::info('PDF gerado com sucesso para status não oficial', [
-                    'proposicao_id' => $proposicao->id,
-                    'pdf_path' => $pdfGerado
+            // Garantir que o diretório existe
+            if (!is_dir(dirname($caminhoPdfAbsoluto))) {
+                mkdir(dirname($caminhoPdfAbsoluto), 0755, true);
+            }
+            
+            // Converter para PDF usando LibreOffice (mesma estratégia da assinatura)
+            $sucesso = $this->converterArquivoParaPDFUnificado($arquivoMaisRecente['path'], $caminhoPdfAbsoluto);
+            
+            if ($sucesso && file_exists($caminhoPdfAbsoluto)) {
+                // Atualizar banco de dados
+                $proposicao->update([
+                    'arquivo_pdf_path' => $caminhoPdfRelativo,
+                    'pdf_gerado_em' => now(),
+                    'pdf_conversor_usado' => 'libreoffice-unified'
                 ]);
                 
-                return response()->file($absolutePath, [
+                Log::info('🔴 PDF REQUEST: PDF gerado com sucesso', [
+                    'proposicao_id' => $proposicao->id,
+                    'pdf_path' => $caminhoPdfRelativo,
+                    'tamanho' => filesize($caminhoPdfAbsoluto)
+                ]);
+                
+                return response()->file($caminhoPdfAbsoluto, [
                     'Content-Type' => 'application/pdf',
-                    'Content-Disposition' => 'inline; filename="proposicao_' . $proposicao->id . '.pdf"',
-                    'Cache-Control' => 'no-cache, no-store, must-revalidate',
+                    'Content-Disposition' => 'inline; filename="proposicao_' . $proposicao->id . '_' . time() . '.pdf"',
+                    'Cache-Control' => 'no-cache, no-store, must-revalidate, max-age=0',
                     'Pragma' => 'no-cache',
-                    'Expires' => '0',
-                    'ETag' => $etag,
-                    'X-PDF-Generator' => 'onlyoffice-dynamic',
-                    'X-PDF-Source' => basename($pdfGerado)
+                    'Expires' => '-1',
+                    'X-PDF-Generator' => 'libreoffice-unified',
+                    'X-PDF-Source' => 'generated-fresh'
                 ]);
             }
             
-            // Só usar placeholder se realmente não conseguiu gerar nada
-            Log::warning('Não foi possível gerar PDF real, usando placeholder temporário', [
-                'proposicao_id' => $proposicao->id,
-                'status' => $proposicao->status
+            // Se falhou a conversão, tentar fallback
+            Log::error('🔴 PDF REQUEST: Falha na conversão para PDF', [
+                'proposicao_id' => $proposicao->id
             ]);
-            return $this->gerarPDFBasicoComAviso($proposicao);
-
+            
+            abort(500, 'Erro ao gerar PDF da proposição.');
+            
         } catch (\Exception $e) {
-            Log::error('🔴 PDF REQUEST: Erro crítico ao servir PDF', [
+            Log::error('🔴 PDF REQUEST: Exceção ao servir PDF', [
                 'proposicao_id' => $proposicao->id,
-                'user_id' => Auth::id(),
-                'error' => $e->getMessage(),
-                'stack_trace' => $e->getTraceAsString(),
-                'status' => $proposicao->status,
-                'arquivo_path' => $proposicao->arquivo_path,
-                'arquivo_pdf_path' => $proposicao->arquivo_pdf_path
+                'erro' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
             ]);
-
-            abort(500, 'Erro interno ao gerar PDF. Contate o suporte.');
+            
+            abort(500, 'Erro ao processar PDF: ' . $e->getMessage());
         }
     }
-
+    
+    /**
+     * Método auxiliar para encontrar PDF mais recente para servir
+     */
+    private function encontrarPDFMaisRecenteParaServir(Proposicao $proposicao): ?string
+    {
+        // Prioridade 1: arquivo_pdf_path
+        if ($proposicao->arquivo_pdf_path) {
+            $caminho = storage_path('app/' . $proposicao->arquivo_pdf_path);
+            if (file_exists($caminho)) {
+                return $proposicao->arquivo_pdf_path;
+            }
+        }
+        
+        // Prioridade 2: Diretório de PDFs
+        $diretorioPDFs = storage_path("app/proposicoes/pdfs/{$proposicao->id}");
+        if (is_dir($diretorioPDFs)) {
+            $pdfs = glob($diretorioPDFs . '/*.pdf');
+            if (!empty($pdfs)) {
+                // Retornar o mais recente
+                $pdfMaisRecente = array_reduce($pdfs, function($carry, $item) {
+                    return (!$carry || filemtime($item) > filemtime($carry)) ? $item : $carry;
+                });
+                return str_replace(storage_path('app/'), '', $pdfMaisRecente);
+            }
+        }
+        
+        // Prioridade 3: Diretório privado
+        $diretorioPrivado = storage_path("app/private/proposicoes/pdfs/{$proposicao->id}");
+        if (is_dir($diretorioPrivado)) {
+            $pdfs = glob($diretorioPrivado . '/*.pdf');
+            if (!empty($pdfs)) {
+                $pdfMaisRecente = array_reduce($pdfs, function($carry, $item) {
+                    return (!$carry || filemtime($item) > filemtime($carry)) ? $item : $carry;
+                });
+                return str_replace(storage_path('app/'), '', $pdfMaisRecente);
+            }
+        }
+        
+        return null;
+    }
+    
+    /**
+     * Converter arquivo para PDF usando estratégia unificada
+     */
+    private function converterArquivoParaPDFUnificado(string $caminhoOrigem, string $caminhoDestino): bool
+    {
+        try {
+            $diretorioDestino = dirname($caminhoDestino);
+            
+            // Comando LibreOffice para conversão
+            $comando = sprintf(
+                'libreoffice --headless --invisible --nodefault --nolockcheck --nologo --norestore --convert-to pdf --outdir %s %s 2>&1',
+                escapeshellarg($diretorioDestino),
+                escapeshellarg($caminhoOrigem)
+            );
+            
+            Log::info('🔴 PDF REQUEST: Executando conversão LibreOffice', [
+                'comando' => $comando
+            ]);
+            
+            exec($comando, $output, $returnCode);
+            
+            if ($returnCode !== 0) {
+                Log::error('🔴 PDF REQUEST: Erro na conversão LibreOffice', [
+                    'return_code' => $returnCode,
+                    'output' => implode("\n", $output)
+                ]);
+                return false;
+            }
+            
+            // LibreOffice gera o PDF com o mesmo nome base do arquivo origem
+            $nomeBasePdf = pathinfo($caminhoOrigem, PATHINFO_FILENAME) . '.pdf';
+            $pdfGerado = $diretorioDestino . '/' . $nomeBasePdf;
+            
+            // Mover para o nome final desejado
+            if (file_exists($pdfGerado) && $pdfGerado !== $caminhoDestino) {
+                rename($pdfGerado, $caminhoDestino);
+            }
+            
+            return file_exists($caminhoDestino);
+            
+        } catch (\Exception $e) {
+            Log::error('🔴 PDF REQUEST: Exceção na conversão', [
+                'erro' => $e->getMessage()
+            ]);
+            return false;
+        }
+    }
+    
     /**
      * Servir arquivo PDF da proposição para acesso público (sem autenticação)
      * Apenas para proposições com status 'protocolado'
@@ -5323,48 +5260,48 @@ class ProposicaoController extends Controller implements HasMiddleware
                     }
                 }
             }
-
+            
             // 3. Fallback: Se conversão direta falhar, usar método DomPDF com conteúdo do banco
             $conteudo = '';
-            if (! empty($proposicao->conteudo)) {
+            if (!empty($proposicao->conteudo)) {
                 $conteudo = $proposicao->conteudo;
             } else {
                 $conteudo = $proposicao->ementa ?: 'Conteúdo não disponível';
             }
-
+            
             // Criar HTML para DomPDF como fallback
             $html = $this->gerarHTMLParaPDF($proposicao, $conteudo);
-
+            
             // Usar DomPDF para gerar PDF
             $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($html);
             $pdf->setPaper('A4', 'portrait');
-
+            
             // Salvar PDF
             file_put_contents($caminhoPdfAbsoluto, $pdf->output());
-
+            
         } catch (\Exception $e) {
             throw $e;
         }
     }
-
+    
     /**
      * Converter RTF para texto limpo removendo códigos RTF
      */
     private function converterRTFParaTexto(string $rtfContent): string
     {
         // Se não é RTF, retornar como está
-        if (! str_contains($rtfContent, '{\rtf')) {
+        if (!str_contains($rtfContent, '{\rtf')) {
             return $rtfContent;
         }
-
+        
         // Para RTF muito complexo como do OnlyOffice, vamos usar uma abordagem mais simples:
         // Buscar por texto real entre códigos RTF usando padrões específicos
-
+        
         $textosEncontrados = [];
-
+        
         // 1. Buscar texto em português comum (frases)
         preg_match_all('/(?:[A-ZÁÉÍÓÚÂÊÎÔÛÃÕÀÈÌÒÙÇ][a-záéíóúâêîôûãõàèìòùç\s,.-]{15,})/u', $rtfContent, $matches);
-        if (! empty($matches[0])) {
+        if (!empty($matches[0])) {
             foreach ($matches[0] as $match) {
                 // Limpar RTF restante
                 $clean = preg_replace('/\\\\\w+\d*\s*/', ' ', $match);
@@ -5375,7 +5312,7 @@ class ProposicaoController extends Controller implements HasMiddleware
                 }
             }
         }
-
+        
         // 2. Buscar por textos específicos conhecidos
         $palavrasChave = [
             'CÂMARA MUNICIPAL',
@@ -5387,12 +5324,12 @@ class ProposicaoController extends Controller implements HasMiddleware
             'manifesta',
             'dirigir a presente',
         ];
-
+        
         foreach ($palavrasChave as $palavra) {
             if (stripos($rtfContent, $palavra) !== false) {
                 // Extrair contexto ao redor da palavra
                 preg_match_all('/[^{}\\\\]*'.preg_quote($palavra, '/').'[^{}\\\\]{0,100}/i', $rtfContent, $matches);
-                if (! empty($matches[0])) {
+                if (!empty($matches[0])) {
                     foreach ($matches[0] as $match) {
                         $clean = preg_replace('/\\\\\w+\d*\s*/', ' ', $match);
                         $clean = preg_replace('/[{}\\\\]/', '', $clean);
@@ -5404,7 +5341,7 @@ class ProposicaoController extends Controller implements HasMiddleware
                 }
             }
         }
-
+        
         // 3. Se ainda não encontramos texto suficiente, usar método strip_tags
         if (empty($textosEncontrados)) {
             $texto = strip_tags($rtfContent);
@@ -5412,17 +5349,17 @@ class ProposicaoController extends Controller implements HasMiddleware
             $texto = preg_replace('/[{}\\\\]/', '', $texto);
             $texto = preg_replace('/[^\w\s\.,;:!?\-()áéíóúâêîôûãõàèìòùçÁÉÍÓÚÂÊÎÔÛÃÕÀÈÌÒÙÇ]/u', ' ', $texto);
             $texto = preg_replace('/\s+/', ' ', $texto);
-
+            
             return trim($texto);
         }
-
+        
         // Juntar textos encontrados e limpar
         $textoFinal = implode(' ', array_unique($textosEncontrados));
         $textoFinal = preg_replace('/\s+/', ' ', $textoFinal);
-
+        
         return trim($textoFinal);
     }
-
+    
     /**
      * Converter arquivo RTF editado diretamente para PDF usando LibreOffice
      * Esta é a conversão mais fiel possível - idêntica ao "Salvar como PDF" do OnlyOffice
@@ -5432,7 +5369,7 @@ class ProposicaoController extends Controller implements HasMiddleware
         try {
             // Garantir que o diretório de destino existe
             $diretorioDestino = dirname($caminhoPdfDestino);
-            if (! is_dir($diretorioDestino)) {
+            if (!is_dir($diretorioDestino)) {
                 mkdir($diretorioDestino, 0755, true);
             }
 
@@ -5447,1837 +5384,232 @@ class ProposicaoController extends Controller implements HasMiddleware
 
             // LibreOffice gera PDF com mesmo nome do arquivo fonte
             $nomeArquivoSemExtensao = pathinfo($caminhoArquivo, PATHINFO_FILENAME);
-            $pdfGerado = $diretorioDestino.'/'.$nomeArquivoSemExtensao.'.pdf';
-
-            // Verificar se conversão foi bem-sucedida
-            if ($returnCode === 0 && file_exists($pdfGerado)) {
-                // Se PDF foi gerado com nome diferente, renomear
-                if ($pdfGerado !== $caminhoPdfDestino) {
-                    rename($pdfGerado, $caminhoPdfDestino);
-                }
-
-                return true;
-            } else {
-                return false;
-            }
-
-        } catch (\Exception $e) {
-            return false;
-        }
-    }
-
-    /**
-     * Instalar LibreOffice se não estiver disponível (método para containers)
-     */
-    private function instalarLibreOfficeSeNecessario(): bool
-    {
-        if ($this->libreOfficeDisponivel()) {
-            return true;
-        }
-
-        // Tentar instalar LibreOffice em ambiente Docker/Linux
-        try {
-            // Detectar tipo de sistema (Alpine vs Debian/Ubuntu)
-            exec('which apk', $apkOutput, $apkReturn);
-            $isAlpine = ($apkReturn === 0);
-
-            if ($isAlpine) {
-                // Alpine Linux (container Docker atual)
-                $comandos = [
-                    'apk add --no-cache libreoffice',
-                    'apk add --no-cache fontconfig ttf-liberation ttf-dejavu',
-                    'fc-cache -f',
-                ];
-            } else {
-                // Debian/Ubuntu
-                $comandos = [
-                    'apt-get update -qq',
-                    'apt-get install -y -qq libreoffice --no-install-recommends',
-                    'apt-get install -y -qq fonts-liberation fonts-dejavu-core',
-                    'apt-get clean',
-                    'rm -rf /var/lib/apt/lists/*',
-                ];
-            }
-
-            foreach ($comandos as $comando) {
-                exec($comando, $output, $returnCode);
-                if ($returnCode !== 0) {
-                    return false;
-                }
-            }
-
-            return $this->libreOfficeDisponivel();
-
-        } catch (\Exception $e) {
-            return false;
-        }
-    }
-
-    /**
-     * Gerar conteúdo completo para PDF quando documento foi editado pelo Legislativo
-     */
-    private function gerarConteudoCompletoParaPDF(\App\Models\Proposicao $proposicao): string
-    {
-        $conteudoCompleto = '';
-
-        // 1. Adicionar informação sobre edição
-        $conteudoCompleto .= "DOCUMENTO EDITADO PELO LEGISLATIVO\n";
-        $conteudoCompleto .= 'Última modificação: '.$proposicao->ultima_modificacao->format('d/m/Y H:i')."\n";
-        if ($proposicao->modificadoPor) {
-            $conteudoCompleto .= 'Modificado por: '.$proposicao->modificadoPor->name."\n";
-        }
-        $conteudoCompleto .= str_repeat('-', 50)."\n\n";
-
-        // 2. Adicionar ementa
-        $conteudoCompleto .= "EMENTA:\n";
-        $conteudoCompleto .= $proposicao->ementa."\n\n";
-
-        // 3. Adicionar conteúdo do banco
-        if (! empty($proposicao->conteudo)) {
-            $conteudoCompleto .= "CONTEÚDO ORIGINAL:\n";
-            $conteudoCompleto .= $proposicao->conteudo."\n\n";
-        }
-
-        // 4. Tentar extrair informações básicas do arquivo editado
-        if ($proposicao->arquivo_path) {
-            $caminhoArquivo = null;
-            $possiveisCaminhos = [
-                storage_path('app/'.$proposicao->arquivo_path),
-                storage_path('app/private/'.$proposicao->arquivo_path),
-            ];
-
-            foreach ($possiveisCaminhos as $caminho) {
-                if (file_exists($caminho)) {
-                    $caminhoArquivo = $caminho;
-                    break;
-                }
-            }
-
-            if ($caminhoArquivo) {
-                $conteudoCompleto .= "INFORMAÇÕES DO ARQUIVO EDITADO:\n";
-                $conteudoCompleto .= 'Arquivo: '.basename($proposicao->arquivo_path)."\n";
-                $conteudoCompleto .= 'Tamanho: '.number_format(filesize($caminhoArquivo) / 1024, 2)." KB\n";
-                $conteudoCompleto .= 'Data do arquivo: '.date('d/m/Y H:i:s', filemtime($caminhoArquivo))."\n\n";
-
-                // Tentar extrair alguns trechos legíveis do RTF
-                $arquivoContent = file_get_contents($caminhoArquivo);
-                $trechosExtraidos = $this->extrairTrechosLegiveisRTF($arquivoContent);
-
-                if (! empty($trechosExtraidos)) {
-                    $conteudoCompleto .= "TRECHOS IDENTIFICADOS NO DOCUMENTO EDITADO:\n";
-                    $conteudoCompleto .= $trechosExtraidos."\n\n";
-                }
-            }
-        }
-
-        // 5. Adicionar observações do fluxo legislativo se houver
-        if ($proposicao->observacoes_legislativo) {
-            $conteudoCompleto .= "OBSERVAÇÕES DO LEGISLATIVO:\n";
-            $conteudoCompleto .= $proposicao->observacoes_legislativo."\n\n";
-        }
-
-        $conteudoCompleto .= 'NOTA: Este PDF contém a versão mais atual do documento, incluindo todas as alterações realizadas durante o processo legislativo.';
-
-        return $conteudoCompleto;
-    }
-
-    /**
-     * Extrair trechos legíveis de um arquivo RTF (método simplificado)
-     */
-    private function extrairTrechosLegiveisRTF(string $rtfContent): string
-    {
-        $trechos = [];
-
-        // Buscar por texto comum em português
-        $patterns = [
-            '/(?:^|\s)([A-ZÁÉÍÓÚÂÊÎÔÛÃÕÀÈÌÒÙÇ][a-záéíóúâêîôûãõàèìòùç\s,.\-!?:;]{25,})(?:\s|$)/mu',
-            '/\b(Art\.|Artigo|Parágrafo|Inciso|Alínea)[^{}\\\\]{5,50}/i',
-            '/\b(Considerando|Resolve|Determina|Estabelece)[^{}\\\\]{5,100}/i',
-        ];
-
-        foreach ($patterns as $pattern) {
-            if (preg_match_all($pattern, $rtfContent, $matches)) {
-                foreach ($matches[1] as $match) {
-                    $match = trim($match);
-                    if (strlen($match) > 15 && ! preg_match('/[{}\\\\]/', $match)) {
-                        $trechos[] = $match;
-                    }
-                }
-            }
-        }
-
-        // Remover duplicatas e retornar os primeiros 5 trechos
-        $trechos = array_unique($trechos);
-        $trechos = array_slice($trechos, 0, 5);
-
-        return implode("\n- ", $trechos);
-    }
-
-    /**
-     * Método alternativo para extrair texto de RTF quando conversão principal falha
-     */
-    private function extrairTextoRTFAlternativo(string $rtfContent): string
-    {
-        // Método mais agressivo usando LibreOffice se disponível
-        if ($this->libreOfficeDisponivel()) {
-            try {
-                // Salvar RTF temporariamente
-                $tempRtf = tempnam(sys_get_temp_dir(), 'rtf_extract_').'.rtf';
-                $tempTxt = tempnam(sys_get_temp_dir(), 'txt_extract_').'.txt';
-
-                file_put_contents($tempRtf, $rtfContent);
-
-                // Usar LibreOffice para converter RTF para texto
-                $comando = sprintf(
-                    'libreoffice --headless --convert-to txt --outdir %s %s 2>/dev/null',
-                    escapeshellarg(dirname($tempTxt)),
-                    escapeshellarg($tempRtf)
-                );
-
-                exec($comando, $output, $returnCode);
-
-                $arquivoTxt = dirname($tempTxt).'/'.pathinfo($tempRtf, PATHINFO_FILENAME).'.txt';
-
-                if ($returnCode === 0 && file_exists($arquivoTxt)) {
-                    $texto = file_get_contents($arquivoTxt);
-
-                    // Limpar arquivos temporários
-                    @unlink($tempRtf);
-                    @unlink($arquivoTxt);
-
-                    if (! empty($texto) && strlen($texto) > 20) {
-                        return trim($texto);
-                    }
-                }
-            } catch (\Exception $e) {
-            }
-        }
-
-        // Método de fallback: buscar por texto comum entre códigos RTF
-        $textoExtraido = '';
-
-        // Extrair texto que aparece entre espaços e caracteres comuns
-        if (preg_match_all('/\s([A-Za-zÀ-ÿ\s,.\-!?:;]{15,})\s/u', $rtfContent, $matches)) {
-            foreach ($matches[1] as $match) {
-                $match = trim($match);
-                if (strlen($match) > 10 && ! preg_match('/[{}\\\\]/', $match)) {
-                    $textoExtraido .= $match.' ';
-                }
-            }
-        }
-
-        // Se ainda não temos texto suficiente, buscar parágrafos
-        if (strlen($textoExtraido) < 100) {
-            if (preg_match_all('/[A-ZÁÉÍÓÚÂÊÎÔÛÃÕÀÈÌÒÙÇ][a-záéíóúâêîôûãõàèìòùç\s,.\-!?:;]{30,}/u', $rtfContent, $matches)) {
-                foreach ($matches[0] as $match) {
-                    $match = trim($match);
-                    if (strlen($match) > 20 && ! preg_match('/[{}\\\\]/', $match)) {
-                        $textoExtraido .= $match.' ';
-                    }
-                }
-            }
-        }
-
-        return trim($textoExtraido);
-    }
-
-    /**
-     * Gerar HTML completo para PDF incluindo protocolo e assinatura
-     */
-    private function gerarHTMLParaPDF(Proposicao $proposicao, string $conteudo): string
-    {
-        // Determinar o título baseado no tipo
-        $tipoFormatado = $this->formatarTipoProposicao($proposicao->tipo);
-
-        // Informações do protocolo
-        $numeroProtocolo = $proposicao->numero_protocolo ?: 'Aguardando Protocolo';
-        $dataProtocolo = $proposicao->data_protocolo ? $proposicao->data_protocolo->format('d/m/Y') : '';
-
-        // Informações da assinatura
-        $assinaturaInfo = '';
-        if ($proposicao->assinatura_digital) {
-            $assinaturaData = json_decode($proposicao->assinatura_digital, true);
-            if ($assinaturaData) {
-                $assinaturaInfo = "
-                <div class='assinatura-info'>
-                    <strong>Assinado digitalmente por:</strong> {$assinaturaData['nome']}<br>
-                    <strong>Data da assinatura:</strong> {$assinaturaData['data']}<br>
-                    <strong>Certificado:</strong> {$assinaturaData['tipo']} - {$assinaturaData['id']}
-                </div>";
-            }
-        }
-
-        return "
-        <!DOCTYPE html>
-        <html lang='pt-BR'>
-        <head>
-            <meta charset='UTF-8'>
-            <title>{$tipoFormatado} Nº {$proposicao->id}/{$proposicao->ano}</title>
-            <style>
-                body { font-family: Arial, sans-serif; margin: 40px; line-height: 1.6; }
-                .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 20px; }
-                .title { font-size: 20px; font-weight: bold; margin: 15px 0; text-transform: uppercase; }
-                .protocolo { font-size: 16px; font-weight: bold; margin: 10px 0; color: #2c5aa0; }
-                .info { font-size: 12px; color: #666; margin: 5px 0; }
-                .content { margin-top: 30px; text-align: justify; }
-                .ementa { background: #f5f5f5; padding: 15px; margin: 20px 0; border-left: 4px solid #007bff; }
-                .assinatura-info { background: #e8f4fd; padding: 15px; margin: 20px 0; border-left: 4px solid #28a745; font-size: 12px; }
-                .footer { margin-top: 40px; text-align: center; font-size: 11px; color: #666; border-top: 1px solid #ddd; padding-top: 20px; }
-            </style>
-        </head>
-        <body>
-            <div class='header'>
-                <h1>CÂMARA MUNICIPAL DE CARAGUATATUBA</h1>
-                <div class='title'>{$tipoFormatado} Nº {$numeroProtocolo}</div>
-                <div class='protocolo'>PROTOCOLO: {$numeroProtocolo}</div>
-                <div class='info'>Autor: ".($proposicao->autor->name ?? 'N/A')."</div>
-                <div class='info'>Data de Criação: ".$proposicao->created_at->format('d/m/Y').'</div>
-                '.($dataProtocolo ? "<div class='info'>Data de Protocolo: {$dataProtocolo}</div>" : '')."
-            </div>
+            $pdfGerado = $diretorioDestino . '/' . $nomeArquivoSemExtensao . '.pdf';
             
-            <div class='ementa'>
-                <strong>EMENTA:</strong><br>
-                ".nl2br(htmlspecialchars($proposicao->ementa))."
-            </div>
-            
-            <div class='content'>
-                ".nl2br(htmlspecialchars($conteudo ?: 'Conteúdo não disponível'))."
-            </div>
-            
-            {$assinaturaInfo}
-            
-            <div class='footer'>
-                <p>Documento oficial da Câmara Municipal de Caraguatatuba</p>
-                <p>Gerado em: ".now()->format('d/m/Y H:i:s').'</p>
-            </div>
-        </body>
-        </html>';
-    }
+            // Mover para o nome final desejado se diferente
+            if (file_exists($pdfGerado) && $pdfGerado !== $caminhoPdfDestino) {
+                rename($pdfGerado, $caminhoPdfDestino);
+            }
 
-    /**
-     * Processar variáveis no template usando TemplateParametrosService
-     */
-    private function processarVariaveisTemplate(string $conteudo): string
-    {
-        try {
-            // Primeiro, converter variáveis com escape RTF para formato normal
-            // De $\{variavel\} para ${variavel}
-            $conteudo = str_replace(['$\\{', '\\}'], ['${', '}'], $conteudo);
-
-            $templateService = app(\App\Services\Template\TemplateParametrosService::class);
-
-            // Processar o template com variáveis padrão
-            return $templateService->processarTemplate($conteudo, []);
+            return file_exists($caminhoPdfDestino);
 
         } catch (\Exception $e) {
-            // Se houver erro, retornar conteúdo original
-            return $conteudo;
-        }
-    }
-
-    /**
-     * Substituir variáveis no template usando o novo sistema
-     */
-    private function substituirVariaveisNoTemplate($template, array $templateVariables, Proposicao $proposicao, TemplateVariablesService $templateVariablesService): string
-    {
-        try {
-            // Obter conteúdo do template usando o método privado do service (reflexão)
-            $reflection = new \ReflectionClass($templateVariablesService);
-            $method = $reflection->getMethod('getTemplateContent');
-            $method->setAccessible(true);
-            $templateContent = $method->invoke($templateVariablesService, $template);
-
-            if (! $templateContent) {
-                return $this->criarTextoBasico($proposicao, $templateVariables);
-            }
-
-            // Variáveis do sistema para preenchimento automático
-            $user = auth()->user();
-            $now = now();
-
-            $systemVariables = [
-                'data_atual' => $now->format('d/m/Y'),
-                'data_extenso' => $now->locale('pt_BR')->translatedFormat('j \\d\\e F \\d\\e Y'),
-                'dia_atual' => $now->format('d'),
-                'mes_atual' => $now->locale('pt_BR')->translatedFormat('F'),
-                'ano_atual' => $now->format('Y'),
-                'hora_atual' => $now->format('H:i'),
-                'data_criacao' => $proposicao->created_at->format('d/m/Y'),
-
-                'numero_proposicao' => $proposicao->numero ?? $proposicao->id,
-                'tipo_proposicao' => $proposicao->tipo_formatado ?? 'Proposição',
-                'status_proposicao' => ucfirst($proposicao->status ?? 'rascunho'),
-
-                'autor_nome' => $proposicao->autor->name ?? $user->name ?? 'Autor',
-                'nome_parlamentar' => $proposicao->autor->name ?? $user->name ?? 'Parlamentar',
-                'cargo_parlamentar' => 'Vereador(a)',
-                'email_parlamentar' => $proposicao->autor->email ?? $user->email ?? '',
-                'partido_parlamentar' => '', // TODO: implementar quando tiver campo partido
-
-                'municipio' => config('app.municipio', 'São Paulo'),
-                'nome_camara' => config('app.nome_camara', 'Câmara Municipal'),
-                'endereco_camara' => config('app.endereco_camara', ''),
-                'legislatura_atual' => config('app.legislatura_atual', '2021-2024'),
-                'sessao_legislativa' => config('app.sessao_legislativa', '2024'),
-
-                'imagem_cabecalho' => config('app.imagem_cabecalho', ''),
-            ];
-
-            // Combinar variáveis do template com as do sistema
-            $allVariables = array_merge($systemVariables, $templateVariables);
-
-            // Substituir variáveis no conteúdo do template
-            $processedContent = $templateContent;
-            foreach ($allVariables as $key => $value) {
-                $processedContent = str_replace('${'.$key.'}', $value, $processedContent);
-            }
-
-            return $processedContent;
-
-        } catch (\Exception $e) {
-            // Fallback: criar texto básico
-            return $this->criarTextoBasico($proposicao, $templateVariables);
-        }
-    }
-
-    /**
-     * Gera ementa automaticamente baseada no tipo de proposição e variáveis disponíveis
-     */
-    private function gerarEmentaAutomatica($proposicao, $variaveisTemplate = [])
-    {
-        // Primeira tentativa: usar variáveis do template se existirem
-        if (! empty($variaveisTemplate)) {
-            if (isset($variaveisTemplate['ementa']['label']) && ! empty($variaveisTemplate['ementa'])) {
-                // Se tem campo ementa no template mas sem valor, usar descrição padrão
-                $ementa = 'Ementa a ser definida - '.ucfirst(str_replace('_', ' ', $proposicao->tipo));
-            } elseif (isset($variaveisTemplate['finalidade']['label']) && ! empty($variaveisTemplate['finalidade'])) {
-                $ementa = 'Proposta com finalidade a ser definida';
-            } elseif (isset($variaveisTemplate['texto']['label']) && ! empty($variaveisTemplate['texto'])) {
-                $ementa = 'Proposição em elaboração - conteúdo a ser definido';
-            }
-        }
-
-        // Segunda tentativa: gerar baseado no tipo de proposição
-        if (empty($ementa)) {
-            switch ($proposicao->tipo) {
-                case 'proposta_emenda_constituicao':
-                    $ementa = 'Proposta de Emenda à Constituição - dispositivos e finalidade a serem definidos';
-                    break;
-                case 'proposta_emenda_lei_organica':
-                    $ementa = 'Proposta de Emenda à Lei Orgânica Municipal - dispositivos a serem definidos';
-                    break;
-                case 'projeto_lei_ordinaria':
-                    $ementa = 'Projeto de Lei Ordinária - matéria a ser definida';
-                    break;
-                case 'projeto_lei_complementar':
-                    $ementa = 'Projeto de Lei Complementar - matéria a ser definida';
-                    break;
-                case 'indicacao':
-                    $ementa = 'Indicação - assunto a ser definido';
-                    break;
-                case 'projeto_decreto_legislativo':
-                    $ementa = 'Projeto de Decreto Legislativo - matéria a ser definida';
-                    break;
-                case 'projeto_resolucao':
-                    $ementa = 'Projeto de Resolução - matéria a ser definida';
-                    break;
-                case 'mocao':
-                    $ementa = 'Moção - assunto a ser definido';
-                    break;
-                default:
-                    $ementa = 'Proposição em elaboração - '.ucfirst(str_replace('_', ' ', $proposicao->tipo));
-                    break;
-            }
-        }
-
-        return $ementa ?? null;
-    }
-
-    /**
-     * Carrega valores existentes de diferentes fontes para pré-preencher campos
-     */
-    private function carregarValoresExistentes($proposicao)
-    {
-        $valoresExistentes = [];
-
-        // Log::info('Carregando valores existentes', [
-        //     'proposicao_id' => $proposicao->id,
-        //     'status' => $proposicao->status
-        // ]);
-
-        // 1. Carregar variáveis do template (usa accessor que já tenta banco e sessão)
-        $variaveisTemplate = $proposicao->variaveis_template;
-        if (! empty($variaveisTemplate)) {
-            $valoresExistentes = array_merge($valoresExistentes, $variaveisTemplate);
-            // Log::info('Valores carregados via accessor', [
-            //     'proposicao_id' => $proposicao->id,
-            //     'variaveis' => array_keys($variaveisTemplate),
-            //     'valores' => $variaveisTemplate
-            // ]);
-        }
-
-        // 3. Mapear campos básicos da proposição para variáveis do template atual
-        // Só mapear se não existirem valores mais específicos
-        if (! empty($proposicao->conteudo) && ! isset($valoresExistentes['texto'])) {
-            $valoresExistentes['texto'] = $proposicao->conteudo;
-        }
-
-        // Para ementa, tentar mapear para finalidade se a ementa parecer automática
-        if (! empty($proposicao->ementa) && ! isset($valoresExistentes['finalidade'])) {
-            // Se a ementa contém indicadores de que foi gerada automaticamente, não mapear
-            $ementaAutomatica = str_contains($proposicao->ementa, 'serem definidos') ||
-                               str_contains($proposicao->ementa, 'a ser definid') ||
-                               str_contains($proposicao->ementa, 'em elaboração');
-
-            if (! $ementaAutomatica) {
-                // Ementa parece ter conteúdo real, mapear para finalidade
-                $valoresExistentes['finalidade'] = $proposicao->ementa;
-            }
-        }
-
-        // 4. Para proposição "em_edicao", tentar extrair de conteúdo processado
-        if ($proposicao->status === 'em_edicao' && ! empty($proposicao->conteudo_processado)) {
-            // Aqui poderia tentar extrair valores do conteúdo processado usando regex
-            // Por simplicidade, vou pular essa parte por enquanto
-        }
-
-        // Log::info('Valores finais carregados', [
-        //     'proposicao_id' => $proposicao->id,
-        //     'total_variaveis' => count($valoresExistentes),
-        //     'variaveis' => array_keys($valoresExistentes)
-        // ]);
-
-        return $valoresExistentes;
-    }
-
-    /**
-     * Remove código LaTeX e outros códigos técnicos do texto
-     */
-    private function limparCodigoLatex($texto)
-    {
-        if (empty($texto)) {
-            return $texto;
-        }
-
-        // Remover comandos LaTeX comuns
-        $patterns = [
-            '/\\\\documentclass\{[^}]*\}/',
-            '/\\\\usepackage(\[[^\]]*\])?\{[^}]*\}/',
-            '/\\\\begin\{document\}/',
-            '/\\\\end\{document\}/',
-            '/\\\\textbf\{([^}]*)\}/',
-            '/\\\\vspace\{[^}]*\}/',
-            '/\\\\onehalfspacing/',
-            '/\\\\spacing/',
-            // Comandos de formatação
-            '/\\\\[a-zA-Z]+(\{[^}]*\})*/',
-            // Linhas que começam com \
-            '/^\\\\.*$/m',
-        ];
-
-        $replacements = [
-            '', // remove documentclass
-            '', // remove usepackage
-            '', // remove begin{document}
-            '', // remove end{document}
-            '$1', // mantém apenas o conteúdo do textbf
-            '', // remove vspace
-            '', // remove onehalfspacing
-            '', // remove spacing
-            '', // remove outros comandos LaTeX
-            '', // remove linhas que começam com \
-        ];
-
-        $textoLimpo = preg_replace($patterns, $replacements, $texto);
-
-        // Limpar linhas vazias excessivas
-        $textoLimpo = preg_replace('/\n\s*\n\s*\n/', "\n\n", $textoLimpo);
-
-        // Remover espaços em branco no início e fim
-        $textoLimpo = trim($textoLimpo);
-
-        // Log::info('Código LaTeX removido do texto', [
-        //     'texto_original_length' => strlen($texto),
-        //     'texto_limpo_length' => strlen($textoLimpo),
-        //     'removeu_latex' => $texto !== $textoLimpo
-        // ]);
-
-        return $textoLimpo;
-    }
-
-    /**
-     * Gerar código RTF para inserir uma imagem
-     */
-    private function gerarCodigoRTFImagem(string $caminhoImagem): string
-    {
-        try {
-            // Verificar se arquivo existe e obter informações
-            if (! file_exists($caminhoImagem)) {
-                return '[IMAGEM DO CABEÇALHO - ARQUIVO NÃO ENCONTRADO]';
-            }
-
-            $info = getimagesize($caminhoImagem);
-            if (! $info) {
-                return '[IMAGEM DO CABEÇALHO - FORMATO INVÁLIDO]';
-            }
-
-            // Para o OnlyOffice, vamos inserir a imagem usando código RTF específico
-            // Primeiro, converter a imagem para formato hexadecimal
-            $imagemData = file_get_contents($caminhoImagem);
-            $imagemHex = bin2hex($imagemData);
-
-            // Obter dimensões da imagem
-            $largura = $info[0];
-            $altura = $info[1];
-
-            // Redimensionar se necessário (máximo 200px de largura para evitar arquivo muito grande)
-            if ($largura > 200) {
-                $novaLargura = 200;
-                $novaAltura = intval(($novaLargura * $altura) / $largura);
-            } else {
-                $novaLargura = $largura;
-                $novaAltura = $altura;
-            }
-
-            // Converter para twips (1 pixel = 15 twips aprox)
-            $larguraTwips = $novaLargura * 15;
-            $alturaTwips = $novaAltura * 15;
-
-            // Determinar o tipo MIME da imagem
-            $tipoImagem = $info['mime'];
-            $formatoRTF = match ($tipoImagem) {
-                'image/png' => 'pngblip',
-                'image/jpeg', 'image/jpg' => 'jpegblip',
-                default => 'pngblip'
-            };
-
-            // Gerar código RTF para inserir a imagem
-            $rtfImagem = "{\pict\\{$formatoRTF}\\picw{$largura}\\pich{$altura}\\picwgoal{$larguraTwips}\\pichgoal{$alturaTwips} {$imagemHex}}";
-
-            // Centralizar a imagem
-            return "{\\qc {$rtfImagem}\\par}";
-
-        } catch (\Exception $e) {
-            // Fallback para placeholder se houver erro
-            $nomeArquivo = basename($caminhoImagem);
-
-            return "{\\qc\\b\\fs20 [INSERIR IMAGEM: {$nomeArquivo}]\\par}";
-        }
-    }
-
-    /**
-     * Retorna dados atualizados da proposição via AJAX
-     * Usado após fechar o editor OnlyOffice para atualizar a página sem reload completo
-     */
-    public function getDadosAtualizados(Proposicao $proposicao)
-    {
-        try {
-            // Verificar permissão de visualização (se houver usuário autenticado)
-            if (auth()->check()) {
-                $user = auth()->user();
-                if ($user->isParlamentar() && $proposicao->autor_id !== auth()->id()) {
-                    return response()->json(['error' => 'Sem permissão'], 403);
-                }
-            }
-
-            // Recarregar a proposição do banco para garantir dados fresh
-            $proposicao->refresh();
-
-            // ESTRATÉGIA SIMPLIFICADA: Sempre extrair ementa do conteúdo original da database
-            $conteudoProcessado = $proposicao->conteudo;
-            $ementaExtraida = $proposicao->ementa;
-
-            // 1. SEMPRE tentar extrair ementa do conteúdo original (limpo e confiável)
-            if ($proposicao->conteudo && strlen($proposicao->conteudo) > 20) {
-                $novaEmenta = $this->extrairEmentaDoConteudo($proposicao->conteudo, $proposicao->ementa);
-                if ($novaEmenta && $novaEmenta !== 'Ementa a ser definida') {
-                    $ementaExtraida = $novaEmenta;
-                    \Log::info('✅ Ementa extraída do conteúdo original: '.substr($ementaExtraida, 0, 100));
-                }
-            }
-
-            // 2. Se existe arquivo salvo, tentar mostrar conteúdo atualizado
-            if ($proposicao->arquivo_path) {
-                try {
-                    $onlyOfficeService = app(\App\Services\OnlyOffice\OnlyOfficeService::class);
-                    $textoDoArquivo = $onlyOfficeService->extrairTextoDoArquivo($proposicao);
-
-                    // Verificar se a extração do arquivo foi bem-sucedida
-                    if ($textoDoArquivo &&
-                        strlen(trim($textoDoArquivo)) > 50 &&
-                        ! preg_match('/^[\s;*\\\\-]+$/', $textoDoArquivo)) {
-
-                        $conteudoProcessado = $textoDoArquivo;
-                        \Log::info('✅ Conteúdo atualizado extraído do arquivo');
-                    } else {
-                        \Log::info('⚠️ Extração do arquivo falhou, mantendo conteúdo original');
-                    }
-                } catch (\Exception $e) {
-                    \Log::info('⚠️ Erro ao extrair texto do arquivo: '.$e->getMessage());
-                }
-            }
-
-            // Retornar dados atualizados
-            return response()->json([
-                'success' => true,
-                'data' => [
-                    'id' => $proposicao->id,
-                    'tipo' => $proposicao->tipo_formatado,
-                    'ementa' => $ementaExtraida ?: 'Ementa a ser definida',
-                    'conteudo' => $proposicao->conteudo,
-                    'conteudo_processado' => $conteudoProcessado,
-                    'arquivo_path' => $proposicao->arquivo_path,
-                    'ultima_modificacao' => $proposicao->ultima_modificacao ? $proposicao->ultima_modificacao->format('d/m/Y H:i') : null,
-                    'status' => $proposicao->status,
-                    'status_label' => $proposicao->status_label,
-                    'autor' => $proposicao->autor ? $proposicao->autor->name : 'Desconhecido',
-                ],
+            Log::error('Erro na conversão direta para PDF', [
+                'erro' => $e->getMessage()
             ]);
-
-        } catch (\Exception $e) {
-            \Log::error('Erro ao buscar dados atualizados da proposição: '.$e->getMessage());
-
-            return response()->json([
-                'success' => false,
-                'error' => 'Erro ao buscar dados atualizados',
-            ], 500);
-        }
-    }
-
-    /**
-     * Extrair ementa inteligente do conteúdo editado
-     */
-    private function extrairEmentaDoConteudo(string $conteudoProcessado, ?string $ementaOriginal): string
-    {
-        // Limpar o conteúdo de tags HTML e caracteres de formatação
-        $textoLimpo = strip_tags($conteudoProcessado);
-        $textoLimpo = html_entity_decode($textoLimpo);
-        $textoLimpo = preg_replace('/\s+/', ' ', $textoLimpo);
-        $textoLimpo = trim($textoLimpo);
-
-        // Se o conteúdo está corrompido ou muito pequeno, manter ementa original
-        if (strlen($textoLimpo) < 50 || preg_match('/[\\\\*-]+/', $textoLimpo)) {
-            return $ementaOriginal ?: 'Ementa a ser definida';
-        }
-
-        // Procurar por padrões de ementa
-        $padroes = [
-            '/EMENTA:\s*([^.]+\.)/i',
-            '/Ementa:\s*([^.]+\.)/i',
-            '/^([^.]+\.)/m',  // Primeira frase que termina com ponto
-        ];
-
-        foreach ($padroes as $padrao) {
-            if (preg_match($padrao, $textoLimpo, $matches)) {
-                $ementaEncontrada = trim($matches[1]);
-                if (strlen($ementaEncontrada) > 20 && strlen($ementaEncontrada) < 500) {
-                    return $ementaEncontrada;
-                }
-            }
-        }
-
-        // Se não encontrou padrão específico, extrair informação significativa
-        $linhas = explode("\n", $textoLimpo);
-        $linhas = array_filter($linhas, function ($linha) {
-            $linha = trim($linha);
-
-            // Ignorar linhas muito curtas, títulos genéricos, ou apenas pontuação
-            return strlen($linha) > 15 &&
-                   ! preg_match('/^(What|Why|How|Onde|Como|Quando|Por que)/i', $linha) &&
-                   ! preg_match('/^[\s\p{P}]*$/u', $linha);
-        });
-
-        if (count($linhas) > 0) {
-            $linhasValidas = array_values($linhas); // Re-indexar
-            $primeiraLinha = trim($linhasValidas[0]);
-
-            // Se a primeira linha parece ser uma pergunta ou título, tentar a próxima
-            if (preg_match('/\?$/', $primeiraLinha) && count($linhasValidas) > 1) {
-                $primeiraLinha = trim($linhasValidas[1]);
-            }
-
-            // Se a primeira linha é muito curta, tentar adicionar contexto
-            if (strlen($primeiraLinha) < 80 && count($linhasValidas) > 1) {
-                $segundaLinha = trim($linhasValidas[1]);
-                if (strlen($segundaLinha) > 15 && ! preg_match('/\?$/', $segundaLinha)) {
-                    // Adicionar segunda linha se não for uma pergunta
-                    $primeiraLinha .= '. '.$segundaLinha;
-                }
-            }
-
-            // Limitar tamanho da ementa
-            if (strlen($primeiraLinha) > 250) {
-                // Tentar cortar em uma frase completa
-                $corte = strrpos(substr($primeiraLinha, 0, 247), '.');
-                if ($corte > 100) {
-                    $primeiraLinha = substr($primeiraLinha, 0, $corte + 1);
-                } else {
-                    $primeiraLinha = substr($primeiraLinha, 0, 247).'...';
-                }
-            }
-
-            // Verificar se é uma ementa válida
-            if (strlen($primeiraLinha) > 20 && ! preg_match('/^[\s\p{P}]*$/u', $primeiraLinha)) {
-                return $primeiraLinha;
-            }
-        }
-
-        // Fallback: manter ementa original
-        return $ementaOriginal ?: 'Ementa a ser definida';
-    }
-
-    /**
-     * Consulta pública de proposição (sem autenticação)
-     * Permite consultar status e informações básicas através do QR Code
-     */
-    public function consultaPublica($id)
-    {
-        $proposicao = Proposicao::with(['autor', 'template'])
-            ->where('id', $id)
-            ->first();
-
-        if (! $proposicao) {
-            return view('proposicoes.consulta.nao-encontrada');
-        }
-
-        // Apenas mostrar informações públicas
-        $informacoesPublicas = [
-            'id' => $proposicao->id,
-            'tipo' => $proposicao->tipo,
-            'ementa' => $proposicao->ementa,
-            'numero_protocolo' => $proposicao->numero_protocolo,
-            'status' => $this->traduzirStatus($proposicao->status),
-            'data_criacao' => $proposicao->created_at?->format('d/m/Y'),
-            'data_protocolo' => $proposicao->data_protocolo?->format('d/m/Y H:i'),
-            'autor_nome' => $proposicao->autor?->name,
-            'assinado' => ! empty($proposicao->assinatura_digital),
-            'data_assinatura' => $proposicao->data_assinatura?->format('d/m/Y H:i'),
-            'tem_pdf' => ! empty($proposicao->arquivo_pdf_path) && file_exists(storage_path('app/'.$proposicao->arquivo_pdf_path)),
-            'pdf_url' => ! empty($proposicao->arquivo_pdf_path) ? route('proposicoes.consulta.pdf', $proposicao->id) : null,
-        ];
-
-        return view('proposicoes.consulta.publica', compact('informacoesPublicas'));
-    }
-
-    /**
-     * Servir PDF para consulta pública
-     */
-    public function consultaPublicaPdf($id)
-    {
-        $proposicao = Proposicao::find($id);
-
-        if (! $proposicao || ! $proposicao->arquivo_pdf_path) {
-            abort(404, 'Documento não encontrado');
-        }
-
-        $pdfPath = storage_path('app/'.$proposicao->arquivo_pdf_path);
-
-        if (! file_exists($pdfPath)) {
-            abort(404, 'Arquivo PDF não encontrado');
-        }
-
-        // Apenas permitir download se estiver protocolado ou assinado (documentos públicos)
-        if (! in_array($proposicao->status, ['protocolado', 'assinado', 'enviado_protocolo'])) {
-            abort(403, 'Documento não disponível para consulta pública');
-        }
-
-        $nomeArquivo = $proposicao->tipo.'_'.($proposicao->numero_protocolo ?? $proposicao->id).'.pdf';
-
-        return response()->file($pdfPath, [
-            'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'inline; filename="'.$nomeArquivo.'"',
-        ]);
-    }
-
-    /**
-     * Atualizar status da proposição via formulário tradicional
-     */
-    public function updateStatus($id, Request $request)
-    {
-        $request->validate([
-            'status' => 'required|string|in:rascunho,em_edicao,enviado_legislativo,em_revisao,aguardando_aprovacao_autor,devolvido_edicao,retornado_legislativo,aprovado,reprovado',
-        ]);
-
-        try {
-            $proposicao = Proposicao::findOrFail($id);
-            $user = auth()->user();
-
-            // Verificar permissões para alterar status
-            if (! $this->canUpdateStatus($proposicao, $request->status, $user)) {
-                return redirect()->back()->with('error', 'Você não tem permissão para alterar este status.');
-            }
-
-            $oldStatus = $proposicao->status;
-            
-            // CRÍTICO: Se status mudou para aprovado, invalidar cache PDF para forçar regeneração
-            $updateData = [
-                'status' => $request->status,
-                'ultima_modificacao' => now(),
-            ];
-            
-            if ($request->status === 'aprovado' && $oldStatus !== 'aprovado') {
-                // Invalidar PDF antigo para forçar regeneração com últimas alterações do OnlyOffice
-                $updateData['arquivo_pdf_path'] = null;
-                $updateData['pdf_gerado_em'] = null;
-                $updateData['pdf_conversor_usado'] = null;
-            }
-            
-            $proposicao->update($updateData);
-
-            $statusTexts = [
-                'rascunho' => 'Rascunho',
-                'em_edicao' => 'Em Edição',
-                'enviado_legislativo' => 'Enviado ao Legislativo',
-                'em_revisao' => 'Em Revisão',
-                'aguardando_aprovacao_autor' => 'Aguardando Aprovação do Autor',
-                'devolvido_edicao' => 'Devolvido para Edição',
-                'retornado_legislativo' => 'Retornado do Legislativo',
-                'aprovado' => 'Aprovado',
-                'reprovado' => 'Reprovado',
-            ];
-
-            $statusText = $statusTexts[$request->status] ?? 'Status Desconhecido';
-
-            return redirect()->route('proposicoes.show', $id)
-                ->with('success', "Status alterado para: {$statusText}");
-
-        } catch (\Exception $e) {
-            return redirect()->back()->with('error', 'Erro ao atualizar status. Tente novamente.');
-        }
-    }
-
-    /**
-     * Verificar se usuário pode alterar status
-     */
-    private function canUpdateStatus(Proposicao $proposicao, string $newStatus, $user): bool
-    {
-        if (! $user) {
             return false;
         }
+    }
 
-        $userRole = $user->getRoleNames()->first() ?? 'guest';
-
-        // Admin pode alterar qualquer status
-        if ($userRole === 'ADMIN' || str_contains($user->email, 'admin') || str_contains($user->email, 'bruno')) {
+    /**
+     * Verificar se a proposição tem PDF disponível
+     */
+    private function verificarExistenciaPDF($proposicao): bool
+    {
+        // Verificar arquivo_pdf_path
+        if ($proposicao->arquivo_pdf_path && Storage::exists($proposicao->arquivo_pdf_path)) {
             return true;
         }
 
-        // Legislativo pode aprovar/reprovar/devolver
-        if ($userRole === 'LEGISLATIVO' || str_contains($user->email, 'legislativo') || str_contains($user->email, 'joao')) {
-            $allowedStatuses = ['em_revisao', 'aprovado', 'reprovado', 'devolvido_edicao'];
-
-            return in_array($newStatus, $allowedStatuses);
+        // Verificar diretório de PDFs
+        $diretorioPDFs = storage_path("app/proposicoes/pdfs/{$proposicao->id}");
+        if (is_dir($diretorioPDFs)) {
+            $pdfs = glob($diretorioPDFs . '/*.pdf');
+            if (!empty($pdfs)) {
+                return true;
+            }
         }
 
-        // Autor pode alterar para em_edicao ou enviado_legislativo
-        if ($proposicao->autor_id === $user->id) {
-            $allowedStatuses = ['em_edicao', 'enviado_legislativo'];
-
-            return in_array($newStatus, $allowedStatuses);
+        // Verificar diretório privado
+        $diretorioPrivado = storage_path("app/private/proposicoes/pdfs/{$proposicao->id}");
+        if (is_dir($diretorioPrivado)) {
+            $pdfs = glob($diretorioPrivado . '/*.pdf');
+            if (!empty($pdfs)) {
+                return true;
+            }
         }
 
         return false;
     }
 
     /**
-     * Buscar dados frescos da proposição para Vue.js
+     * Limpar código LaTeX do conteúdo
      */
-    public function getDadosFrescos($id)
+    private function limparCodigoLatex($conteudo): string
     {
-        try {
-            $proposicao = Proposicao::with(['autor'])->findOrFail($id);
-
-            // Verificar permissões de visualização
-            $user = auth()->user();
-            if (! $user) {
-                return response()->json(['success' => false, 'message' => 'Não autenticado'], 401);
-            }
-
-            // Limpar e extrair dados úteis do conteúdo
-            $dadosLimpos = $this->extrairDadosLimpos($proposicao);
-
-            // Formatar dados para Vue.js
-            $data = [
-                'id' => $proposicao->id,
-                'tipo' => $proposicao->tipo,
-                'ementa' => $dadosLimpos['ementa'],
-                'conteudo' => $dadosLimpos['conteudo'],
-                'status' => $proposicao->status,
-                'numero_protocolo' => $proposicao->numero_protocolo,
-                'created_at' => $proposicao->created_at?->toISOString(),
-                'updated_at' => $proposicao->updated_at?->toISOString(),
-                'autor' => [
-                    'id' => $proposicao->autor?->id,
-                    'name' => $proposicao->autor?->name,
-                    'email' => $proposicao->autor?->email,
-                ],
-                'has_arquivo' => ! empty($proposicao->arquivo_path),
-                'has_pdf' => ! empty($proposicao->arquivo_pdf_path),
-                'meta' => [
-                    'word_count' => str_word_count(strip_tags($dadosLimpos['conteudo'] ?? '')),
-                    'char_count' => strlen($dadosLimpos['conteudo'] ?? ''),
-                    'has_content' => ! empty($dadosLimpos['conteudo']),
-                    'is_complete' => ! empty($dadosLimpos['ementa']) && ! empty($dadosLimpos['conteudo']),
-                ],
-            ];
-
-            return response()->json([
-                'success' => true,
-                'proposicao' => $data,
-                'timestamp' => now()->toISOString(),
-            ]);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erro ao buscar dados da proposição',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
-    }
-
-    /**
-     * Extrair dados limpos da proposição removendo elementos de template
-     */
-    private function extrairDadosLimpos($proposicao)
-    {
-        // Inicializar com dados originais
-        $ementa = $proposicao->ementa ?? '';
-        $conteudo = $proposicao->conteudo ?? '';
-
-        // Verificar se o conteúdo contém códigos RTF corrompidos
-        if (str_contains($conteudo, 'Arial;Calibri;Times New Roman') || 
-            str_contains($conteudo, 'Heading 1;') ||
-            str_contains($conteudo, ';;;;;;;;;;;;')) {
-            
-            // Conteúdo RTF corrompido - usar apenas a ementa ou criar conteúdo básico
-            $conteudo = 'Conteúdo da proposição disponível no editor. Para visualizar o conteúdo completo, utilize o editor OnlyOffice.';
-        }
-
-        // Se o conteúdo contém elementos de template, extrair dados úteis
-        if (str_contains($conteudo, 'assinatura_digital_info') ||
-            str_contains($conteudo, 'qrcode_html') ||
-            str_contains($conteudo, 'EMENTA:')) {
-
-            // Extrair ementa do conteúdo se presente
-            if (preg_match('/EMENTA:\s*([^A]+?)\s*A Câmara/s', $conteudo, $matches)) {
-                $ementaExtraida = trim($matches[1]);
-                if (! empty($ementaExtraida)) {
-                    $ementa = $ementaExtraida;
-                }
-            }
-
-            // Extrair conteúdo principal (texto entre "A Câmara Municipal manifesta:" e "Resolve dirigir")
-            if (preg_match('/A Câmara Municipal manifesta:\s*(.*?)\s*Resolve dirigir/s', $conteudo, $matches)) {
-                $conteudoExtraido = trim($matches[1]);
-                if (! empty($conteudoExtraido)) {
-                    $conteudo = $conteudoExtraido;
-                }
-            } else {
-                // Tentar extrair texto entre outras marcações comuns
-                if (preg_match('/manifesta:\s*(.*?)\s*(?:Caraguatatuba|____)/s', $conteudo, $matches)) {
-                    $conteudoExtraido = trim($matches[1]);
-                    if (! empty($conteudoExtraido)) {
-                        $conteudo = $conteudoExtraido;
-                    }
-                }
-            }
-
-            // Limpar elementos de template restantes
-            $elementosParaRemover = [
-                'assinatura_digital_info',
-                'qrcode_html',
-                'MOÇÃO Nº [AGUARDANDO PROTOCOLO]',
-                '____________________________________',
-                'Câmara Municipal de Caraguatatuba - Documento Oficial',
-            ];
-
-            foreach ($elementosParaRemover as $elemento) {
-                $conteudo = str_replace($elemento, '', $conteudo);
-                $ementa = str_replace($elemento, '', $ementa);
-            }
-
-            // Limpar espaços extras e quebras de linha desnecessárias
-            $conteudo = preg_replace('/\s+/', ' ', trim($conteudo));
-            $ementa = preg_replace('/\s+/', ' ', trim($ementa));
-        }
-
-        // Aplicar limpeza adicional para códigos RTF
-        $conteudo = $this->limparConteudoRTF($conteudo);
-
-        // Fallbacks para dados vazios
-        if (empty($ementa) || $ementa === 'Criado pelo Parlamentar') {
-            $ementa = 'Moção em elaboração';
-        }
-
-        if (empty($conteudo) || strlen(trim($conteudo)) < 10) {
-            $conteudo = 'Conteúdo em elaboração pelo parlamentar. Para visualizar ou editar o conteúdo completo, utilize o editor OnlyOffice.';
-        }
-
-        return [
-            'ementa' => $ementa,
-            'conteudo' => $conteudo,
-        ];
-    }
-
-    /**
-     * Traduzir status para linguagem amigável ao público
-     */
-    private function traduzirStatus(string $status): string
-    {
-        $statusMap = [
-            'rascunho' => 'Em Elaboração',
-            'enviado_legislativo' => 'Em Análise Legislativa',
-            'aprovado_assinatura' => 'Aprovado - Aguardando Assinatura',
-            'assinado' => 'Assinado Digitalmente',
-            'enviado_protocolo' => 'Enviado para Protocolo',
-            'protocolado' => 'Protocolado - Tramitação Iniciada',
-            'devolvido_correcao' => 'Devolvido para Correções',
-            'retornado_legislativo' => 'Retornado ao Legislativo',
-        ];
-
-        return $statusMap[$status] ?? ucfirst(str_replace('_', ' ', $status));
-    }
-
-    /**
-     * Limpar conteúdo RTF corrompido
-     */
-    private function limparConteudoRTF(string $conteudo): string
-    {
-        // Verificar padrões específicos de corrupção RTF
-        $padroesCorrompidos = [
-            'Arial;Calibri;Times New Roman',
-            'Heading 1;',
-            ';;;;;;;;;;;;',
-            'List Paragraph;',
-            'No Spacing;',
-            'Title;',
-            'Subtitle;',
-            'Quote;',
-            'Intense Quote;',
-            'Header;',
-            'Footer;',
-            'Caption;'
-        ];
-
-        foreach ($padroesCorrompidos as $padrao) {
-            if (str_contains($conteudo, $padrao)) {
-                // Conteúdo está corrompido - retornar mensagem informativa
-                return 'Conteúdo da proposição disponível no editor. Para visualizar o conteúdo completo, utilize o editor OnlyOffice.';
-            }
-        }
-
-        // Se não é RTF, retornar como está
-        if (! str_contains($conteudo, '{\rtf')) {
+        if (empty($conteudo)) {
             return $conteudo;
         }
 
-        // Remover códigos RTF complexos e caracteres Unicode corrompidos
-        $conteudo = preg_replace('/\\\\u[0-9a-fA-F]+\*/', '', $conteudo); // Remove \u65*\u114* etc
-        $conteudo = preg_replace('/\\\\\w+\d*\s*/', ' ', $conteudo);
-        $conteudo = preg_replace('/[{}\\\\]/', '', $conteudo);
-        $conteudo = preg_replace('/\* \* \* \* \*;?\s*/', '', $conteudo);
-        $conteudo = preg_replace('/\d{10,}/', '', $conteudo);
-        $conteudo = preg_replace('/[A-Z0-9]{10,}/', '', $conteudo);
-        $conteudo = preg_replace('/\s*;\s*/', ' ', $conteudo);
+        // Remover comandos LaTeX comuns
+        $patterns = [
+            '/\\\\[a-zA-Z]+\{[^}]*\}/',  // Comandos com chaves: \comando{conteudo}
+            '/\\\\[a-zA-Z]+/',           // Comandos simples: \comando
+            '/\{\\\\[^}]*\}/',           // Chaves com comandos: {\comando}
+            '/\\\\\\\\/',                // Quebras de linha LaTeX: \\
+            '/\$[^$]*\$/',               // Expressões matemáticas: $...$
+            '/\$\$[^$]*\$\$/',           // Expressões matemáticas em bloco: $$...$$
+        ];
 
-        // Remover sequências específicas de caracteres corrompidos
-        $conteudo = preg_replace('/[0-9]{2,}[a-zA-Z]{2,}[0-9]{2,}/', '', $conteudo);
-        $conteudo = preg_replace('/[a-zA-Z]{2,}[0-9]{2,}[a-zA-Z]{2,}/', '', $conteudo);
-
-        // Limpar espaços múltiplos e caracteres especiais
-        $conteudo = preg_replace('/\s+/', ' ', $conteudo);
-        $conteudo = preg_replace('/[^\w\s\-\.\,\:\;\(\)]/', '', $conteudo);
-
-        // Remover linhas vazias ou muito curtas
-        $linhas = explode("\n", $conteudo);
-        $linhasLimpas = array_filter($linhas, function ($linha) {
-            $linhaLimpa = trim($linha);
-
-            return strlen($linhaLimpa) > 10 && ! preg_match('/^[\s\*\-;]+$/', $linhaLimpa);
-        });
-
-        $conteudoLimpo = trim(implode("\n", $linhasLimpas));
-
-        // Se após a limpeza o conteúdo ficou muito pequeno ou vazio, retornar mensagem informativa
-        if (strlen($conteudoLimpo) < 20) {
-            return 'Conteúdo da proposição disponível no editor. Para visualizar o conteúdo completo, utilize o editor OnlyOffice.';
+        $conteudoLimpo = $conteudo;
+        foreach ($patterns as $pattern) {
+            $conteudoLimpo = preg_replace($pattern, '', $conteudoLimpo);
         }
+
+        // Limpar espaços extras
+        $conteudoLimpo = preg_replace('/\s+/', ' ', $conteudoLimpo);
+        $conteudoLimpo = trim($conteudoLimpo);
 
         return $conteudoLimpo;
     }
 
     /**
-     * Gerar PDF atualizado com informações corretas para proposições protocoladas
+     * Atualizar status da proposição
      */
-    private function gerarPDFAtualizado(Proposicao $proposicao): ?string
+    public function updateStatus(Request $request, Proposicao $proposicao)
     {
-        // Para proposições protocoladas, sempre gerar um novo PDF
-        $nomeArquivo = "proposicao_{$proposicao->id}_protocolado_".time().'_corrigido.pdf';
-        $caminhoPdf = storage_path("app/proposicoes/pdfs/{$proposicao->id}/{$nomeArquivo}");
-
-        // Garantir que o diretório existe
-        $diretorio = dirname($caminhoPdf);
-        if (! is_dir($diretorio)) {
-            mkdir($diretorio, 0755, true);
-        }
-
         try {
-            // Para proposições com conteúdo RTF corrompido, usar apenas a ementa
-            $conteudoParaPDF = $proposicao->ementa ?: 'Conteúdo não disponível';
-
-            // Se a ementa for muito curta, adicionar informações básicas
-            if (strlen($conteudoParaPDF) < 100) {
-                $conteudoParaPDF = "Ementa: {$conteudoParaPDF}\n\n";
-                $conteudoParaPDF .= 'Tipo: '.($proposicao->tipo ?? 'Proposição')."\n";
-                $conteudoParaPDF .= 'Autor: '.($proposicao->autor->name ?? 'Parlamentar')."\n";
-                $conteudoParaPDF .= 'Data: '.($proposicao->created_at ? $proposicao->created_at->format('d/m/Y') : 'N/A')."\n";
-                $conteudoParaPDF .= 'Status: '.($proposicao->status ?? 'N/A')."\n\n";
-                $conteudoParaPDF .= 'Conteúdo completo disponível no sistema.';
-            }
-
-            // Criar HTML simples para teste
-            $tipo = $proposicao->tipo ? $proposicao->tipo : 'Proposição';
-            $autor = $proposicao->autor->name ? $proposicao->autor->name : 'Parlamentar';
-            $status = $proposicao->status ? $proposicao->status : 'N/A';
-            $data = $proposicao->created_at ? $proposicao->created_at->format('d/m/Y') : 'N/A';
-            $dataAtual = now()->format('d/m/Y H:i:s');
-
-            $html = "
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <meta charset='UTF-8'>
-                <title>Proposição {$proposicao->id}</title>
-                <style>
-                    body { font-family: Arial, sans-serif; margin: 20px; }
-                    .header { text-align: center; margin-bottom: 30px; }
-                    .content { margin: 20px 0; }
-                    .footer { margin-top: 30px; text-align: center; }
-                </style>
-            </head>
-            <body>
-                <div class='header'>
-                    <h1>Proposição {$proposicao->id}</h1>
-                    <h2>{$tipo}</h2>
-                </div>
-                
-                <div class='content'>
-                    <h3>Ementa:</h3>
-                    <p>{$conteudoParaPDF}</p>
-                    
-                    <h3>Informações:</h3>
-                    <p><strong>Autor:</strong> {$autor}</p>
-                    <p><strong>Status:</strong> {$status}</p>
-                    <p><strong>Data:</strong> {$data}</p>
-                </div>
-                
-                <div class='footer'>
-                    <p>Documento gerado automaticamente pelo sistema LegisInc</p>
-                    <p>Data: {$dataAtual}</p>
-                </div>
-            </body>
-            </html>";
-
-            // Usar DomPDF para gerar PDF com configurações otimizadas
-            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($html);
-            $pdf->setOptions([
-                'isHtml5ParserEnabled' => true,
-                'isRemoteEnabled' => false,
-                'isPhpEnabled' => false,
-                'defaultFont' => 'DejaVu Sans',
-                'dpi' => 150,
-                'enableFontSubsetting' => true,
-                'pdfBackend' => 'CPDF',
-                'tempDir' => sys_get_temp_dir(),
-                'chroot' => realpath(base_path()),
-                'logOutputFile' => storage_path('logs/dompdf.log'),
-                'defaultMediaType' => 'screen',
-                'defaultPaperSize' => 'a4',
-                'defaultPaperOrientation' => 'portrait',
-                'fontHeightRatio' => 1.1,
-                'enableCssFloat' => true,
-                'enableJavascript' => false,
-                'enableInlinePhp' => false,
+            $request->validate([
+                'status' => 'required|string|in:rascunho,em_edicao,enviado_legislativo,aprovado,retornado_parlamentar,enviado_protocolo,protocolado,assinado'
             ]);
 
-            // Salvar PDF
-            file_put_contents($caminhoPdf, $pdf->output());
+            $statusAnterior = $proposicao->status;
+            $novoStatus = $request->status;
 
-            return $caminhoPdf;
+            // Verificar se o usuário pode alterar para este status
+            $user = Auth::user();
+            
+            // Lógica de permissões por perfil
+            if ($user->isParlamentar()) {
+                // Parlamentar pode apenas criar/editar suas proposições
+                if ($proposicao->autor_id !== $user->id) {
+                    return response()->json(['error' => 'Você só pode alterar suas próprias proposições.'], 403);
+                }
+                // Parlamentar só pode usar status: rascunho, em_edicao, enviado_legislativo
+                $statusPermitidos = ['rascunho', 'em_edicao', 'enviado_legislativo'];
+                if (!in_array($novoStatus, $statusPermitidos)) {
+                    return response()->json(['error' => 'Status não permitido para parlamentares.'], 403);
+                }
+            } elseif ($user->isLegislativo()) {
+                // Legislativo pode aprovar/retornar proposições
+                $statusPermitidos = ['aprovado', 'retornado_parlamentar'];
+                if (!in_array($novoStatus, $statusPermitidos)) {
+                    return response()->json(['error' => 'Status não permitido para o legislativo.'], 403);
+                }
+            } elseif ($user->isProtocolo()) {
+                // Protocolo pode protocolar proposições aprovadas
+                if ($novoStatus === 'protocolado' && $statusAnterior !== 'enviado_protocolo') {
+                    return response()->json(['error' => 'Só é possível protocolar proposições enviadas para o protocolo.'], 403);
+                }
+            }
+
+            // Atualizar status
+            $proposicao->update([
+                'status' => $novoStatus,
+                'updated_at' => now()
+            ]);
+
+            // Log da alteração
+            Log::info('Status da proposição alterado', [
+                'proposicao_id' => $proposicao->id,
+                'status_anterior' => $statusAnterior,
+                'novo_status' => $novoStatus,
+                'user_id' => $user->id,
+                'user_email' => $user->email
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Status atualizado com sucesso.',
+                'status_anterior' => $statusAnterior,
+                'novo_status' => $novoStatus
+            ]);
 
         } catch (\Exception $e) {
-            // Se falhar, tentar usar PDF existente como fallback
-            return $this->encontrarPDFMaisRecente($proposicao);
+            Log::error('Erro ao atualizar status da proposição', [
+                'proposicao_id' => $proposicao->id,
+                'erro' => $e->getMessage(),
+                'user_id' => Auth::id()
+            ]);
+
+            return response()->json([
+                'error' => 'Erro interno ao atualizar status.',
+                'message' => $e->getMessage()
+            ], 500);
         }
     }
 
     /**
-     * Gerar assinatura digital para protocolo
+     * Método robusto que replica a lógica do ProposicaoAssinaturaController
+     * Busca PDFs por timestamp real de modificação, não por nome
      */
-    private function gerarAssinaturaDigital(Proposicao $proposicao): string
+    private function encontrarPDFMaisRecenteRobusta(Proposicao $proposicao): ?string
     {
-        $dataAssinatura = now()->format('d/m/Y H:i:s');
+        $pdfsPossiveis = [];
 
-        $nomeAssinante = $proposicao->autor->name ? $proposicao->autor->name : 'Parlamentar';
-        $numeroProtocolo = $proposicao->numero_protocolo ? $proposicao->numero_protocolo : 'Pendente';
-
-        return "
-        <div class='assinatura-digital'>
-            <div class='linha-assinatura'></div>
-            <div class='nome-assinante'>{$nomeAssinante}</div>
-            <div class='cargo-assinante'>Vereador(a)</div>
-            <div class='data-assinatura'>Data: {$dataAssinatura}</div>
-            <div class='protocolo-info'>Protocolo: {$numeroProtocolo}</div>
-        </div>";
-    }
-
-    /**
-     * Gerar QR Code para verificação
-     */
-    private function gerarQRCode(Proposicao $proposicao): string
-    {
-        $urlVerificacao = url("/proposicoes/{$proposicao->id}");
-
-        return "
-        <div class='qrcode-container'>
-            <div class='qrcode-info'>
-                <strong>QR Code para Verificação</strong><br>
-                <small>Escaneie para verificar autenticidade</small><br>
-                <small>URL: {$urlVerificacao}</small>
-            </div>
-        </div>";
-    }
-
-    /**
-     * Encontrar o PDF mais recente para a proposição
-     */
-    private function encontrarPDFMaisRecente($proposicao): ?string
-    {
-        // 1. Se tem arquivo_pdf_path cadastrado, verificar se existe
-        if (! empty($proposicao->arquivo_pdf_path)) {
-            $pdfPath = storage_path('app/'.$proposicao->arquivo_pdf_path);
-            if (file_exists($pdfPath)) {
-                return $pdfPath;
+        // 1. Verificar diretório principal de PDFs da proposição
+        $diretorioPrincipal = storage_path("app/private/proposicoes/pdfs/{$proposicao->id}");
+        if (is_dir($diretorioPrincipal)) {
+            $arquivos = glob($diretorioPrincipal.'/*.pdf');
+            foreach ($arquivos as $arquivo) {
+                if (file_exists($arquivo)) {
+                    $pdfsPossiveis[] = [
+                        'path' => $arquivo,
+                        'relative_path' => str_replace(storage_path('app/'), '', $arquivo),
+                        'timestamp' => filemtime($arquivo),
+                        'tipo' => 'pdf_onlyoffice',
+                    ];
+                }
             }
         }
 
-        // 2. Buscar PDFs fisicamente em múltiplos diretórios possíveis
-        $diretoriosParaBuscar = [
-            storage_path("app/proposicoes/pdfs/{$proposicao->id}/"),      // Diretório onde PDFs assinados são criados
-            storage_path("app/private/proposicoes/pdfs/{$proposicao->id}/"), // Diretório antigo
-            storage_path("app/public/proposicoes/pdfs/{$proposicao->id}/"),  // Diretório público
+        // 2. Verificar se há PDF no arquivo_pdf_path
+        if ($proposicao->arquivo_pdf_path) {
+            $caminhoCompleto = storage_path('app/'.$proposicao->arquivo_pdf_path);
+            if (file_exists($caminhoCompleto)) {
+                $pdfsPossiveis[] = [
+                    'path' => $caminhoCompleto,
+                    'relative_path' => $proposicao->arquivo_pdf_path,
+                    'timestamp' => filemtime($caminhoCompleto),
+                    'tipo' => 'pdf_assinatura',
+                ];
+            }
+        }
+
+        // 3. Verificar diretórios alternativos
+        $diretorios = [
+            storage_path("app/proposicoes/{$proposicao->id}"),
+            storage_path("app/private/proposicoes/{$proposicao->id}"),
+            storage_path("app/public/proposicoes/{$proposicao->id}"),
         ];
 
-        $todosPDFs = [];
-
-        foreach ($diretoriosParaBuscar as $diretorio) {
+        foreach ($diretorios as $diretorio) {
             if (is_dir($diretorio)) {
-                $pdfs = glob($diretorio.'*.pdf');
-                if ($pdfs !== false) {
-                    $todosPDFs = array_merge($todosPDFs, $pdfs);
-                }
-            }
-        }
-
-        if (empty($todosPDFs)) {
-            return null;
-        }
-
-        // 3. Priorizar PDFs assinados
-        $pdfsAssinados = array_filter($todosPDFs, function ($pdf) {
-            return strpos($pdf, '_assinado_') !== false;
-        });
-
-        if (! empty($pdfsAssinados)) {
-            // Retornar o PDF assinado mais recente
-            usort($pdfsAssinados, function ($a, $b) {
-                return filemtime($b) - filemtime($a);
-            });
-
-            return $pdfsAssinados[0];
-        }
-
-        // 4. Se não há PDFs assinados, retornar o PDF mais recente
-        usort($todosPDFs, function ($a, $b) {
-            return filemtime($b) - filemtime($a);
-        });
-
-        return $todosPDFs[0];
-    }
-
-    /**
-     * Verificar se existe PDF para a proposição
-     */
-    private function verificarExistenciaPDF($proposicao): bool
-    {
-        // 1. Verificar campo arquivo_pdf_path (método rápido)
-        if (! empty($proposicao->arquivo_pdf_path)) {
-            return true;
-        }
-
-        // 2. Para status avançados, verificar fisicamente se existe PDF
-        $statusComPDF = ['aprovado', 'assinado', 'protocolado', 'aprovado_assinatura'];
-        if (in_array($proposicao->status, $statusComPDF)) {
-
-            // Verificar múltiplos diretórios onde pode estar o PDF
-            $diretoriosParaVerificar = [
-                storage_path("app/private/proposicoes/pdfs/{$proposicao->id}/"),
-                storage_path("app/proposicoes/pdfs/{$proposicao->id}/"),
-                storage_path("app/pdfs/{$proposicao->id}/"),
-            ];
-
-            foreach ($diretoriosParaVerificar as $diretorio) {
-                try {
-                    if (is_dir($diretorio)) {
-                        // Usar glob nativo do PHP para buscar PDFs
-                        $pdfs = glob($diretorio.'*.pdf');
-                        if ($pdfs !== false && ! empty($pdfs)) {
-                            return true;
-                        }
-
-                        // Buscar também por padrões específicos
-                        $padroes = [
-                            "proposicao_{$proposicao->id}_onlyoffice_*_assinado_*.pdf",
-                            "proposicao_{$proposicao->id}_*.pdf",
-                            "proposicao_{$proposicao->id}_protocolado_*.pdf",
-                            "proposicao_{$proposicao->id}_assinado_*.pdf",
+                $arquivos = glob($diretorio.'/*.pdf');
+                foreach ($arquivos as $arquivo) {
+                    if (file_exists($arquivo)) {
+                        $pdfsPossiveis[] = [
+                            'path' => $arquivo,
+                            'relative_path' => str_replace(storage_path('app/'), '', $arquivo),
+                            'timestamp' => filemtime($arquivo),
+                            'tipo' => 'pdf_backup',
                         ];
-
-                        foreach ($padroes as $padrao) {
-                            $arquivos = glob($diretorio.$padrao);
-                            if ($arquivos !== false && ! empty($arquivos)) {
-                                return true;
-                            }
-                        }
-                    }
-                } catch (\Exception $e) {
-                    // Continuar verificando outros diretórios se um falhar
-                    continue;
-                }
-            }
-        }
-
-        return false;
-    }
-
-    /**
-     * Gera PDF sob demanda quando não encontrado
-     */
-    private function gerarPDFSobDemanda(Proposicao $proposicao): ?string
-    {
-        try {
-            if (empty($proposicao->arquivo_path) || !Storage::exists($proposicao->arquivo_path)) {
-                Log::warning('PDF sob demanda: arquivo fonte não encontrado', [
-                    'proposicao_id' => $proposicao->id,
-                    'arquivo_path' => $proposicao->arquivo_path
-                ]);
-                return null;
-            }
-
-            $fileHash = hash('sha256', Storage::get($proposicao->arquivo_path));
-            $pdfPath = "proposicoes/pdfs/{$proposicao->id}/proposicao_{$proposicao->id}_{$fileHash}.pdf";
-
-            $converter = app(DocumentConversionService::class);
-            $result = $converter->convertToPDF(
-                $proposicao->arquivo_path,
-                $pdfPath,
-                $proposicao->status
-            );
-
-            if ($result['success']) {
-                $proposicao->update([
-                    'arquivo_pdf_path' => $pdfPath,
-                    'pdf_gerado_em' => now(),
-                    'pdf_conversor_usado' => $result['converter'],
-                    'pdf_tamanho' => $result['output_bytes'],
-                    'pdf_erro_geracao' => null,
-                ]);
-
-                Log::info('PDF sob demanda gerado com sucesso', [
-                    'proposicao_id' => $proposicao->id,
-                    'converter' => $result['converter']
-                ]);
-
-                return $pdfPath;
-            }
-
-            Log::error('PDF sob demanda: falha na conversão', [
-                'proposicao_id' => $proposicao->id,
-                'error' => $result['error']
-            ]);
-
-            return null;
-
-        } catch (\Exception $e) {
-            Log::error('PDF sob demanda: exceção', [
-                'proposicao_id' => $proposicao->id,
-                'error' => $e->getMessage()
-            ]);
-            return null;
-        }
-    }
-
-    /**
-     * Gera PDF básico com aviso quando conversão falha
-     */
-    private function gerarPDFBasicoComAviso(Proposicao $proposicao): Response
-    {
-        $html = "
-        <div style='text-align: center; margin-top: 100px; font-family: Arial, sans-serif;'>
-            <h2 style='color: #d32f2f;'>⚠️ DOCUMENTO EM PROCESSAMENTO</h2>
-            <p><strong>Proposição:</strong> {$proposicao->numero_proposicao}</p>
-            <p><strong>Ementa:</strong> {$proposicao->ementa}</p>
-            <p style='color: #666; margin-top: 50px;'>
-                O documento está sendo processado e estará disponível em breve.<br>
-                Por favor, tente novamente em alguns minutos.
-            </p>
-            <p style='font-size: 12px; color: #999; margin-top: 50px;'>
-                Sistema LegisInc - Câmara Municipal<br>
-                Documento gerado em: " . now()->format('d/m/Y H:i:s') . "
-            </p>
-        </div>";
-
-        try {
-            $dompdf = new \Dompdf\Dompdf([
-                'isHtml5ParserEnabled' => true,
-                'isPhpEnabled' => false,
-                'tempDir' => storage_path('app/temp')
-            ]);
-
-            $dompdf->loadHtml($html);
-            $dompdf->setPaper('A4', 'portrait');
-            $dompdf->render();
-
-            Log::warning('PDF temporário gerado (não salvo no storage)', [
-                'proposicao_id' => $proposicao->id,
-                'razao' => 'pdf_oficial_nao_encontrado'
-            ]);
-
-            return response($dompdf->output(), 202, [
-                'Content-Type' => 'application/pdf',
-                'Content-Disposition' => 'inline; filename="proposicao_' . $proposicao->id . '_processando.pdf"',
-                'Cache-Control' => 'no-store, max-age=0',
-                'X-PDF-Generator' => 'placeholder-temp'
-            ]);
-
-        } catch (\Exception $e) {
-            Log::error('Falha ao gerar PDF básico com aviso', [
-                'proposicao_id' => $proposicao->id,
-                'error' => $e->getMessage()
-            ]);
-
-            abort(500, 'Erro interno do servidor');
-        }
-    }
-
-    /**
-     * Identifica o tipo de PDF pelo nome do arquivo
-     */
-    private function identificarTipoPdf(?string $relativePath): string
-    {
-        if (!$relativePath) return 'desconhecido';
-        
-        $name = strtolower(basename($relativePath));
-        
-        if (str_contains($name, 'protocolado')) return 'protocolado';
-        if (str_contains($name, 'assinado')) return 'assinado';
-        if (str_contains($name, 'oficial')) return 'oficial';
-        if (str_contains($name, 'onlyoffice')) return 'onlyoffice';
-        if (str_contains($name, 'libreoffice')) return 'libreoffice';
-        
-        return 'outro';
-    }
-
-    /**
-     * Determina o caminho do PDF oficial com precedência clara
-     * Prioridade: protocolado → assinado → oficial → arquivo_pdf_path
-     * Nunca retorna arquivos placeholder, DomPDF ou temporários
-     */
-    private function caminhoPdfOficial(Proposicao $proposicao): ?string
-    {
-        // CRITICAL: Blindagem total contra PDFs mockados/temporários
-        $isBad = function (?string $relativePath) use ($proposicao): bool {
-            if (!$relativePath) return true;
-            
-            // Verificar existência - usar file_exists como fallback
-            $exists = Storage::exists($relativePath);
-            if (!$exists) {
-                // Para caminhos que começam com 'private/', verificar no disco local
-                if (str_starts_with($relativePath, 'private/')) {
-                    $relativePath = str_replace('private/', '', $relativePath);
-                    $exists = Storage::disk('local')->exists($relativePath);
-                }
-                
-                if (!$exists) {
-                    // Tentar caminho absoluto como fallback
-                    $absolutePath = storage_path('app/' . ltrim($relativePath, '/'));
-                    $exists = file_exists($absolutePath);
-                }
-            }
-            if (!$exists) return true;
-            
-            // BLACKLIST: Padrões que indicam PDF inválido/mockado
-            $filename = strtolower(basename($relativePath));
-            $suspiciousPatterns = ['process', 'tempor', 'fallback', 'dompdf', 'padrao', 'html', 'mock'];
-            
-            // EXCEÇÕES: PDFs válidos mesmo com padrões suspeitos
-            $isTemplateUniversal = str_contains($filename, 'template_universal');
-            $isAssinado = str_contains($filename, '_assinado_');
-            $isProtocolado = str_contains($filename, '_protocolado_');
-            
-            // PDFs assinados e protocolados são sempre válidos
-            if ($isAssinado || $isProtocolado) {
-                return false; // É um PDF válido
-            }
-            
-            foreach ($suspiciousPatterns as $pattern) {
-                if (str_contains($filename, $pattern) && !$isTemplateUniversal) {
-                    return true;
-                }
-            }
-            
-            // Verificar tamanho mínimo (PDFs mockados são pequenos)
-            $absolutePath = Storage::exists($relativePath) 
-                ? Storage::path($relativePath) 
-                : storage_path('app/' . ltrim($relativePath, '/'));
-            if (file_exists($absolutePath)) {
-                $size = filesize($absolutePath);
-                
-                // 1. PDFs muito pequenos (<15KB) são suspeitos, exceto se explicitamente otimizados
-                if ($size < 15 * 1024 && !str_contains($filename, 'otimizado') && !str_contains($filename, 'stamp')) {
-                    return true;
-                }
-                
-                // 2. Verificar conteúdo do cabeçalho para detectar DomPDF ou HTML markers
-                $handle = fopen($absolutePath, 'r');
-                if ($handle) {
-                    $header = fread($handle, 2048); // Ler mais para capturar metadados
-                    fclose($handle);
-                    
-                    $htmlMarkers = ['dompdf', 'barryvdh', 'html5', 'temporary', 'temporÁrio', 'fallback'];
-                    foreach ($htmlMarkers as $marker) {
-                        if (stripos($header, $marker) !== false) {
-                            return true; // É PDF HTML/DomPDF
-                        }
-                    }
-                }
-                
-                // 3. Para status oficiais, verificar se o PDF contém marcações necessárias
-                if (in_array($proposicao->status, ['assinado', 'protocolado'])) {
-                    $content = shell_exec("pdftotext '{$absolutePath}' - 2>/dev/null");
-                    if ($content) {
-                        // PDF assinado deve conter marca de assinatura (vários padrões aceitos)
-                        if ($proposicao->status === 'assinado') {
-                            $temAssinatura = stripos($content, 'ASSINATURA DIGITAL') !== false ||
-                                           stripos($content, 'DOCUMENTO ASSINADO DIGITALMENTE') !== false ||
-                                           stripos($content, 'assinado digitalmente por') !== false ||
-                                           ($proposicao->codigo_validacao && stripos($content, $proposicao->codigo_validacao) !== false);
-                            
-                            if (!$temAssinatura) {
-                                return true;
-                            }
-                        }
-                        
-                        // PDF protocolado - ser mais flexível com validação
-                        if ($proposicao->status === 'protocolado') {
-                            // Se o arquivo tem "_protocolado_" no nome E foi gravado pelo sistema de protocolo
-                            if (str_contains($filename, '_protocolado_') && 
-                                str_contains($filename, $proposicao->tipo)) {
-                                // Verificar se tem algum número de protocolo no conteúdo
-                                if ($proposicao->numero_protocolo) {
-                                    $numeroSimples = explode('/', $proposicao->numero_protocolo)[2] ?? null;
-                                    if ($numeroSimples && stripos($content, $numeroSimples) !== false) {
-                                        return false; // Arquivo válido - tem número de protocolo
-                                    }
-                                }
-                                
-                                // Se tem "Protocolo:" no início, provavelmente é válido
-                                if (stripos($content, 'Protocolo:') !== false) {
-                                    return false; // Arquivo válido
-                                }
-                            }
-                            
-                            // Para outros casos, aceitar se não tem placeholder em posição problemática
-                            // (o placeholder pode estar em outras partes sem invalidar o documento)
-                            $temPlaceholderProblematico = preg_match('/^.{0,200}\[AGUARDANDO PROTOCOLO\]/i', $content);
-                            
-                            if ($temPlaceholderProblematico) {
-                                // Mas aceitar se também tem número de protocolo real
-                                if ($proposicao->numero_protocolo && stripos($content, $proposicao->numero_protocolo) !== false) {
-                                    return false; // Arquivo válido mesmo com placeholder antigo
-                                }
-                                return true; // Arquivo inválido
-                            }
-                            
-                            // Se chegou aqui e tem número de protocolo, aceitar
-                            if ($proposicao->numero_protocolo) {
-                                return false; // Arquivo válido
-                            }
-                        }
                     }
                 }
             }
-            
-            return false; // Arquivo válido
-        };
-
-        // PRECEDÊNCIA ESTRITA: protocolado > assinado > oficial
-        $candidatos = [
-            $proposicao->arquivo_pdf_protocolado,        // 1º: PDF protocolado (campo correto)
-            $proposicao->arquivo_pdf_assinado,           // 2º: PDF assinado (campo correto)
-            $proposicao->pdf_assinado_path,              // 3º: PDF assinado alternativo
-            $proposicao->arquivo_pdf_path,               // 4º: PDF principal
-            $proposicao->pdf_path,                       // 5º: PDF path alternativo
-        ];
-
-        // Procurar o primeiro candidato válido
-        foreach ($candidatos as $index => $relativePath) {
-            Log::info("DEBUG: Testando candidato {$index}", [
-                'proposicao_id' => $proposicao->id,
-                'candidato' => $relativePath ?? 'NULL',
-                'tem_valor' => $relativePath ? 'SIM' : 'NAO'
-            ]);
-            
-            if ($relativePath && !$isBad($relativePath)) {
-                Log::info('PDF oficial selecionado', [
-                    'proposicao_id' => $proposicao->id,
-                    'arquivo' => $relativePath,
-                    'tipo' => $this->identificarTipoPdf($relativePath)
-                ]);
-                return $relativePath;
-            } elseif ($relativePath) {
-                Log::info("DEBUG: Candidato {$index} rejeitado por isBad", [
-                    'proposicao_id' => $proposicao->id,
-                    'candidato' => $relativePath
-                ]);
-            }
         }
 
-        // Se nenhum candidato válido, avisar
-        Log::warning('Nenhum PDF oficial válido encontrado', [
-            'proposicao_id' => $proposicao->id,
-            'candidatos_verificados' => array_filter($candidatos)
-        ]);
-
-        // IMPORTANTE: Para proposições assinadas e protocoladas, NÃO usar arquivos OnlyOffice antigos
-        if ($proposicao->data_assinatura && $proposicao->status === 'protocolado') {
-            Log::info('Proposição assinada e protocolada - não usar OnlyOffice antigo', [
-                'proposicao_id' => $proposicao->id
-            ]);
-            return null;
-        }
-
-        // Se não encontrou nos campos específicos, procurar arquivo OnlyOffice mais recente
-        $onlyOfficePattern = 'private/proposicoes/pdfs/' . $proposicao->id . '/proposicao_' . $proposicao->id . '_onlyoffice_*.pdf';
-        $files = Storage::files('proposicoes/pdfs/' . $proposicao->id);
-        
-        Log::info('DEBUG: Procurando arquivos OnlyOffice', [
-            'proposicao_id' => $proposicao->id,
-            'diretorio_buscado' => 'proposicoes/pdfs/' . $proposicao->id,
-            'arquivos_encontrados' => $files,
-            'total_arquivos' => count($files)
-        ]);
-        
-        // Filtrar arquivos OnlyOffice
-        $onlyOfficeFiles = array_filter($files, function($file) {
-            return str_contains($file, '_onlyoffice_') && str_ends_with($file, '.pdf');
+        // Ordenar por data de modificação (mais recente primeiro)
+        usort($pdfsPossiveis, function ($a, $b) {
+            return $b['timestamp'] - $a['timestamp'];
         });
-        
-        Log::info('DEBUG: Arquivos OnlyOffice filtrados', [
+
+        Log::info('DEBUG: encontrarPDFMaisRecenteRobusta encontrou', [
             'proposicao_id' => $proposicao->id,
-            'arquivos_onlyoffice' => $onlyOfficeFiles,
-            'total_onlyoffice' => count($onlyOfficeFiles)
+            'total_pdfs' => count($pdfsPossiveis),
+            'mais_recente' => !empty($pdfsPossiveis) ? $pdfsPossiveis[0]['relative_path'] : null
         ]);
-        
-        if (!empty($onlyOfficeFiles)) {
-            // Ordenar por timestamp no nome (mais recente primeiro)
-            usort($onlyOfficeFiles, function($a, $b) {
-                preg_match('/_(\d+)\.pdf$/', $a, $matchesA);
-                preg_match('/_(\d+)\.pdf$/', $b, $matchesB);
-                return ($matchesB[1] ?? 0) <=> ($matchesA[1] ?? 0);
-            });
-            
-            $maisRecente = $onlyOfficeFiles[0];
-            Log::info('DEBUG: Arquivo OnlyOffice mais recente selecionado', [
-                'proposicao_id' => $proposicao->id,
-                'arquivo_selecionado' => $maisRecente,
-                'existe' => Storage::exists($maisRecente)
-            ]);
-            
-            if (Storage::exists($maisRecente)) {
-                return $maisRecente;
-            }
-        }
 
-        // Buscar também no diretório private
-        if (Storage::disk('local')->exists('proposicoes/pdfs/' . $proposicao->id)) {
-            $privateFiles = Storage::disk('local')->files('proposicoes/pdfs/' . $proposicao->id);
-            $onlyOfficePrivate = array_filter($privateFiles, function($file) {
-                return str_contains($file, '_onlyoffice_') && str_ends_with($file, '.pdf');
-            });
-            
-            if (!empty($onlyOfficePrivate)) {
-                usort($onlyOfficePrivate, function($a, $b) {
-                    preg_match('/_(\d+)\.pdf$/', $a, $matchesA);
-                    preg_match('/_(\d+)\.pdf$/', $b, $matchesB);
-                    return ($matchesB[1] ?? 0) <=> ($matchesA[1] ?? 0);
-                });
-                
-                return $onlyOfficePrivate[0];
-            }
-        }
-
-        return null;
-    }
-
-    /**
-     * Serve PDF via URL temporária com token
-     */
-    public function servePDFTemporary(string $token): Response
-    {
-        try {
-            $cacheKey = "pdf_temp_token_{$token}";
-            $proposicaoId = Cache::get($cacheKey);
-
-            if (!$proposicaoId) {
-                abort(404, 'Token não encontrado ou expirado');
-            }
-
-            $proposicao = Proposicao::findOrFail($proposicaoId);
-
-            if (!empty($proposicao->arquivo_pdf_path) && Storage::exists($proposicao->arquivo_pdf_path)) {
-                $pdfContent = Storage::get($proposicao->arquivo_pdf_path);
-                
-                return response($pdfContent, 200, [
-                    'Content-Type' => 'application/pdf',
-                    'Content-Disposition' => 'inline; filename="proposicao_' . $proposicao->id . '.pdf"',
-                    'Cache-Control' => 'no-cache, no-store, must-revalidate',
-                    'Pragma' => 'no-cache',
-                    'Expires' => '0'
-                ]);
-            }
-
-            $pdfPath = $this->gerarPDFSobDemanda($proposicao);
-
-            if ($pdfPath && Storage::exists($pdfPath)) {
-                $pdfContent = Storage::get($pdfPath);
-                
-                return response($pdfContent, 200, [
-                    'Content-Type' => 'application/pdf',
-                    'Content-Disposition' => 'inline; filename="proposicao_' . $proposicao->id . '.pdf"'
-                ]);
-            }
-
-            return $this->gerarPDFBasicoComAviso($proposicao);
-
-        } catch (\Exception $e) {
-            Log::error('Erro ao servir PDF temporário', [
-                'token' => $token,
-                'error' => $e->getMessage()
-            ]);
-
-            abort(500, 'Erro interno do servidor');
-        }
+        return !empty($pdfsPossiveis) ? $pdfsPossiveis[0]['relative_path'] : null;
     }
 }

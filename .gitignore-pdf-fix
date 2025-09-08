@@ -1,0 +1,21 @@
+# Arquivos CRÍTICOS para correção PDF - NÃO REMOVER
+
+# Estes arquivos contêm correções críticas para o problema:
+# "PDF Desatualizado Entre Endpoints" (07/09/2025)
+
+# SEEDERS CRÍTICOS (manter sempre)
+database/seeders/PDFDesatualizadoFixSeeder.php
+database/seeders/CorrecoesCriticasPDFSeeder.php
+
+# DOCUMENTAÇÃO (manter sempre) 
+docs/technical/SOLUCAO-PDF-DESATUALIZADO-ENDPOINTS.md
+docs/CORRECAO-PDF-PERMANENTE.md
+
+# SCRIPTS DE TESTE (manter sempre)
+scripts/testar-correcao-pdf-persistente.sh
+
+# CONTROLLER COM CORREÇÕES (cuidado ao modificar)
+app/Http/Controllers/ProposicaoController.php
+
+# IMPORTANTE: Se algum destes arquivos for modificado ou removido,
+# o problema pode voltar a ocorrer.

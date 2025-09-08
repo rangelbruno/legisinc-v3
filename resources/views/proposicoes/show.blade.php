@@ -100,6 +100,12 @@
     margin-bottom: 0;
 }
 </style>
+<style>
+
+.d-grid .btn-assinatura:last-child {
+    margin-bottom: 0;
+}
+</style>
 
 <style>
 
@@ -342,9 +348,9 @@
                                                     <small class="text-muted">@{{ anexo.extensao.toUpperCase() }}</small>
                                                 </div>
                                             </div>
-                                        </td>
-                                        <td>@{{ formatFileSize(anexo.tamanho) }}</td>
-                                        <td>@{{ formatDate(anexo.uploaded_at) }}</td>
+            </td>
+                                        <td>@{{ formatFileSize(anexo.tamanho) }}</a></td>
+                                        <td>@{{ formatDate(anexo.uploaded_at) }}</a></td>
                                         <td class="text-end">
                                             <a :href="`/proposicoes/${proposicao.id}/anexo/${index}/download`" 
                                                class="btn btn-sm btn-light-primary me-1">
@@ -660,17 +666,7 @@
                             <!--end::Sign Document-->
 
                             <!--begin::View PDF-->
-                            <div v-if="proposicao.has_pdf">
-                                <a 
-                                    :href="'/proposicoes/' + proposicao.id + '/pdf-viewer'"
-                                    class="btn btn-light-danger w-100 mb-3"
-                                    @click="logPDFClick">
-                                    <i class="ki-duotone ki-file-down fs-3 me-2">
-                                        <span class="path1"></span>
-                                        <span class="path2"></span>
-                                    </i>
-                                    Visualizar PDF (com Debug)
-                                </a>
+                            <div v-if="proposicao.has_pdf && canViewPDF()">
                                 <a 
                                     :href="'/proposicoes/' + proposicao.id + '/pdf'"
                                     target="_blank"
@@ -679,7 +675,7 @@
                                         <span class="path1"></span>
                                         <span class="path2"></span>
                                     </i>
-                                    PDF Direto (nova aba)
+                                    Visualizar PDF
                                 </a>
                             </div>
                             <!--end::View PDF-->
@@ -1444,6 +1440,14 @@ createApp({
             return statusAllowed && hasPermission;
         },
         
+        canViewPDF() {
+            if (!this.proposicao) return false;
+            
+            // PDF só pode ser visualizado após aprovação pelo Legislativo (para todos os usuários)
+            const allowedStatuses = ['aprovado', 'aprovado_assinatura'];
+            return allowedStatuses.includes(this.proposicao.status);
+        },
+        
         getEditorUrl() {
             if (!this.proposicao) return '#';
             const isOwner = this.proposicao.autor_id === this.userId;
@@ -1863,12 +1867,55 @@ createApp({
                         }
                     });
                     
-                    // Submit the form
-                    form.submit();
+                    // Fazer requisição AJAX em vez de submit tradicional
+                    await this.submitStatusForm(form);
                 }
             } catch (error) {
                 console.error('Erro ao processar ação:', error);
                 this.showErrorAlert('Erro inesperado ao processar ação');
+            }
+        },
+        
+        async submitStatusForm(form) {
+            try {
+                const formData = new FormData(form);
+                const response = await fetch(form.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    // Atualizar o status da proposição localmente
+                    this.proposicao.status = result.novo_status;
+                    
+                    // Fechar o loading
+                    Swal.close();
+                    
+                    // Mostrar mensagem de sucesso
+                    await Swal.fire({
+                        title: 'Sucesso!',
+                        text: result.message,
+                        icon: 'success',
+                        confirmButtonText: 'OK',
+                        customClass: {
+                            confirmButton: 'btn btn-success'
+                        },
+                        buttonsStyling: false
+                    });
+                    
+                } else {
+                    throw new Error(result.message || 'Erro ao atualizar status');
+                }
+            } catch (error) {
+                console.error('Erro na requisição AJAX:', error);
+                Swal.close();
+                this.showErrorAlert(error.message || 'Erro ao atualizar status da proposição');
             }
         },
         

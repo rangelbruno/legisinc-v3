@@ -47,6 +47,7 @@ class DatabaseSeeder extends Seeder
             DadosGeraisParametrosSeeder::class,
             DadosGeraisValoresSeeder::class,
             FixDadosGeraisCamposSeeder::class, // CRÍTICO: Criar campos necessários para Dados Gerais
+            DebugLoggerParametroSeeder::class, // Debug Logger para configurações do sistema
         ]);
 
         // Seeder de permissões de menu
@@ -86,6 +87,11 @@ class DatabaseSeeder extends Seeder
         // NOVO: Seeder de PDF de Assinatura Otimizado
         $this->call([
             PDFAssinaturaOptimizadoSeeder::class,
+        ]);
+
+        // TESTE: Criar proposição de teste com template OnlyOffice
+        $this->call([
+            ProposicaoTesteAssinaturaSeeder::class,
         ]);
 
         // CORREÇÃO DEFINITIVA: Estrutura Word completa (cabeçalho + corpo + rodapé)
@@ -132,6 +138,11 @@ class DatabaseSeeder extends Seeder
         // Correção de PDFs com protocolo e assinatura
         $this->call([
             CorrecaoPDFProtocoloAssinaturaSeeder::class,
+        ]);
+
+        // CORREÇÕES PDF VIEWER: Loading overlay e seleção de PDF mais recente
+        $this->call([
+            CorrecoesPDFViewerSeeder::class,
         ]);
 
         // PRESERVAÇÃO AUTOMÁTICA: Melhorias detectadas automaticamente
@@ -274,6 +285,91 @@ class DatabaseSeeder extends Seeder
             PreservarMelhorias19Seeder::class,
         ]);
 
+        // PRESERVAÇÃO AUTOMÁTICA: Melhorias detectadas automaticamente
+        $this->call([
+            PreservarMelhorias21Seeder::class,
+        ]);
+
+        // PRESERVAÇÃO AUTOMÁTICA: Melhorias detectadas automaticamente
+        $this->call([
+            PreservarMelhorias23Seeder::class,
+        ]);
+
+        // PRESERVAÇÃO AUTOMÁTICA: Melhorias detectadas automaticamente
+        $this->call([
+            PreservarMelhorias25Seeder::class,
+        ]);
+
+        // PRESERVAÇÃO AUTOMÁTICA: Melhorias detectadas automaticamente
+        $this->call([
+            PreservarMelhorias27Seeder::class,
+        ]);
+
+        // PRESERVAÇÃO AUTOMÁTICA: Melhorias detectadas automaticamente
+        $this->call([
+            PreservarMelhorias29Seeder::class,
+        ]);
+
+        // PRESERVAÇÃO AUTOMÁTICA: Melhorias detectadas automaticamente
+        $this->call([
+            PreservarMelhorias31Seeder::class,
+        ]);
+
+        // PRESERVAÇÃO AUTOMÁTICA: Melhorias detectadas automaticamente
+        $this->call([
+            PreservarMelhorias33Seeder::class,
+        ]);
+
+        // PRESERVAÇÃO AUTOMÁTICA: Melhorias detectadas automaticamente
+        $this->call([
+            PreservarMelhorias35Seeder::class,
+        ]);
+
+        // PRESERVAÇÃO AUTOMÁTICA: Melhorias detectadas automaticamente
+        $this->call([
+            PreservarMelhorias39Seeder::class,
+        ]);
+
+        // PRESERVAÇÃO AUTOMÁTICA: Melhorias detectadas automaticamente
+        $this->call([
+            PreservarMelhorias41Seeder::class,
+        ]);
+
+        // PRESERVAÇÃO AUTOMÁTICA: Melhorias detectadas automaticamente
+        $this->call([
+            PreservarMelhorias43Seeder::class,
+        ]);
+
+        // PRESERVAÇÃO AUTOMÁTICA: Melhorias detectadas automaticamente
+        $this->call([
+            PreservarMelhorias45Seeder::class,
+        ]);
+
+        // PRESERVAÇÃO AUTOMÁTICA: Melhorias detectadas automaticamente
+        $this->call([
+            PreservarMelhorias47Seeder::class,
+        ]);
+
+        // PRESERVAÇÃO AUTOMÁTICA: Melhorias detectadas automaticamente
+        $this->call([
+            PreservarMelhorias49Seeder::class,
+        ]);
+
+        // PRESERVAÇÃO AUTOMÁTICA: Melhorias detectadas automaticamente
+        $this->call([
+            PreservarMelhorias51Seeder::class,
+        ]);
+
+        // PRESERVAÇÃO AUTOMÁTICA: Melhorias detectadas automaticamente
+        $this->call([
+            PreservarMelhorias53Seeder::class,
+        ]);
+
+        // PRESERVAÇÃO AUTOMÁTICA: Melhorias detectadas automaticamente
+        $this->call([
+            PreservarMelhorias55Seeder::class,
+        ]);
+
         // ÚLTIMO: Correções HTML de estrutura de botões (DEVE ser executado POR ÚLTIMO)
         $this->call([
             HTMLButtonsFixSeeder::class,
@@ -345,6 +441,16 @@ class DatabaseSeeder extends Seeder
         // LARAVEL BOOST: Correção robusta de validação OnlyOffice (DEFINITIVA)
         $this->call([
             OnlyOfficeRobustValidationSeeder::class,
+        ]);
+
+        // CORREÇÕES CRÍTICAS FINAIS: PDF Viewer (EXECUTAR POR ÚLTIMO)
+        $this->call([
+            CorrecoesCriticasPDFSeeder::class,
+        ]);
+
+        // CORREÇÃO DEFINITIVA: PDF Desatualizado Entre Endpoints (CRÍTICO - NÃO REMOVER)
+        $this->call([
+            PDFDesatualizadoFixSeeder::class,
         ]);
 
         // Processar imagens dos templates admin
