@@ -756,6 +756,17 @@
                             </a>
                         </div>
                         @endif
+                        @if(auth()->user()->isAdmin())
+                        <div class="menu-item">
+                            <a class="menu-link {{ request()->routeIs('admin.pyhanko-fluxo.*') ? 'active' : '' }}" href="{{ route('admin.pyhanko-fluxo.index') }}">
+                                <span class="menu-bullet">
+                                    <span class="bullet bullet-dot"></span>
+                                </span>
+                                <span class="menu-title">🛡️ Assinatura Digital PyHanko</span>
+                                <span class="badge badge-light-primary badge-sm ms-auto">v2.2</span>
+                            </a>
+                        </div>
+                        @endif
                         @if(\App\Models\ScreenPermission::userCanAccessRoute('admin.docs.fluxo-documentos'))
                         <div class="menu-item">
                             <a class="menu-link {{ request()->routeIs('admin.docs.fluxo-documentos') ? 'active' : '' }}" href="{{ route('admin.docs.fluxo-documentos') }}">

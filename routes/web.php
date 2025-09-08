@@ -1345,6 +1345,14 @@ Route::prefix('admin')->middleware(['auth', 'check.screen.permission'])->group(f
         ->name('admin.system-diagnostic.table');
     Route::post('system-diagnostic/fix-permissions', [App\Http\Controllers\Admin\SystemDiagnosticController::class, 'fixPermissions'])
         ->name('admin.system-diagnostic.fix-permissions');
+
+    // PyHanko Fluxo routes
+    Route::get('pyhanko-fluxo', [App\Http\Controllers\Admin\PyHankoFluxoController::class, 'index'])
+        ->name('admin.pyhanko-fluxo.index');
+    Route::post('pyhanko-fluxo/testar-status', [App\Http\Controllers\Admin\PyHankoFluxoController::class, 'testarStatus'])
+        ->name('admin.pyhanko-fluxo.testar-status');
+    Route::post('pyhanko-fluxo/executar-teste', [App\Http\Controllers\Admin\PyHankoFluxoController::class, 'executarTeste'])
+        ->name('admin.pyhanko-fluxo.executar-teste');
 });
 
 // Test Module routes (protected with auth)

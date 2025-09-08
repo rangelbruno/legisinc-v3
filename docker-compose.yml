@@ -140,6 +140,25 @@ services:
     networks:
       - legisinc_network
 
+  # 5. PyHanko - Assinatura Digital (efêmero, não sobe no up -d)
+  pyhanko:
+    build:
+      context: ./docker/pyhanko
+      dockerfile: Dockerfile
+    image: legisinc-pyhanko:latest
+    container_name: legisinc-pyhanko-tool
+    profiles: ["tools", "signing"]  # Não aparece no docker-compose up -d
+    entrypoint: ["pyhanko"]
+    environment:
+      - PFX_PASS                    # Injete em runtime
+      - TZ=America/Sao_Paulo
+    volumes:
+      - ./storage:/work             # Documentos para assinatura
+      - ./docker/pyhanko/certs:/certs:ro  # Certificados read-only
+    networks:
+      - legisinc_network
+    # Sem depends_on - usado apenas sob demanda
+
 volumes:
   postgres_data:
   redis_data:

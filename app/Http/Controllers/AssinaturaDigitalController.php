@@ -81,23 +81,93 @@ class AssinaturaDigitalController extends Controller
                     $arquivoPFX = $request->file('arquivo_pfx');
                     $senhaPFX = $request->senha_pfx ?: $request->senha_certificado;
                     
-                    // Salvar temporariamente para validação usando diretório temp existente
+                    // Salvar temporariamente para validação - garantir que diretório temp existe
                     $tempFileName = 'pfx_validation_' . time() . '_' . uniqid() . '.pfx';
-                    $tempPath = $arquivoPFX->storeAs('temp', $tempFileName);
-                    $fullTempPath = Storage::path($tempPath);
+                    
+                    // Garantir que o diretório temp existe
+                    if (!Storage::exists('temp')) {
+                        Storage::makeDirectory('temp');
+                    }
+                    
+                    // Debug do arquivo antes do save
+                    Log::info('Debug arquivo PFX antes de salvar', [
+                        'tempFileName' => $tempFileName,
+                        'arquivo_size' => $arquivoPFX->getSize(),
+                        'arquivo_mime' => $arquivoPFX->getMimeType(),
+                        'arquivo_original' => $arquivoPFX->getClientOriginalName(),
+                        'temp_dir_exists' => Storage::exists('temp'),
+                        'arquivo_isValid' => $arquivoPFX->isValid(),
+                        'arquivo_getRealPath' => $arquivoPFX->getRealPath(),
+                        'storage_default_disk' => config('filesystems.default')
+                    ]);
+                    
+                    // Método direto com file_put_contents
+                    try {
+                        // Diretório de destino
+                        $storageDir = storage_path('app/temp');
+                        
+                        // Garantir que o diretório existe
+                        if (!is_dir($storageDir)) {
+                            mkdir($storageDir, 0755, true);
+                        }
+                        
+                        // Caminho completo do arquivo temporário
+                        $fullTempPath = $storageDir . '/' . $tempFileName;
+                        
+                        // Ler conteúdo do arquivo temporário do PHP
+                        $fileContents = file_get_contents($arquivoPFX->getRealPath());
+                        
+                        if ($fileContents === false) {
+                            throw new \Exception('Erro ao ler conteúdo do arquivo PFX');
+                        }
+                        
+                        // Salvar usando file_put_contents diretamente
+                        $bytesWritten = file_put_contents($fullTempPath, $fileContents);
+                        
+                        if ($bytesWritten === false) {
+                            throw new \Exception('Erro ao gravar arquivo PFX diretamente');
+                        }
+                        
+                        Log::info('Debug resultado do file_put_contents - SUCESSO', [
+                            'fullTempPath' => $fullTempPath,
+                            'file_size' => strlen($fileContents),
+                            'bytes_written' => $bytesWritten,
+                            'file_exists' => file_exists($fullTempPath),
+                            'is_readable' => is_readable($fullTempPath)
+                        ]);
+                        
+                    } catch (\Exception $e) {
+                        Log::error('Debug erro no salvamento direto', [
+                            'error_message' => $e->getMessage(),
+                            'error_code' => $e->getCode(),
+                            'error_file' => $e->getFile(),
+                            'error_line' => $e->getLine(),
+                            'storage_dir' => $storageDir ?? 'undefined',
+                            'temp_filename' => $tempFileName
+                        ]);
+                        throw new \Exception('Erro ao salvar arquivo temporário para validação PFX');
+                    }
+                    
+                    Log::info('Debug paths para validação PFX', [
+                        'tempFileName' => $tempFileName,
+                        'fullTempPath' => $fullTempPath,
+                        'file_exists' => file_exists($fullTempPath),
+                        'is_dir' => is_dir($fullTempPath),
+                        'file_permissions' => substr(sprintf('%o', fileperms($fullTempPath)), -4)
+                    ]);
                     
                     // Validar se a senha está correta
                     $assinaturaService = app(\App\Services\AssinaturaDigitalService::class);
                     if (!$this->validarSenhaPFX($fullTempPath, $senhaPFX)) {
                         // Remover arquivo temporário
-                        Storage::delete($tempPath);
+                        @unlink($fullTempPath);
                         return back()->withErrors([
                             'senha_certificado' => 'Senha do certificado PFX está incorreta. Verifique a senha e tente novamente.'
                         ]);
                     }
                     
                     // Remover arquivo temporário após validação
-                    Storage::delete($tempPath);
+                    @unlink($fullTempPath);
                 }
             }
             
@@ -629,18 +699,36 @@ class AssinaturaDigitalController extends Controller
 
             $certificates = [];
             
-            // Tentar abrir certificado com a senha fornecida
-            $resultado = openssl_pkcs12_read($certificateData, $certificates, $senha);
+            // VALIDAÇÃO ROBUSTA seguindo as melhores práticas
+            // 1. Tentar com a senha fornecida
+            $validacaoComSenha = @openssl_pkcs12_read($certificateData, $certificates, $senha);
             
-            if (!$resultado) {
-                // Log do erro OpenSSL
-                $opensslError = openssl_error_string();
-                Log::info('Validação de senha PFX falhou', [
-                    'arquivo' => basename($arquivoPFX),
-                    'senha_length' => strlen($senha),
-                    'openssl_error' => $opensslError
-                ]);
-                return false;
+            if (!$validacaoComSenha) {
+                // 2. Se falhou, verificar se devemos tentar sem senha
+                if (empty($senha)) {
+                    // Usuário não forneceu senha, tentar PFX sem proteção
+                    $validacaoSemSenha = @openssl_pkcs12_read($certificateData, $certificates, '');
+                    if (!$validacaoSemSenha) {
+                        $opensslError = openssl_error_string();
+                        Log::info('Arquivo PFX inválido ou corrompido', [
+                            'arquivo' => basename($arquivoPFX),
+                            'openssl_error' => $opensslError
+                        ]);
+                        return false;
+                    }
+                    Log::info('PFX validado sem senha (certificado não protegido)');
+                } else {
+                    // 3. Senha foi fornecida mas está incorreta
+                    $opensslError = openssl_error_string();
+                    Log::info('Senha PFX incorreta na validação', [
+                        'arquivo' => basename($arquivoPFX),
+                        'senha_length' => strlen($senha),
+                        'openssl_error' => $opensslError
+                    ]);
+                    return false;
+                }
+            } else {
+                Log::info('PFX validado com senha fornecida');
             }
 
             // Verificar se o certificado contém os dados necessários

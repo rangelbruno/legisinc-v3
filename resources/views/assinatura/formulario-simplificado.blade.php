@@ -283,12 +283,11 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Processar envio do formulário com SweetAlert
+    // Apenas validar campos básicos antes de enviar - permitir validação do servidor
     formAssinatura.addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        // Validar campos
+        // Validar apenas campos obrigatórios localmente
         if (!formAssinatura.checkValidity()) {
+            e.preventDefault();
             Swal.fire({
                 title: 'Campos obrigatórios',
                 text: 'Por favor, preencha todos os campos obrigatórios.',
@@ -299,74 +298,10 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
-        // Confirmação com SweetAlert2
-        Swal.fire({
-            title: 'Confirmar Assinatura Digital',
-            html: `
-                <div class="text-start">
-                    <p><strong>Documento:</strong> Proposição #{{ $proposicao->id }}</p>
-                    <p><strong>Tipo:</strong> ${tipoCertificado.options[tipoCertificado.selectedIndex].text}</p>
-                    <p><strong>Assinante:</strong> {{ Auth::user()->name }}</p>
-                    <p><strong>Data/Hora:</strong> ${new Date().toLocaleString('pt-BR')}</p>
-                    <hr>
-                    <p class="text-warning"><i class="fas fa-exclamation-triangle me-2"></i><strong>Atenção:</strong></p>
-                    <p class="small">Após a assinatura, o documento não poderá ser alterado e terá validade jurídica conforme a Lei 14.063/2020.</p>
-                </div>
-            `,
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonColor: '#28a745',
-            cancelButtonColor: '#dc3545',
-            confirmButtonText: '<i class="fas fa-signature me-2"></i>Confirmar Assinatura',
-            cancelButtonText: '<i class="fas fa-times me-2"></i>Cancelar',
-            allowOutsideClick: false,
-            allowEscapeKey: false,
-            focusConfirm: false,
-            reverseButtons: true,
-            width: '650px',
-            customClass: {
-                popup: 'swal2-large-popup',
-                confirmButton: 'btn btn-success btn-lg',
-                cancelButton: 'btn btn-danger btn-lg'
-            },
-            buttonsStyling: false
-        }).then((result) => {
-            if (result.isConfirmed) {
-                // Mostrar progresso da assinatura
-                Swal.fire({
-                    title: 'Processando Assinatura...',
-                    html: `
-                        <div class="d-flex justify-content-center align-items-center mb-3">
-                            <div class="spinner-border text-primary me-3" role="status"></div>
-                            <span>Gerando assinatura digital...</span>
-                        </div>
-                        <div class="progress">
-                            <div class="progress-bar progress-bar-striped progress-bar-animated" 
-                                 role="progressbar" style="width: 100%"></div>
-                        </div>
-                        <small class="text-muted mt-2 d-block">
-                            <i class="fas fa-info-circle me-1"></i>
-                            Gerando identificador único e checksum SHA-256...
-                        </small>
-                    `,
-                    allowOutsideClick: false,
-                    allowEscapeKey: false,
-                    showConfirmButton: false,
-                    didOpen: () => {
-                        Swal.showLoading();
-                    }
-                });
-                
-                // Desabilitar botão e atualizar texto
-                btnAssinar.disabled = true;
-                btnAssinar.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Assinando...';
-                
-                // Simular delay para mostrar o progresso
-                setTimeout(() => {
-                    formAssinatura.submit();
-                }, 1500);
-            }
-        });
+        // Permitir envio para validação do servidor
+        // Desabilitar botão para evitar duplo clique
+        btnAssinar.disabled = true;
+        btnAssinar.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Validando...';
     });
 
     // Estado inicial

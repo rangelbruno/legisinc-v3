@@ -5,6 +5,8 @@ namespace App\Services;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Symfony\Component\Process\Process;
+use Symfony\Component\Process\Exception\ProcessFailedException;
 
 class AssinaturaDigitalService
 {
@@ -123,39 +125,186 @@ class AssinaturaDigitalService
     }
 
     /**
-     * Assinar com certificado PFX (.pfx/.p12)
+     * Assinar com certificado PFX usando pyHanko
      */
     private function assinarComCertificadoPFX(string $caminhoPDF, array $dadosAssinatura): ?string
     {
         try {
-            Log::info('Assinando com certificado PFX');
-
-            // Validar arquivo PFX
-            if (empty($dadosAssinatura['arquivo_pfx'])) {
-                throw new \Exception('Arquivo PFX não fornecido');
-            }
-
-            // Processar arquivo PFX
-            $certificado = $this->processarCertificadoPFX($dadosAssinatura['arquivo_pfx'], $dadosAssinatura['senha_pfx'] ?? '');
+            // Validar certificado PFX
+            $pfxPath = $dadosAssinatura['certificado_path'] ?? $dadosAssinatura['arquivo_pfx'] ?? null;
+            $pfxPassword = $dadosAssinatura['certificado_senha'] ?? $dadosAssinatura['senha_pfx'] ?? '';
             
-            if (!$certificado) {
-                throw new \Exception('Falha ao processar certificado PFX');
+            if (!$pfxPath) {
+                throw new \Exception('Caminho do certificado PFX não fornecido');
             }
-
-            // Assinar PDF com certificado PFX
-            $pdfAssinado = $this->adicionarAssinaturaDigitalAoPDF($caminhoPDF, $dadosAssinatura, $certificado);
             
-            if ($pdfAssinado) {
-                Log::info('Assinatura PFX concluída com sucesso');
+            if (!file_exists($pfxPath)) {
+                throw new \Exception('Arquivo PFX não encontrado: ' . $pfxPath);
+            }
+            
+            // Validar senha do PFX
+            if (!$this->validarSenhaPFX($pfxPath, $pfxPassword)) {
+                throw new \Exception('Senha do certificado PFX é inválida');
+            }
+            
+            // Gerar nome do arquivo assinado
+            $pdfAssinado = $this->gerarCaminhoAssinado($caminhoPDF);
+            
+            // Criar configuração temporária para este certificado
+            $this->criarConfiguracaoTemporaria($pfxPath, dirname($caminhoPDF));
+            
+            // 1. Criar campo de assinatura se necessário
+            $pdfComCampo = $this->garantirCampoAssinatura($caminhoPDF);
+            
+            // 2. Comando PyHanko BLINDADO (modo não-interativo, PAdES B-LT)
+            $comando = [
+                'docker', 'run', '--rm',
+                '--network', 'bridge', // Permitir acesso TSA/CRL/OCSP
+                '-v', dirname($pdfComCampo) . ':/work',
+                '-v', dirname($pfxPath) . ':/certs:ro', // Read-only: segurança
+                '-e', 'PFX_PASS=' . $pfxPassword, // Variável de ambiente (não escapar - Docker cuida)
+                'legisinc-pyhanko',
+                '--config', '/work/pyhanko.yml',
+                'sign', 'addsig', 
+                '--use-pades',
+                '--timestamp-url', 'https://freetsa.org/tsr',
+                '--with-validation-info', // PAdES B-LT: embute CRL/OCSP
+                '--field', 'AssinaturaDigital', // Campo padrão Legisinc
+                'pkcs12', '--p12-setup', 'legisinc', // Modo não-interativo
+                '/work/' . basename($pdfComCampo),
+                '/work/' . basename($pdfAssinado)
+            ];
+            
+            // 3. Executar assinatura com timeout e captura completa
+            Log::info('Executando PyHanko à prova de balas', [
+                'comando' => implode(' ', array_map(function($arg) {
+                    return strpos($arg, 'PFX_PASS') !== false ? '[REDACTED]' : $arg;
+                }, $comando))
+            ]);
+            
+            $process = new Process($comando, null, null, null, 180); // 3min timeout
+            $process->mustRun(); // Lança exceção se exitCode != 0
+            
+            // 4. Verificar resultado e opcionalmente upgrade para B-LTA
+            if (file_exists($pdfAssinado)) {
+                Log::info('PyHanko PAdES B-LT executado com sucesso', [
+                    'pdf_assinado' => $pdfAssinado,
+                    'tamanho' => filesize($pdfAssinado),
+                    'output' => substr($process->getOutput(), 0, 500)
+                ]);
+                
+                // Opcional: Upgrade para B-LTA (Archive Timestamp)
+                if (config('app.pades_lta_enabled', false)) {
+                    $pdfAssinado = $this->upgradeParaBLTA($pdfAssinado);
+                }
+                
                 return $pdfAssinado;
             }
-
-            return null;
-
+            
+            throw new \Exception('PyHanko executou sem erro mas PDF assinado não foi criado');
+            
+        } catch (ProcessFailedException $e) {
+            Log::error('PyHanko falhou', [
+                'command' => $e->getProcess()->getCommandLine(),
+                'exit_code' => $e->getProcess()->getExitCode(),
+                'output' => $e->getProcess()->getOutput(),
+                'error_output' => $e->getProcess()->getErrorOutput()
+            ]);
+            throw new \Exception('Falha na assinatura PyHanko: ' . $e->getProcess()->getErrorOutput());
+            
         } catch (\Exception $e) {
             Log::error('Erro na assinatura PFX: ' . $e->getMessage());
-            // CORREÇÃO: Re-lançar exceção para validação de senha
             throw $e;
+        }
+    }
+
+    /**
+     * Garantir que PDF tem campo de assinatura visível (formato: página/x1,y1,x2,y2/nome)
+     */
+    private function garantirCampoAssinatura(string $pdfPath): string
+    {
+        try {
+            // Verificar se já tem campo AssinaturaDigital
+            $conteudo = file_get_contents($pdfPath);
+            if (strpos($conteudo, '/AssinaturaDigital') !== false) {
+                Log::debug('PDF já possui campo AssinaturaDigital');
+                return $pdfPath;
+            }
+            
+            // Criar campo de assinatura visível conforme padrão PyHanko
+            $pdfComCampo = str_replace('.pdf', '_com_campo_assinatura.pdf', $pdfPath);
+            
+            $comando = [
+                'docker', 'run', '--rm',
+                '-v', dirname($pdfPath) . ':/work',
+                'legisinc-pyhanko',
+                'sign', 'addfields',
+                '--field', '1/50,50,250,120/AssinaturaDigital', // Página 1, canto inf esquerdo
+                '/work/' . basename($pdfPath),
+                '/work/' . basename($pdfComCampo)
+            ];
+            
+            $process = new Process($comando, null, null, null, 60);
+            $process->run();
+            
+            if ($process->isSuccessful() && file_exists($pdfComCampo)) {
+                Log::info('Campo AssinaturaDigital criado', [
+                    'pdf' => $pdfComCampo,
+                    'posicao' => '1/50,50,250,120/AssinaturaDigital'
+                ]);
+                return $pdfComCampo;
+            }
+            
+            // Fallback: PyHanko cria campo automaticamente se não existir
+            Log::info('Usando PDF original - PyHanko criará campo automaticamente');
+            return $pdfPath;
+            
+        } catch (\Exception $e) {
+            Log::warning('Erro ao criar campo de assinatura: ' . $e->getMessage());
+            return $pdfPath; // Fallback seguro
+        }
+    }
+
+    /**
+     * Upgrade PAdES B-LT para B-LTA (Archive Timestamp)
+     */
+    private function upgradeParaBLTA(string $pdfBLT): string
+    {
+        try {
+            $pdfBLTA = str_replace('_assinado.pdf', '_assinado_lta.pdf', $pdfBLT);
+            
+            $comando = [
+                'docker', 'run', '--rm',
+                '--network', 'bridge',
+                '-v', dirname($pdfBLT) . ':/work',
+                'legisinc-pyhanko',
+                '--config', '/work/pyhanko.yml',
+                'sign', 'ltaupdate',
+                '--timestamp-url', 'https://freetsa.org/tsr',
+                '/work/' . basename($pdfBLT),
+                '/work/' . basename($pdfBLTA)
+            ];
+            
+            $process = new Process($comando, null, null, null, 120);
+            $process->run();
+            
+            if ($process->isSuccessful() && file_exists($pdfBLTA)) {
+                Log::info('Upgrade para PAdES B-LTA realizado', ['pdf' => $pdfBLTA]);
+                
+                // Remover versão B-LT intermediária para economizar espaço
+                if (file_exists($pdfBLT)) {
+                    unlink($pdfBLT);
+                }
+                
+                return $pdfBLTA;
+            }
+            
+            Log::warning('Falha no upgrade B-LTA, mantendo B-LT');
+            return $pdfBLT;
+            
+        } catch (\Exception $e) {
+            Log::warning('Erro no upgrade B-LTA: ' . $e->getMessage());
+            return $pdfBLT; // Manter B-LT
         }
     }
 
@@ -411,6 +560,12 @@ class AssinaturaDigitalService
     private function processarCertificadoPFX(string $arquivoPFX, string $senha): ?array
     {
         try {
+            Log::info('Processando certificado PFX', [
+                'arquivo_pfx' => $arquivoPFX,
+                'exists' => file_exists($arquivoPFX),
+                'is_dir' => is_dir($arquivoPFX)
+            ]);
+            
             if (!file_exists($arquivoPFX)) {
                 throw new \Exception('Arquivo PFX não encontrado');
             }
@@ -453,31 +608,38 @@ class AssinaturaDigitalService
                 ];
             }
             
-            // Tentar abrir o certificado com a senha fornecida
-            if (!openssl_pkcs12_read($certificateData, $certificates, $senha)) {
-                // Log detalhado do erro
-                $opensslError = openssl_error_string();
-                Log::warning('Falha ao abrir certificado PFX', [
-                    'arquivo' => basename($arquivoPFX),
-                    'tamanho' => filesize($arquivoPFX),
-                    'senha_length' => strlen($senha),
-                    'openssl_error' => $opensslError
-                ]);
-                
-                // CORREÇÃO: Não aceitar senha vazia como fallback automaticamente
-                // Apenas permitir senha vazia se foi fornecida explicitamente
+            // VALIDAÇÃO ROBUSTA: Primeiro verificar se é PFX válido
+            $certificates = [];
+            
+            // 1. Tentar com a senha fornecida pelo usuário
+            $validacaoComSenha = @openssl_pkcs12_read($certificateData, $certificates, $senha);
+            
+            if (!$validacaoComSenha) {
+                // 2. Se falhou, verificar se devemos tentar sem senha
                 if (empty($senha)) {
-                    // Se a senha fornecida já era vazia, tentar abrir sem senha
-                    if (!openssl_pkcs12_read($certificateData, $certificates, '')) {
-                        throw new \Exception('Senha do certificado PFX inválida ou certificado corrompido');
+                    // Usuário deixou senha vazia, tentar PFX sem proteção por senha
+                    $validacaoSemSenha = @openssl_pkcs12_read($certificateData, $certificates, '');
+                    if (!$validacaoSemSenha) {
+                        $opensslError = openssl_error_string();
+                        throw new \Exception('Arquivo PFX inválido ou corrompido.' . ($opensslError ? " (OpenSSL: $opensslError)" : ''));
                     }
+                    Log::info('PFX aberto sem senha (certificado não protegido)');
                     $senhaValida = '';
                 } else {
-                    // Se senha foi fornecida mas falhou, não tentar fallback
-                    throw new \Exception('Senha do certificado PFX inválida. Verifique se a senha está correta.');
+                    // 3. Senha foi fornecida mas está incorreta
+                    $opensslError = openssl_error_string();
+                    Log::warning('Senha PFX incorreta', [
+                        'arquivo' => basename($arquivoPFX),
+                        'tamanho' => filesize($arquivoPFX),
+                        'senha_length' => strlen($senha),
+                        'openssl_error' => $opensslError
+                    ]);
+                    throw new \Exception('Senha do certificado PFX está incorreta. Verifique a senha e tente novamente.');
                 }
             } else {
+                // Senha está correta
                 $senhaValida = $senha;
+                Log::info('PFX aberto com senha fornecida');
             }
 
             // Validar se o certificado contém os dados necessários
@@ -528,6 +690,207 @@ class AssinaturaDigitalService
     }
 
     /**
+     * Gerar caminho para arquivo assinado
+     */
+    private function gerarCaminhoAssinado(string $caminhoPDF): string
+    {
+        $info = pathinfo($caminhoPDF);
+        return $info['dirname'] . '/' . $info['filename'] . '_assinado.pdf';
+    }
+
+    /**
+     * Criar configuração PyHanko temporária para certificado específico
+     */
+    private function criarConfiguracaoTemporaria(string $pfxPath, string $workDir): void
+    {
+        $config = [
+            'pkcs12-setups' => [
+                'legisinc' => [
+                    'pfx-file' => '/certs/' . basename($pfxPath),
+                    'pfx-passphrase' => '${PFX_PASS:?PFX password is required}'
+                ]
+            ],
+            'validation-contexts' => [
+                'icp-brasil' => [
+                    'trust' => [
+                        '/certs/roots/ac-raiz-icpbrasil-v5.crt',
+                        '/certs/roots/ac-raiz-icpbrasil-v10.crt'
+                    ],
+                    'provisional-ok' => true,
+                    'ee-signature-config' => (object)[]
+                ]
+            ],
+            'time-stamp-servers' => [
+                'freetsa' => [
+                    'url' => 'https://freetsa.org/tsr'
+                ]
+            ]
+        ];
+        
+        $yamlContent = "# PyHanko Configuration - Auto-generated\n";
+        $yamlContent .= $this->arrayToYaml($config);
+        
+        file_put_contents($workDir . '/pyhanko.yml', $yamlContent);
+    }
+
+    /**
+     * Converter array PHP para YAML simples
+     */
+    private function arrayToYaml(array $data, int $indent = 0): string
+    {
+        $yaml = '';
+        $spaces = str_repeat('  ', $indent);
+        
+        foreach ($data as $key => $value) {
+            if (is_array($value)) {
+                if (array_keys($value) === range(0, count($value) - 1)) {
+                    // Array indexado (lista)
+                    $yaml .= $spaces . $key . ":\n";
+                    foreach ($value as $item) {
+                        if (is_array($item)) {
+                            $yaml .= $spaces . "  -\n" . $this->arrayToYaml($item, $indent + 2);
+                        } else {
+                            $yaml .= $spaces . "  - " . $this->yamlValue($item) . "\n";
+                        }
+                    }
+                } else {
+                    // Array associativo
+                    $yaml .= $spaces . $key . ":\n";
+                    $yaml .= $this->arrayToYaml($value, $indent + 1);
+                }
+            } else {
+                $yaml .= $spaces . $key . ': ' . $this->yamlValue($value) . "\n";
+            }
+        }
+        
+        return $yaml;
+    }
+
+    /**
+     * Formatar valor para YAML
+     */
+    private function yamlValue($value): string
+    {
+        if (is_bool($value)) {
+            return $value ? 'true' : 'false';
+        }
+        if (is_null($value)) {
+            return 'null';
+        }
+        if (is_numeric($value)) {
+            return (string)$value;
+        }
+        if (is_object($value) && get_class($value) === 'stdClass') {
+            return '{}';
+        }
+        
+        // String - escapar se necessário
+        if (strpos($value, ':') !== false || strpos($value, '${') !== false) {
+            return '"' . addslashes($value) . '"';
+        }
+        
+        return $value;
+    }
+
+    /**
+     * Validar assinatura PDF usando PyHanko
+     */
+    public function validarAssinaturaPDF(string $pdfPath): array
+    {
+        try {
+            $comando = [
+                'docker', 'run', '--rm',
+                '-v', dirname($pdfPath) . ':/work',
+                'legisinc-pyhanko',
+                'sign', 'validate',
+                '--validation-context', 'icp-brasil',
+                '/work/' . basename($pdfPath)
+            ];
+            
+            $process = new Process($comando, null, null, null, 30);
+            $process->run();
+            
+            $output = $process->getOutput();
+            $errorOutput = $process->getErrorOutput();
+            
+            return [
+                'valida' => $process->isSuccessful(),
+                'detalhes' => $output,
+                'erros' => $errorOutput,
+                'tem_assinatura' => strpos($output, 'signature') !== false,
+                'nivel_pades' => $this->extrairNivelPAdES($output),
+                'timestamp' => $this->extrairTimestamp($output)
+            ];
+            
+        } catch (\Exception $e) {
+            Log::error('Erro na validação de assinatura: ' . $e->getMessage());
+            
+            // Fallback: validação básica PHP
+            return $this->validarAssinaturaBasica($pdfPath);
+        }
+    }
+
+    /**
+     * Validação básica de assinatura (fallback)
+     */
+    private function validarAssinaturaBasica(string $pdfPath): array
+    {
+        $conteudo = file_get_contents($pdfPath);
+        
+        return [
+            'valida' => null,
+            'tem_assinatura' => strpos($conteudo, '/ByteRange') !== false && 
+                              strpos($conteudo, '/Contents') !== false,
+            'tipo_assinatura' => $this->extrairTipoAssinatura($conteudo),
+            'detalhes' => 'Validação básica - use validador externo para verificação completa'
+        ];
+    }
+
+    /**
+     * Extrair nível PAdES do output PyHanko
+     */
+    private function extrairNivelPAdES(string $output): ?string
+    {
+        if (strpos($output, 'B-LTA') !== false) return 'PAdES B-LTA';
+        if (strpos($output, 'B-LT') !== false) return 'PAdES B-LT';
+        if (strpos($output, 'B-T') !== false) return 'PAdES B-T';
+        if (strpos($output, 'B-B') !== false) return 'PAdES B-B';
+        if (strpos($output, 'PAdES') !== false) return 'PAdES';
+        
+        return null;
+    }
+
+    /**
+     * Extrair timestamp do output PyHanko
+     */
+    private function extrairTimestamp(string $output): ?string
+    {
+        if (preg_match('/timestamp.*?(\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2}:\d{2})/i', $output, $matches)) {
+            return $matches[1];
+        }
+        
+        return null;
+    }
+
+    /**
+     * Extrair tipo de assinatura do PDF
+     */
+    private function extrairTipoAssinatura(string $conteudo): string
+    {
+        if (strpos($conteudo, 'ETSI.CAdES.detached') !== false) {
+            return 'PAdES (ETSI.CAdES.detached)';
+        }
+        if (strpos($conteudo, 'adbe.pkcs7.detached') !== false) {
+            return 'PDF Digital Signature (PKCS#7)';
+        }
+        if (strpos($conteudo, '/ByteRange') !== false) {
+            return 'PDF Digital Signature';
+        }
+        
+        return 'Desconhecido';
+    }
+
+    /**
      * Gerar caminho para PDF assinado
      */
     private function gerarCaminhoPDFAssinado(string $caminhoPDF): string
@@ -571,7 +934,10 @@ class AssinaturaDigitalService
                 break;
                 
             case 'PFX':
-                if (empty($dadosAssinatura['arquivo_pfx']) || empty($dadosAssinatura['senha_pfx'])) {
+                $pfxPath = $dadosAssinatura['certificado_path'] ?? $dadosAssinatura['arquivo_pfx'] ?? null;
+                $pfxSenha = $dadosAssinatura['certificado_senha'] ?? $dadosAssinatura['senha_pfx'] ?? null;
+                
+                if (empty($pfxPath) || empty($pfxSenha)) {
                     throw new \Exception('Arquivo PFX e senha são obrigatórios');
                 }
                 break;
@@ -588,6 +954,51 @@ class AssinaturaDigitalService
     public function getTiposCertificado(): array
     {
         return self::TIPOS_CERTIFICADO;
+    }
+
+    /**
+     * Validar senha do certificado PFX
+     */
+    public function validarSenhaPFX(string $caminhoArquivo, string $senha): bool
+    {
+        try {
+            if (!file_exists($caminhoArquivo)) {
+                return false;
+            }
+            
+            $conteudoPFX = file_get_contents($caminhoArquivo);
+            if ($conteudoPFX === false) {
+                return false;
+            }
+            
+            $certificados = [];
+            
+            // Tentar abrir o PFX com a senha fornecida
+            $resultado = openssl_pkcs12_read(
+                $conteudoPFX, 
+                $certificados, 
+                $senha
+            );
+            
+            if ($resultado && isset($certificados['cert']) && isset($certificados['pkey'])) {
+                Log::info('Certificado PFX validado com sucesso', [
+                    'arquivo' => basename($caminhoArquivo),
+                    'tem_certificado' => !empty($certificados['cert']),
+                    'tem_chave_privada' => !empty($certificados['pkey'])
+                ]);
+                
+                return true;
+            }
+            
+            return false;
+            
+        } catch (\Exception $e) {
+            Log::error('Erro ao validar senha PFX: ' . $e->getMessage(), [
+                'arquivo' => $caminhoArquivo,
+                'erro' => $e->getMessage()
+            ]);
+            return false;
+        }
     }
 
     /**

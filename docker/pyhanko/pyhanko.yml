@@ -1,0 +1,106 @@
+# PyHanko Configuration for Legisinc - Production Bulletproof
+# Configuração blindada para produção ICP-Brasil
+
+# PKCS#12 Setup nomeado (não-interativo, à prova de vazamento)
+pkcs12-setups:
+  legisinc:
+    pfx-file: /certs/certificado.pfx
+    pfx-passphrase: ${PFX_PASS:?PFX password is required}
+
+# Validation contexts ICP-Brasil bulletproof
+validation-contexts:
+  icp-brasil:
+    trust:
+      # AC Raiz ICP-Brasil (versões atuais e válidas)
+      - /certs/roots/ac-raiz-icpbrasil-v12.crt
+      - /certs/roots/ac-raiz-icpbrasil-v13.crt
+      # ACs intermediárias principais ICP-Brasil
+      - /certs/roots/ac-instituto-fenacon-rg.crt
+      - /certs/roots/ac-certisign-g8.crt
+      - /certs/roots/ac-soluti-g7.crt
+      - /certs/roots/ac-serasa-g7.crt
+      - /certs/roots/ac-valid-rg.crt
+    # Para desenvolvimento: permite cadeias incompletas temporariamente
+    provisional-ok: true
+    ee-signature-config: {}
+    # Para produção: desabilitar provisional-ok após instalar todas as raízes
+    
+  # Context para certificados auto-assinados (desenvolvimento apenas)
+  desenvolvimento:
+    trust: []
+    provisional-ok: true
+    ee-signature-config: {}
+    
+  # Context padrão com validação rigorosa (produção)
+  producao:
+    trust:
+      - /certs/roots/ac-raiz-icpbrasil-v12.crt
+      - /certs/roots/ac-raiz-icpbrasil-v13.crt
+    provisional-ok: false  # Validação rigorosa
+    ee-signature-config: {}
+
+# TSA Configuration (prioridade produção → desenvolvimento)
+time-stamp-servers:
+  # TSA ICP-Brasil (requer autenticação - use via API Python)
+  serpro-tsa:
+    url: https://acremoto.serpro.gov.br/tsa
+    # auth: certificado_cliente.pem (via API Python)
+  
+  prodesp-tsa:
+    url: https://tsa.prodesp.sp.gov.br/tsa  
+    # auth: certificado_cliente.pem (via API Python)
+  
+  # TSA públicos para desenvolvimento/teste
+  freetsa:
+    url: https://freetsa.org/tsr
+    
+  digicert:
+    url: http://timestamp.digicert.com
+
+# Configurações de aparência para assinatura visível
+stamp-styles:
+  legisinc-default:
+    type: text
+    background: 
+      colour: [0.9, 0.9, 1.0]  # Azul claro
+    border:
+      width: 2
+      colour: [0.0, 0.0, 0.8]  # Azul escuro
+    text-box:
+      font: NotoSans-Regular
+      font-size: 10
+      leading: 1.2
+      text: |
+        Assinado digitalmente por:
+        {{signer_name}}
+        
+        Data: {{signing_time}}
+        Documento: {{signing_location}}
+        
+        Sistema Legisinc v2.2
+        PAdES B-LT Compliant
+
+# Logging otimizado
+logging:
+  version: 1
+  disable_existing_loggers: false
+  formatters:
+    detailed:
+      format: '[%(asctime)s] %(levelname)s in %(name)s: %(message)s'
+  handlers:
+    console:
+      class: logging.StreamHandler
+      level: INFO
+      formatter: detailed
+  loggers:
+    pyhanko:
+      level: INFO
+      handlers: [console]
+      propagate: false
+    pyhanko.sign:
+      level: DEBUG  # Debug detalhado para assinaturas
+    pyhanko.pdf_utils:
+      level: WARNING  # Reduzir ruído de parsing
+  root:
+    level: WARNING
+    handlers: [console]
