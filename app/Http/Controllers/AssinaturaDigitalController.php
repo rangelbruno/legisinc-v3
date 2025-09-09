@@ -50,8 +50,46 @@ class AssinaturaDigitalController extends Controller
         }
 
         $tiposCertificado = $this->assinaturaService->getTiposCertificado();
+        
+        // Verificar se o usuário tem certificado digital cadastrado
+        $user = Auth::user();
+        $certificadoCadastrado = $user->temCertificadoDigital();
+        $certificadoValido = $user->certificadoDigitalValido();
+        $senhaSalva = $user->certificado_digital_senha_salva ?? false;
+        
+        // Debug para identificar problema
+        Log::info('Debug AssinaturaDigital - Verificando certificado', [
+            'user_id' => $user->id,
+            'certificadoCadastrado' => $certificadoCadastrado,
+            'certificadoValido' => $certificadoValido,
+            'senhaSalva' => $senhaSalva,
+            'cn' => $user->certificado_digital_cn,
+            'validade' => $user->certificado_digital_validade,
+            'ativo' => $user->certificado_digital_ativo
+        ]);
+        
+        // Dados do certificado se existir
+        $dadosCertificado = null;
+        if ($certificadoCadastrado) {
+            $dadosCertificado = [
+                'cn' => $user->certificado_digital_cn,
+                'validade' => $user->certificado_digital_validade,
+                'ativo' => $user->certificado_digital_ativo,
+                'senha_salva' => $senhaSalva,
+                'path' => $user->certificado_digital_path
+            ];
+        }
 
-        return view('assinatura.formulario-simplificado', compact('proposicao', 'tiposCertificado', 'pdfPath'));
+        // Usar view Vue.js otimizada
+        return view('assinatura.formulario-vue', compact(
+            'proposicao', 
+            'tiposCertificado', 
+            'pdfPath',
+            'certificadoCadastrado',
+            'certificadoValido',
+            'senhaSalva',
+            'dadosCertificado'
+        ));
     }
 
     /**
@@ -62,13 +100,29 @@ class AssinaturaDigitalController extends Controller
         try {
             // Verificação de permissões já é feita pelo middleware check.assinatura.permission
             
-            // Validar dados da requisição
-            $request->validate([
-                'tipo_certificado' => 'required|in:A1,A3,PFX,SIMULADO',
-                'senha' => 'required_if:tipo_certificado,A1,A3|nullable|string|min:4',
-                'senha_pfx' => 'nullable|string|min:1',
-                'senha_certificado' => 'nullable|string|min:1'
-            ]);
+            $user = Auth::user();
+            $certificadoCadastrado = $user->temCertificadoDigital();
+            
+            // Se há certificado cadastrado, usar automático; senão, validar formulário tradicional
+            if ($certificadoCadastrado && $request->input('usar_certificado_cadastrado') === '1') {
+                // Usar certificado cadastrado - validação específica
+                $request->validate([
+                    'senha_certificado' => 'nullable|string|min:1'
+                ]);
+            } else {
+                // Validar dados da requisição tradicional
+                $request->validate([
+                    'tipo_certificado' => 'required|in:A1,A3,PFX,SIMULADO',
+                    'senha' => 'required_if:tipo_certificado,A1,A3|nullable|string|min:4',
+                    'senha_pfx' => 'nullable|string|min:1',
+                    'senha_certificado' => 'nullable|string|min:1'
+                ]);
+            }
+            
+            // Processar assinatura com certificado cadastrado
+            if ($certificadoCadastrado && $request->input('usar_certificado_cadastrado') === '1') {
+                return $this->processarAssinaturaCertificadoCadastrado($request, $proposicao, $user);
+            }
             
             // Validação customizada para PFX - deve ter pelo menos um dos campos de senha
             if ($request->tipo_certificado === 'PFX') {
@@ -786,6 +840,111 @@ class AssinaturaDigitalController extends Controller
                 'error' => $e->getMessage()
             ]);
             return false;
+        }
+    }
+    
+    /**
+     * Processar assinatura digital usando certificado cadastrado no usuário
+     */
+    private function processarAssinaturaCertificadoCadastrado(Request $request, Proposicao $proposicao, $user)
+    {
+        try {
+            // Verificar se o certificado está válido
+            if (!$user->certificadoDigitalValido()) {
+                return back()->withErrors(['certificado' => 'O certificado cadastrado está expirado ou inativo.']);
+            }
+            
+            $senhaCertificado = null;
+            
+            // Verificar se a senha está salva ou foi fornecida
+            if ($user->certificado_digital_senha_salva) {
+                // Usar senha salva
+                $senhaCertificado = $user->getSenhaCertificado();
+                if (!$senhaCertificado) {
+                    return back()->withErrors(['senha' => 'Erro ao recuperar senha salva do certificado.']);
+                }
+            } else {
+                // Usar senha fornecida pelo usuário
+                $senhaCertificado = $request->input('senha_certificado');
+                if (!$senhaCertificado) {
+                    return back()->withErrors(['senha_certificado' => 'Senha do certificado é obrigatória.']);
+                }
+            }
+            
+            // Obter caminho do certificado
+            $caminhoCompleto = $user->getCaminhoCompletoCertificado();
+            if (!$caminhoCompleto || !file_exists($caminhoCompleto)) {
+                return back()->withErrors(['certificado' => 'Arquivo do certificado não encontrado.']);
+            }
+            
+            // Validar senha do certificado antes de prosseguir
+            if (!$this->validarSenhaPFX($caminhoCompleto, $senhaCertificado)) {
+                return back()->withErrors(['senha_certificado' => 'Senha do certificado incorreta.']);
+            }
+            
+            // Processar assinatura usando o serviço
+            $dadosAssinatura = [
+                'nome_assinante' => $user->name,
+                'email_assinante' => $user->email,
+                'tipo_certificado' => 'PFX_CADASTRADO',
+                'ip_assinatura' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+                'certificado_cn' => $user->certificado_digital_cn,
+                'certificado_validade' => $user->certificado_digital_validade
+            ];
+            
+            // Usar serviço de assinatura digital
+            $resultado = $this->assinaturaService->assinarPDF(
+                $this->obterCaminhoPDFParaAssinatura($proposicao),
+                $caminhoCompleto,
+                $senhaCertificado,
+                $dadosAssinatura
+            );
+            
+            if (!$resultado['sucesso']) {
+                return back()->withErrors(['assinatura' => $resultado['erro']]);
+            }
+            
+            // Gerar identificador da assinatura
+            $identificador = $this->gerarIdentificadorAssinatura($proposicao, $user, 'PFX_CADASTRADO');
+            
+            // Dados compactos para o banco
+            $dadosCompactos = [
+                'id' => $identificador,
+                'tipo' => 'PFX_CADASTRADO',
+                'nome' => $user->name,
+                'data' => now()->format('d/m/Y H:i'),
+                'cn' => $user->certificado_digital_cn
+            ];
+            
+            // Atualizar proposição
+            $proposicao->update([
+                'status' => 'enviado_protocolo',
+                'assinatura_digital' => json_encode($dadosCompactos),
+                'data_assinatura' => now(),
+                'ip_assinatura' => $request->ip(),
+                'certificado_digital' => $identificador,
+                'arquivo_pdf_assinado' => $this->obterCaminhoRelativo($resultado['arquivo_assinado'])
+            ]);
+            
+            Log::info('Proposição assinada com certificado cadastrado', [
+                'proposicao_id' => $proposicao->id,
+                'usuario_id' => $user->id,
+                'certificado_cn' => $user->certificado_digital_cn,
+                'senha_salva' => $user->certificado_digital_senha_salva
+            ]);
+            
+            return redirect()->route('proposicoes.show', $proposicao)
+                ->with('success', 'Proposição assinada digitalmente com sucesso usando certificado cadastrado!');
+                
+        } catch (\Exception $e) {
+            Log::error('Erro ao processar assinatura com certificado cadastrado: ' . $e->getMessage(), [
+                'proposicao_id' => $proposicao->id,
+                'usuario_id' => $user->id,
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return back()->withErrors(['assinatura' => 'Erro ao processar assinatura: ' . $e->getMessage()]);
         }
     }
 }

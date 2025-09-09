@@ -19,6 +19,21 @@ Route::get('/onlyoffice/realtime/check-changes/{proposicao}', [App\Http\Controll
 Route::post('/onlyoffice/realtime/invalidate-cache/{proposicao}', [App\Http\Controllers\Api\OnlyOfficeRealtimeController::class, 'invalidateDocumentCache'])->name('api.onlyoffice.realtime.invalidate-cache');
 Route::get('/onlyoffice/realtime/new-document-key/{proposicao}', [App\Http\Controllers\Api\OnlyOfficeRealtimeController::class, 'getNewDocumentKey'])->name('api.onlyoffice.realtime.new-document-key');
 
+// ===== ASSINATURA DIGITAL API =====
+Route::middleware(['auth:sanctum'])->prefix('assinatura-digital')->name('api.assinatura-digital.')->group(function () {
+    // Obter dados do certificado
+    Route::get('/proposicoes/{proposicao}/certificado', [App\Http\Controllers\Api\AssinaturaDigitalApiController::class, 'obterDadosCertificado'])->name('certificado');
+    
+    // Validar senha do certificado
+    Route::post('/proposicoes/{proposicao}/validar-senha', [App\Http\Controllers\Api\AssinaturaDigitalApiController::class, 'validarSenhaCertificado'])->name('validar-senha');
+    
+    // Processar assinatura
+    Route::post('/proposicoes/{proposicao}/processar', [App\Http\Controllers\Api\AssinaturaDigitalApiController::class, 'processarAssinatura'])->name('processar');
+    
+    // Status da assinatura
+    Route::get('/proposicoes/{proposicao}/status', [App\Http\Controllers\Api\AssinaturaDigitalApiController::class, 'status'])->name('status');
+});
+
 // API Routes para busca de câmaras (sem CSRF protection)
 Route::get('/camaras/buscar', function () {
     return app(App\Http\Controllers\Api\CamaraInfoController::class)->buscarPorNome(request());

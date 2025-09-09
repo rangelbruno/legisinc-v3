@@ -1266,6 +1266,14 @@ Route::get('/debug-user', function () {
 
 // Templates routes (protected with auth and permissions)
 Route::prefix('admin')->middleware(['auth', 'check.screen.permission'])->group(function () {
+    // Guia de Desenvolvimento
+    Route::get('guia-desenvolvimento', [App\Http\Controllers\Admin\GuiaDesenvolvimentoController::class, 'index'])
+        ->name('admin.guia-desenvolvimento.index');
+    Route::get('guia-desenvolvimento/biblioteca-digital', [App\Http\Controllers\Admin\GuiaDesenvolvimentoController::class, 'bibliotecaDigital'])
+        ->name('admin.guia-desenvolvimento.biblioteca-digital');
+    Route::post('guia-desenvolvimento/gerar', [App\Http\Controllers\Admin\GuiaDesenvolvimentoController::class, 'gerarExemplo'])
+        ->name('admin.guia-desenvolvimento.gerar');
+    
     Route::get('templates', [App\Http\Controllers\TemplateController::class, 'index'])
         ->name('templates.index');
     Route::get('templates/create', [App\Http\Controllers\TemplateController::class, 'create'])

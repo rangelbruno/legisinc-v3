@@ -49,6 +49,23 @@
                                 </a>
                             </div>
                             @endif
+                            
+                            {{-- Guia de Desenvolvimento (apenas Admin) --}}
+                            @if(auth()->user()->isAdmin())
+                            <div class="menu-item">
+                                <a class="menu-link {{ request()->routeIs('admin.guia-desenvolvimento.index') ? 'active' : '' }}" href="{{ route('admin.guia-desenvolvimento.index') }}">
+                                    <span class="menu-icon">
+                                        <i class="ki-duotone ki-code fs-2">
+                                            <span class="path1"></span>
+                                            <span class="path2"></span>
+                                            <span class="path3"></span>
+                                            <span class="path4"></span>
+                                        </i>
+                                    </span>
+                                    <span class="menu-title">Guia de Desenvolvimento</span>
+                                </a>
+                            </div>
+                            @endif
 
                             {{-- Seção: Sistema Parlamentar (apenas se não for PARLAMENTAR puro) --}}
                             @if(!\auth()->user()->hasRole('PARLAMENTAR') && (\App\Models\ScreenPermission::userCanAccessModule('parlamentares') || \App\Models\ScreenPermission::userCanAccessModule('comissoes') || \App\Models\ScreenPermission::userCanAccessModule('proposicoes')))

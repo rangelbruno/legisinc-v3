@@ -48,15 +48,69 @@
                                           enctype="multipart/form-data">
                                         @csrf
                                         
-                                        <!-- Tipo de Certificado -->
+                                        @if($certificadoCadastrado)
+                                        <!-- Certificado Cadastrado Detectado -->
+                                        <div class="alert {{ $certificadoValido ? 'alert-success' : 'alert-warning' }} d-flex align-items-center mb-4" id="certificado-cadastrado">
+                                            <i class="fas fa-certificate fs-2 me-3 text-success"></i>
+                                            <div class="flex-grow-1">
+                                                <h5 class="mb-1">
+                                                    <i class="fas fa-check-circle me-2"></i>
+                                                    Certificado Digital Detectado
+                                                </h5>
+                                                <p class="mb-2"><strong>CN:</strong> {{ $dadosCertificado['cn'] }}</p>
+                                                <p class="mb-2"><strong>Válido até:</strong> 
+                                                    {{ $dadosCertificado['validade']->format('d/m/Y') }}
+                                                    @if(!$certificadoValido)
+                                                        <span class="badge bg-danger ms-2">EXPIRADO</span>
+                                                    @endif
+                                                </p>
+                                                <p class="mb-1">
+                                                    <strong>Senha:</strong> 
+                                                    @if($senhaSalva)
+                                                        <span class="badge bg-success">
+                                                            <i class="fas fa-lock me-1"></i>Salva (assinatura automática)
+                                                        </span>
+                                                    @else
+                                                        <span class="badge bg-warning">
+                                                            <i class="fas fa-unlock me-1"></i>Será solicitada
+                                                        </span>
+                                                    @endif
+                                                </p>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Opção para usar certificado cadastrado -->
                                         <div class="mb-4">
+                                            <div class="form-check form-check-lg">
+                                                <input class="form-check-input" type="checkbox" 
+                                                       id="usar_certificado_cadastrado" 
+                                                       name="usar_certificado_cadastrado" 
+                                                       value="1" checked>
+                                                <label class="form-check-label fw-bold" for="usar_certificado_cadastrado">
+                                                    <i class="fas fa-magic me-2 text-success"></i>
+                                                    Usar Certificado Cadastrado (Recomendado)
+                                                </label>
+                                            </div>
+                                            <div class="form-text">
+                                                Usar o certificado digital já cadastrado em seu perfil
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Separador -->
+                                        <div class="text-center mb-4" id="ou-separador">
+                                            <hr class="my-3">
+                                            <span class="bg-white px-3 text-muted">OU</span>
+                                        </div>
+                                        @endif
+                                        
+                                        <!-- Tipo de Certificado -->
+                                        <div class="mb-4" id="campo-tipo-certificado" @if($certificadoCadastrado) style="display: none;" @endif>
                                             <label for="tipo_certificado" class="form-label fw-bold">
                                                 Tipo de Certificado
                                             </label>
                                             <select class="form-select form-select-lg" 
                                                     id="tipo_certificado" 
-                                                    name="tipo_certificado" 
-                                                    required>
+                                                    name="tipo_certificado">
                                                 <option value="">Selecione...</option>
                                                 @foreach($tiposCertificado as $valor => $descricao)
                                                     <option value="{{ $valor }}">{{ $descricao }}</option>
@@ -124,14 +178,43 @@
                                             <p class="mb-0"><strong>IP:</strong> {{ request()->ip() }}</p>
                                         </div>
 
+                                        @if($certificadoCadastrado && $certificadoValido)
+                                        <!-- Campo de Senha para Certificado Cadastrado (se necessário) -->
+                                        <div class="mb-4" id="campo-senha-cadastrado" @if($senhaSalva) style="display: none;" @endif>
+                                            <label for="senha_certificado" class="form-label fw-bold">
+                                                <i class="fas fa-key me-2"></i>
+                                                Senha do Certificado Cadastrado
+                                            </label>
+                                            <input type="password" 
+                                                   class="form-control form-control-lg" 
+                                                   id="senha_certificado" 
+                                                   name="senha_certificado" 
+                                                   placeholder="Digite a senha do certificado..."
+                                                   autocomplete="current-password">
+                                            <div class="form-text">
+                                                <i class="fas fa-info-circle me-1"></i>
+                                                Digite a senha do seu certificado digital cadastrado
+                                            </div>
+                                        </div>
+                                        @endif
+                                        
                                         <!-- Botão de Assinatura -->
                                         <div class="d-grid gap-2">
+                                            @if($certificadoCadastrado && $certificadoValido && $senhaSalva)
+                                            <button type="submit" 
+                                                    class="btn btn-success btn-lg" 
+                                                    id="btnAssinar">
+                                                <i class="fas fa-magic me-2"></i>
+                                                Assinar Documento Automaticamente
+                                            </button>
+                                            @else
                                             <button type="submit" 
                                                     class="btn btn-success btn-lg" 
                                                     id="btnAssinar">
                                                 <i class="fas fa-signature me-2"></i>
                                                 Assinar Documento
                                             </button>
+                                            @endif
                                             
                                             <a href="{{ route('proposicoes.show', $proposicao) }}" 
                                                class="btn btn-outline-secondary">
@@ -204,6 +287,15 @@ document.addEventListener('DOMContentLoaded', function() {
     const inputSenhaPfx = document.getElementById('senha_pfx');
     const formAssinatura = document.getElementById('formAssinatura');
     const btnAssinar = document.getElementById('btnAssinar');
+    
+    // Elementos do certificado cadastrado
+    const usarCertificadoCadastrado = document.getElementById('usar_certificado_cadastrado');
+    const campoTipoCertificado = document.getElementById('campo-tipo-certificado');
+    const ouSeparador = document.getElementById('ou-separador');
+    const campoSenhaCadastrado = document.getElementById('campo-senha-cadastrado');
+    const certificadoCadastrado = {{ $certificadoCadastrado ? 'true' : 'false' }};
+    const certificadoValido = {{ $certificadoValido ? 'true' : 'false' }};
+    const senhaSalva = {{ $senhaSalva ? 'true' : 'false' }};
 
     // Controlar exibição dos campos baseado no tipo
     tipoCertificado.addEventListener('change', function() {
@@ -305,7 +397,12 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Estado inicial
-    btnAssinar.disabled = true;
+    if (certificadoCadastrado && senhaSalva) {
+        btnAssinar.disabled = false;
+        mostrarInfoCertificadoCadastrado();
+    } else {
+        btnAssinar.disabled = true;
+    }
     
     // Verificar e mostrar mensagens de erro ou sucesso
     @if($errors->any())
@@ -341,18 +438,54 @@ document.addEventListener('DOMContentLoaded', function() {
     @else
         // Mostrar welcome message apenas se não houver mensagens de erro/sucesso
         @if(!$errors->any())
-            Swal.fire({
-                title: 'Assinatura Digital',
-                text: 'Selecione o tipo de certificado para iniciar o processo de assinatura digital.',
-                icon: 'info',
-                confirmButtonText: 'Iniciar',
-                confirmButtonColor: '#3085d6',
-                timer: 4000,
-                timerProgressBar: true,
-                toast: true,
-                position: 'top-end',
-                showConfirmButton: false
-            });
+            @if($certificadoCadastrado)
+                @if($certificadoValido)
+                    @if($senhaSalva)
+                        Swal.fire({
+                            title: 'Certificado Detectado!',
+                            html: '<i class="fas fa-magic fs-2 text-success mb-3"></i><br>Seu certificado está configurado para assinatura automática. Clique em "Assinar" quando estiver pronto.',
+                            icon: null,
+                            confirmButtonText: 'Entendi',
+                            confirmButtonColor: '#28a745',
+                            timer: 5000,
+                            timerProgressBar: true
+                        });
+                    @else
+                        Swal.fire({
+                            title: 'Certificado Detectado!',
+                            html: '<i class="fas fa-certificate fs-2 text-success mb-3"></i><br>Certificado digital encontrado. A senha será solicitada no momento da assinatura.',
+                            icon: null,
+                            confirmButtonText: 'Entendi',
+                            confirmButtonColor: '#28a745',
+                            timer: 4000,
+                            timerProgressBar: true
+                        });
+                    @endif
+                @else
+                    Swal.fire({
+                        title: 'Certificado Expirado!',
+                        html: '<i class="fas fa-exclamation-triangle fs-2 text-warning mb-3"></i><br>Certificado digital encontrado, mas está expirado. Use a opção manual ou cadastre um novo certificado.',
+                        icon: null,
+                        confirmButtonText: 'Entendi',
+                        confirmButtonColor: '#f39c12',
+                        timer: 6000,
+                        timerProgressBar: true
+                    });
+                @endif
+            @else
+                Swal.fire({
+                    title: 'Assinatura Digital',
+                    text: 'Selecione o tipo de certificado para iniciar o processo de assinatura digital.',
+                    icon: 'info',
+                    confirmButtonText: 'Iniciar',
+                    confirmButtonColor: '#3085d6',
+                    timer: 4000,
+                    timerProgressBar: true,
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false
+                });
+            @endif
         @endif
     @endif
 });
