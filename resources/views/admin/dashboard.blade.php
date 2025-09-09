@@ -424,280 +424,358 @@
             </div>
             <!--end::Row-->
             
-            <!-- Cards Administrativos - Seção Inferior -->
+            <!-- Cards de Acesso Rápido - Seção Inferior -->
             <!--begin::Row-->
             <div class="row gy-5 gx-xl-8 mt-5 mt-xl-8">
-            <!-- Usuários Admin -->
-            <div class="col-xl-4 col-lg-6 col-md-6">
-                <!--begin::Statistics Widget 2-->
-                <div class="card card-xl-stretch mb-xl-8 card-hover cursor-pointer" onclick="window.location.href='{{ route('admin.usuarios.index') }}'">
-                    <!--begin::Body-->
-                    <div class="card-body d-flex align-items-center pt-3 pb-0">
-                        <div class="d-flex flex-column flex-grow-1 py-2 py-lg-13 me-2">
-                            <a href="{{ route('admin.usuarios.index') }}" class="fw-bold text-gray-900 fs-4 mb-2 text-hover-primary d-flex align-items-center">
-                                Gerenciar Usuários Admin
-                                <i class="ki-duotone ki-arrow-right fs-5 ms-2">
-                                    <span class="path1"></span>
-                                    <span class="path2"></span>
-                                </i>
-                            </a>
-                            <span class="fw-semibold text-muted fs-5">Privilégios administrativos</span>
-                        </div>
-                        <i class="ki-duotone ki-profile-user text-primary fs-4x align-self-end h-100px">
-                            <span class="path1"></span>
-                            <span class="path2"></span>
-                            <span class="path3"></span>
-                            <span class="path4"></span>
-                        </i>
-                    </div>
-                    <!--end::Body-->
+                
+                <!-- Seção: Gestão de Usuários & Permissões -->
+                <div class="col-12 mb-5">
+                    <h2 class="fs-2 fw-bold text-gray-800 border-bottom pb-3">👥 Gestão de Usuários & Permissões</h2>
                 </div>
-                <!--end::Statistics Widget 2-->
-            </div>
-            @endif
+                <!-- Usuários do Sistema -->
+                <div class="col-xl-4 col-lg-6 col-md-6">
+                    <div class="card card-xl-stretch mb-xl-8 card-hover cursor-pointer" onclick="window.location.href='{{ route('usuarios.index') }}'">
+                        <div class="card-body d-flex align-items-center pt-3 pb-0">
+                            <div class="d-flex flex-column flex-grow-1 py-2 py-lg-13 me-2">
+                                <a href="{{ route('usuarios.index') }}" class="fw-bold text-gray-900 fs-4 mb-2 text-hover-primary d-flex align-items-center">
+                                    👥 Usuários do Sistema
+                                    <i class="ki-duotone ki-arrow-right fs-5 ms-2">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                    </i>
+                                </a>
+                                <span class="fw-semibold text-muted fs-5">Gestão completa de usuários</span>
+                            </div>
+                            <i class="ki-duotone ki-people text-success fs-4x align-self-end h-100px">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                                <span class="path3"></span>
+                                <span class="path4"></span>
+                                <span class="path5"></span>
+                            </i>
+                        </div>
+                    </div>
+                </div>
 
-            <!-- Usuários do Sistema -->
-            @if(\App\Models\ScreenPermission::userCanAccessRoute('usuarios.index'))
-            <div class="col-xl-4 col-lg-6 col-md-6">
-                <!--begin::Statistics Widget 2-->
-                <div class="card card-xl-stretch mb-xl-8 card-hover cursor-pointer" onclick="window.location.href='{{ route('usuarios.index') }}'">
-                    <!--begin::Body-->
-                    <div class="card-body d-flex align-items-center pt-3 pb-0">
-                        <div class="d-flex flex-column flex-grow-1 py-2 py-lg-13 me-2">
-                            <a href="{{ route('usuarios.index') }}" class="fw-bold text-gray-900 fs-4 mb-2 text-hover-primary d-flex align-items-center">
-                                Gerenciar Usuários
-                                <i class="ki-duotone ki-arrow-right fs-5 ms-2">
-                                    <span class="path1"></span>
-                                    <span class="path2"></span>
-                                </i>
-                            </a>
-                            <span class="fw-semibold text-muted fs-5">Gestão completa de usuários</span>
+                <!-- Permissões de Acesso -->
+                <div class="col-xl-4 col-lg-6 col-md-6">
+                    <div class="card card-xl-stretch mb-xl-8 card-hover cursor-pointer" onclick="window.location.href='{{ route('admin.screen-permissions.index') }}'">
+                        <div class="card-body d-flex align-items-center pt-3 pb-0">
+                            <div class="d-flex flex-column flex-grow-1 py-2 py-lg-13 me-2">
+                                <a href="{{ route('admin.screen-permissions.index') }}" class="fw-bold text-gray-900 fs-4 mb-2 text-hover-primary d-flex align-items-center">
+                                    🛡️ Permissões de Acesso
+                                    <i class="ki-duotone ki-arrow-right fs-5 ms-2">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                    </i>
+                                </a>
+                                <span class="fw-semibold text-muted fs-5">Controle de acesso por perfil</span>
+                            </div>
+                            <i class="ki-duotone ki-shield-tick text-warning fs-4x align-self-end h-100px">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                                <span class="path3"></span>
+                            </i>
                         </div>
-                        <i class="ki-duotone ki-people text-success fs-4x align-self-end h-100px">
-                            <span class="path1"></span>
-                            <span class="path2"></span>
-                            <span class="path3"></span>
-                            <span class="path4"></span>
-                            <span class="path5"></span>
-                        </i>
                     </div>
-                    <!--end::Body-->
                 </div>
-                <!--end::Statistics Widget 2-->
-            </div>
-            @endif
 
-            <!-- Partidos Políticos -->
-            @if(\App\Models\ScreenPermission::userCanAccessRoute('partidos.index'))
-            <div class="col-xl-4 col-lg-6 col-md-6">
-                <!--begin::Statistics Widget 2-->
-                <div class="card card-xl-stretch mb-xl-8 card-hover cursor-pointer" onclick="window.location.href='{{ route('partidos.index') }}'">
-                    <!--begin::Body-->
-                    <div class="card-body d-flex align-items-center pt-3 pb-0">
-                        <div class="d-flex flex-column flex-grow-1 py-2 py-lg-13 me-2">
-                            <a href="{{ route('partidos.index') }}" class="fw-bold text-gray-900 fs-4 mb-2 text-hover-primary d-flex align-items-center">
-                                Gerenciar Partidos
-                                <i class="ki-duotone ki-arrow-right fs-5 ms-2">
-                                    <span class="path1"></span>
-                                    <span class="path2"></span>
-                                </i>
-                            </a>
-                            <span class="fw-semibold text-muted fs-5">Partidos políticos e siglas</span>
+                <!-- Parlamentares -->
+                <div class="col-xl-4 col-lg-6 col-md-6">
+                    <div class="card card-xl-stretch mb-xl-8 card-hover cursor-pointer" onclick="window.location.href='{{ route('parlamentares.index') }}'">
+                        <div class="card-body d-flex align-items-center pt-3 pb-0">
+                            <div class="d-flex flex-column flex-grow-1 py-2 py-lg-13 me-2">
+                                <a href="{{ route('parlamentares.index') }}" class="fw-bold text-gray-900 fs-4 mb-2 text-hover-primary d-flex align-items-center">
+                                    🏛️ Parlamentares
+                                    <i class="ki-duotone ki-arrow-right fs-5 ms-2">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                    </i>
+                                </a>
+                                <span class="fw-semibold text-muted fs-5">Vereadores e Mesa Diretora</span>
+                            </div>
+                            <i class="ki-duotone ki-people text-primary fs-4x align-self-end h-100px">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                                <span class="path3"></span>
+                                <span class="path4"></span>
+                                <span class="path5"></span>
+                            </i>
                         </div>
-                        <i class="ki-duotone ki-flag text-danger fs-4x align-self-end h-100px">
-                            <span class="path1"></span>
-                            <span class="path2"></span>
-                        </i>
                     </div>
-                    <!--end::Body-->
                 </div>
-                <!--end::Statistics Widget 2-->
-            </div>
-            @endif
 
-            <!-- Modelos de Projeto -->
-            @if(auth()->user()->isAdmin())
-            <div class="col-xl-4 col-lg-6 col-md-6">
-                <!--begin::Statistics Widget 2-->
-                <div class="card card-xl-stretch mb-xl-8 card-hover cursor-pointer" onclick="window.location.href='{{ route('templates.index') }}'">
-                    <!--begin::Body-->
-                    <div class="card-body d-flex align-items-center pt-3 pb-0">
-                        <div class="d-flex flex-column flex-grow-1 py-2 py-lg-13 me-2">
-                            <a href="{{ route('templates.index') }}" class="fw-bold text-gray-900 fs-4 mb-2 text-hover-primary d-flex align-items-center">
-                                Templates
-                                <i class="ki-duotone ki-arrow-right fs-5 ms-2">
-                                    <span class="path1"></span>
-                                    <span class="path2"></span>
-                                </i>
-                            </a>
-                            <span class="fw-semibold text-muted fs-5">Templates de documentos</span>
-                        </div>
-                        <i class="ki-duotone ki-document text-info fs-4x align-self-end h-100px">
-                            <span class="path1"></span>
-                            <span class="path2"></span>
-                        </i>
-                    </div>
-                    <!--end::Body-->
+                <!-- Seção: Configuração do Sistema -->
+                <div class="col-12 mt-8 mb-5">
+                    <h2 class="fs-2 fw-bold text-gray-800 border-bottom pb-3">⚙️ Configuração do Sistema</h2>
                 </div>
-                <!--end::Statistics Widget 2-->
-            </div>
 
-            <!-- Documentos em Tramitação -->
-            <div class="col-xl-4 col-lg-6 col-md-6">
-                <!--begin::Statistics Widget 2-->
-                <div class="card card-xl-stretch mb-xl-8 card-hover cursor-pointer" onclick="window.location.href='{{ route('documentos.instancias.index') }}'">
-                    <!--begin::Body-->
-                    <div class="card-body d-flex align-items-center pt-3 pb-0">
-                        <div class="d-flex flex-column flex-grow-1 py-2 py-lg-13 me-2">
-                            <a href="{{ route('documentos.instancias.index') }}" class="fw-bold text-gray-900 fs-4 mb-2 text-hover-primary d-flex align-items-center">
-                                Documentos em Tramitação
-                                <i class="ki-duotone ki-arrow-right fs-5 ms-2">
-                                    <span class="path1"></span>
-                                    <span class="path2"></span>
-                                </i>
-                            </a>
-                            <span class="fw-semibold text-muted fs-5">Acompanhar workflow</span>
+                <!-- Parâmetros do Sistema -->
+                <div class="col-xl-4 col-lg-6 col-md-6">
+                    <div class="card card-xl-stretch mb-xl-8 card-hover cursor-pointer" onclick="window.location.href='{{ route('parametros.index') }}'">
+                        <div class="card-body d-flex align-items-center pt-3 pb-0">
+                            <div class="d-flex flex-column flex-grow-1 py-2 py-lg-13 me-2">
+                                <a href="{{ route('parametros.index') }}" class="fw-bold text-gray-900 fs-4 mb-2 text-hover-primary d-flex align-items-center">
+                                    ⚙️ Parâmetros do Sistema
+                                    <i class="ki-duotone ki-arrow-right fs-5 ms-2">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                    </i>
+                                </a>
+                                <span class="fw-semibold text-muted fs-5">Configurações gerais</span>
+                            </div>
+                            <i class="ki-duotone ki-setting-2 text-info fs-4x align-self-end h-100px">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                            </i>
                         </div>
-                        <i class="ki-duotone ki-file-text text-success fs-4x align-self-end h-100px">
-                            <span class="path1"></span>
-                            <span class="path2"></span>
-                        </i>
                     </div>
-                    <!--end::Body-->
                 </div>
-                <!--end::Statistics Widget 2-->
-            </div>
 
-            <!-- Permissões -->
-            <div class="col-xl-4 col-lg-6 col-md-6">
-                <!--begin::Statistics Widget 2-->
-                <div class="card card-xl-stretch mb-xl-8 card-hover cursor-pointer" onclick="window.location.href='{{ route('admin.screen-permissions.index') }}'">
-                    <!--begin::Body-->
-                    <div class="card-body d-flex align-items-center pt-3 pb-0">
-                        <div class="d-flex flex-column flex-grow-1 py-2 py-lg-13 me-2">
-                            <a href="{{ route('admin.screen-permissions.index') }}" class="fw-bold text-gray-900 fs-4 mb-2 text-hover-primary d-flex align-items-center">
-                                Configurar Permissões
-                                <i class="ki-duotone ki-arrow-right fs-5 ms-2">
-                                    <span class="path1"></span>
-                                    <span class="path2"></span>
-                                </i>
-                            </a>
-                            <span class="fw-semibold text-muted fs-5">Controle de acesso</span>
+                <!-- Tipos de Proposição -->
+                <div class="col-xl-4 col-lg-6 col-md-6">
+                    <div class="card card-xl-stretch mb-xl-8 card-hover cursor-pointer" onclick="window.location.href='{{ route('admin.tipo-proposicoes.index') }}'">
+                        <div class="card-body d-flex align-items-center pt-3 pb-0">
+                            <div class="d-flex flex-column flex-grow-1 py-2 py-lg-13 me-2">
+                                <a href="{{ route('admin.tipo-proposicoes.index') }}" class="fw-bold text-gray-900 fs-4 mb-2 text-hover-primary d-flex align-items-center">
+                                    📄 Tipos de Proposição
+                                    <i class="ki-duotone ki-arrow-right fs-5 ms-2">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                    </i>
+                                </a>
+                                <span class="fw-semibold text-muted fs-5">Moções, Projetos de Lei, etc.</span>
+                            </div>
+                            <i class="ki-duotone ki-file-added text-primary fs-4x align-self-end h-100px">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                            </i>
                         </div>
-                        <i class="ki-duotone ki-shield-tick text-warning fs-4x align-self-end h-100px">
-                            <span class="path1"></span>
-                            <span class="path2"></span>
-                            <span class="path3"></span>
-                        </i>
                     </div>
-                    <!--end::Body-->
                 </div>
-                <!--end::Statistics Widget 2-->
-            </div>
 
-            <!-- Parâmetros -->
-            <div class="col-xl-4 col-lg-6 col-md-6">
-                <!--begin::Statistics Widget 2-->
-                <div class="card card-xl-stretch mb-xl-8 card-hover cursor-pointer" onclick="window.location.href='{{ route('parametros.index') }}'">
-                    <!--begin::Body-->
-                    <div class="card-body d-flex align-items-center pt-3 pb-0">
-                        <div class="d-flex flex-column flex-grow-1 py-2 py-lg-13 me-2">
-                            <a href="{{ route('parametros.index') }}" class="fw-bold text-gray-900 fs-4 mb-2 text-hover-primary d-flex align-items-center">
-                                Configurar Parâmetros
-                                <i class="ki-duotone ki-arrow-right fs-5 ms-2">
-                                    <span class="path1"></span>
-                                    <span class="path2"></span>
-                                </i>
-                            </a>
-                            <span class="fw-semibold text-muted fs-5">Configurações do sistema</span>
+                <!-- Templates de Documentos -->
+                <div class="col-xl-4 col-lg-6 col-md-6">
+                    <div class="card card-xl-stretch mb-xl-8 card-hover cursor-pointer" onclick="window.location.href='{{ route('templates.index') }}'">
+                        <div class="card-body d-flex align-items-center pt-3 pb-0">
+                            <div class="d-flex flex-column flex-grow-1 py-2 py-lg-13 me-2">
+                                <a href="{{ route('templates.index') }}" class="fw-bold text-gray-900 fs-4 mb-2 text-hover-primary d-flex align-items-center">
+                                    📝 Templates de Documentos
+                                    <span class="badge badge-light-primary ms-2">v2.0</span>
+                                    <i class="ki-duotone ki-arrow-right fs-5 ms-2">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                    </i>
+                                </a>
+                                <span class="fw-semibold text-muted fs-5">RTF com variáveis dinâmicas</span>
+                            </div>
+                            <i class="ki-duotone ki-document text-info fs-4x align-self-end h-100px">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                            </i>
                         </div>
-                        <i class="ki-duotone ki-setting-2 text-danger fs-4x align-self-end h-100px">
-                            <span class="path1"></span>
-                            <span class="path2"></span>
-                        </i>
                     </div>
-                    <!--end::Body-->
                 </div>
-                <!--end::Statistics Widget 2-->
-            </div>
 
-            <!-- Editor de Templates -->
-            <div class="col-xl-4 col-lg-6 col-md-6">
-                <!--begin::Statistics Widget 2-->
-                <div class="card card-xl-stretch mb-xl-8 card-hover cursor-pointer" onclick="window.location.href='{{ route('admin.templates.relatorio-pdf') }}'">
-                    <!--begin::Body-->
-                    <div class="card-body d-flex align-items-center pt-3 pb-0">
-                        <div class="d-flex flex-column flex-grow-1 py-2 py-lg-13 me-2">
-                            <a href="{{ route('admin.templates.relatorio-pdf') }}" class="fw-bold text-gray-900 fs-4 mb-2 text-hover-primary d-flex align-items-center">
-                                Editor de Templates
-                                <i class="ki-duotone ki-arrow-right fs-5 ms-2">
-                                    <span class="path1"></span>
-                                    <span class="path2"></span>
-                                </i>
-                            </a>
-                            <span class="fw-semibold text-muted fs-5">Personalizar relatórios PDF</span>
-                        </div>
-                        <i class="ki-duotone ki-file-down text-success fs-4x align-self-end h-100px">
-                            <span class="path1"></span>
-                            <span class="path2"></span>
-                        </i>
-                    </div>
-                    <!--end::Body-->
+                <!-- Seção: Fluxos Operacionais -->
+                <div class="col-12 mt-8 mb-5">
+                    <h2 class="fs-2 fw-bold text-gray-800 border-bottom pb-3">📋 Fluxos Operacionais</h2>
                 </div>
-                <!--end::Statistics Widget 2-->
-            </div>
 
-            <!-- Tipos de Proposição -->
-            <div class="col-xl-4 col-lg-6 col-md-6">
-                <!--begin::Statistics Widget 2-->
-                <div class="card card-xl-stretch mb-xl-8 card-hover cursor-pointer" onclick="window.location.href='{{ route('admin.tipo-proposicoes.index') }}'">
-                    <!--begin::Body-->
-                    <div class="card-body d-flex align-items-center pt-3 pb-0">
-                        <div class="d-flex flex-column flex-grow-1 py-2 py-lg-13 me-2">
-                            <a href="{{ route('admin.tipo-proposicoes.index') }}" class="fw-bold text-gray-900 fs-4 mb-2 text-hover-primary d-flex align-items-center">
-                                Tipos de Proposição
-                                <i class="ki-duotone ki-arrow-right fs-5 ms-2">
-                                    <span class="path1"></span>
-                                    <span class="path2"></span>
-                                </i>
-                            </a>
-                            <span class="fw-semibold text-muted fs-5">Gerenciar tipos de documentos</span>
+                <!-- Fluxo de Proposições -->
+                <div class="col-xl-4 col-lg-6 col-md-6">
+                    <div class="card card-xl-stretch mb-xl-8 card-hover cursor-pointer" onclick="window.location.href='{{ route('admin.docs.fluxo-proposicoes') }}'">
+                        <div class="card-body d-flex align-items-center pt-3 pb-0">
+                            <div class="d-flex flex-column flex-grow-1 py-2 py-lg-13 me-2">
+                                <a href="{{ route('admin.docs.fluxo-proposicoes') }}" class="fw-bold text-gray-900 fs-4 mb-2 text-hover-primary d-flex align-items-center">
+                                    📋 Fluxo de Proposições
+                                    <span class="badge badge-light-success ms-2">NOVO</span>
+                                    <i class="ki-duotone ki-arrow-right fs-5 ms-2">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                    </i>
+                                </a>
+                                <span class="fw-semibold text-muted fs-5">Documentação do workflow</span>
+                            </div>
+                            <i class="ki-duotone ki-delivery-3 text-success fs-4x align-self-end h-100px">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                                <span class="path3"></span>
+                                <span class="path4"></span>
+                                <span class="path5"></span>
+                                <span class="path6"></span>
+                            </i>
                         </div>
-                        <i class="ki-duotone ki-file-added text-primary fs-4x align-self-end h-100px">
-                            <span class="path1"></span>
-                            <span class="path2"></span>
-                        </i>
                     </div>
-                    <!--end::Body-->
                 </div>
-                <!--end::Statistics Widget 2-->
-            </div>
 
-            <!-- Configurações (Em breve) -->
-            <div class="col-xl-4 col-lg-6 col-md-6">
-                <!--begin::Statistics Widget 2-->
-                <div class="card card-xl-stretch mb-xl-8 card-hover cursor-pointer" onclick="showComingSoon('Configurações do Sistema')">
-                    <!--begin::Body-->
-                    <div class="card-body d-flex align-items-center pt-3 pb-0">
-                        <div class="d-flex flex-column flex-grow-1 py-2 py-lg-13 me-2">
-                            <a href="#" class="fw-bold text-gray-900 fs-4 mb-2 text-hover-primary d-flex align-items-center" onclick="showComingSoon('Configurações do Sistema')">
-                                Ver Configurações
-                                <i class="ki-duotone ki-arrow-right fs-5 ms-2">
-                                    <span class="path1"></span>
-                                    <span class="path2"></span>
-                                </i>
-                            </a>
-                            <span class="fw-semibold text-muted fs-5">Configurações gerais</span>
+                <!-- Assinatura Digital PyHanko -->
+                <div class="col-xl-4 col-lg-6 col-md-6">
+                    <div class="card card-xl-stretch mb-xl-8 card-hover cursor-pointer" onclick="window.location.href='{{ route('admin.pyhanko-fluxo.index') }}'">
+                        <div class="card-body d-flex align-items-center pt-3 pb-0">
+                            <div class="d-flex flex-column flex-grow-1 py-2 py-lg-13 me-2">
+                                <a href="{{ route('admin.pyhanko-fluxo.index') }}" class="fw-bold text-gray-900 fs-4 mb-2 text-hover-primary d-flex align-items-center">
+                                    🛡️ Assinatura Digital
+                                    <span class="badge badge-light-primary ms-2">v2.2</span>
+                                    <i class="ki-duotone ki-arrow-right fs-5 ms-2">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                    </i>
+                                </a>
+                                <span class="fw-semibold text-muted fs-5">PyHanko + PAdES</span>
+                            </div>
+                            <i class="ki-duotone ki-security-user text-primary fs-4x align-self-end h-100px">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                            </i>
                         </div>
-                        <i class="ki-duotone ki-gear text-secondary fs-4x align-self-end h-100px">
-                            <span class="path1"></span>
-                            <span class="path2"></span>
-                        </i>
                     </div>
-                    <!--end::Body-->
                 </div>
-                <!--end::Statistics Widget 2-->
-            </div>
+
+                <!-- Fluxo de Documentos -->
+                <div class="col-xl-4 col-lg-6 col-md-6">
+                    <div class="card card-xl-stretch mb-xl-8 card-hover cursor-pointer" onclick="window.location.href='{{ route('admin.docs.fluxo-documentos') }}'">
+                        <div class="card-body d-flex align-items-center pt-3 pb-0">
+                            <div class="d-flex flex-column flex-grow-1 py-2 py-lg-13 me-2">
+                                <a href="{{ route('admin.docs.fluxo-documentos') }}" class="fw-bold text-gray-900 fs-4 mb-2 text-hover-primary d-flex align-items-center">
+                                    📑 Fluxo de Documentos
+                                    <span class="badge badge-light-info ms-2">NOVO</span>
+                                    <i class="ki-duotone ki-arrow-right fs-5 ms-2">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                    </i>
+                                </a>
+                                <span class="fw-semibold text-muted fs-5">Tramitação de documentos</span>
+                            </div>
+                            <i class="ki-duotone ki-file-text text-info fs-4x align-self-end h-100px">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                            </i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Seção: Ferramentas Avançadas -->
+                <div class="col-12 mt-8 mb-5">
+                    <h2 class="fs-2 fw-bold text-gray-800 border-bottom pb-3">🔧 Ferramentas Avançadas</h2>
+                </div>
+
+                <!-- Módulo de Testes -->
+                <div class="col-xl-4 col-lg-6 col-md-6">
+                    <div class="card card-xl-stretch mb-xl-8 card-hover cursor-pointer" onclick="window.location.href='{{ route('tests.index') }}'">
+                        <div class="card-body d-flex align-items-center pt-3 pb-0">
+                            <div class="d-flex flex-column flex-grow-1 py-2 py-lg-13 me-2">
+                                <a href="{{ route('tests.index') }}" class="fw-bold text-gray-900 fs-4 mb-2 text-hover-primary d-flex align-items-center">
+                                    🧪 Módulo de Testes
+                                    <i class="ki-duotone ki-arrow-right fs-5 ms-2">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                    </i>
+                                </a>
+                                <span class="fw-semibold text-muted fs-5">Debug e validações</span>
+                            </div>
+                            <i class="ki-duotone ki-flask text-danger fs-4x align-self-end h-100px">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                                <span class="path3"></span>
+                                <span class="path4"></span>
+                            </i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Diagnóstico do Sistema -->
+                <div class="col-xl-4 col-lg-6 col-md-6">
+                    <div class="card card-xl-stretch mb-xl-8 card-hover cursor-pointer" onclick="window.location.href='{{ route('admin.system-diagnostic.index') }}'">
+                        <div class="card-body d-flex align-items-center pt-3 pb-0">
+                            <div class="d-flex flex-column flex-grow-1 py-2 py-lg-13 me-2">
+                                <a href="{{ route('admin.system-diagnostic.index') }}" class="fw-bold text-gray-900 fs-4 mb-2 text-hover-primary d-flex align-items-center">
+                                    🔍 Diagnóstico do Sistema
+                                    <i class="ki-duotone ki-arrow-right fs-5 ms-2">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                    </i>
+                                </a>
+                                <span class="fw-semibold text-muted fs-5">Monitoramento e saúde</span>
+                            </div>
+                            <i class="ki-duotone ki-pulse text-success fs-4x align-self-end h-100px">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                            </i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gerador de Módulos -->
+                <div class="col-xl-4 col-lg-6 col-md-6">
+                    <div class="card card-xl-stretch mb-xl-8 card-hover cursor-pointer" onclick="window.location.href='{{ route('admin.module-generator.index') }}'">
+                        <div class="card-body d-flex align-items-center pt-3 pb-0">
+                            <div class="d-flex flex-column flex-grow-1 py-2 py-lg-13 me-2">
+                                <a href="{{ route('admin.module-generator.index') }}" class="fw-bold text-gray-900 fs-4 mb-2 text-hover-primary d-flex align-items-center">
+                                    ⚡ Gerador de Módulos
+                                    <span class="badge badge-light-primary ms-2">NOVO</span>
+                                    <i class="ki-duotone ki-arrow-right fs-5 ms-2">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                    </i>
+                                </a>
+                                <span class="fw-semibold text-muted fs-5">Criação automática de CRUDs</span>
+                            </div>
+                            <i class="ki-duotone ki-code text-primary fs-4x align-self-end h-100px">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                                <span class="path3"></span>
+                            </i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Banco de Dados -->
+                <div class="col-xl-4 col-lg-6 col-md-6">
+                    <div class="card card-xl-stretch mb-xl-8 card-hover cursor-pointer" onclick="window.location.href='{{ route('admin.database.index') }}'">
+                        <div class="card-body d-flex align-items-center pt-3 pb-0">
+                            <div class="d-flex flex-column flex-grow-1 py-2 py-lg-13 me-2">
+                                <a href="{{ route('admin.database.index') }}" class="fw-bold text-gray-900 fs-4 mb-2 text-hover-primary d-flex align-items-center">
+                                    🗄️ Banco de Dados
+                                    <span class="badge badge-light-info ms-2">ADMIN</span>
+                                    <i class="ki-duotone ki-arrow-right fs-5 ms-2">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                    </i>
+                                </a>
+                                <span class="fw-semibold text-muted fs-5">Administração de dados</span>
+                            </div>
+                            <i class="ki-duotone ki-save-2 text-info fs-4x align-self-end h-100px">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                                <span class="path3"></span>
+                            </i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Configurações do Sistema -->
+                <div class="col-xl-4 col-lg-6 col-md-6">
+                    <div class="card card-xl-stretch mb-xl-8 card-hover cursor-pointer" onclick="window.location.href='{{ route('admin.system-configuration.index') }}'">
+                        <div class="card-body d-flex align-items-center pt-3 pb-0">
+                            <div class="d-flex flex-column flex-grow-1 py-2 py-lg-13 me-2">
+                                <a href="{{ route('admin.system-configuration.index') }}" class="fw-bold text-gray-900 fs-4 mb-2 text-hover-primary d-flex align-items-center">
+                                    🔧 Configurações do Sistema
+                                    <i class="ki-duotone ki-arrow-right fs-5 ms-2">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                    </i>
+                                </a>
+                                <span class="fw-semibold text-muted fs-5">Configurações avançadas</span>
+                            </div>
+                            <i class="ki-duotone ki-gear text-secondary fs-4x align-self-end h-100px">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                            </i>
+                        </div>
+                    </div>
+                </div>
+
             <!--end::Row-->
             @endif
         

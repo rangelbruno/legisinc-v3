@@ -250,6 +250,44 @@
                                                     </td>
                                                 </tr>
                                                 <tr>
+                                                    <td class="text-muted">Certificado Digital</td>
+                                                    <td class="fw-bold text-end">
+                                                        @if($parlamentar['user'] && $parlamentar['user']['certificado_digital_ativo'])
+                                                            <span class="badge badge-success">
+                                                                <i class="ki-duotone ki-security-check fs-7 me-1">
+                                                                    <span class="path1"></span>
+                                                                    <span class="path2"></span>
+                                                                </i>
+                                                                Ativo
+                                                            </span>
+                                                            <div class="fs-7 text-muted mt-1">
+                                                                {{ $parlamentar['user']['certificado_digital_cn'] ?? 'N/A' }}
+                                                            </div>
+                                                            @if($parlamentar['user']['certificado_digital_validade'])
+                                                                <div class="fs-8 text-muted">
+                                                                    Válido até: {{ \Carbon\Carbon::parse($parlamentar['user']['certificado_digital_validade'])->format('d/m/Y') }}
+                                                                </div>
+                                                            @endif
+                                                        @elseif($parlamentar['user'] && $parlamentar['user']['certificado_digital_path'])
+                                                            <span class="badge badge-warning">
+                                                                <i class="ki-duotone ki-security-time fs-7 me-1">
+                                                                    <span class="path1"></span>
+                                                                    <span class="path2"></span>
+                                                                </i>
+                                                                Inativo
+                                                            </span>
+                                                        @else
+                                                            <span class="badge badge-light-danger">
+                                                                <i class="ki-duotone ki-cross-circle fs-7 me-1">
+                                                                    <span class="path1"></span>
+                                                                    <span class="path2"></span>
+                                                                </i>
+                                                                Não cadastrado
+                                                            </span>
+                                                        @endif
+                                                    </td>
+                                                </tr>
+                                                <tr>
                                                     <td class="text-muted">Total de Comissões</td>
                                                     <td class="fw-bold text-end">
                                                         <span class="badge badge-light">{{ $parlamentar['total_comissoes'] }}</span>

@@ -129,6 +129,15 @@ Route::middleware('auth')->group(function () {
     Route::post('/update-last-access', [UserController::class, 'updateLastAccess'])->name('user.update-last-access');
 });
 
+// Certificado Digital routes (protected)
+Route::prefix('certificado-digital')->name('certificado-digital.')->middleware('auth')->group(function () {
+    Route::get('/', [App\Http\Controllers\CertificadoDigitalController::class, 'index'])->name('index');
+    Route::post('/upload', [App\Http\Controllers\CertificadoDigitalController::class, 'upload'])->name('upload');
+    Route::delete('/remover', [App\Http\Controllers\CertificadoDigitalController::class, 'remover'])->name('remover');
+    Route::post('/toggle', [App\Http\Controllers\CertificadoDigitalController::class, 'toggleAtivo'])->name('toggle');
+    Route::post('/testar', [App\Http\Controllers\CertificadoDigitalController::class, 'testar'])->name('testar');
+});
+
 // Test route to auto-login as admin for demo
 Route::get('/auto-login-admin', function () {
     // Force logout first
@@ -182,6 +191,7 @@ Route::prefix('parlamentares')->name('parlamentares.')->middleware(['auth', 'che
     Route::get('/{id}/edit', [ParlamentarController::class, 'edit'])->name('edit')->middleware('check.permission:parlamentares.edit');
     Route::put('/{id}', [ParlamentarController::class, 'update'])->name('update')->middleware('check.permission:parlamentares.edit');
     Route::delete('/{id}', [ParlamentarController::class, 'destroy'])->name('destroy')->middleware('check.permission:parlamentares.delete');
+    Route::post('/{id}/remover-certificado', [ParlamentarController::class, 'removerCertificado'])->name('remover-certificado')->middleware('check.permission:parlamentares.edit');
 });
 
 // Partidos routes (protected with permissions)

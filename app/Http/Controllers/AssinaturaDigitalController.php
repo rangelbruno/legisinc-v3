@@ -229,8 +229,27 @@ class AssinaturaDigitalController extends Controller
             $dadosAssinatura['identificador'] = $identificador;
             $dadosAssinatura['checksum'] = $checksum;
 
-            // Processar assinatura
-            $pdfAssinado = $this->assinaturaService->assinarPDF($pdfPath, $dadosAssinatura);
+            // Processar assinatura (passando usuário para usar certificado se disponível)
+            $usuario = Auth::user();
+            
+            // Se usuário tem certificado e não forneceu arquivo PFX, usar certificado do usuário
+            if ($usuario->temCertificadoDigital() && !$request->hasFile('arquivo_pfx')) {
+                // Validar que a senha do certificado foi fornecida
+                $senhaCertificado = $request->senha_certificado ?? $request->senha_pfx ?? '';
+                if (empty($senhaCertificado)) {
+                    return back()->withErrors(['senha_certificado' => 'Informe a senha do seu certificado digital.']);
+                }
+                
+                $dadosAssinatura['senha_certificado'] = $senhaCertificado;
+                $dadosAssinatura['tipo_certificado'] = 'PFX'; // Forçar PFX quando usar certificado do usuário
+                
+                Log::info('Usando certificado digital do usuário para assinatura', [
+                    'user_id' => $usuario->id,
+                    'certificado_nome' => $usuario->certificado_digital_nome
+                ]);
+            }
+            
+            $pdfAssinado = $this->assinaturaService->assinarPDF($pdfPath, $dadosAssinatura, $usuario);
 
             if (!$pdfAssinado) {
                 return back()->withErrors(['assinatura' => 'Falha ao processar assinatura digital.']);

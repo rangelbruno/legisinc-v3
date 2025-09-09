@@ -33,6 +33,12 @@ class User extends Authenticatable
         'ativo',
         'ultimo_acesso',
         'avatar',
+        'certificado_digital_path',
+        'certificado_digital_nome',
+        'certificado_digital_upload_em',
+        'certificado_digital_validade',
+        'certificado_digital_cn',
+        'certificado_digital_ativo',
     ];
 
     /**
@@ -59,6 +65,9 @@ class User extends Authenticatable
             'preferencias' => 'array',
             'ativo' => 'boolean',
             'ultimo_acesso' => 'datetime',
+            'certificado_digital_upload_em' => 'datetime',
+            'certificado_digital_validade' => 'date',
+            'certificado_digital_ativo' => 'boolean',
         ];
     }
 
@@ -603,5 +612,146 @@ class User extends Authenticatable
                 ->pluck('total', 'status')
                 ->toArray(),
         ];
+    }
+
+    // ========== CERTIFICADO DIGITAL ==========
+
+    /**
+     * Verificar se o usuário tem certificado digital ativo
+     */
+    public function temCertificadoDigital(): bool
+    {
+        return $this->certificado_digital_ativo && 
+               $this->certificado_digital_path && 
+               \Storage::exists($this->certificado_digital_path);
+    }
+
+    /**
+     * Verificar se o certificado digital está válido (não expirado)
+     */
+    public function certificadoDigitalValido(): bool
+    {
+        if (!$this->temCertificadoDigital()) {
+            return false;
+        }
+
+        return $this->certificado_digital_validade && 
+               $this->certificado_digital_validade->isFuture();
+    }
+
+    /**
+     * Obter caminho completo do certificado digital
+     */
+    public function getCaminhoCompletoCertificado(): ?string
+    {
+        if (!$this->certificado_digital_path) {
+            return null;
+        }
+
+        return storage_path('app/' . $this->certificado_digital_path);
+    }
+
+    /**
+     * Obter status do certificado digital
+     */
+    public function getStatusCertificadoDigital(): string
+    {
+        if (!$this->certificado_digital_path) {
+            return 'Não cadastrado';
+        }
+
+        if (!$this->certificado_digital_ativo) {
+            return 'Inativo';
+        }
+
+        if (!$this->certificadoDigitalValido()) {
+            return 'Expirado';
+        }
+
+        return 'Ativo';
+    }
+
+    /**
+     * Obter dias restantes até expiração do certificado
+     */
+    public function getDiasParaExpiracaoCertificado(): ?int
+    {
+        if (!$this->certificado_digital_validade) {
+            return null;
+        }
+
+        return now()->diffInDays($this->certificado_digital_validade, false);
+    }
+
+    /**
+     * Verificar se o certificado está próximo do vencimento (30 dias)
+     */
+    public function certificadoProximoVencimento(): bool
+    {
+        $dias = $this->getDiasParaExpiracaoCertificado();
+        return $dias !== null && $dias <= 30 && $dias > 0;
+    }
+
+    /**
+     * Remover certificado digital
+     */
+    public function removerCertificadoDigital(): bool
+    {
+        if ($this->certificado_digital_path && \Storage::exists($this->certificado_digital_path)) {
+            \Storage::delete($this->certificado_digital_path);
+        }
+
+        return $this->update([
+            'certificado_digital_path' => null,
+            'certificado_digital_nome' => null,
+            'certificado_digital_upload_em' => null,
+            'certificado_digital_validade' => null,
+            'certificado_digital_cn' => null,
+            'certificado_digital_ativo' => false,
+            'certificado_digital_senha' => null,
+            'certificado_digital_senha_salva' => false,
+        ]);
+    }
+    
+    /**
+     * Salvar senha do certificado criptografada
+     */
+    public function salvarSenhaCertificado(string $senha): bool
+    {
+        return $this->update([
+            'certificado_digital_senha' => encrypt($senha),
+            'certificado_digital_senha_salva' => true,
+        ]);
+    }
+    
+    /**
+     * Obter senha do certificado descriptografada
+     */
+    public function getSenhaCertificado(): ?string
+    {
+        if (!$this->certificado_digital_senha) {
+            return null;
+        }
+        
+        try {
+            return decrypt($this->certificado_digital_senha);
+        } catch (\Exception $e) {
+            \Log::error('Erro ao descriptografar senha do certificado', [
+                'user_id' => $this->id,
+                'error' => $e->getMessage()
+            ]);
+            return null;
+        }
+    }
+    
+    /**
+     * Remover senha do certificado
+     */
+    public function removerSenhaCertificado(): bool
+    {
+        return $this->update([
+            'certificado_digital_senha' => null,
+            'certificado_digital_senha_salva' => false,
+        ]);
     }
 }

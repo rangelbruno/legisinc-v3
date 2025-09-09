@@ -462,7 +462,8 @@ class ProposicaoProtocoloController extends Controller
                     'motivo_assinatura' => 'Proposição protocolada',
                     'certificado_path' => $proposicao->certificado_digital_path,
                     'certificado_senha' => $proposicao->certificado_senha ?? ''
-                ]
+                ],
+                $proposicao->autor // Pass the proposicao author as user
             );
 
             return $pdfAssinado;

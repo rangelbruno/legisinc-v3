@@ -2654,6 +2654,24 @@
     @auth
     <script>
         (function() {
+            // Configurar eventos passivos por padrão para melhor performance
+            if ('addEventListener' in window) {
+                // Override para tornar eventos de scroll passivos por padrão
+                const originalAddEventListener = EventTarget.prototype.addEventListener;
+                EventTarget.prototype.addEventListener = function(type, listener, options) {
+                    if (['scroll', 'wheel', 'touchstart', 'touchmove', 'mousewheel'].includes(type)) {
+                        if (typeof options === 'boolean') {
+                            options = { capture: options, passive: true };
+                        } else if (typeof options === 'object' && options.passive === undefined) {
+                            options.passive = true;
+                        } else if (options === undefined) {
+                            options = { passive: true };
+                        }
+                    }
+                    return originalAddEventListener.call(this, type, listener, options);
+                };
+            }
+            
             // Previne navegação com botão voltar após login
             if (window.history && window.history.pushState) {
                 window.history.pushState('forward', null, window.location.href);
@@ -2674,10 +2692,10 @@
             const maxInactiveTime = 30 * 60 * 1000; // 30 minutos
             
             // Atualiza última atividade em qualquer interação
-            document.addEventListener('click', updateActivity);
-            document.addEventListener('keypress', updateActivity);
-            document.addEventListener('scroll', updateActivity);
-            document.addEventListener('mousemove', updateActivity);
+            document.addEventListener('click', updateActivity, { passive: true });
+            document.addEventListener('keypress', updateActivity, { passive: true });
+            document.addEventListener('scroll', updateActivity, { passive: true });
+            document.addEventListener('mousemove', updateActivity, { passive: true });
             
             function updateActivity() {
                 lastActivity = new Date().getTime();

@@ -142,6 +142,10 @@ class ParlamentarController extends Controller
             'criar_usuario' => 'boolean',
             'usuario_password' => 'nullable|string|min:8',
             'usuario_password_confirmation' => 'nullable|string|min:8|same:usuario_password',
+            // Campos para certificado digital
+            'upload_certificado' => 'nullable|boolean',
+            'certificado_digital_create' => 'nullable|file|max:5120',
+            'certificado_senha_create' => 'nullable|string|min:4',
         ];
 
         // Se vai criar usuário, validar email único também na tabela users
@@ -220,6 +224,19 @@ class ParlamentarController extends Controller
             
             $parlamentar = $this->parlamentarService->create($validatedData);
             
+            // Processar certificado digital se fornecido
+            if ($request->boolean('upload_certificado') && $request->hasFile('certificado_digital_create')) {
+                try {
+                    $this->processarCertificadoDigitalCreate($request, $parlamentar['id']);
+                } catch (\Exception $e) {
+                    \Log::warning('Erro ao processar certificado digital na criação do parlamentar', [
+                        'parlamentar_id' => $parlamentar['id'],
+                        'error' => $e->getMessage()
+                    ]);
+                    // Não falhar a criação do parlamentar por causa do certificado
+                }
+            }
+            
             DB::commit();
             
             return redirect()->route('parlamentares.show', $parlamentar['id'])
@@ -283,6 +300,8 @@ class ParlamentarController extends Controller
             'status' => 'required|in:ativo,licenciado,inativo',
             'foto' => 'nullable|image|mimes:jpeg,jpg,png,gif|max:2048',
             'comissoes' => 'nullable|string',
+            'certificado_digital' => 'nullable|file|max:5120',
+            'certificado_senha' => 'nullable|string|min:4',
         ]);
 
 
@@ -312,6 +331,19 @@ class ParlamentarController extends Controller
             
             // Para atualização, manter campos vazios pois podem ser para limpar dados
             // Log::info('Dados finais para atualização:', $validatedData);
+            
+            // Processar certificado digital se fornecido
+            try {
+                if ($request->hasFile('certificado_digital')) {
+                    $this->processarCertificadoDigital($request, $id);
+                }
+            } catch (\Exception $e) {
+                \Log::warning('Erro ao processar certificado digital do parlamentar', [
+                    'parlamentar_id' => $id,
+                    'error' => $e->getMessage()
+                ]);
+                // Não falhar a atualização do parlamentar por causa do certificado
+            }
             
             $parlamentar = $this->parlamentarService->update($id, $validatedData);
             
@@ -349,6 +381,68 @@ class ParlamentarController extends Controller
         } catch (\Exception $e) {
             return redirect()->back()
                 ->with('error', 'Erro ao deletar parlamentar: ' . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Remover certificado digital do parlamentar
+     */
+    public function removerCertificado(Request $request, int $id)
+    {
+        try {
+            // Verificar se usuário tem permissão
+            $userLogado = auth()->user();
+            $parlamentar = $this->parlamentarService->getById($id);
+            
+            if (!isset($parlamentar['user_id']) || !$parlamentar['user_id']) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Parlamentar não possui usuário vinculado'
+                ], 400);
+            }
+            
+            $usuario = User::find($parlamentar['user_id']);
+            if (!$usuario) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Usuário do parlamentar não encontrado'
+                ], 404);
+            }
+            
+            // Verificar permissões
+            $isAdmin = $userLogado->hasRole('ADMIN');
+            $isProprioParlamentar = $userLogado->id == $usuario->id;
+            
+            if (!$isAdmin && !$isProprioParlamentar) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Sem permissão para remover este certificado'
+                ], 403);
+            }
+            
+            // Remover certificado
+            if ($usuario->removerCertificadoDigital()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Certificado removido com sucesso'
+                ]);
+            }
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Erro ao remover certificado'
+            ], 500);
+            
+        } catch (\Exception $e) {
+            \Log::error('Erro ao remover certificado do parlamentar', [
+                'parlamentar_id' => $id,
+                'error' => $e->getMessage()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Erro ao remover certificado: ' . $e->getMessage()
+            ], 500);
         }
     }
     
@@ -629,6 +723,235 @@ class ParlamentarController extends Controller
                 'parlamentares' => [],
                 'error' => config('app.debug') ? $e->getMessage() : 'Erro interno'
             ], 500);
+        }
+    }
+    
+    /**
+     * Processar upload de certificado digital do parlamentar
+     */
+    private function processarCertificadoDigital(Request $request, int $parlamentarId): void
+    {
+        try {
+            // Obter parlamentar e seu usuário vinculado
+            $parlamentar = $this->parlamentarService->getById($parlamentarId);
+            
+            if (!isset($parlamentar['user_id']) || !$parlamentar['user_id']) {
+                throw new \Exception('Este parlamentar não possui usuário vinculado para receber o certificado.');
+            }
+            
+            $usuario = User::find($parlamentar['user_id']);
+            if (!$usuario) {
+                throw new \Exception('Usuário vinculado ao parlamentar não encontrado.');
+            }
+            
+            // Validar arquivo e senha
+            $arquivo = $request->file('certificado_digital');
+            $senha = $request->input('certificado_senha');
+            
+            // Validar extensão do arquivo
+            if ($arquivo) {
+                $extensao = strtolower($arquivo->getClientOriginalExtension());
+                if (!in_array($extensao, ['pfx', 'p12'])) {
+                    throw new \Exception('O arquivo deve ter extensão .pfx ou .p12.');
+                }
+            }
+            
+            if (!$senha) {
+                throw new \Exception('Senha do certificado é obrigatória.');
+            }
+            
+            // Processar certificado diretamente usando os mesmos métodos do CertificadoDigitalController
+            // Simular autenticação do usuário do parlamentar temporariamente
+            $usuarioAnterior = auth()->user();
+            auth()->login($usuario);
+            
+            try {
+                // Salvar arquivo temporário usando move() em vez de store()
+                $nomeTemp = 'cert_temp_' . time() . '_' . uniqid() . '.pfx';
+                $caminhoCompletoTemp = storage_path('app/temp/' . $nomeTemp);
+                
+                // Mover arquivo diretamente
+                if (!$arquivo->move(storage_path('app/temp'), $nomeTemp)) {
+                    throw new \Exception('Erro ao salvar arquivo temporário para validação.');
+                }
+                
+                $caminhoTemp = 'temp/' . $nomeTemp;
+                
+                // Debug: log do processo de salvamento
+                \Log::info('ParlamentarController: Salvando arquivo temporário', [
+                    'nome_original' => $arquivo->getClientOriginalName(),
+                    'caminho_temp' => $caminhoTemp,
+                    'caminho_completo' => $caminhoCompletoTemp,
+                    'arquivo_existe' => file_exists($caminhoCompletoTemp),
+                    'eh_arquivo' => is_file($caminhoCompletoTemp),
+                    'tamanho' => file_exists($caminhoCompletoTemp) ? filesize($caminhoCompletoTemp) : 'N/A'
+                ]);
+                
+                // Instanciar controller para usar método de validação
+                $certificadoController = app(\App\Http\Controllers\CertificadoDigitalController::class);
+                $reflection = new \ReflectionClass($certificadoController);
+                $validarMethod = $reflection->getMethod('validarCertificado');
+                $validarMethod->setAccessible(true);
+                
+                // Validar certificado
+                $validacao = $validarMethod->invoke($certificadoController, $caminhoCompletoTemp, $senha);
+                
+                if (!$validacao['valido']) {
+                    Storage::delete($caminhoTemp);
+                    throw new \Exception('Certificado inválido: ' . $validacao['erro']);
+                }
+                
+                // Remover certificado anterior se existir
+                if ($usuario->certificado_digital_path && Storage::exists($usuario->certificado_digital_path)) {
+                    Storage::delete($usuario->certificado_digital_path);
+                }
+                
+                // Gerar nome único para o arquivo final
+                $nomeArquivo = 'certificado_' . $usuario->id . '_' . time() . '.pfx';
+                $caminhoRelativo = 'certificados-digitais/' . $nomeArquivo;
+                
+                // Mover para pasta definitiva usando rename do PHP já que o arquivo foi movido fisicamente
+                $destino = storage_path('app/private/' . $caminhoRelativo);
+                $diretorioDestino = dirname($destino);
+                
+                // Criar diretório se não existir
+                if (!is_dir($diretorioDestino)) {
+                    mkdir($diretorioDestino, 0755, true);
+                }
+                
+                // Mover arquivo fisicamente
+                rename($caminhoCompletoTemp, $destino);
+                
+                // Atualizar dados do usuário
+                $usuario->update([
+                    'certificado_digital_path' => $caminhoRelativo,
+                    'certificado_digital_nome' => $arquivo->getClientOriginalName(),
+                    'certificado_digital_upload_em' => now(),
+                    'certificado_digital_validade' => $validacao['validade'] ?? null,
+                    'certificado_digital_cn' => $validacao['cn'] ?? null,
+                    'certificado_digital_ativo' => true,
+                ]);
+                
+                // Verificar se deve salvar a senha do certificado
+                if ($request->has('salvar_senha_certificado') && $request->input('salvar_senha_certificado') == '1') {
+                    $usuario->salvarSenhaCertificado($senha);
+                    \Log::info('Senha do certificado salva para parlamentar', [
+                        'parlamentar_id' => $parlamentarId,
+                        'usuario_id' => $usuario->id
+                    ]);
+                }
+                
+                \Log::info('Certificado digital processado com sucesso para parlamentar', [
+                    'parlamentar_id' => $parlamentarId,
+                    'usuario_id' => $usuario->id
+                ]);
+                
+            } finally {
+                // Restaurar autenticação anterior
+                if ($usuarioAnterior) {
+                    auth()->login($usuarioAnterior);
+                } else {
+                    auth()->logout();
+                }
+            }
+            
+        } catch (\Exception $e) {
+            \Log::error('Erro ao processar certificado digital do parlamentar', [
+                'parlamentar_id' => $parlamentarId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            throw $e;
+        }
+    }
+    
+    /**
+     * Processar upload de certificado digital na criação do parlamentar
+     */
+    private function processarCertificadoDigitalCreate(Request $request, int $parlamentarId): void
+    {
+        try {
+            // Obter parlamentar recém-criado
+            $parlamentar = $this->parlamentarService->getById($parlamentarId);
+            
+            if (!isset($parlamentar['user_id']) || !$parlamentar['user_id']) {
+                throw new \Exception('Parlamentar criado não possui usuário vinculado para receber o certificado.');
+            }
+            
+            $usuario = User::find($parlamentar['user_id']);
+            if (!$usuario) {
+                throw new \Exception('Usuário vinculado ao parlamentar não encontrado.');
+            }
+            
+            // Validar arquivo e senha
+            $arquivo = $request->file('certificado_digital_create');
+            $senha = $request->input('certificado_senha_create');
+            
+            if (!$arquivo || !$senha) {
+                throw new \Exception('Arquivo do certificado e senha são obrigatórios.');
+            }
+            
+            // Validar extensão do arquivo
+            $extensao = strtolower($arquivo->getClientOriginalExtension());
+            if (!in_array($extensao, ['pfx', 'p12'])) {
+                throw new \Exception('O arquivo deve ter extensão .pfx ou .p12.');
+            }
+            
+            // Usar o CertificadoDigitalController para processar o upload
+            $certificadoController = app(\App\Http\Controllers\CertificadoDigitalController::class);
+            
+            // Criar request personalizado para o controller de certificado
+            $certificadoRequest = new Request();
+            $certificadoRequest->files->set('certificado', $arquivo);
+            $certificadoRequest->request->set('senha_teste', $senha);
+            $certificadoRequest->setMethod('POST');
+            
+            // Simular autenticação do usuário do parlamentar temporariamente
+            $usuarioAnterior = auth()->user();
+            auth()->login($usuario);
+            
+            try {
+                // Processar upload usando o controller existente
+                $response = $certificadoController->upload($certificadoRequest);
+                
+                // Verificar se houve erro
+                if ($response instanceof \Illuminate\Http\RedirectResponse) {
+                    $errors = $response->getSession()->get('errors');
+                    if ($errors) {
+                        throw new \Exception('Erro ao processar certificado: ' . $errors->first());
+                    }
+                }
+                
+                // Verificar se deve salvar a senha do certificado
+                if ($request->has('salvar_senha_certificado_create') && $request->input('salvar_senha_certificado_create') == '1') {
+                    $usuario->salvarSenhaCertificado($senha);
+                    \Log::info('Senha do certificado salva na criação do parlamentar', [
+                        'parlamentar_id' => $parlamentarId,
+                        'usuario_id' => $usuario->id
+                    ]);
+                }
+                
+                \Log::info('Certificado digital processado com sucesso na criação do parlamentar', [
+                    'parlamentar_id' => $parlamentarId,
+                    'usuario_id' => $usuario->id
+                ]);
+                
+            } finally {
+                // Restaurar autenticação anterior
+                if ($usuarioAnterior) {
+                    auth()->login($usuarioAnterior);
+                } else {
+                    auth()->logout();
+                }
+            }
+            
+        } catch (\Exception $e) {
+            \Log::error('Erro ao processar certificado digital na criação do parlamentar', [
+                'parlamentar_id' => $parlamentarId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            throw $e;
         }
     }
 }

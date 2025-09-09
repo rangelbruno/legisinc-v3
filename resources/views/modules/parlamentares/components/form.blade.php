@@ -283,6 +283,356 @@
         </div>
         <!--end::Parliamentary info-->
         
+        <!--begin::Certificado Digital-->
+        @if(isset($parlamentar) && !empty($parlamentar))
+        <div class="card card-flush py-4">
+            <!--begin::Card header-->
+            <div class="card-header">
+                <div class="card-title">
+                    <h2>Certificado Digital</h2>
+                </div>
+            </div>
+            <!--end::Card header-->
+            <!--begin::Card body-->
+            <div class="card-body pt-0">
+                @php
+                    $usuario = null;
+                    if (isset($parlamentar['user_id']) && $parlamentar['user_id']) {
+                        $usuario = \App\Models\User::find($parlamentar['user_id']);
+                    }
+                @endphp
+                
+                
+                @if($usuario && $usuario->temCertificadoDigital())
+                    <!--begin::Status atual-->
+                    <div class="row mb-10">
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center">
+                                <div class="symbol symbol-50px me-3">
+                                    <span class="symbol-label bg-light-success">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler text-success" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                            <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                                            <rect x="5" y="11" width="14" height="10" rx="2"/>
+                                            <circle cx="12" cy="16" r="1"/>
+                                            <path d="m8 11v-4a4 4 0 0 1 8 0v4"/>
+                                        </svg>
+                                    </span>
+                                </div>
+                                <div>
+                                    <h6 class="mb-0">Certificado Digital Cadastrado</h6>
+                                    <div class="text-muted fs-7">
+                                        Status: <span class="badge badge-light-{{ $usuario->certificadoDigitalValido() ? 'success' : 'warning' }}">
+                                            {{ $usuario->getStatusCertificadoDigital() }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="text-muted fs-7">
+                                <strong>Arquivo:</strong> {{ $usuario->certificado_digital_nome }}<br>
+                                @if($usuario->certificado_digital_cn)
+                                    <strong>Nome:</strong> {{ $usuario->certificado_digital_cn }}<br>
+                                @endif
+                                @if($usuario->certificado_digital_validade)
+                                    <strong>Válido até:</strong> {{ $usuario->certificado_digital_validade->format('d/m/Y') }}
+                                    @if($usuario->certificadoProximoVencimento())
+                                        <span class="badge badge-warning ms-2">Vence em breve</span>
+                                    @endif
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                    <!--end::Status atual-->
+                    
+                    <!--begin::Actions-->
+                    <div class="row mb-6">
+                        <div class="col-12">
+                            @php
+                                $userLogado = auth()->user();
+                                $isAdmin = $userLogado->hasRole('ADMIN');
+                                $isProprioParlamentar = $usuario && $userLogado->id == $usuario->id;
+                                $podeGerenciar = $isAdmin || $isProprioParlamentar;
+                            @endphp
+                            
+                            @if($podeGerenciar)
+                                <button type="button" class="btn btn-light-primary btn-sm me-2" onclick="mostrarFormSubstituirCertificado()">
+                                    <i class="ki-duotone ki-arrows-loop fs-2">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                    </i>
+                                    Substituir Certificado
+                                </button>
+                                
+                                <button type="button" class="btn btn-light-danger btn-sm me-2" onclick="removerCertificadoParlamentar()">
+                                    <i class="ki-duotone ki-trash fs-2">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                        <span class="path3"></span>
+                                        <span class="path4"></span>
+                                        <span class="path5"></span>
+                                    </i>
+                                    Remover Certificado
+                                </button>
+                            @endif
+                            
+                            <button type="button" class="btn btn-light-info btn-sm" onclick="testarCertificadoParlamentar()">
+                                <i class="ki-duotone ki-verify fs-2"></i>
+                                Testar Certificado
+                            </button>
+                        </div>
+                    </div>
+                    <!--end::Actions-->
+                    
+                    <!--begin::Form substituir (oculto inicialmente)-->
+                    @if($podeGerenciar)
+                    <div class="row mb-6" id="form-substituir-certificado" style="display: none;">
+                        <div class="col-12">
+                            <div class="card border-2 border-info">
+                                <div class="card-header bg-light-info">
+                                    <h5 class="card-title mb-0">
+                                        <i class="ki-duotone ki-arrows-loop fs-2 me-2">
+                                            <span class="path1"></span>
+                                            <span class="path2"></span>
+                                        </i>
+                                        Substituir Certificado Digital
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <!--begin::Certificado atual-->
+                                    <div class="alert alert-light-warning d-flex align-items-center mb-4">
+                                        <i class="ki-duotone ki-information-2 fs-2x text-warning me-3">
+                                            <span class="path1"></span>
+                                            <span class="path2"></span>
+                                            <span class="path3"></span>
+                                        </i>
+                                        <div>
+                                            <h6 class="mb-1">Certificado Atual:</h6>
+                                            <div class="text-muted fs-7">
+                                                <strong>Arquivo:</strong> {{ $usuario->certificado_digital_nome ?? 'N/A' }}<br>
+                                                <strong>CN:</strong> {{ $usuario->certificado_digital_cn ?? 'N/A' }}<br>
+                                                <strong>Validade:</strong> {{ $usuario->certificado_digital_validade ? $usuario->certificado_digital_validade->format('d/m/Y') : 'N/A' }}<br>
+                                                <strong>Senha salva:</strong> 
+                                                @if($usuario->certificado_digital_senha_salva)
+                                                    <span class="badge badge-success">Sim</span>
+                                                @else
+                                                    <span class="badge badge-light">Não</span>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <!--end::Certificado atual-->
+                                    
+                                    <!--begin::Novo certificado-->
+                                    <div class="mb-3">
+                                        <label class="form-label required">Novo Certificado Digital (.pfx ou .p12)</label>
+                                        <input type="file" class="form-control" name="certificado_digital" accept=".pfx,.p12">
+                                        <div class="form-text">Selecione o novo certificado digital. O certificado atual será substituído.</div>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label required">Senha do Certificado</label>
+                                        <input type="password" class="form-control" name="certificado_senha" placeholder="Digite a senha do certificado" id="certificado_senha_substituir" autocomplete="current-password">
+                                        <div class="form-text">A senha é necessária para validar o certificado.</div>
+                                    </div>
+                                    
+                                    <!--begin::Opção salvar senha-->
+                                    <div class="mb-4">
+                                        <div class="form-check form-switch form-check-custom form-check-solid">
+                                            <input class="form-check-input" type="checkbox" id="salvar_senha_certificado" name="salvar_senha_certificado" value="1">
+                                            <label class="form-check-label fw-semibold text-muted" for="salvar_senha_certificado">
+                                                Salvar senha do certificado (criptografada)
+                                            </label>
+                                        </div>
+                                        <div class="form-text">
+                                            <i class="ki-duotone ki-shield-tick fs-6 text-success me-1">
+                                                <span class="path1"></span>
+                                                <span class="path2"></span>
+                                            </i>
+                                            Se marcado, a senha será salva de forma criptografada para facilitar a assinatura automática. 
+                                            <br>Se não marcado, a senha será solicitada sempre que for assinar um documento.
+                                        </div>
+                                    </div>
+                                    <!--end::Opção salvar senha-->
+                                    
+                                    <div class="d-flex justify-content-between">
+                                        <button type="button" class="btn btn-light-secondary" onclick="cancelarSubstituirCertificado()">
+                                            <i class="ki-duotone ki-cross fs-2">
+                                                <span class="path1"></span>
+                                                <span class="path2"></span>
+                                            </i>
+                                            Cancelar
+                                        </button>
+                                        <small class="text-muted align-self-center">
+                                            <i class="ki-duotone ki-information fs-6">
+                                                <span class="path1"></span>
+                                                <span class="path2"></span>
+                                                <span class="path3"></span>
+                                            </i>
+                                            Clique em "Salvar" no final do formulário para confirmar a substituição
+                                        </small>
+                                    </div>
+                                    <!--end::Novo certificado-->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    @endif
+                    <!--end::Form substituir-->
+                @else
+                    <!--begin::Upload novo-->
+                    @if(!$usuario)
+                        <div class="alert alert-warning">
+                            <div class="d-flex">
+                                <div>
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="icon alert-icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                                        <circle cx="12" cy="12" r="9"/>
+                                        <line x1="12" y1="8" x2="12" y2="12"/>
+                                        <line x1="12" y1="16" x2="12.01" y2="16"/>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <strong>Usuário não vinculado:</strong> Este parlamentar não possui usuário de sistema vinculado. 
+                                    É necessário vincular um usuário primeiro para poder cadastrar certificado digital.
+                                </div>
+                            </div>
+                        </div>
+                    @else
+                        <div class="alert alert-info">
+                            <div class="d-flex">
+                                <div>
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="icon alert-icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                                        <circle cx="12" cy="12" r="9"/>
+                                        <line x1="12" y1="8" x2="12" y2="12"/>
+                                        <line x1="12" y1="16" x2="12.01" y2="16"/>
+                                    </svg>
+                                </div>
+                                <div>
+                                    Este parlamentar não possui certificado digital cadastrado. 
+                                    Faça o upload do arquivo .pfx/.p12 abaixo para cadastrar.
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-10">
+                            <div class="col-md-8">
+                                <label class="form-label">Arquivo do Certificado (.pfx ou .p12)</label>
+                                <input type="file" name="certificado_digital" id="certificado-input" class="form-control mb-2" accept=".pfx,.p12">
+                                <div class="form-hint">
+                                    Selecione seu certificado digital no formato .pfx ou .p12. O arquivo deve ter no máximo 5MB.
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Senha do Certificado</label>
+                                <input type="password" name="certificado_senha" id="certificado-senha" class="form-control mb-2" placeholder="Digite a senha" autocomplete="current-password">
+                                <div class="form-hint">
+                                    A senha será usada apenas para validação inicial.
+                                </div>
+                                
+                                <!--begin::Opção salvar senha-->
+                                <div class="form-check form-check-custom form-check-solid mt-3">
+                                    <input class="form-check-input" type="checkbox" name="salvar_senha_certificado" id="salvar-senha-certificado" value="1">
+                                    <label class="form-check-label text-muted" for="salvar-senha-certificado">
+                                        Salvar senha criptografada para assinatura automática
+                                    </label>
+                                </div>
+                                <div class="form-text text-muted fs-8">
+                                    <i class="ki-duotone ki-shield-tick text-success fs-6 me-1">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                    </i>
+                                    A senha será armazenada de forma criptografada e segura
+                                </div>
+                                <!--end::Opção salvar senha-->
+                            </div>
+                        </div>
+                    @endif
+                    <!--end::Upload novo-->
+                @endif
+            </div>
+            <!--end::Card body-->
+        </div>
+        <!--end::Certificado Digital-->
+        @endif
+        
+        <!--begin::Certificado Digital para Criação-->
+        @if(!isset($parlamentar) || empty($parlamentar))
+        <div class="card card-flush py-4">
+            <!--begin::Card header-->
+            <div class="card-header">
+                <div class="card-title">
+                    <h2>Certificado Digital (Opcional)</h2>
+                </div>
+            </div>
+            <!--end::Card header-->
+            <!--begin::Card body-->
+            <div class="card-body pt-0">
+                <div class="alert alert-info">
+                    <div class="d-flex">
+                        <div>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon alert-icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                                <circle cx="12" cy="12" r="9"/>
+                                <line x1="12" y1="8" x2="12" y2="12"/>
+                                <line x1="12" y1="16" x2="12.01" y2="16"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <strong>Opcional:</strong> Você pode fazer o upload do certificado digital agora ou configurá-lo posteriormente. 
+                            O certificado será associado automaticamente ao usuário criado para este parlamentar.
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-check mb-6">
+                    <input class="form-check-input" type="checkbox" id="upload_certificado_check" name="upload_certificado" value="1">
+                    <label class="form-check-label" for="upload_certificado_check">
+                        <strong>Fazer upload do certificado digital agora</strong>
+                    </label>
+                </div>
+                
+                <div id="certificado_upload_section" style="display: none;">
+                    <div class="row mb-10">
+                        <div class="col-md-8">
+                            <label class="form-label">Arquivo do Certificado (.pfx ou .p12)</label>
+                            <input type="file" name="certificado_digital_create" id="certificado-input-create" class="form-control mb-2" accept=".pfx,.p12">
+                            <div class="form-hint">
+                                Selecione o certificado digital no formato .pfx ou .p12. O arquivo deve ter no máximo 5MB.
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Senha do Certificado</label>
+                            <input type="password" name="certificado_senha_create" id="certificado-senha-create" class="form-control mb-2" placeholder="Digite a senha" autocomplete="current-password">
+                            <div class="form-hint">
+                                A senha será usada apenas para validação inicial.
+                            </div>
+                            
+                            <!--begin::Opção salvar senha-->
+                            <div class="form-check form-check-custom form-check-solid mt-3">
+                                <input class="form-check-input" type="checkbox" name="salvar_senha_certificado_create" id="salvar-senha-certificado-create" value="1">
+                                <label class="form-check-label text-muted" for="salvar-senha-certificado-create">
+                                    Salvar senha criptografada para assinatura automática
+                                </label>
+                            </div>
+                            <div class="form-text text-muted fs-8">
+                                <i class="ki-duotone ki-shield-tick text-success fs-6 me-1">
+                                    <span class="path1"></span>
+                                    <span class="path2"></span>
+                                </i>
+                                A senha será armazenada de forma criptografada e segura
+                            </div>
+                            <!--end::Opção salvar senha-->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!--end::Card body-->
+        </div>
+        <!--end::Certificado Digital para Criação-->
+        @endif
+        
         <!--begin::User integration-->
         @if(!isset($parlamentar) || empty($parlamentar))
         <div class="card card-flush py-4">
@@ -353,7 +703,7 @@
                         <label class="col-lg-4 col-form-label required fw-semibold fs-6">Senha do Usuário</label>
                         <div class="col-lg-8">
                             <input type="password" name="usuario_password" class="form-control form-control-lg form-control-solid" 
-                                   placeholder="Digite uma senha segura" />
+                                   placeholder="Digite uma senha segura" autocomplete="new-password" />
                             @error('usuario_password')
                                 <div class="text-danger fs-7">{{ $message }}</div>
                             @enderror
@@ -364,7 +714,7 @@
                         <label class="col-lg-4 col-form-label required fw-semibold fs-6">Confirmar Senha</label>
                         <div class="col-lg-8">
                             <input type="password" name="usuario_password_confirmation" class="form-control form-control-lg form-control-solid" 
-                                   placeholder="Confirme a senha" />
+                                   placeholder="Confirme a senha" autocomplete="new-password" />
                         </div>
                     </div>
                 </div>
@@ -414,7 +764,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Photo preview functionality
     const fotoInput = document.getElementById('foto-input');
     const fotoPreview = document.getElementById('foto-preview');
-    const originalSrc = fotoPreview.src;
+    const originalSrc = fotoPreview ? fotoPreview.src : null;
     
     if (fotoInput && fotoPreview) {
         fotoInput.addEventListener('change', function(e) {
@@ -481,14 +831,14 @@ document.addEventListener('DOMContentLoaded', function() {
     
     function toggleUserOptions() {
         if (existingUserRadio && existingUserRadio.checked) {
-            selectUser.style.display = 'block';
-            createUserFields.style.display = 'none';
+            if (selectUser) selectUser.style.display = 'block';
+            if (createUserFields) createUserFields.style.display = 'none';
         } else if (createUserRadio && createUserRadio.checked) {
-            selectUser.style.display = 'none';
-            createUserFields.style.display = 'block';
+            if (selectUser) selectUser.style.display = 'none';
+            if (createUserFields) createUserFields.style.display = 'block';
         } else {
-            selectUser.style.display = 'none';
-            createUserFields.style.display = 'none';
+            if (selectUser) selectUser.style.display = 'none';
+            if (createUserFields) createUserFields.style.display = 'none';
         }
     }
 
@@ -788,6 +1138,121 @@ function initPartidoAutocomplete() {
     });
     
     console.log('🏦 Autocomplete de partido configurado com sucesso');
+}
+
+// Controlar exibição da seção de certificado na criação
+const uploadCertificadoCheck = document.getElementById('upload_certificado_check');
+const certificadoUploadSection = document.getElementById('certificado_upload_section');
+
+if (uploadCertificadoCheck && certificadoUploadSection) {
+    uploadCertificadoCheck.addEventListener('change', function() {
+        if (this.checked) {
+            certificadoUploadSection.style.display = 'block';
+        } else {
+            certificadoUploadSection.style.display = 'none';
+            // Limpar campos quando ocultar
+            const certificadoInput = document.getElementById('certificado-input-create');
+            const senhaInput = document.getElementById('certificado-senha-create');
+            if (certificadoInput) certificadoInput.value = '';
+            if (senhaInput) senhaInput.value = '';
+        }
+    });
+}
+
+// Função para testar certificado do parlamentar
+function testarCertificadoParlamentar() {
+    // Solicitar senha via prompt (simples, pode ser melhorado com modal)
+    const senha = prompt('Digite a senha do certificado digital:');
+    
+    if (!senha) {
+        return;
+    }
+    
+    // Fazer requisição AJAX para testar certificado
+    fetch('/certificado-digital/testar', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+        },
+        body: JSON.stringify({ 
+            senha_teste: senha 
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('✅ Certificado digital válido!\n\n' +
+                  'Nome: ' + (data.dados ? data.dados.cn : 'N/A') + '\n' +
+                  'Validade: ' + (data.dados ? data.dados.validade : 'N/A'));
+        } else {
+            alert('❌ Erro no certificado:\n' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        alert('❌ Erro ao testar certificado digital.');
+    });
+}
+
+// Função para mostrar formulário de substituir certificado
+function mostrarFormSubstituirCertificado() {
+    const formElement = document.getElementById('form-substituir-certificado');
+    if (formElement) {
+        formElement.style.display = 'block';
+        // Scroll suave até o formulário
+        formElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+}
+
+// Função para cancelar substituição de certificado
+function cancelarSubstituirCertificado() {
+    const formElement = document.getElementById('form-substituir-certificado');
+    if (formElement) {
+        formElement.style.display = 'none';
+    }
+    
+    // Limpar campos
+    const certificadoInput = document.querySelector('input[name="certificado_digital"]');
+    const senhaInput = document.querySelector('input[name="certificado_senha"]');
+    if (certificadoInput) certificadoInput.value = '';
+    if (senhaInput) senhaInput.value = '';
+}
+
+// Função para remover certificado do parlamentar
+function removerCertificadoParlamentar() {
+    if (!confirm('Tem certeza que deseja remover o certificado digital?\n\nEsta ação não pode ser desfeita.')) {
+        return;
+    }
+    
+    @if(isset($usuario) && $usuario)
+    // Fazer requisição para remover certificado do usuário do parlamentar
+    fetch('/parlamentares/{{ $parlamentar["id"] ?? "" }}/remover-certificado', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+        },
+        body: JSON.stringify({ 
+            user_id: {{ $usuario->id }}
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('✅ Certificado removido com sucesso!');
+            window.location.reload();
+        } else {
+            alert('❌ Erro ao remover certificado:\n' + (data.message || 'Erro desconhecido'));
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        alert('❌ Erro ao remover certificado digital.');
+    });
+    @else
+    alert('❌ Não é possível remover o certificado pois o parlamentar não possui usuário vinculado.');
+    @endif
 }
 </script>
 <!--end::Javascript-->

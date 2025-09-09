@@ -395,133 +395,31 @@
                             </div>
                             @endif
 
-                            {{-- Seção: Administração (apenas para ADMIN) --}}
-                            @if(auth()->user()->isAdmin())
+                            {{-- Certificado Digital (apenas para usuários autenticados) --}}
                             <div class="menu-item">
-                                <div class="menu-content pt-8 pb-2">
-                                    <span class="menu-section text-muted text-uppercase fs-8 ls-1">Administração</span>
-                                </div>
-                            </div>
-                            @endif
-
-                            {{-- Usuários (apenas para ADMIN) --}}
-                            @if(auth()->user()->isAdmin())
-                            <div data-kt-menu-trigger="click" class="menu-item menu-accordion {{ request()->routeIs('usuarios.*') ? 'here show' : '' }}">
-                                <span class="menu-link">
+                                <a class="menu-link {{ request()->routeIs('certificado-digital.*') ? 'active' : '' }}" href="{{ route('certificado-digital.index') }}">
                                     <span class="menu-icon">
-                                        <i class="ki-duotone ki-user fs-2">
-                                            <span class="path1"></span>
-                                            <span class="path2"></span>
-                                        </i>
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                            <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                                            <rect x="5" y="11" width="14" height="10" rx="2"/>
+                                            <circle cx="12" cy="16" r="1"/>
+                                            <path d="m8 11v-4a4 4 0 0 1 8 0v4"/>
+                                        </svg>
                                     </span>
-                                    <span class="menu-title">Usuários</span>
-                                    <span class="menu-arrow"></span>
-                                </span>
-                                <div class="menu-sub menu-sub-accordion {{ request()->routeIs('usuarios.*') ? 'show' : '' }}">
-                                    @if(\App\Models\ScreenPermission::userCanAccessRoute('usuarios.index'))
-                                    <div class="menu-item">
-                                        <a class="menu-link {{ request()->routeIs('usuarios.index') ? 'active' : '' }}" href="{{ route('usuarios.index') }}">
-                                            <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
-                                            <span class="menu-title">Gestão de Usuários</span>
-                                        </a>
-                                    </div>
+                                    <span class="menu-title">Certificado Digital</span>
+                                    @if(auth()->user()->temCertificadoDigital() && auth()->user()->certificadoDigitalValido())
+                                        <span class="badge badge-circle badge-success ms-auto" data-bs-toggle="tooltip" title="Certificado ativo">
+                                            <i class="ki-duotone ki-check fs-6 text-white"></i>
+                                        </span>
+                                    @elseif(auth()->user()->certificadoProximoVencimento())
+                                        <span class="badge badge-circle badge-warning ms-auto" data-bs-toggle="tooltip" title="Certificado próximo do vencimento">
+                                            <i class="ki-duotone ki-warning fs-6 text-white"></i>
+                                        </span>
                                     @endif
-                                    @if(\App\Models\ScreenPermission::userCanAccessRoute('usuarios.create'))
-                                    <div class="menu-item">
-                                        <a class="menu-link {{ request()->routeIs('usuarios.create') ? 'active' : '' }}" href="{{ route('usuarios.create') }}">
-                                            <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
-                                            <span class="menu-title">Novo Usuário</span>
-                                        </a>
-                                    </div>
-                                    @endif
-                                </div>
+                                </a>
                             </div>
-                            @endif
 
-                            {{-- Documentos (apenas para ADMIN) --}}
-                            @if(auth()->user()->isAdmin())
-                            <div data-kt-menu-trigger="click" class="menu-item menu-accordion {{ request()->routeIs('documentos.*') ? 'here show' : '' }}">
-                                <span class="menu-link">
-                                    <span class="menu-icon">
-                                        <i class="ki-duotone ki-document fs-2">
-                                            <span class="path1"></span>
-                                            <span class="path2"></span>
-                                        </i>
-                                    </span>
-                                    <span class="menu-title">Documentos</span>
-                                    <span class="menu-arrow"></span>
-                                </span>
-                                <div class="menu-sub menu-sub-accordion {{ request()->routeIs('documentos.*') ? 'show' : '' }}">
-                                    @if(\App\Models\ScreenPermission::userCanAccessRoute('documentos.instancias.index'))
-                                    <div class="menu-item">
-                                        <a class="menu-link {{ request()->routeIs('documentos.instancias.*') ? 'active' : '' }}" href="{{ route('documentos.instancias.index') }}">
-                                            <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
-                                            <span class="menu-title">Documentos em Tramitação</span>
-                                        </a>
-                                    </div>
-                                    @endif
-                                </div>
-                            </div>
-                            @endif
-
-                            {{-- Configurações --}}
-                            @if(auth()->user()->isAdmin())
-                            <div data-kt-menu-trigger="click" class="menu-item menu-accordion {{ request()->routeIs('configuracoes.*') || request()->routeIs('admin.*') ? 'here show' : '' }}">
-                                <span class="menu-link">
-                                    <span class="menu-icon">
-                                        <i class="ki-duotone ki-setting-2 fs-2">
-                                            <span class="path1"></span>
-                                            <span class="path2"></span>
-                                        </i>
-                                    </span>
-                                    <span class="menu-title">Configurações</span>
-                                    <span class="menu-arrow"></span>
-                                </span>
-                                <div class="menu-sub menu-sub-accordion {{ request()->routeIs('configuracoes.*') || request()->routeIs('admin.*') ? 'show' : '' }}">
-                                    <div class="menu-item">
-                                        <a class="menu-link {{ request()->routeIs('admin.screen-permissions.*') ? 'active' : '' }}" href="{{ route('admin.screen-permissions.index') }}">
-                                            <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
-                                            <span class="menu-title">Permissões</span>
-                                        </a>
-                                    </div>
-                                    <div class="menu-item">
-                                        <a class="menu-link {{ request()->routeIs('admin.tipo-proposicoes.*') ? 'active' : '' }}" href="{{ route('admin.tipo-proposicoes.index') }}">
-                                            <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
-                                            <span class="menu-title">Tipos de Proposição</span>
-                                        </a>
-                                    </div>
-                                    @if(\App\Models\ScreenPermission::userCanAccessRoute('tests.index'))
-                                    <div class="menu-item">
-                                        <a class="menu-link {{ request()->routeIs('tests.*') ? 'active' : '' }}" href="{{ route('tests.index') }}">
-                                            <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
-                                            <span class="menu-title">Testes do Sistema</span>
-                                        </a>
-                                    </div>
-                                    @endif
-                                    <div class="menu-item">
-                                        <a class="menu-link {{ request()->routeIs('admin.docs.fluxo-proposicoes') ? 'active' : '' }}" href="{{ route('admin.docs.fluxo-proposicoes') }}">
-                                            <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
-                                            <span class="menu-title">Fluxo de Proposições</span>
-                                            <span class="badge badge-light-success badge-sm ms-auto">NOVO</span>
-                                        </a>
-                                    </div>
-                                    <div class="menu-item">
-                                        <a class="menu-link {{ request()->routeIs('admin.docs.fluxo-documentos') ? 'active' : '' }}" href="{{ route('admin.docs.fluxo-documentos') }}">
-                                            <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
-                                            <span class="menu-title">Fluxo de Documentos</span>
-                                            <span class="badge badge-light-info badge-sm ms-auto">NOVO</span>
-                                        </a>
-                                    </div>
-                                    <div class="menu-item">
-                                        <a class="menu-link {{ request()->routeIs('admin.module-generator.*') ? 'active' : '' }}" href="{{ route('admin.module-generator.index') }}">
-                                            <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
-                                            <span class="menu-title">Gerador de Módulos</span>
-                                            <span class="badge badge-light-primary badge-sm ms-auto">NOVO</span>
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-                            @endif
+                            {{-- Seção Administração removida - todos os links agora estão acessíveis apenas pelo dashboard admin --}}
 
                         </div>
                         <!--end::Menu-->

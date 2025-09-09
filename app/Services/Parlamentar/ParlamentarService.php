@@ -37,7 +37,7 @@ class ParlamentarService
      */
     public function getById(int $id): array
     {
-        $parlamentar = Parlamentar::find($id);
+        $parlamentar = Parlamentar::with('user')->find($id);
         
         if (!$parlamentar) {
             throw new ModelNotFoundException("Parlamentar com ID {$id} não encontrado");
@@ -300,6 +300,8 @@ class ParlamentarService
             'comissoes' => $parlamentar['comissoes'] ?? [],
             'total_comissoes' => count($parlamentar['comissoes'] ?? []),
             'mandatos' => $parlamentar['mandatos'] ?? [],
+            'user_id' => $parlamentar['user_id'] ?? null,
+            'user' => $parlamentar['user'] ?? null,
             'created_at' => $this->formatDatetime($parlamentar['created_at']),
             'updated_at' => $this->formatDatetime($parlamentar['updated_at']),
         ];

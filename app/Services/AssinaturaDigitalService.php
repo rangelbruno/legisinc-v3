@@ -23,12 +23,19 @@ class AssinaturaDigitalService
     /**
      * Assinar PDF com certificado digital
      */
-    public function assinarPDF(string $caminhoPDF, array $dadosAssinatura): ?string
+    public function assinarPDF(string $caminhoPDF, array $dadosAssinatura, $usuario = null): ?string
     {
         try {
+            // Se usuário foi informado e tem certificado, usar certificado do usuário
+            if ($usuario && $usuario->temCertificadoDigital() && $usuario->certificadoDigitalValido()) {
+                $dadosAssinatura = $this->configurarDadosUsuario($usuario, $dadosAssinatura);
+            }
+            
             Log::info('Iniciando assinatura digital do PDF', [
                 'pdf_path' => $caminhoPDF,
-                'tipo_certificado' => $dadosAssinatura['tipo_certificado'] ?? 'N/A'
+                'tipo_certificado' => $dadosAssinatura['tipo_certificado'] ?? 'N/A',
+                'usuario_id' => $usuario ? $usuario->id : null,
+                'tem_certificado_usuario' => $usuario ? $usuario->temCertificadoDigital() : false
             ]);
 
             // Validar arquivo PDF
@@ -1024,6 +1031,73 @@ class AssinaturaDigitalService
         } catch (\Exception $e) {
             Log::error('Erro ao verificar validade do certificado: ' . $e->getMessage());
             return false;
+        }
+    }
+
+    /**
+     * Configurar dados de assinatura com certificado do usuário
+     */
+    private function configurarDadosUsuario($usuario, array $dadosAssinatura): array
+    {
+        try {
+            Log::info('Configurando certificado do usuário', [
+                'user_id' => $usuario->id,
+                'certificado_nome' => $usuario->certificado_digital_nome,
+                'certificado_cn' => $usuario->certificado_digital_cn
+            ]);
+
+            // Configurar dados do certificado do usuário
+            $dadosAssinatura['tipo_certificado'] = 'PFX';
+            $dadosAssinatura['certificado_path'] = $usuario->getCaminhoCompletoCertificado();
+            $dadosAssinatura['arquivo_pfx'] = $usuario->getCaminhoCompletoCertificado();
+            
+            // Manter senha do certificado se fornecida (será solicitada no controller)
+            $dadosAssinatura['certificado_senha'] = $dadosAssinatura['senha_certificado'] ?? $dadosAssinatura['certificado_senha'] ?? '';
+            $dadosAssinatura['senha_pfx'] = $dadosAssinatura['certificado_senha'];
+            
+            // Usar dados do certificado para assinatura
+            $dadosAssinatura['nome_assinante'] = $usuario->certificado_digital_cn ?? $usuario->name;
+            
+            Log::info('Certificado do usuário configurado com sucesso');
+            
+            return $dadosAssinatura;
+
+        } catch (\Exception $e) {
+            Log::error('Erro ao configurar certificado do usuário: ' . $e->getMessage());
+            throw new \Exception('Erro ao configurar certificado digital do usuário: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Assinar PDF com certificado do usuário (método de conveniência)
+     */
+    public function assinarComCertificadoUsuario(string $caminhoPDF, $usuario, string $senhaCertificado): ?string
+    {
+        try {
+            // Verificar se usuário tem certificado válido
+            if (!$usuario->temCertificadoDigital()) {
+                throw new \Exception('Usuário não possui certificado digital cadastrado.');
+            }
+
+            if (!$usuario->certificadoDigitalValido()) {
+                throw new \Exception('Certificado digital do usuário está inválido ou expirado.');
+            }
+
+            // Configurar dados de assinatura
+            $dadosAssinatura = [
+                'tipo_certificado' => 'PFX',
+                'senha_certificado' => $senhaCertificado,
+                'nome_assinante' => $usuario->certificado_digital_cn ?? $usuario->name
+            ];
+
+            return $this->assinarPDF($caminhoPDF, $dadosAssinatura, $usuario);
+
+        } catch (\Exception $e) {
+            Log::error('Erro ao assinar com certificado do usuário', [
+                'user_id' => $usuario->id ?? null,
+                'error' => $e->getMessage()
+            ]);
+            throw $e;
         }
     }
 }

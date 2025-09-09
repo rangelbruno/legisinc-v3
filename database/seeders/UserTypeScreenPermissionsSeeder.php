@@ -394,7 +394,7 @@ class UserTypeScreenPermissionsSeeder extends Seeder
      */
     private function createDefaultUsers(): void
     {
-        $this->command->info('👤 Criando/corrigindo usuários padrão...');
+        $this->command->info('👤 Criando usuários complementares (evitando conflitos com SystemUsersSeeder)...');
         
         $defaultUsers = [
             [
@@ -406,43 +406,12 @@ class UserTypeScreenPermissionsSeeder extends Seeder
                 'profissao' => 'Administrador de Sistema',
                 'cargo_atual' => 'Administrador',
             ],
-            [
-                'name' => 'Jessica Santos',
-                'email' => 'jessica@sistema.gov.br', 
-                'role' => 'PARLAMENTAR',
-                'documento' => '111.111.111-11',
-                'telefone' => '(11) 9111-1111',
-                'profissao' => 'Advogada',
-                'cargo_atual' => 'Vereadora',
-                'partido' => 'PT',
-            ],
-            [
-                'name' => 'João Oliveira',
-                'email' => 'joao@sistema.gov.br',
-                'role' => 'LEGISLATIVO', 
-                'documento' => '222.222.222-22',
-                'telefone' => '(11) 9222-2222',
-                'profissao' => 'Servidor Legislativo',
-                'cargo_atual' => 'Diretor Legislativo',
-            ],
-            [
-                'name' => 'Roberto Costa',
-                'email' => 'roberto@sistema.gov.br',
-                'role' => 'PROTOCOLO',
-                'documento' => '333.333.333-33', 
-                'telefone' => '(11) 9333-3333',
-                'profissao' => 'Servidor Público',
-                'cargo_atual' => 'Chefe de Protocolo',
-            ],
-            [
-                'name' => 'Carlos Protocolo Silva',
-                'email' => 'protocolo@camara.gov.br',
-                'role' => 'PROTOCOLO',
-                'documento' => '444.444.444-44',
-                'telefone' => '(11) 9444-4444', 
-                'profissao' => 'Servidor Público',
-                'cargo_atual' => 'Responsável pelo Protocolo',
-            ],
+            // REMOVIDO: Jessica Santos já é criada pelo SystemUsersSeeder
+            // Evita conflito na vinculação parlamentar
+            
+            // REMOVIDO: João, Roberto e protocolo@camara.gov.br são criados pelo SystemUsersSeeder
+            // SystemUsersSeeder cria: admin@sistema.gov.br, jessica@sistema.gov.br, servidor@camara.gov.br, protocolo@camara.gov.br
+            // Mantemos apenas os usuários únicos deste seeder
             [
                 'name' => 'Carlos Expediente',
                 'email' => 'expediente@sistema.gov.br',
