@@ -100,6 +100,12 @@
     margin-bottom: 0;
 }
 </style>
+<style>
+
+.d-grid .btn-assinatura:last-child {
+    margin-bottom: 0;
+}
+</style>
 
 <style>
 
@@ -1307,6 +1313,35 @@ createApp({
                 });
             }
             
+            // Handle 'protocolado' status (after digital signature)
+            if (status === 'protocolado') {
+                // Add digital signature event if signature data exists
+                if (this.proposicao.assinatura_digital) {
+                    const signatureData = typeof this.proposicao.assinatura_digital === 'string' 
+                        ? JSON.parse(this.proposicao.assinatura_digital) 
+                        : this.proposicao.assinatura_digital;
+                    
+                    events.push({
+                        title: 'Documento Assinado Digitalmente',
+                        description: `Por ${signatureData.nome || 'N/A'} - CN: ${signatureData.cn || 'N/A'}`,
+                        date: this.proposicao.data_protocolo || this.proposicao.updated_at,
+                        icon: 'ki-duotone ki-signature',
+                        color: 'success'
+                    });
+                }
+                
+                // Add protocol event
+                if (this.proposicao.numero_protocolo) {
+                    events.push({
+                        title: 'Protocolado',
+                        description: `Nº ${this.proposicao.numero_protocolo}`,
+                        date: this.proposicao.data_protocolo || this.proposicao.updated_at,
+                        icon: 'ki-duotone ki-hashtag',
+                        color: 'info'
+                    });
+                }
+            }
+            
             this.timeline = events.reverse();
         },
         
@@ -1437,8 +1472,8 @@ createApp({
         canViewPDF() {
             if (!this.proposicao) return false;
             
-            // PDF só pode ser visualizado após aprovação pelo Legislativo (para todos os usuários)
-            const allowedStatuses = ['aprovado', 'aprovado_assinatura'];
+            // PDF pode ser visualizado após aprovação pelo Legislativo ou após protocolo (assinatura digital)
+            const allowedStatuses = ['aprovado', 'aprovado_assinatura', 'protocolado', 'enviado_protocolo'];
             return allowedStatuses.includes(this.proposicao.status);
         },
         

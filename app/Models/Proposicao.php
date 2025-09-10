@@ -63,6 +63,11 @@ class Proposicao extends Model
         'numero',
         'variaveis_template',
         // 'conteudo_processado'
+        
+        // 🔄 Campos do sistema de workflow
+        'workflow_id',
+        'etapa_workflow_atual_id',
+        'fluxo_personalizado'
     ];
 
     protected $casts = [
@@ -84,6 +89,7 @@ class Proposicao extends Model
         'total_anexos' => 'integer',
         'pdf_protocolo_aplicado' => 'boolean',
         'data_aplicacao_protocolo' => 'datetime',
+        'fluxo_personalizado' => 'boolean',
     ];
 
     /**
@@ -149,6 +155,67 @@ class Proposicao extends Model
     public function logstramitacao()
     {
         return $this->hasMany(TramitacaoLog::class)->orderBy('created_at', 'desc');
+    }
+
+    // ==========================================
+    // 🔄 RELACIONAMENTOS DO SISTEMA DE WORKFLOW
+    // ==========================================
+
+    /**
+     * Workflow atual da proposição
+     */
+    public function workflow()
+    {
+        return $this->belongsTo(Workflow::class);
+    }
+
+    /**
+     * Etapa atual do workflow
+     */
+    public function etapaWorkflowAtual()
+    {
+        return $this->belongsTo(WorkflowEtapa::class, 'etapa_workflow_atual_id');
+    }
+
+    /**
+     * Status atual no workflow (morfismo)
+     */
+    public function documentoWorkflowStatus()
+    {
+        return $this->morphOne(DocumentoWorkflowStatus::class, 'documento');
+    }
+
+    /**
+     * Histórico completo no workflow (morfismo)
+     */
+    public function documentoWorkflowHistorico()
+    {
+        return $this->morphMany(DocumentoWorkflowHistorico::class, 'documento')
+            ->orderBy('processado_em', 'desc');
+    }
+
+    /**
+     * Verifica se a proposição usa workflow personalizado
+     */
+    public function usaWorkflowPersonalizado(): bool
+    {
+        return $this->fluxo_personalizado && $this->workflow_id;
+    }
+
+    /**
+     * Obtém o status atual no workflow
+     */
+    public function statusWorkflow(): ?string
+    {
+        return $this->documentoWorkflowStatus?->status;
+    }
+
+    /**
+     * Verifica se está em determinada etapa
+     */
+    public function estaEm(string $keyEtapa): bool
+    {
+        return $this->etapaWorkflowAtual?->key === $keyEtapa;
     }
 
     /**

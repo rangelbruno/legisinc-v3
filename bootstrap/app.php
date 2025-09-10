@@ -31,12 +31,14 @@ return Application::configure(basePath: dirname(__DIR__))
             'role.permission' => \App\Http\Middleware\RolePermissionMiddleware::class,
             'check.assinatura.permission' => \App\Http\Middleware\CheckAssinaturaPermission::class,
             'debug.logger' => \App\Http\Middleware\DebugActionLogger::class,
+            'database.debug' => \App\Http\Middleware\DatabaseDebugMiddleware::class,
         ]);
         
         // Aplica middleware para prevenir navegação com botão voltar em todas as rotas autenticadas
         $middleware->web([
             \App\Http\Middleware\PreventBackHistory::class,
             \App\Http\Middleware\DebugActionLogger::class,
+            \App\Http\Middleware\DatabaseDebugMiddleware::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

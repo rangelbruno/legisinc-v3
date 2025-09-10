@@ -4933,7 +4933,30 @@ class ProposicaoController extends Controller implements HasMiddleware
                 'arquivo_path' => $proposicao->arquivo_path
             ]);
             
-            // 1. Instanciar o controller de assinatura para reutilizar métodos
+            // 1. PRIMEIRO: Verificar se existe PDF assinado/mais recente já disponível
+            $pdfExistente = $this->encontrarPDFMaisRecenteRobusta($proposicao);
+            
+            if ($pdfExistente) {
+                $caminhoAbsoluto = storage_path('app/' . $pdfExistente);
+                if (file_exists($caminhoAbsoluto)) {
+                    Log::info('🔴 PDF REQUEST: Servindo PDF existente (assinado/mais recente)', [
+                        'proposicao_id' => $proposicao->id,
+                        'pdf_path' => $pdfExistente,
+                        'tamanho' => filesize($caminhoAbsoluto)
+                    ]);
+                    
+                    return response()->file($caminhoAbsoluto, [
+                        'Content-Type' => 'application/pdf',
+                        'Content-Disposition' => 'inline; filename="proposicao_' . $proposicao->id . '.pdf"',
+                        'Cache-Control' => 'no-cache, no-store, must-revalidate, max-age=0',
+                        'Pragma' => 'no-cache',
+                        'Expires' => '-1',
+                        'X-PDF-Source' => 'existing-signed'
+                    ]);
+                }
+            }
+            
+            // 2. Instanciar o controller de assinatura para reutilizar métodos
             $assinaturaController = app(ProposicaoAssinaturaController::class);
             
             // 2. Buscar arquivo DOCX/RTF mais recente (mesma lógica da assinatura)
@@ -5563,7 +5586,32 @@ class ProposicaoController extends Controller implements HasMiddleware
             }
         }
 
-        // 2. Verificar se há PDF no arquivo_pdf_path
+        // 2. PRIORIDADE: Verificar PDFs assinados e protocolados primeiro
+        if ($proposicao->arquivo_pdf_protocolado) {
+            $caminhoCompleto = storage_path('app/'.$proposicao->arquivo_pdf_protocolado);
+            if (file_exists($caminhoCompleto)) {
+                $pdfsPossiveis[] = [
+                    'path' => $caminhoCompleto,
+                    'relative_path' => $proposicao->arquivo_pdf_protocolado,
+                    'timestamp' => filemtime($caminhoCompleto),
+                    'tipo' => 'pdf_protocolado',
+                ];
+            }
+        }
+        
+        if ($proposicao->arquivo_pdf_assinado) {
+            $caminhoCompleto = storage_path('app/'.$proposicao->arquivo_pdf_assinado);
+            if (file_exists($caminhoCompleto)) {
+                $pdfsPossiveis[] = [
+                    'path' => $caminhoCompleto,
+                    'relative_path' => $proposicao->arquivo_pdf_assinado,
+                    'timestamp' => filemtime($caminhoCompleto),
+                    'tipo' => 'pdf_assinado',
+                ];
+            }
+        }
+
+        // 3. Verificar se há PDF no arquivo_pdf_path (fallback para PDFs não assinados)
         if ($proposicao->arquivo_pdf_path) {
             $caminhoCompleto = storage_path('app/'.$proposicao->arquivo_pdf_path);
             if (file_exists($caminhoCompleto)) {
@@ -5571,12 +5619,12 @@ class ProposicaoController extends Controller implements HasMiddleware
                     'path' => $caminhoCompleto,
                     'relative_path' => $proposicao->arquivo_pdf_path,
                     'timestamp' => filemtime($caminhoCompleto),
-                    'tipo' => 'pdf_assinatura',
+                    'tipo' => 'pdf_basico',
                 ];
             }
         }
 
-        // 3. Verificar diretórios alternativos
+        // 4. Verificar diretórios alternativos
         $diretorios = [
             storage_path("app/proposicoes/{$proposicao->id}"),
             storage_path("app/private/proposicoes/{$proposicao->id}"),
@@ -5599,17 +5647,129 @@ class ProposicaoController extends Controller implements HasMiddleware
             }
         }
 
-        // Ordenar por data de modificação (mais recente primeiro)
-        usort($pdfsPossiveis, function ($a, $b) {
+        // ORDENAR POR PRIORIDADE DE TIPO PRIMEIRO, depois por data de modificação
+        // Ordem de prioridade: 1=protocolado, 2=assinado, 3=basico, 4=onlyoffice, 5=backup
+        $prioridades = [
+            'pdf_protocolado' => 1,
+            'pdf_assinado' => 2,
+            'pdf_basico' => 3,
+            'pdf_onlyoffice' => 4,
+            'pdf_backup' => 5,
+        ];
+        
+        usort($pdfsPossiveis, function ($a, $b) use ($prioridades) {
+            $prioridadeA = $prioridades[$a['tipo']] ?? 99;
+            $prioridadeB = $prioridades[$b['tipo']] ?? 99;
+            
+            // Se prioridades diferentes, ordenar por prioridade
+            if ($prioridadeA !== $prioridadeB) {
+                return $prioridadeA - $prioridadeB;
+            }
+            
+            // Se mesma prioridade, ordenar por timestamp (mais recente primeiro)
             return $b['timestamp'] - $a['timestamp'];
         });
 
-        Log::info('DEBUG: encontrarPDFMaisRecenteRobusta encontrou', [
+        Log::info('🔴 DEBUG: encontrarPDFMaisRecenteRobusta encontrou', [
             'proposicao_id' => $proposicao->id,
             'total_pdfs' => count($pdfsPossiveis),
+            'pdfs_encontrados' => array_map(function($pdf) {
+                return [
+                    'tipo' => $pdf['tipo'],
+                    'path' => $pdf['relative_path'],
+                    'timestamp' => date('Y-m-d H:i:s', $pdf['timestamp'])
+                ];
+            }, $pdfsPossiveis),
             'mais_recente' => !empty($pdfsPossiveis) ? $pdfsPossiveis[0]['relative_path'] : null
         ]);
 
         return !empty($pdfsPossiveis) ? $pdfsPossiveis[0]['relative_path'] : null;
+    }
+
+    /**
+     * Retornar dados frescos da proposição para Vue.js (polling)
+     */
+    public function getDadosFrescos(Proposicao $proposicao)
+    {
+        try {
+            // Verificar permissões
+            if (!$this->podeVisualizarProposicao($proposicao)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Sem permissão para visualizar esta proposição'
+                ], 403);
+            }
+
+            // Recarregar dados frescos do banco
+            $proposicao->refresh();
+
+            // Verificar se há PDF assinado/mais recente
+            $pdfPath = $this->encontrarPDFMaisRecenteRobusta($proposicao);
+            
+            // Decodificar assinatura digital se existir
+            $assinaturaDigital = null;
+            if ($proposicao->assinatura_digital) {
+                $assinaturaDigital = json_decode($proposicao->assinatura_digital, true);
+            }
+
+            return response()->json([
+                'success' => true,
+                'proposicao' => [
+                    'id' => $proposicao->id,
+                    'status' => $proposicao->status,
+                    'numero_protocolo' => $proposicao->numero_protocolo,
+                    'data_protocolo' => $proposicao->data_protocolo?->format('d/m/Y H:i'),
+                    'data_criacao' => $proposicao->created_at?->format('d/m/Y H:i'),
+                    'ementa' => $proposicao->ementa,
+                    'arquivo_pdf_path' => $pdfPath,
+                    'has_pdf' => !empty($pdfPath),
+                    'assinatura_digital' => $assinaturaDigital,
+                    'updated_at' => $proposicao->updated_at?->toISOString(),
+                ],
+                'timestamp' => now()->toISOString()
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Erro ao buscar dados frescos da proposição', [
+                'proposicao_id' => $proposicao->id,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Erro ao carregar dados da proposição',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Verificar se usuário pode visualizar proposição
+     */
+    private function podeVisualizarProposicao(Proposicao $proposicao): bool
+    {
+        $user = Auth::user();
+        
+        // Admin pode ver tudo
+        if ($user->hasRole('ADMIN')) {
+            return true;
+        }
+        
+        // Parlamentar pode ver suas próprias
+        if ($user->hasRole('PARLAMENTAR') && $proposicao->user_id === $user->id) {
+            return true;
+        }
+        
+        // Legislativo pode ver proposições em tramitação
+        if ($user->hasRole('LEGISLATIVO')) {
+            return true;
+        }
+        
+        // Protocolo pode ver proposições protocoladas
+        if ($user->hasRole('PROTOCOLO')) {
+            return true;
+        }
+        
+        return false;
     }
 }

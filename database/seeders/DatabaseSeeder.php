@@ -68,6 +68,11 @@ class DatabaseSeeder extends Seeder
             TipoProposicaoTemplatesSeeder::class,
         ]);
 
+        // SISTEMA DE WORKFLOWS MODULARES: Fluxos padrão de tramitação
+        $this->call([
+            WorkflowPadraoSeeder::class,
+        ]);
+
         // Seeder de permissões de tela por tipo de usuário
         $this->call([
             UserTypeScreenPermissionsSeeder::class,
@@ -373,6 +378,31 @@ class DatabaseSeeder extends Seeder
         // PRESERVAÇÃO AUTOMÁTICA: Melhorias detectadas automaticamente
         $this->call([
             PreservarMelhorias57Seeder::class,
+        ]);
+
+        // PRESERVAÇÃO AUTOMÁTICA: Melhorias detectadas automaticamente
+        $this->call([
+            PreservarMelhorias59Seeder::class,
+        ]);
+
+        // PRESERVAÇÃO AUTOMÁTICA: Melhorias detectadas automaticamente
+        $this->call([
+            PreservarMelhorias61Seeder::class,
+        ]);
+
+        // PRESERVAÇÃO AUTOMÁTICA: Melhorias detectadas automaticamente
+        $this->call([
+            PreservarMelhorias63Seeder::class,
+        ]);
+
+        // PRESERVAÇÃO AUTOMÁTICA: Melhorias detectadas automaticamente
+        $this->call([
+            PreservarMelhorias65Seeder::class,
+        ]);
+
+        // PRESERVAÇÃO AUTOMÁTICA: Melhorias detectadas automaticamente
+        $this->call([
+            PreservarMelhorias67Seeder::class,
         ]);
 
         // ÚLTIMO: Correções HTML de estrutura de botões (DEVE ser executado POR ÚLTIMO)

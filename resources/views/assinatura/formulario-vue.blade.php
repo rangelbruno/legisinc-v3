@@ -609,8 +609,23 @@ const AssinaturaDigitalComponent = {
         // Enviar requisição
         const response = await fetch('/proposicoes/' + this.proposicao.id + '/assinatura-digital/processar', {
           method: 'POST',
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json'
+          },
           body: formData
         })
+        
+        // Verificar se a resposta é válida
+        if (!response.ok) {
+          const contentType = response.headers.get('content-type')
+          if (contentType && contentType.includes('text/html')) {
+            // Se retornou HTML, provavelmente é uma página de erro
+            const text = await response.text()
+            console.error('Erro: Resposta HTML recebida:', text)
+            throw new Error('Erro no servidor. Por favor, tente novamente.')
+          }
+        }
         
         const result = await response.json()
         

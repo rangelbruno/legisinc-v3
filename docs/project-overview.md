@@ -1,86 +1,155 @@
 # Visão Geral do Projeto LegisInc
 
-Este documento fornece uma análise detalhada da arquitetura, tecnologias e estrutura do projeto LegisInc.
+Este documento fornece uma análise detalhada da arquitetura, tecnologias e estrutura do sistema LegisInc v2.1 Enterprise.
 
-## 1. Ambiente de Desenvolvimento (Docker)
+## 1. Sistema de Gestão Legislativa
 
-O projeto utiliza Docker para criar um ambiente de desenvolvimento consistente e isolado. A configuração está dividida em dois arquivos principais, permitindo flexibilidade para diferentes cenários.
+O LegisInc é um sistema completo de gestão legislativa com foco na digitalização de processos parlamentares, especialmente proposições e documentação oficial.
 
-### 1.1. Estrutura do Container
+### 1.1. Configuração Atual
+
+- **Ambiente:** Câmara Municipal de Caraguatatuba
+- **Endereço:** Praça da República, 40, Centro, Caraguatatuba-SP
+- **Acesso Principal:** `http://localhost:8001`
+- **Comando de Inicialização:** `docker exec -it legisinc-app php artisan migrate:fresh --seed`
+
+## 2. Ambiente de Desenvolvimento (Docker)
+
+### 2.1. Estrutura do Container
 
 - **Servidor Web:** Nginx
 - **Processador PHP:** PHP-FPM 8.2
-- **Base:** A imagem Docker é baseada em `php:8.2-fpm-alpine`, uma imagem leve e segura.
-- **Gerenciamento de Processos:** Embora o Supervisor esteja instalado, o comando de inicialização padrão executa o Nginx e o PHP-FPM diretamente.
+- **Base:** Imagem Docker baseada em `php:8.2-fpm-alpine`
+- **Banco de Dados:** PostgreSQL containerizado
+- **Editor de Documentos:** OnlyOffice Document Server integrado
 
-### 1.2. Configurações do Docker Compose
+## 3. Usuários do Sistema
 
-Existem dois ambientes principais definidos:
+O sistema possui usuários pré-configurados com diferentes níveis de acesso:
 
-#### a) Ambiente Padrão (`docker-compose.yml`)
+- **Administrador:** bruno@sistema.gov.br / 123456
+- **Parlamentar:** jessica@sistema.gov.br / 123456  
+- **Legislativo:** joao@sistema.gov.br / 123456
+- **Protocolo:** roberto@sistema.gov.br / 123456
+- **Expediente:** expediente@sistema.gov.br / 123456
+- **Assessor Jurídico:** juridico@sistema.gov.br / 123456
 
-- **Acesso:** `http://localhost:8000`
-- **Banco de Dados:** Utiliza **PostgreSQL** containerizado. O banco de dados roda em um container separado com persistência de dados via volumes Docker.
-- **Propósito:** Ambiente completo para desenvolvimento e testes que necessitam de persistência de dados.
+## 4. Arquitetura do Backend (Laravel)
 
-#### b) Ambiente de Desenvolvimento (`docker-compose.dev.yml`)
+### 4.1. Recursos Principais v2.1
 
-- **Acesso:** `http://localhost:3001`
-- **Banco de Dados:** A conexão com o banco de dados é **desabilitada** por padrão (`DB_CONNECTION=null`).
-- **Otimização:** Utiliza um volume nomeado do Docker para a pasta `vendor`, melhorando a performance de I/O em sistemas macOS e Windows.
-- **Propósito:** Ideal para desenvolvimento focado no frontend ou em partes da aplicação que não requerem acesso ao banco de dados, utilizando a API Mock.
+✅ **OnlyOffice 100% funcional** - Preserva todas as alterações  
+✅ **Priorização de arquivos salvos** - Sistema prioriza edições sobre templates  
+✅ **Polling Realtime** - Detecta mudanças automaticamente em 15s  
+✅ **Performance otimizada** - Cache inteligente + 70% redução I/O  
+✅ **Interface Vue.js** - Atualizações em tempo real  
+✅ **PDF de assinatura** - Sempre usa versão mais recente  
+✅ **Parágrafos preservados** - Quebras de linha funcionam no OnlyOffice  
+✅ **Permissões por role** - Sistema inteligente de autorizações
 
-## 2. Arquitetura do Backend (Laravel)
+### 4.2. Sistema de Templates
 
-O backend é uma aplicação Laravel robusta e bem estruturada.
+- **23 tipos de proposições** com templates LC 95/1998
+- **Template de Moção funcional** (ID: 6)
+- **RTF com codificação UTF-8** para acentuação portuguesa
+- **Processamento de imagem automático** do cabeçalho
+- **Template Universal** com prioridade garantida
 
-### 2.1. Rotas e Endpoints
+### 4.3. Fluxo de Proposições
 
-O sistema possui uma clara separação entre rotas web, rotas de API e uma API de mock.
+1. **Parlamentar** cria proposição → Template aplicado automaticamente
+2. **Sistema** detecta tipo e aplica template correspondente
+3. **Parlamentar** edita documento no OnlyOffice
+4. **Protocolo** atribui número oficial (ex: 0001/2025)
+5. **Legislativo** recebe para análise e aprovação
+6. **Assinatura Digital** com certificados .pfx/.p12
 
-- **Rotas Web (`routes/web.php`):**
-    - Inclui rotas de autenticação (login, registro), dashboard e perfis de usuário.
-    - Utiliza o sistema de autenticação padrão do Laravel, baseado em sessão.
-    - Contém rotas para os módulos principais de **Parlamentares** e **Comissões**.
+### 4.4. Controle de Acesso e Segurança
 
-- **Rotas de API (`routes/api.php`):**
-    - Define uma **API de Mock** completa sob o prefixo `/mock-api`.
-    - Esta API simula todo o comportamento do backend real, facilitando o desenvolvimento do frontend de forma isolada.
-    - É controlada pelo `MockApiController`.
+- Sistema **RBAC** (Role-Based Access Control)
+- Middleware `check.permission` protege rotas críticas
+- Permissões específicas por módulo (parlamentares.view, comissoes.create)
+- **Assinatura digital** integrada com certificados digitais
 
-- **Rotas de API de Usuário (`routes/web.php`):**
-    - Curiosamente, há um grupo de rotas de API para usuários (`/user-api`) dentro do arquivo de rotas web.
-    - Possui seus próprios endpoints de autenticação, sugerindo que pode ser consumida por um cliente JavaScript rico (SPA) ou um cliente externo, possivelmente com autenticação baseada em token.
+### 4.5. Comunicação com Banco de Dados
 
-### 2.2. Controle de Acesso e Segurança
+- **PostgreSQL** containerizado para performance avançada
+- Models Eloquent em `app/Models/`
+- Seeders automatizados para dados iniciais
 
-- A aplicação implementa um sistema de **Controle de Acesso Baseado em Permissões (RBAC)**.
-- O middleware `check.permission` é utilizado para proteger rotas críticas, como `parlamentares.view` ou `comissoes.create`.
-- Isso garante que apenas usuários com as permissões corretas possam acessar funcionalidades específicas.
+## 5. Arquitetura do Frontend
 
-### 2.3. Comunicação com Banco de Dados
+### 5.1. Tecnologias
 
-- A aplicação está configurada para usar **PostgreSQL** containerizado, proporcionando melhor performance e recursos avançados de banco de dados.
-- Os Models do Eloquent (em `app/Models/`) são responsáveis pela interação com o banco de dados. A estrutura exata dos models precisaria ser analisada para um detalhamento maior das tabelas.
+- **Templates:** Laravel Blade como motor principal
+- **Estilização:** Tailwind CSS (utility-first approach)
+- **JavaScript:** Vue.js para componentes interativos + Vanilla JS
+- **HTTP Client:** Axios para requisições às APIs
+- **Editor:** OnlyOffice Document Server integrado
 
-## 3. Arquitetura do Frontend
+### 5.2. Componentes Principais
 
-O frontend segue uma abordagem clássica do Laravel, sem a complexidade de um framework JavaScript de grande porte.
+- **Componentes Blade** reutilizáveis em `resources/views/components`
+- **Layouts responsivos** em `resources/views/components/layouts`
+- **Interface Vue.js** para atualizações em tempo real
+- **Polling realtime** para sincronização automática (15s)
 
-### 3.1. Tecnologias
+### 5.3. Integração OnlyOffice
 
-- **Templates:** **Laravel Blade** é o motor de templates principal.
-- **Estilização:** **Tailwind CSS** é utilizado para a construção da interface, seguindo uma abordagem de utility-first.
-- **JavaScript:** Utiliza JavaScript "puro" (vanilla), com `app.js` como ponto de entrada principal. A biblioteca **Axios** está incluída para realizar requisições HTTP às APIs do backend.
+- **Editor colaborativo** para documentos RTF
+- **Preservação automática** de todas as alterações
+- **Priorização inteligente** de arquivos salvos sobre templates
+- **Sincronização em tempo real** entre usuários
 
-### 3.2. Estrutura de Componentes
+## 6. Numeração de Proposições
 
-- O projeto faz uso extensivo de **Componentes Blade**.
-- A UI é organizada em componentes reutilizáveis localizados em `resources/views/components`.
-- Os layouts principais da aplicação, como o layout base, estão em `resources/views/components/layouts`, o que mantém o código das views limpo e organizado.
+**Fluxo legislativo:**
+1. **Criação:** Exibe `[AGUARDANDO PROTOCOLO]`
+2. **Após protocolar:** Exibe número oficial (`0001/2025`)
+3. **Apenas o Protocolo** pode atribuir números oficiais
 
-## 4. Resumo e Fluxo de Trabalho
+## 7. Assinatura Digital
 
-1.  **Ambiente:** O desenvolvedor pode escolher entre o ambiente completo com PostgreSQL (`docker-compose up`) ou o ambiente focado em frontend sem banco de dados (`docker-compose -f docker-compose.dev.yml up`).
-2.  **Backend:** A lógica de negócio, regras de acesso e manipulação de dados são controladas pela aplicação Laravel.
-3.  **Frontend:** As views são renderizadas no lado do servidor com Blade e estilizadas com Tailwind CSS. A interatividade do lado do cliente é adicionada com JavaScript e as chamadas de API são feitas com Axios, principalmente para a API de mock durante o desenvolvimento. 
+### 7.1. Certificados Suportados
+- Arquivos **.pfx/.p12** para assinatura
+- **Validação de senha** antes da assinatura
+- **Integração PyHanko** para padrão PAdES
+
+### 7.2. Processo de Assinatura
+1. Upload do certificado digital (.pfx)
+2. Validação da senha do certificado
+3. Assinatura automática do PDF final
+4. Verificação da integridade da assinatura
+
+## 8. Arquivos Críticos
+
+### 8.1. Processamento
+- `/app/Services/OnlyOffice/OnlyOfficeService.php`
+- `/app/Services/Template/TemplateProcessorService.php`
+- `/app/Services/AssinaturaDigitalService.php`
+
+### 8.2. Seeders
+- `/database/seeders/DatabaseSeeder.php` - Orquestrador principal
+- `/database/seeders/TipoProposicaoTemplatesSeeder.php` - Templates
+- `/database/seeders/ParametrosTemplatesSeeder.php` - Parâmetros
+
+### 8.3. Scripts de Validação
+```bash
+./scripts/validacao-final-completa.sh       # Validação recomendada
+./scripts/teste-migrate-fresh-completo.sh   # Teste completo
+./scripts/validar-pdf-otimizado.sh          # Validação rápida
+```
+
+## 9. Status Atual - v2.1 Enterprise
+
+**🎊 SISTEMA 100% OPERACIONAL**
+
+- ✅ OnlyOffice integrado com polling realtime
+- ✅ Templates automatizados (23 tipos)
+- ✅ Assinatura digital funcional
+- ✅ PDF sempre atualizado
+- ✅ Performance otimizada (70% redução I/O)
+- ✅ Interface Vue.js responsiva
+- ✅ Certificação digital integrada
+
+**Última atualização:** 05/09/2025 

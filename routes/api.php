@@ -287,3 +287,29 @@ Route::middleware(['web', 'auth'])->prefix('proposicoes')->name('api.proposicoes
 Route::middleware(['web', 'auth'])->group(function () {
     Route::get('/notifications', [App\Http\Controllers\Api\NotificationController::class, 'index'])->name('api.notifications.index');
 });
+
+// 🔄 ===== WORKFLOW API ROUTES =====
+Route::middleware(['auth:sanctum'])->prefix('workflows')->name('api.workflows.')->group(function () {
+    // Listagem e consulta
+    Route::get('/', [App\Http\Controllers\Api\WorkflowApiController::class, 'index'])->name('index');
+    Route::get('/default', [App\Http\Controllers\Api\WorkflowApiController::class, 'getDefault'])->name('default');
+    Route::get('/{workflow}', [App\Http\Controllers\Api\WorkflowApiController::class, 'show'])->name('show');
+    
+    // Dashboard e analytics
+    Route::get('/dashboard/stats', [App\Http\Controllers\Api\WorkflowApiController::class, 'dashboard'])->name('dashboard');
+    
+    // Execução de workflows
+    Route::post('/start', [App\Http\Controllers\Api\WorkflowApiController::class, 'startWorkflow'])->name('start');
+    Route::post('/advance', [App\Http\Controllers\Api\WorkflowApiController::class, 'advanceWorkflow'])->name('advance');
+    Route::post('/pause', [App\Http\Controllers\Api\WorkflowApiController::class, 'pauseWorkflow'])->name('pause');
+    Route::post('/resume', [App\Http\Controllers\Api\WorkflowApiController::class, 'resumeWorkflow'])->name('resume');
+    
+    // Status e histórico de documentos
+    Route::get('/document-status', [App\Http\Controllers\Api\WorkflowApiController::class, 'getDocumentStatus'])->name('document.status');
+    Route::get('/document-history', [App\Http\Controllers\Api\WorkflowApiController::class, 'getDocumentHistory'])->name('document.history');
+    Route::get('/available-actions', [App\Http\Controllers\Api\WorkflowApiController::class, 'getAvailableActions'])->name('available-actions');
+    
+    // Utilidades
+    Route::post('/validate-conditions', [App\Http\Controllers\Api\WorkflowApiController::class, 'validateConditions'])->name('validate-conditions');
+    Route::get('/condition-examples', [App\Http\Controllers\Api\WorkflowApiController::class, 'getConditionExamples'])->name('condition-examples');
+});

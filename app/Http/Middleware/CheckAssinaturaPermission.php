@@ -21,40 +21,46 @@ class CheckAssinaturaPermission
     {
         // Verificar se usuário está autenticado
         if (!Auth::check()) {
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json(['message' => 'Não autenticado'], 401);
+            }
             return redirect()->route('login');
         }
 
         $user = Auth::user();
-        $proposicaoId = $request->route('proposicao');
+        $proposicaoParam = $request->route('proposicao');
 
-        // Log para debug
-        Log::info('CheckAssinaturaPermission - Debug', [
-            'proposicao_id' => $proposicaoId,
-            'tipo_proposicao_id' => gettype($proposicaoId),
-            'is_numeric' => is_numeric($proposicaoId),
-            'is_array' => is_array($proposicaoId),
-            'is_object' => is_object($proposicaoId),
-            'route_name' => $request->route()->getName(),
-            'url' => $request->url()
-        ]);
-
-        // Se não há ID de proposição, permitir acesso
-        if (!$proposicaoId) {
-            return $next($request);
-        }
-
-        // Buscar proposição - garantir que seja um modelo individual
-        $proposicao = null;
-        
-        if (is_numeric($proposicaoId)) {
-            $proposicao = Proposicao::find($proposicaoId);
-        } elseif ($proposicaoId instanceof Proposicao) {
-            $proposicao = $proposicaoId;
-        } elseif (is_array($proposicaoId)) {
-            $proposicao = Proposicao::find($proposicaoId['id'] ?? $proposicaoId[0] ?? null);
-        } elseif (is_object($proposicaoId) && method_exists($proposicaoId, 'first')) {
-            // Se for uma Collection, pegar o primeiro item
-            $proposicao = $proposicaoId->first();
+        // Se já é uma instância de Proposicao (Laravel Model Binding), usar diretamente
+        if ($proposicaoParam instanceof Proposicao) {
+            $proposicao = $proposicaoParam;
+            $proposicaoId = $proposicao->id;
+        } else {
+            $proposicaoId = $proposicaoParam;
+            
+            // Log para debug
+            Log::info('CheckAssinaturaPermission - Debug', [
+                'proposicao_id' => $proposicaoId,
+                'tipo_proposicao_id' => gettype($proposicaoId),
+                'is_numeric' => is_numeric($proposicaoId),
+                'is_array' => is_array($proposicaoId),
+                'is_object' => is_object($proposicaoId),
+                'route_name' => $request->route()->getName(),
+                'url' => $request->url()
+            ]);
+            
+            // Se não há ID de proposição, permitir acesso
+            if (!$proposicaoId) {
+                return $next($request);
+            }
+            
+            // Buscar proposição
+            $proposicao = null;
+            
+            if (is_numeric($proposicaoId)) {
+                $proposicao = Proposicao::find($proposicaoId);
+            } elseif (is_array($proposicaoId)) {
+                $proposicao = Proposicao::find($proposicaoId['id'] ?? $proposicaoId[0] ?? null);
+            }
         }
         
         if (!$proposicao) {
@@ -62,6 +68,9 @@ class CheckAssinaturaPermission
                 'proposicao_id' => $proposicaoId,
                 'tipo' => gettype($proposicaoId)
             ]);
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json(['message' => 'Proposição não encontrada'], 404);
+            }
             abort(404, 'Proposição não encontrada.');
         }
 
@@ -74,11 +83,17 @@ class CheckAssinaturaPermission
                 'proposicao_autor_id' => $proposicao->autor_id,
                 'proposicao_parlamentar_id' => $proposicao->parlamentar_id ?? 'N/A'
             ]);
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json(['message' => 'Você não tem permissão para assinar esta proposição'], 403);
+            }
             abort(403, 'Você não tem permissão para assinar esta proposição.');
         }
 
         // Verificar se proposição está disponível para assinatura
         if (!$this->proposicaoDisponivelParaAssinatura($proposicao)) {
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json(['message' => 'Esta proposição não está disponível para assinatura'], 403);
+            }
             abort(403, 'Esta proposição não está disponível para assinatura.');
         }
 

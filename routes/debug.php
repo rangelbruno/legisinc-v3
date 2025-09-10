@@ -22,6 +22,10 @@ Route::middleware(['web', 'auth'])->prefix('debug')->name('debug.')->group(funct
     Route::post('/export', [DebugController::class, 'exportLogs'])->name('export');
     Route::delete('/cleanup', [DebugController::class, 'cleanup'])->name('cleanup');
     
+    // Database debug routes
+    Route::get('/database/queries', [DebugController::class, 'getDatabaseQueries'])->name('database.queries');
+    Route::get('/database/stats', [DebugController::class, 'getDatabaseStats'])->name('database.stats');
+    
 });
 
 // Rota pública para servir arquivos de debug exportados

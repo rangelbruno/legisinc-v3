@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
 use App\Helpers\DebugHelper;
+use App\Services\DatabaseDebugService;
 
 class SystemConfigurationController extends Controller
 {
@@ -19,7 +20,8 @@ class SystemConfigurationController extends Controller
         // Get all system configuration parameters
         $debugLogger = $this->getDebugLoggerConfig();
         
-        return view('admin.system-configuration.index', compact('debugLogger'));
+        // Use enhanced view with database debug features
+        return view('admin.system-configuration.index-enhanced', compact('debugLogger'));
     }
     
     /**
@@ -155,6 +157,92 @@ class SystemConfigurationController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Erro ao limpar cache: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+    
+    /**
+     * Start database query capture
+     */
+    public function startDatabaseCapture()
+    {
+        try {
+            $dbDebug = new DatabaseDebugService();
+            $dbDebug->startCapture();
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Captura de queries iniciada'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erro ao iniciar captura: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+    
+    /**
+     * Stop database query capture
+     */
+    public function stopDatabaseCapture()
+    {
+        try {
+            $dbDebug = new DatabaseDebugService();
+            $dbDebug->stopCapture();
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Captura de queries parada'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erro ao parar captura: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+    
+    /**
+     * Get captured database queries
+     */
+    public function getDatabaseQueries()
+    {
+        try {
+            $dbDebug = new DatabaseDebugService();
+            $queries = $dbDebug->getCapturedQueries();
+            $stats = $dbDebug->getQueryStatistics();
+            
+            return response()->json([
+                'success' => true,
+                'queries' => $queries,
+                'statistics' => $stats
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erro ao obter queries: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+    
+    /**
+     * Get database statistics
+     */
+    public function getDatabaseStats()
+    {
+        try {
+            $dbDebug = new DatabaseDebugService();
+            $stats = $dbDebug->getDatabaseStats();
+            
+            return response()->json([
+                'success' => true,
+                'stats' => $stats
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erro ao obter estatísticas: ' . $e->getMessage()
             ], 500);
         }
     }

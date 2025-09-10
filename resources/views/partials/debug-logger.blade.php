@@ -40,27 +40,112 @@
                                 @{{ isRecording ? '🔴 Gravando' : '⚫ Parado' }}
                             </span>
                             <span class="badge badge-info">@{{ actions.length }} ações</span>
+                            <span v-if="dbQueriesCount > 0" class="badge badge-primary" :title="'Queries SQL capturadas'">
+                                🗄️ @{{ dbQueriesCount }} DB
+                            </span>
                             <span v-if="sessionId" class="badge badge-warning" :title="'Sessão: ' + sessionId">
                                 📱 Persistente
                             </span>
                         </div>
                         
-                        <div class="debug-filters" v-if="actions.length > 0">
-                            <select v-model="filterType" class="form-select form-select-sm">
-                                <option value="">Todos os tipos</option>
-                                <option v-for="type in uniqueTypes" :key="type" :value="type">@{{ type }}</option>
-                            </select>
+                        <!-- Tabs -->
+                        <div class="debug-tabs">
+                            <button :class="['debug-tab', { active: activeTab === 'actions' }]" @click="activeTab = 'actions'; loadPersistedLogs()">
+                                📋 Ações (@{{ actions.length }})
+                            </button>
+                            <button :class="['debug-tab', { active: activeTab === 'database' }]" @click="activeTab = 'database'; loadDatabaseQueries()">
+                                🗄️ Banco
+                            </button>
                         </div>
                         
-                        <div class="debug-actions">
-                            <div v-for="(action, index) in filteredActions" :key="index" 
-                                 :class="['debug-action', action.type, { 'error': action.isError }]">
-                                <div class="action-header">
-                                    <span class="action-time">@{{ action.time }}</span>
-                                    <span class="action-type">@{{ action.type }}</span>
+                        <!-- Actions Tab -->
+                        <div v-if="activeTab === 'actions'">
+                            <div class="debug-filters">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <select v-if="actions.length > 0" v-model="filterType" class="form-select form-select-sm" style="width: auto;">
+                                        <option value="">Todos os tipos</option>
+                                        <option v-for="type in uniqueTypes" :key="type" :value="type">@{{ type }}</option>
+                                    </select>
+                                    <button class="btn btn-sm btn-outline-light" @click="loadPersistedLogs()" title="Atualizar ações">
+                                        🔄
+                                    </button>
                                 </div>
-                                <div class="action-details">@{{ action.details }}</div>
-                                <div v-if="action.url" class="action-url">@{{ action.method }} @{{ action.url }}</div>
+                            </div>
+                            
+                            <div class="debug-actions">
+                                <div v-if="filteredActions.length === 0" class="no-actions">
+                                    <div v-if="!isRecording" class="text-center py-3">
+                                        <p class="mb-2">Debug não está ativo</p>
+                                        <p class="text-muted">Clique em "▶️ Iniciar" para começar a capturar suas ações</p>
+                                    </div>
+                                    <div v-else class="text-center py-3">
+                                        <p class="mb-2">Nenhuma ação capturada ainda</p>
+                                        <p class="text-muted">Execute ações no sistema para vê-las aparecer aqui</p>
+                                    </div>
+                                </div>
+                                
+                                <div v-for="(action, index) in filteredActions" :key="index" 
+                                     :class="['debug-action', action.type, { 'error': action.isError }]">
+                                    <div class="action-header">
+                                        <span class="action-time">@{{ action.time }}</span>
+                                        <span class="action-type">@{{ action.type }}</span>
+                                    </div>
+                                    <div class="action-details">@{{ action.details }}</div>
+                                    <div v-if="action.url" class="action-url">@{{ action.method }} @{{ action.url }}</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Database Tab -->
+                        <div v-if="activeTab === 'database'">
+                            <div class="debug-filters">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div class="db-stats-compact" v-if="dbStats">
+                                        <div class="d-flex gap-3">
+                                            <span class="stat-compact">
+                                                <strong>@{{ dbStats.total_queries || 0 }}</strong> queries
+                                            </span>
+                                            <span class="stat-compact">
+                                                <strong>@{{ (dbStats.total_time || 0).toFixed(2) }}ms</strong> total
+                                            </span>
+                                            <span class="stat-compact text-danger" v-if="(dbStats.slow_queries || 0) + (dbStats.very_slow_queries || 0) > 0">
+                                                <strong>@{{ (dbStats.slow_queries || 0) + (dbStats.very_slow_queries || 0) }}</strong> lentas
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex gap-2">
+                                        <button class="btn btn-sm btn-outline-light" @click="copyDatabaseQueries()" :disabled="dbQueries.length === 0" title="Copiar queries">
+                                            📋 Copiar
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-light" @click="loadDatabaseQueries()" title="Atualizar queries">
+                                            🔄
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="debug-db-actions">
+                                <div v-for="(query, index) in dbQueries.slice(0, 10)" :key="index" 
+                                     :class="['debug-action', 'query', query.performance]"
+                                     @click="showQueryDetail(query)">
+                                    <div class="action-header">
+                                        <span class="action-time">@{{ new Date(query.timestamp).toLocaleTimeString() }}</span>
+                                        <span :class="['action-type', 'query-type', query.type.toLowerCase()]">@{{ query.type }}</span>
+                                        <span :class="['query-performance', query.performance]">@{{ query.time_formatted }}</span>
+                                    </div>
+                                    <div class="action-details query-sql">@{{ truncateSQL(query.sql, 80) }}</div>
+                                    <div v-if="query.tables.length > 0" class="query-tables">
+                                        <span v-for="table in query.tables" :key="table" class="table-badge">@{{ table }}</span>
+                                    </div>
+                                </div>
+                                
+                                <div v-if="dbQueries.length > 10" class="more-queries">
+                                    ... e mais @{{ dbQueries.length - 10 }} queries
+                                </div>
+                                
+                                <div v-if="dbQueries.length === 0" class="no-queries">
+                                    Nenhuma query capturada ainda
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -78,7 +163,11 @@
                 isRecording: false,
                 actions: [],
                 filterType: '',
-                sessionId: null
+                sessionId: null,
+                activeTab: 'actions',
+                dbQueries: [],
+                dbStats: null,
+                dbQueriesCount: 0
             };
         },
         mounted() {
@@ -144,15 +233,41 @@
                 // Carregar logs persistidos
                 this.loadPersistedLogs();
             },
-            loadPersistedLogs() {
+            async loadPersistedLogs() {
                 if (!this.sessionId) return;
                 
+                // Primeiro tentar carregar do servidor
+                try {
+                    const response = await axios.get('/debug/logs');
+                    if (response.data.logs && response.data.logs.length > 0) {
+                        // Converter logs do servidor para o formato do Vue
+                        this.actions = response.data.logs.map(log => ({
+                            time: new Date(log.timestamp).toLocaleTimeString(),
+                            timestamp: log.timestamp,
+                            type: log.action_type,
+                            details: this.formatLogDetails(log),
+                            url: log.url,
+                            method: log.method,
+                            isError: log.is_error,
+                            sessionId: this.sessionId
+                        }));
+                        
+                        console.log(`Debug Logger: ${this.actions.length} logs carregados do servidor`);
+                        // Salvar no localStorage como backup
+                        this.persistLogs();
+                        return;
+                    }
+                } catch (error) {
+                    console.warn('Debug Logger: Erro ao carregar logs do servidor, tentando localStorage', error);
+                }
+                
+                // Fallback para localStorage se servidor falhar
                 const persistedLogs = localStorage.getItem(`debugLogger_logs_${this.sessionId}`);
                 if (persistedLogs) {
                     try {
                         const logs = JSON.parse(persistedLogs);
                         this.actions = logs;
-                        console.log(`Debug Logger: ${logs.length} logs carregados do localStorage`);
+                        console.log(`Debug Logger: ${logs.length} logs carregados do localStorage (fallback)`);
                     } catch (e) {
                         console.warn('Debug Logger: Erro ao carregar logs persistidos', e);
                         this.actions = [];
@@ -201,6 +316,8 @@
                 setInterval(() => {
                     if (this.isRecording) {
                         this.checkDebugStatus();
+                        // Recarregar logs do servidor periodicamente
+                        this.loadPersistedLogs();
                     }
                 }, 10000);
                 
@@ -303,10 +420,20 @@
                     this.isRecording = true;
                     this.sessionId = response.data.session_id;
                     
-                    // Carregar logs existentes desta sessão (se houver)
-                    this.loadPersistedLogs();
+                    // Limpar ações antigas
+                    this.actions = [];
                     
-                    this.logAction('system', 'Debug iniciado', { sessionId: this.sessionId });
+                    // Aguardar um momento para que a sessão seja registrada no servidor
+                    setTimeout(async () => {
+                        // Carregar logs existentes desta sessão (se houver)
+                        await this.loadPersistedLogs();
+                        
+                        // Adicionar log de início se não houver logs carregados
+                        if (this.actions.length === 0) {
+                            this.logAction('system', 'Debug iniciado', { sessionId: this.sessionId });
+                        }
+                    }, 500);
+                    
                     this.persistState();
                     console.log('Debug Logger: Gravação iniciada', response.data);
                 } catch (error) {
@@ -330,12 +457,16 @@
                     const response = await axios.get('/debug/status');
                     const serverActive = response.data.active;
                     const serverSessionId = response.data.session_id;
+                    const dbQueriesCount = response.data.db_queries_count || 0;
+                    
+                    // Atualizar contador de queries do banco
+                    this.dbQueriesCount = dbQueriesCount;
                     
                     // Sincronizar com o servidor apenas se houver discrepância
                     if (this.isRecording !== serverActive || this.sessionId !== serverSessionId) {
                         console.log('Debug Logger: Sincronizando com servidor', {
                             local: { isRecording: this.isRecording, sessionId: this.sessionId },
-                            server: { active: serverActive, sessionId: serverSessionId }
+                            server: { active: serverActive, sessionId: serverSessionId, dbQueries: dbQueriesCount }
                         });
                         
                         // Se sessionId mudou, carregar logs da nova sessão
@@ -526,14 +657,38 @@
                 
                 // Persistir logs automaticamente após cada nova ação
                 this.persistLogs();
+                
+                // Log no console para debug
+                console.log('Debug Logger: Nova ação capturada', { type, details, extra });
             },
             copyLogs() {
-                const logs = this.actions.map((action, index) => {
-                    return `${index + 1}. [${action.time}] ${action.type.toUpperCase()}: ${action.details}${action.url ? ' - ' + action.url : ''}`;
-                }).join('\n');
+                if (!this.actions || this.actions.length === 0) {
+                    this.showToast('Nenhuma ação disponível para copiar', 'warning');
+                    return;
+                }
                 
-                navigator.clipboard.writeText(logs).then(() => {
-                    alert('Logs copiados para a área de transferência!');
+                // Gerar relatório formatado de ações
+                let content = '📋 USER ACTIONS DEBUG REPORT\n';
+                content += '=====================================\n\n';
+                content += `📅 Generated: ${new Date().toLocaleString()}\n`;
+                content += `🔑 Session: ${this.sessionId}\n`;
+                content += `👤 Total Actions: ${this.actions.length}\n\n`;
+                content += '='.repeat(50) + '\n';
+                content += 'ACTIONS DETAILS\n';
+                content += '='.repeat(50) + '\n\n';
+                
+                const actionContent = this.actions.map((action, index) => {
+                    return `${index + 1}. [${action.time}] ${action.type.toUpperCase()}\n   ${action.details}${action.url ? '\n   URL: ' + action.url : ''}`;
+                }).join('\n\n' + '-'.repeat(40) + '\n\n');
+                
+                content += actionContent;
+                content += '\n\n=== END OF REPORT ===\n';
+                
+                navigator.clipboard.writeText(content).then(() => {
+                    this.showToast(`${this.actions.length} ações copiadas para área de transferência!`, 'success');
+                }).catch(err => {
+                    console.error('Erro ao copiar:', err);
+                    this.showToast('Erro ao copiar ações', 'error');
                 });
             },
             clearLogs() {
@@ -566,6 +721,178 @@
                 console.log('Debug Logger: Reinicialização forçada');
                 this.reinitializeInterceptors();
                 this.checkDebugStatus();
+            },
+            
+            // Métodos para banco de dados
+            async loadDatabaseQueries() {
+                if (!this.isRecording) return;
+                
+                try {
+                    const response = await axios.get('/debug/database/queries');
+                    if (response.data.success) {
+                        this.dbQueries = response.data.queries || [];
+                        this.dbStats = response.data.statistics || {};
+                        console.log('Debug Logger: Database queries loaded', {
+                            queries: this.dbQueries.length,
+                            stats: this.dbStats
+                        });
+                    }
+                } catch (error) {
+                    console.error('Erro ao carregar queries do banco:', error);
+                }
+            },
+            
+            showQueryDetail(query) {
+                // Criar modal ou expansão para mostrar detalhes da query
+                const details = `
+SQL: ${query.formatted_sql || query.sql}
+
+Performance: ${query.performance} (${query.time_formatted})
+Type: ${query.type}
+Tables: ${query.tables.join(', ')}
+
+Executed at: ${new Date(query.timestamp).toLocaleString()}
+                `.trim();
+                
+                alert(details);
+            },
+            
+            truncateSQL(sql, maxLength) {
+                if (!sql || sql.length <= maxLength) return sql || '';
+                return sql.substring(0, maxLength) + '...';
+            },
+            
+            formatLogDetails(log) {
+                // Formatar detalhes do log baseado no tipo de ação
+                const actionType = log.action_type;
+                const method = log.method;
+                const url = log.url;
+                
+                switch(actionType) {
+                    case 'page_view':
+                        return `Visualização de página: ${url}`;
+                    case 'form_submit':
+                        return `Envio de formulário: ${method} ${url}`;
+                    case 'proposicao_create':
+                        return 'Nova proposição criada';
+                    case 'proposicao_update':
+                        return 'Proposição atualizada';
+                    case 'proposicao_view':
+                        return 'Proposição visualizada';
+                    case 'proposicao_pdf_view':
+                        return 'PDF da proposição visualizado';
+                    case 'proposicao_sign':
+                        return 'Proposição assinada digitalmente';
+                    case 'proposicao_protocol':
+                        return 'Proposição protocolada';
+                    case 'onlyoffice_edit':
+                        return 'Edição no OnlyOffice';
+                    case 'auth_login':
+                        return 'Login realizado';
+                    case 'auth_logout':
+                        return 'Logout realizado';
+                    case 'data_update':
+                        return `Atualização de dados: ${method} ${url}`;
+                    case 'data_delete':
+                        return `Exclusão de dados: ${method} ${url}`;
+                    default:
+                        return `${actionType}: ${method} ${url}`;
+                }
+            },
+            
+            // Função para copiar queries do banco de dados
+            copyDatabaseQueries() {
+                if (!this.dbQueries || this.dbQueries.length === 0) {
+                    this.showToast('Nenhuma query disponível para copiar', 'warning');
+                    return;
+                }
+                
+                // Gerar cabeçalho do relatório
+                let content = '🗄️ DATABASE QUERIES DEBUG REPORT\n';
+                content += '=====================================\n\n';
+                content += `📅 Generated: ${new Date().toLocaleString()}\n`;
+                content += `🔑 Session: ${this.sessionId}\n`;
+                content += `📊 Total Queries: ${this.dbQueries.length}\n`;
+                
+                if (this.dbStats) {
+                    content += `⏱️ Total Time: ${(this.dbStats.total_time || 0).toFixed(2)}ms\n`;
+                    content += `📈 Average Time: ${(this.dbStats.average_time || 0).toFixed(2)}ms\n`;
+                    content += `🐌 Slow Queries: ${(this.dbStats.slow_queries || 0) + (this.dbStats.very_slow_queries || 0)}\n`;
+                }
+                
+                content += '\n' + '='.repeat(50) + '\n';
+                content += 'QUERIES DETAILS\n';
+                content += '='.repeat(50) + '\n\n';
+                
+                // Adicionar cada query formatada
+                this.dbQueries.forEach((query, index) => {
+                    content += `${index + 1}. [${new Date(query.timestamp).toLocaleTimeString()}] ${query.type} Query\n`;
+                    content += `   Performance: ${query.performance} (${query.time_formatted})\n`;
+                    
+                    if (query.tables && query.tables.length > 0) {
+                        content += `   Tables: ${query.tables.join(', ')}\n`;
+                    }
+                    
+                    content += `   SQL:\n`;
+                    content += `   ${query.formatted_sql || query.sql}\n`;
+                    
+                    if (query.bindings && query.bindings.length > 0) {
+                        content += `   Bindings: ${JSON.stringify(query.bindings)}\n`;
+                    }
+                    
+                    content += '\n' + '-'.repeat(40) + '\n\n';
+                });
+                
+                content += '\n=== END OF REPORT ===\n';
+                
+                // Copiar para clipboard
+                navigator.clipboard.writeText(content).then(() => {
+                    this.showToast(`${this.dbQueries.length} queries copiadas para área de transferência!`, 'success');
+                }).catch(err => {
+                    console.error('Erro ao copiar:', err);
+                    this.showToast('Erro ao copiar queries', 'error');
+                });
+            },
+            
+            // Função para mostrar toast/notificação
+            showToast(message, type = 'success') {
+                // Implementação simples de toast
+                const toastElement = document.createElement('div');
+                toastElement.className = `debug-toast toast-${type}`;
+                toastElement.innerHTML = `
+                    <div class="toast-content">
+                        <span class="toast-icon">${type === 'success' ? '✅' : type === 'warning' ? '⚠️' : '❌'}</span>
+                        <span class="toast-message">${message}</span>
+                    </div>
+                `;
+                
+                // Adicionar estilos inline
+                toastElement.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    z-index: 10000;
+                    background: ${type === 'success' ? '#48bb78' : type === 'warning' ? '#ed8936' : '#f56565'};
+                    color: white;
+                    padding: 12px 16px;
+                    border-radius: 8px;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                    font-size: 12px;
+                    max-width: 300px;
+                    animation: slideInRight 0.3s ease-out;
+                `;
+                
+                document.body.appendChild(toastElement);
+                
+                // Remover após 3 segundos
+                setTimeout(() => {
+                    toastElement.style.animation = 'slideOutRight 0.3s ease-in';
+                    setTimeout(() => {
+                        if (document.body.contains(toastElement)) {
+                            document.body.removeChild(toastElement);
+                        }
+                    }, 300);
+                }, 3000);
             }
         }
     };
@@ -732,6 +1059,19 @@
         border-bottom: 1px solid #4a5568;
     }
     
+    .debug-filters .btn-outline-light {
+        border-color: #4a5568;
+        color: #a0aec0;
+        font-size: 12px;
+        padding: 2px 6px;
+    }
+    
+    .debug-filters .btn-outline-light:hover {
+        background-color: #4a5568;
+        border-color: #718096;
+        color: #e2e8f0;
+    }
+    
     .debug-filters select {
         background: #4a5568;
         color: #e2e8f0;
@@ -842,6 +1182,210 @@
         background: #c53030 !important;
         transform: scale(1.1) !important;
         box-shadow: 0 6px 16px rgba(229, 62, 62, 0.6) !important;
+    }
+    
+    /* Debug Tabs */
+    .debug-tabs {
+        display: flex;
+        border-bottom: 1px solid #4a5568;
+        background: #2d3748;
+    }
+    
+    .debug-tab {
+        flex: 1;
+        padding: 6px 8px;
+        background: transparent;
+        border: none;
+        color: #a0aec0;
+        font-size: 11px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .debug-tab:hover {
+        background: #4a5568;
+        color: #e2e8f0;
+    }
+    
+    .debug-tab.active {
+        background: #1a202c;
+        color: #4299e1;
+        border-bottom: 2px solid #4299e1;
+    }
+    
+    /* Database Stats */
+    .db-stats {
+        display: flex;
+        justify-content: space-between;
+        padding: 6px 12px;
+        background: #1a202c;
+        border-bottom: 1px solid #4a5568;
+        font-size: 10px;
+    }
+    
+    .db-stat-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .stat-label {
+        color: #a0aec0;
+        font-size: 9px;
+        margin-bottom: 2px;
+    }
+    
+    .stat-value {
+        color: #e2e8f0;
+        font-weight: bold;
+    }
+    
+    /* Query Actions */
+    .debug-db-actions {
+        padding: 8px;
+        max-height: 350px;
+        overflow-y: auto;
+    }
+    
+    .debug-action.query {
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .debug-action.query:hover {
+        background: #2d3748;
+        transform: translateX(2px);
+    }
+    
+    .debug-action.query.excellent { border-left-color: #48bb78; }
+    .debug-action.query.good { border-left-color: #4299e1; }
+    .debug-action.query.average { border-left-color: #ed8936; }
+    .debug-action.query.slow { border-left-color: #f56565; }
+    .debug-action.query.very_slow { border-left-color: #9f7aea; }
+    
+    .query-type {
+        font-size: 8px !important;
+    }
+    
+    .query-type.select { background: #4299e1; }
+    .query-type.insert { background: #48bb78; }
+    .query-type.update { background: #ed8936; }
+    .query-type.delete { background: #f56565; }
+    .query-type.transaction { background: #9f7aea; }
+    
+    .query-performance {
+        background: #4a5568;
+        color: #e2e8f0;
+        padding: 1px 3px;
+        border-radius: 2px;
+        font-size: 8px;
+        margin-left: 4px;
+    }
+    
+    .query-performance.excellent { background: #48bb78; }
+    .query-performance.good { background: #4299e1; }
+    .query-performance.average { background: #ed8936; }
+    .query-performance.slow { background: #f56565; }
+    .query-performance.very_slow { background: #9f7aea; }
+    
+    .query-sql {
+        font-family: 'Monaco', 'Consolas', monospace;
+        font-size: 10px;
+        color: #a0aec0;
+        margin: 2px 0;
+    }
+    
+    .query-tables {
+        margin-top: 3px;
+    }
+    
+    .table-badge {
+        display: inline-block;
+        background: #4a5568;
+        color: #e2e8f0;
+        padding: 1px 3px;
+        border-radius: 2px;
+        font-size: 8px;
+        margin-right: 2px;
+    }
+    
+    .more-queries, .no-queries, .no-actions {
+        text-align: center;
+        padding: 10px;
+        color: #a0aec0;
+        font-size: 11px;
+        font-style: italic;
+    }
+    
+    .no-actions p {
+        margin: 5px 0;
+        font-size: 12px;
+    }
+    
+    .no-actions .text-muted {
+        color: #718096 !important;
+        font-size: 11px;
+    }
+    
+    .text-danger {
+        color: #f56565 !important;
+    }
+    
+    /* Database Stats Compact */
+    .db-stats-compact {
+        font-size: 11px;
+        color: #a0aec0;
+    }
+    
+    .stat-compact {
+        color: #e2e8f0;
+    }
+    
+    .stat-compact strong {
+        color: #4299e1;
+    }
+    
+    /* Toast Animations */
+    @keyframes slideInRight {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+    
+    @keyframes slideOutRight {
+        from {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        to {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+    }
+    
+    /* Debug Toast Styles */
+    .debug-toast {
+        font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    }
+    
+    .toast-content {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .toast-icon {
+        font-size: 14px;
+    }
+    
+    .toast-message {
+        flex: 1;
+        font-weight: 500;
     }
 </style>
 @endif

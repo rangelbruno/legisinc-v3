@@ -7,6 +7,8 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
+use App\Services\DatabaseDebugService;
+use Illuminate\Support\Facades\Cache;
 
 class DebugController extends Controller
 {
@@ -30,6 +32,12 @@ class DebugController extends Controller
             'ip' => $request->ip(),
             'user_agent' => $request->userAgent()
         ]);
+        
+        // Iniciar captura de queries do banco de dados
+        if (config('app.debug')) {
+            $dbDebug = new DatabaseDebugService();
+            $dbDebug->startCapture();
+        }
 
         return response()->json([
             'status' => 'started',
@@ -39,7 +47,8 @@ class DebugController extends Controller
                 'name' => Auth::user()->name,
                 'email' => Auth::user()->email,
                 'role' => Auth::user()->roles()->first()?->name
-            ]
+            ],
+            'db_capture' => config('app.debug') ? 'enabled' : 'disabled'
         ]);
     }
 
@@ -63,6 +72,12 @@ class DebugController extends Controller
             'session_id' => $sessionId,
             'duration_seconds' => $duration
         ]);
+        
+        // Parar captura de queries do banco de dados
+        if (config('app.debug')) {
+            $dbDebug = new DatabaseDebugService();
+            $dbDebug->stopCapture();
+        }
 
         return response()->json([
             'status' => 'stopped',
@@ -75,6 +90,10 @@ class DebugController extends Controller
      */
     public function status()
     {
+        // Verificar também o status da captura de banco de dados
+        $dbCaptureActive = Cache::get('db_debug_capturing', false);
+        $dbQueriesCount = $dbCaptureActive ? count(Cache::get('db_debug_queries', [])) : 0;
+        
         return response()->json([
             'active' => session('debug_logger_active', false),
             'session_id' => session('debug_session_id'),
@@ -84,7 +103,9 @@ class DebugController extends Controller
                 'name' => Auth::user()->name,
                 'email' => Auth::user()->email,
                 'role' => Auth::user()->roles()->first()?->name
-            ] : null
+            ] : null,
+            'db_capture_active' => $dbCaptureActive,
+            'db_queries_count' => $dbQueriesCount
         ]);
     }
 
@@ -256,5 +277,53 @@ class DebugController extends Controller
         $content .= "\n=== END OF LOG ===\n";
 
         return $content;
+    }
+    
+    /**
+     * Get captured database queries
+     */
+    public function getDatabaseQueries(Request $request)
+    {
+        if (!session('debug_logger_active', false)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Debug session not active',
+                'queries' => []
+            ]);
+        }
+        
+        $dbDebug = new DatabaseDebugService();
+        $queries = $dbDebug->getCapturedQueries();
+        $stats = $dbDebug->getQueryStatistics();
+        
+        return response()->json([
+            'success' => true,
+            'queries' => $queries,
+            'statistics' => $stats,
+            'session_id' => session('debug_session_id')
+        ]);
+    }
+    
+    /**
+     * Get database statistics
+     */
+    public function getDatabaseStats(Request $request)
+    {
+        if (!session('debug_logger_active', false)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Debug session not active',
+                'stats' => []
+            ]);
+        }
+        
+        $dbDebug = new DatabaseDebugService();
+        $stats = $dbDebug->getDatabaseStats();
+        
+        return response()->json([
+            'success' => true,
+            'stats' => $stats,
+            'session_id' => session('debug_session_id')
+        ]);
     }
 }

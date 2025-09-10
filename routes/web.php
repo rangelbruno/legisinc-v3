@@ -117,6 +117,16 @@ Route::prefix('admin/system-configuration')->name('admin.system-configuration.')
         ->name('test-debug-logger')->middleware('check.permission:admin.view');
     Route::post('/clear-cache', [App\Http\Controllers\Admin\SystemConfigurationController::class, 'clearCache'])
         ->name('clear-cache')->middleware('check.permission:admin.manage');
+    
+    // Database Debug routes
+    Route::post('/database/start-capture', [App\Http\Controllers\Admin\SystemConfigurationController::class, 'startDatabaseCapture'])
+        ->name('database.start-capture')->middleware('check.permission:admin.manage');
+    Route::post('/database/stop-capture', [App\Http\Controllers\Admin\SystemConfigurationController::class, 'stopDatabaseCapture'])
+        ->name('database.stop-capture')->middleware('check.permission:admin.manage');
+    Route::get('/database/queries', [App\Http\Controllers\Admin\SystemConfigurationController::class, 'getDatabaseQueries'])
+        ->name('database.queries')->middleware('check.permission:admin.view');
+    Route::get('/database/stats', [App\Http\Controllers\Admin\SystemConfigurationController::class, 'getDatabaseStats'])
+        ->name('database.stats')->middleware('check.permission:admin.view');
 });
 
 Route::get('/home', function () {
@@ -1296,6 +1306,44 @@ Route::prefix('admin')->middleware(['auth', 'check.screen.permission'])->group(f
     // Rotas para Padrões Legais
     Route::post('templates/{tipo}/gerar-padroes-legais', [App\Http\Controllers\TemplateController::class, 'gerarComPadroesLegais'])
         ->name('templates.gerar-padroes-legais');
+
+});
+
+// 🔄 ROTAS DE SISTEMA DE WORKFLOWS MODULARES (apenas middleware auth)
+Route::prefix('admin/workflows')->name('admin.workflows.')->middleware('auth')->group(function () {
+    Route::get('/', [App\Http\Controllers\Admin\WorkflowController::class, 'index'])
+        ->name('index');
+    Route::get('/create', [App\Http\Controllers\Admin\WorkflowController::class, 'create'])
+        ->name('create');
+    Route::post('/', [App\Http\Controllers\Admin\WorkflowController::class, 'store'])
+        ->name('store');
+    Route::get('/{workflow}', [App\Http\Controllers\Admin\WorkflowController::class, 'show'])
+        ->name('show');
+    Route::get('/{workflow}/edit', [App\Http\Controllers\Admin\WorkflowController::class, 'edit'])
+        ->name('edit');
+    Route::put('/{workflow}', [App\Http\Controllers\Admin\WorkflowController::class, 'update'])
+        ->name('update');
+    Route::delete('/{workflow}', [App\Http\Controllers\Admin\WorkflowController::class, 'destroy'])
+        ->name('destroy');
+    
+    // Ações especiais
+    Route::patch('/{workflow}/toggle', [App\Http\Controllers\Admin\WorkflowController::class, 'toggle'])
+        ->name('toggle');
+    Route::patch('/{workflow}/set-default', [App\Http\Controllers\Admin\WorkflowController::class, 'setDefault'])
+        ->name('set-default');
+    Route::post('/{workflow}/duplicate', [App\Http\Controllers\Admin\WorkflowController::class, 'duplicate'])
+        ->name('duplicate');
+    
+    // Designer visual
+    Route::get('/designer/new', [App\Http\Controllers\Admin\WorkflowController::class, 'designer'])
+        ->name('designer.new');
+    Route::get('/{workflow}/designer', [App\Http\Controllers\Admin\WorkflowController::class, 'designer'])
+        ->name('designer.edit');
+    Route::get('/{workflow}/designer-data', [App\Http\Controllers\Admin\WorkflowController::class, 'designerData'])
+        ->name('designer.data');
+});
+
+Route::prefix('admin')->middleware(['auth', 'check.screen.permission'])->group(function () {
     Route::get('templates/{tipo}/validar', [App\Http\Controllers\TemplateController::class, 'validarTemplate'])
         ->name('templates.validar');
 
@@ -1459,6 +1507,9 @@ Route::prefix('proposicoes/{proposicao}/assinatura-digital')->name('proposicoes.
     Route::get('/status', [App\Http\Controllers\AssinaturaDigitalController::class, 'verificarStatus'])->name('status');
 });
 
+// Rota de teste JSON para debug
+Route::post('/teste-json', [App\Http\Controllers\AssinaturaDigitalController::class, 'testeJson'])->middleware('auth');
+
 // ===== ROTA TEMPORÁRIA PARA PDF DE PROPOSIÇÕES PROTOCOLADAS (SEM AUTENTICAÇÃO) =====
 Route::get('/proposicoes/{proposicao}/pdf-publico', [\App\Http\Controllers\ProposicaoController::class, 'servePDFPublico'])
     ->name('proposicoes.pdf.publico')
@@ -1477,6 +1528,10 @@ Route::middleware(['auth'])->prefix('debug')->name('debug.')->group(function () 
     Route::get('/logs', [DebugController::class, 'getLogs'])->name('logs');
     Route::post('/export', [DebugController::class, 'exportLogs'])->name('export');
     Route::delete('/cleanup', [DebugController::class, 'cleanup'])->name('cleanup');
+    
+    // Database debug routes
+    Route::get('/database/queries', [DebugController::class, 'getDatabaseQueries'])->name('database.queries');
+    Route::get('/database/stats', [DebugController::class, 'getDatabaseStats'])->name('database.stats');
 });
 
 // Rota pública para servir arquivos de debug exportados
