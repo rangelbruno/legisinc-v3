@@ -27,6 +27,7 @@ class DatabaseSeeder extends Seeder
         // PRESERVAÇÃO INTELIGENTE: Sistema automático v2.0 que detecta e preserva melhorias
         $this->call([
             SmartPreservationSeeder::class,
+            PreservarOtimizacoesPerformanceSeeder::class, // Preservar otimizações v2.1
             PreservarDadosCriticosSeeder::class,
         ]);
 
@@ -130,9 +131,10 @@ class DatabaseSeeder extends Seeder
             UIButtonsFixSeeder::class,
         ]);
 
-        // FINAL: Limpeza de código debug
+        // FINAL: Limpeza de código debug e correção de permissões
         $this->call([
             LimpezaCodigoDebugSeeder::class,
+            CorrigirPermissoesStorageSeeder::class, // Garantir permissões corretas
         ]);
 
         // Correção do botão Assinar Documento

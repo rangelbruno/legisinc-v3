@@ -219,14 +219,13 @@
                 <!--end::Content-->
                 
                 <!--begin::Debug Logger Component-->
-                @if(App\Helpers\DebugHelper::isDebugLoggerActive())
+                {{-- Debug logger será carregado pelo include no final se necessário --}}
                 <div id="debug-logger"></div>
                 
                 <!-- Fallback Debug Button (caso Vue.js não carregue) -->
                 <div id="debug-fallback" class="debug-toggle-fallback" onclick="initializeDebugLogger()" style="display: block;">
                     🔧
                 </div>
-                @endif
                 <!--end::Debug Logger Component-->
                 
                 <!--begin::Footer-->

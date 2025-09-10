@@ -3984,9 +3984,14 @@ class ProposicaoAssinaturaController extends Controller implements HasMiddleware
                 ], 403);
             }
 
+            // OTIMIZAÇÃO: Carregar user com roles uma única vez para evitar N+1 queries
+            $user = Auth::user()->load('roles');
+            $userId = Auth::id();
+            
             // Verificar se o usuário tem permissão (deve ser o autor ou ter permissão administrativa)
             // Usuários do Legislativo NÃO podem excluir proposições
-            if (Auth::id() !== $proposicao->autor_id && ! Auth::user()->hasRole(['ADMIN'])) {
+            $isAdmin = $user->roles->contains('name', 'ADMIN');
+            if ($userId !== $proposicao->autor_id && !$isAdmin) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Você não tem permissão para excluir esta proposição. Apenas o autor ou administradores podem excluir proposições.',
@@ -4006,9 +4011,19 @@ class ProposicaoAssinaturaController extends Controller implements HasMiddleware
             if ($proposicao->arquivo_pdf_path) {
                 $pdfPath = storage_path('app/'.$proposicao->arquivo_pdf_path);
                 if (file_exists($pdfPath)) {
-                    unlink($pdfPath);
-                    $arquivosExcluidos[] = 'PDF de assinatura';
-                    Log::info("PDF de assinatura excluído: {$pdfPath}");
+                    try {
+                        if (unlink($pdfPath)) {
+                            $arquivosExcluidos[] = 'PDF de assinatura';
+                            Log::info("PDF de assinatura excluído: {$pdfPath}");
+                        } else {
+                            Log::warning("Falha ao excluir PDF de assinatura: {$pdfPath}");
+                        }
+                    } catch (\Exception $e) {
+                        Log::error("Erro ao excluir PDF de assinatura: {$pdfPath}", [
+                            'error' => $e->getMessage(),
+                            'proposicao_id' => $proposicao->id
+                        ]);
+                    }
                 }
             }
 
@@ -4022,10 +4037,20 @@ class ProposicaoAssinaturaController extends Controller implements HasMiddleware
 
                 foreach ($caminhosPossiveisArquivo as $caminho) {
                     if (file_exists($caminho)) {
-                        unlink($caminho);
-                        $arquivosExcluidos[] = 'Documento editado ('.pathinfo($caminho, PATHINFO_EXTENSION).')';
-                        Log::info("Arquivo editado excluído: {$caminho}");
-                        break;
+                        try {
+                            if (unlink($caminho)) {
+                                $arquivosExcluidos[] = 'Documento editado ('.pathinfo($caminho, PATHINFO_EXTENSION).')';
+                                Log::info("Arquivo editado excluído: {$caminho}");
+                                break;
+                            } else {
+                                Log::warning("Falha ao excluir arquivo editado: {$caminho}");
+                            }
+                        } catch (\Exception $e) {
+                            Log::error("Erro ao excluir arquivo editado: {$caminho}", [
+                                'error' => $e->getMessage(),
+                                'proposicao_id' => $proposicao->id
+                            ]);
+                        }
                     }
                 }
             }
@@ -4055,9 +4080,19 @@ class ProposicaoAssinaturaController extends Controller implements HasMiddleware
                 $arquivos = glob($padrao);
                 foreach ($arquivos as $arquivo) {
                     if (is_file($arquivo)) {
-                        unlink($arquivo);
-                        $arquivosExcluidos[] = basename($arquivo);
-                        Log::info("Arquivo relacionado excluído: {$arquivo}");
+                        try {
+                            if (unlink($arquivo)) {
+                                $arquivosExcluidos[] = basename($arquivo);
+                                Log::info("Arquivo relacionado excluído: {$arquivo}");
+                            } else {
+                                Log::warning("Falha ao excluir arquivo relacionado: {$arquivo}");
+                            }
+                        } catch (\Exception $e) {
+                            Log::error("Erro ao excluir arquivo relacionado: {$arquivo}", [
+                                'error' => $e->getMessage(),
+                                'proposicao_id' => $proposicao->id
+                            ]);
+                        }
                     }
                 }
             }
@@ -4091,12 +4126,12 @@ class ProposicaoAssinaturaController extends Controller implements HasMiddleware
                 $mensagem .= " {$pastasLimpas} diretório(s) limpo(s).";
             }
 
-            Log::info("Proposição {$proposicaoInfo['id']} excluída permanentemente por usuário ".Auth::id(), [
+            Log::info("Proposição {$proposicaoInfo['id']} excluída permanentemente por usuário {$userId}", [
                 'proposicao_info' => $proposicaoInfo,
                 'arquivos_excluidos' => $arquivosExcluidos,
                 'pastas_limpas' => $pastasLimpas,
-                'usuario_id' => Auth::id(),
-                'usuario_nome' => Auth::user()->name ?? 'N/A',
+                'usuario_id' => $userId,
+                'usuario_nome' => $user->name ?? 'N/A',
             ]);
 
             return response()->json([
