@@ -286,6 +286,13 @@ class ParlamentarController extends Controller
      */
     public function update(Request $request, int $id): RedirectResponse
     {
+        // Debug: verificar se arquivo foi recebido
+        \Log::info('ParlamentarController@update - Request recebido', [
+            'has_certificado' => $request->hasFile('certificado_digital'),
+            'files' => $request->allFiles(),
+            'certificado_senha' => $request->has('certificado_senha') ? 'sim' : 'não'
+        ]);
+        
         $validatedData = $request->validate([
             'nome' => 'required|string|max:255',
             'nome_politico' => 'nullable|string|max:255',
@@ -335,12 +342,18 @@ class ParlamentarController extends Controller
             // Processar certificado digital se fornecido
             try {
                 if ($request->hasFile('certificado_digital')) {
+                    \Log::info('Processando certificado digital', [
+                        'parlamentar_id' => $id,
+                        'arquivo_valido' => $request->file('certificado_digital')->isValid(),
+                        'tamanho' => $request->file('certificado_digital')->getSize()
+                    ]);
                     $this->processarCertificadoDigital($request, $id);
                 }
             } catch (\Exception $e) {
                 \Log::warning('Erro ao processar certificado digital do parlamentar', [
                     'parlamentar_id' => $id,
-                    'error' => $e->getMessage()
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
                 ]);
                 // Não falhar a atualização do parlamentar por causa do certificado
             }
@@ -766,16 +779,14 @@ class ParlamentarController extends Controller
             auth()->login($usuario);
             
             try {
-                // Salvar arquivo temporário usando move() em vez de store()
+                // Usar diretório temporário do sistema em vez do storage
                 $nomeTemp = 'cert_temp_' . time() . '_' . uniqid() . '.pfx';
-                $caminhoCompletoTemp = storage_path('app/temp/' . $nomeTemp);
+                $caminhoCompletoTemp = sys_get_temp_dir() . '/' . $nomeTemp;
                 
-                // Mover arquivo diretamente
-                if (!$arquivo->move(storage_path('app/temp'), $nomeTemp)) {
-                    throw new \Exception('Erro ao salvar arquivo temporário para validação.');
-                }
+                // Salvar conteúdo do arquivo no diretório temporário do sistema
+                file_put_contents($caminhoCompletoTemp, file_get_contents($arquivo->getRealPath()));
                 
-                $caminhoTemp = 'temp/' . $nomeTemp;
+                $caminhoTemp = 'temp/' . $nomeTemp; // mantido para compatibilidade de log
                 
                 // Debug: log do processo de salvamento
                 \Log::info('ParlamentarController: Salvando arquivo temporário', [
@@ -797,7 +808,7 @@ class ParlamentarController extends Controller
                 $validacao = $validarMethod->invoke($certificadoController, $caminhoCompletoTemp, $senha);
                 
                 if (!$validacao['valido']) {
-                    Storage::delete($caminhoTemp);
+                    @unlink($caminhoCompletoTemp); // Deletar arquivo temporário
                     throw new \Exception('Certificado inválido: ' . $validacao['erro']);
                 }
                 
@@ -819,8 +830,14 @@ class ParlamentarController extends Controller
                     mkdir($diretorioDestino, 0755, true);
                 }
                 
-                // Mover arquivo fisicamente
-                rename($caminhoCompletoTemp, $destino);
+                // Copiar arquivo para destino final (mais seguro que rename entre filesystems)
+                if (!copy($caminhoCompletoTemp, $destino)) {
+                    @unlink($caminhoCompletoTemp);
+                    throw new \Exception('Erro ao mover certificado para destino final');
+                }
+                
+                // Deletar arquivo temporário
+                @unlink($caminhoCompletoTemp);
                 
                 // Atualizar dados do usuário
                 $usuario->update([

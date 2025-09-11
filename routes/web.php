@@ -1501,6 +1501,7 @@ Route::get('/consulta/proposicao/{id}/pdf', [\App\Http\Controllers\ProposicaoCon
 // ===== ASSINATURA DIGITAL ===== (FORA do grupo proposicoes para evitar conflito de middlewares)
 Route::prefix('proposicoes/{proposicao}/assinatura-digital')->name('proposicoes.assinatura-digital.')->middleware(['auth', 'check.assinatura.permission'])->group(function () {
     Route::get('/', [App\Http\Controllers\AssinaturaDigitalController::class, 'mostrarFormulario'])->name('formulario');
+    Route::get('/dados', [App\Http\Controllers\AssinaturaDigitalController::class, 'dados'])->name('dados');
     Route::post('/processar', [App\Http\Controllers\AssinaturaDigitalController::class, 'processarAssinatura'])->name('processar');
     Route::get('/visualizar', [App\Http\Controllers\AssinaturaDigitalController::class, 'visualizarPDFAssinado'])->name('visualizar');
     Route::get('/download', [App\Http\Controllers\AssinaturaDigitalController::class, 'downloadPDFAssinado'])->name('download');

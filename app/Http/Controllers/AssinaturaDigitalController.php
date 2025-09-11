@@ -57,16 +57,6 @@ class AssinaturaDigitalController extends Controller
         $certificadoValido = $user->certificadoDigitalValido();
         $senhaSalva = $user->certificado_digital_senha_salva ?? false;
         
-        // Debug para identificar problema
-        Log::info('Debug AssinaturaDigital - Verificando certificado', [
-            'user_id' => $user->id,
-            'certificadoCadastrado' => $certificadoCadastrado,
-            'certificadoValido' => $certificadoValido,
-            'senhaSalva' => $senhaSalva,
-            'cn' => $user->certificado_digital_cn,
-            'validade' => $user->certificado_digital_validade,
-            'ativo' => $user->certificado_digital_ativo
-        ]);
         
         // Dados do certificado se existir
         $dadosCertificado = null;
@@ -81,15 +71,41 @@ class AssinaturaDigitalController extends Controller
         }
 
         // Usar view Vue.js otimizada
-        return view('assinatura.formulario-vue', compact(
-            'proposicao', 
-            'tiposCertificado', 
-            'pdfPath',
-            'certificadoCadastrado',
-            'certificadoValido',
-            'senhaSalva',
-            'dadosCertificado'
-        ));
+        return view('proposicoes.assinatura.assinar-vue', [
+            'proposicaoId' => $proposicao->id,
+        ]);
+    }
+
+    /**
+     * Endpoint de dados para o Vue
+     */
+    public function dados(Request $request, Proposicao $proposicao)
+    {
+        /** @var \App\Models\User $user */
+        $user = $request->user();
+
+        return response()->json([
+            'success' => true,
+            'proposicaoId' => $proposicao->id,
+            'proposicao' => [
+                'id' => $proposicao->id,
+                'tipo' => $proposicao->tipo,
+                'numero_protocolo' => $proposicao->numero_protocolo,
+                'titulo' => $proposicao->titulo,
+                'ementa' => $proposicao->ementa,
+                'status' => $proposicao->status,
+                'created_at' => $proposicao->created_at,
+                'updated_at' => $proposicao->updated_at,
+            ],
+            'usuario' => [
+                'id' => $user->id,
+                'nome' => $user->name,
+                'email' => $user->email,
+            ],
+            'certificado' => $user->certificadoResumo(), // null se não houver
+            'temCertificado' => $user->temCertificadoDigital(),
+            'certValido' => $user->certificadoDigitalValido(),
+        ]);
     }
 
     /**
@@ -97,46 +113,49 @@ class AssinaturaDigitalController extends Controller
      */
     public function processarAssinatura(Request $request, Proposicao $proposicao)
     {
-        // Log para debug da requisição
-        Log::info('AssinaturaDigitalController - processarAssinatura iniciado', [
-            'proposicao_id' => $proposicao->id,
-            'request_ajax' => $request->ajax(),
-            'request_expects_json' => $request->expectsJson(),
-            'request_headers' => $request->headers->all(),
-            'request_method' => $request->method(),
-            'request_content_type' => $request->header('Content-Type'),
-            'request_accept' => $request->header('Accept')
-        ]);
-        
         try {
-            // Verificação de permissões já é feita pelo middleware check.assinatura.permission
+            // FORÇA SEMPRE JSON - Se não espera JSON, retorna erro
+            if (!$request->expectsJson() && !$request->ajax()) {
+                return response()->json(['success' => false, 'message' => 'Endpoint aceita apenas requisições JSON'], 406);
+            }
+
+            // Log para debug da requisição
+            Log::info('AssinaturaDigitalController - processarAssinatura iniciado', [
+                'proposicao_id' => $proposicao->id,
+                'request_ajax' => $request->ajax(),
+                'request_expects_json' => $request->expectsJson(),
+                'request_accept' => $request->header('Accept')
+            ]);
             
             $user = Auth::user();
-            $certificadoCadastrado = $user->temCertificadoDigital();
             
-            // Se há certificado cadastrado, usar automático; senão, validar formulário tradicional
-            if ($certificadoCadastrado && $request->input('usar_certificado_cadastrado') === '1') {
-                // Usar certificado cadastrado - validação específica
-                $request->validate([
-                    'senha_certificado' => 'nullable|string|min:1'
-                ]);
-            } else {
-                // Validar dados da requisição tradicional
-                $request->validate([
-                    'tipo_certificado' => 'required|in:A1,A3,PFX,SIMULADO',
-                    'senha' => 'required_if:tipo_certificado,A1,A3|nullable|string|min:4',
-                    'senha_pfx' => 'nullable|string|min:1',
-                    'senha_certificado' => 'nullable|string|min:1'
-                ]);
+            // Verificar se usuário tem certificado cadastrado
+            if (!$user->temCertificadoDigital()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Nenhum certificado digital cadastrado para este usuário.'
+                ], 422);
             }
+            
+            // Verificar se certificado está válido
+            if (!$user->certificadoDigitalValido()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'O certificado digital está expirado ou inválido.'
+                ], 422);
+            }
+            
+            // Validar entrada específica para certificado cadastrado
+            $request->validate([
+                'usar_certificado_cadastrado' => 'nullable|boolean',
+                'senha_certificado' => 'nullable|string|min:1'
+            ]);
             
             // Processar assinatura com certificado cadastrado
-            if ($certificadoCadastrado && $request->input('usar_certificado_cadastrado') === '1') {
-                return $this->processarAssinaturaCertificadoCadastrado($request, $proposicao, $user);
-            }
+            return $this->processarAssinaturaCertificadoCadastrado($request, $proposicao, $user);
             
-            // Validação customizada para PFX - deve ter pelo menos um dos campos de senha
-            if ($request->tipo_certificado === 'PFX') {
+            // Validação customizada para PFX - deve ter pelo menos um dos campos de senha (APENAS PARA UPLOADS)
+            if ($request->tipo_certificado === 'PFX' && !$request->input('usar_certificado_cadastrado')) {
                 if (empty($request->senha_pfx) && empty($request->senha_certificado)) {
                     return back()->withErrors(['senha_certificado' => 'Senha é obrigatória para certificados PFX.']);
                 }
@@ -386,15 +405,11 @@ class AssinaturaDigitalController extends Controller
                 'trace' => $e->getTraceAsString()
             ]);
 
-            // Retornar JSON para requisições AJAX
-            if ($request->expectsJson() || $request->ajax()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Erro ao processar assinatura: ' . $e->getMessage()
-                ], 422);
-            }
-
-            return back()->withErrors(['assinatura' => 'Erro ao processar assinatura: ' . $e->getMessage()]);
+            // SEMPRE retornar JSON - nunca HTML
+            return response()->json([
+                'success' => false,
+                'message' => 'Erro ao processar assinatura: ' . $e->getMessage()
+            ], 500);
         }
     }
 
@@ -916,6 +931,16 @@ class AssinaturaDigitalController extends Controller
      */
     private function processarAssinaturaCertificadoCadastrado(Request $request, Proposicao $proposicao, $user)
     {
+        Log::info('processarAssinaturaCertificadoCadastrado iniciado', [
+            'proposicao_id' => $proposicao->id,
+            'user_id' => $user->id,
+            'user_email' => $user->email,
+            'request_ajax' => $request->ajax(),
+            'request_expects_json' => $request->expectsJson(),
+            'usar_certificado_cadastrado' => $request->input('usar_certificado_cadastrado'),
+            'senha_certificado_presente' => !empty($request->input('senha_certificado'))
+        ]);
+        
         try {
             // Verificar se o certificado está válido
             if (!$user->certificadoDigitalValido()) {
@@ -930,35 +955,97 @@ class AssinaturaDigitalController extends Controller
             
             $senhaCertificado = null;
             
+            // Obter caminho do certificado primeiro
+            $caminhoCompleto = $user->getCaminhoCompletoCertificado();
+            
             // Verificar se a senha está salva ou foi fornecida
+            $senhaCertificado = null;
+            
+            // Tentar usar senha salva primeiro
             if ($user->certificado_digital_senha_salva) {
-                // Usar senha salva
-                $senhaCertificado = $user->getSenhaCertificado();
-                if (!$senhaCertificado) {
-                    if ($request->expectsJson() || $request->ajax()) {
+                try {
+                    $senhaTestar = $user->getSenhaCertificado();
+                    if (!$senhaTestar) {
+                        // Senha salva é NULL - remover flag e exigir nova senha
+                        $user->removerSenhaCertificado();
+                        
                         return response()->json([
                             'success' => false,
-                            'message' => 'Erro ao recuperar senha salva do certificado.'
+                            'code' => 'senha_salva_nula',
+                            'message' => 'Sua senha salva foi perdida. Por favor, informe a senha novamente.'
                         ], 422);
                     }
-                    return back()->withErrors(['senha' => 'Erro ao recuperar senha salva do certificado.']);
-                }
-            } else {
-                // Usar senha fornecida pelo usuário
-                $senhaCertificado = $request->input('senha_certificado');
-                if (!$senhaCertificado) {
-                    if ($request->expectsJson() || $request->ajax()) {
+                    
+                    // Validar se a senha descriptografada funciona com o certificado
+                    $caminhoCompletoCertificado = $user->getCaminhoCompletoCertificado();
+                    if (!$this->validarSenhaPFX($caminhoCompletoCertificado, $senhaTestar)) {
+                        // Senha salva não confere - remover e exigir nova
+                        $user->removerSenhaCertificado();
+                        
                         return response()->json([
                             'success' => false,
-                            'message' => 'Senha do certificado é obrigatória.'
+                            'code' => 'senha_salva_invalida', 
+                            'message' => 'Sua senha salva não confere com o certificado. Por favor, informe a senha correta.'
                         ], 422);
                     }
-                    return back()->withErrors(['senha_certificado' => 'Senha do certificado é obrigatória.']);
+                    
+                    $senhaCertificado = $senhaTestar;
+                    
+                } catch (\Throwable $e) {
+                    // Erro de descriptografia - APP_KEY mudou ou dados corrompidos
+                    $user->removerSenhaCertificado();
+                    
+                    Log::warning('Erro ao descriptografar senha do certificado', [
+                        'user_id' => $user->id,
+                        'error' => $e->getMessage(),
+                        'certificado_path' => $user->certificado_digital_path
+                    ]);
+                    
+                    return response()->json([
+                        'success' => false,
+                        'code' => 'senha_salva_corrompida',
+                        'message' => 'Não foi possível recuperar sua senha salva. Por favor, informe a senha novamente.'
+                    ], 422);
                 }
             }
             
-            // Obter caminho do certificado
-            $caminhoCompleto = $user->getCaminhoCompletoCertificado();
+            // Se chegou aqui sem senha, exigir entrada manual
+            if (!$senhaCertificado) {
+                $senhaInput = (string) $request->input('senha_certificado', '');
+                if ($senhaInput === '') {
+                    return response()->json([
+                        'success' => false,
+                        'code' => 'senha_obrigatoria',
+                        'message' => 'Por favor, informe a senha do certificado.'
+                    ], 422);
+                }
+                
+                // Validar senha fornecida
+                $caminhoCompletoCertificado = $user->getCaminhoCompletoCertificado();
+                if (!$this->validarSenhaPFX($caminhoCompletoCertificado, $senhaInput)) {
+                    return response()->json([
+                        'success' => false,
+                        'code' => 'senha_invalida',
+                        'message' => 'Senha do certificado incorreta.'
+                    ], 422);
+                }
+                
+                // Opcionalmente salvar a senha para próximas assinaturas (padrão: sim)
+                if ($request->boolean('salvar_senha', true)) {
+                    try {
+                        $user->salvarSenhaCertificado($senhaInput);
+                        Log::info('Senha do certificado salva com sucesso', ['user_id' => $user->id]);
+                    } catch (\Exception $e) {
+                        Log::warning('Falha ao salvar senha do certificado', [
+                            'user_id' => $user->id,
+                            'error' => $e->getMessage()
+                        ]);
+                        // Não falha a assinatura se não conseguir salvar a senha
+                    }
+                }
+                
+                $senhaCertificado = $senhaInput;
+            }
             
             // Log para debug
             Log::info('Verificando certificado cadastrado', [
@@ -984,16 +1071,6 @@ class AssinaturaDigitalController extends Controller
                 return back()->withErrors(['certificado' => 'Arquivo do certificado não encontrado.']);
             }
             
-            // Validar senha do certificado antes de prosseguir
-            if (!$this->validarSenhaPFX($caminhoCompleto, $senhaCertificado)) {
-                if ($request->expectsJson() || $request->ajax()) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Senha do certificado incorreta.'
-                    ], 422);
-                }
-                return back()->withErrors(['senha_certificado' => 'Senha do certificado incorreta.']);
-            }
             
             // Processar assinatura usando o serviço
             $dadosAssinatura = [

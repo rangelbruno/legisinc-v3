@@ -220,7 +220,7 @@
                                             </i>Tipo:
                                         </div>
                                         <div class="fw-bold text-end">
-                                            <span class="badge badge-light-primary">@{{ proposicao.tipo }}</span>
+                                            <span class="badge badge-light-primary">@{{ proposicao?.tipo || 'N/A' }}</span>
                                         </div>
                                     </div>
                                     
@@ -232,7 +232,7 @@
                                                 <span class="path3"></span>
                                             </i>Número:
                                         </div>
-                                        <div class="fw-bold text-end">@{{ proposicao.numero_protocolo || 'Aguardando' }}</div>
+                                        <div class="fw-bold text-end">@{{ proposicao?.numero_protocolo || 'Aguardando' }}</div>
                                     </div>
                                     
                                     <div class="d-flex align-items-center justify-content-between mb-5">
@@ -242,7 +242,7 @@
                                                 <span class="path2"></span>
                                             </i>Data Criação:
                                         </div>
-                                        <div class="fw-bold text-end">@{{ formatDate(proposicao.created_at) }}</div>
+                                        <div class="fw-bold text-end">@{{ formatDate(proposicao?.created_at) }}</div>
                                     </div>
                                     
                                     <div class="d-flex align-items-center justify-content-between mb-5">
@@ -253,8 +253,8 @@
                                             </i>Status:
                                         </div>
                                         <div class="fw-bold text-end">
-                                            <span :class="getStatusBadgeClass(proposicao.status)">
-                                                @{{ getStatusLabel(proposicao.status) }}
+                                            <span :class="getStatusBadgeClass(proposicao?.status)">
+                                                @{{ getStatusLabel(proposicao?.status) }}
                                             </span>
                                         </div>
                                     </div>
@@ -264,25 +264,25 @@
                                 
                                 <div class="mb-5">
                                     <label class="fs-6 fw-semibold mb-2 text-gray-600">Título:</label>
-                                    <div class="fw-bold text-gray-800">@{{ proposicao.titulo || 'Sem título' }}</div>
+                                    <div class="fw-bold text-gray-800">@{{ proposicao?.titulo || 'Sem título' }}</div>
                                 </div>
                                 
                                 <div class="mb-5">
                                     <label class="fs-6 fw-semibold mb-2 text-gray-600">Ementa:</label>
-                                    <div class="fw-semibold text-gray-700 lh-lg">@{{ proposicao.ementa }}</div>
+                                    <div class="fw-semibold text-gray-700 lh-lg">@{{ proposicao?.ementa || 'Sem ementa' }}</div>
                                 </div>
                                 
-                                <div v-if="proposicao.revisor" class="mb-5">
+                                <div v-if="proposicao?.revisor" class="mb-5">
                                     <label class="fs-6 fw-semibold mb-2 text-gray-600">Aprovado por:</label>
                                     <div class="d-flex align-items-center">
                                         <div class="symbol symbol-35px me-3">
                                             <div class="symbol-label bg-light-success text-success fs-8 fw-bold">
-                                                @{{ getInitials(proposicao.revisor.name) }}
+                                                @{{ getInitials(proposicao?.revisor?.name) }}
                                             </div>
                                         </div>
                                         <div class="d-flex flex-column">
-                                            <div class="fw-bold text-gray-800">@{{ proposicao.revisor.name }}</div>
-                                            <div class="fs-7 text-muted">@{{ formatDate(proposicao.updated_at) }}</div>
+                                            <div class="fw-bold text-gray-800">@{{ proposicao?.revisor?.name }}</div>
+                                            <div class="fs-7 text-muted">@{{ formatDate(proposicao?.updated_at) }}</div>
                                         </div>
                                     </div>
                                 </div>
@@ -427,8 +427,114 @@
                                 
                                 <!-- Formulário de Assinatura -->
                                 <div v-show="confirmacaoLeitura" class="assinatura-form">
+                                    <!-- Loading -->
+                                    <div v-if="carregando" class="alert alert-info d-flex align-items-center p-5">
+                                        <i class="ki-duotone ki-loading fs-2hx text-info me-4">
+                                            <span class="path1"></span>
+                                            <span class="path2"></span>
+                                        </i>
+                                        <div class="text-info fw-semibold fs-6">Carregando dados…</div>
+                                    </div>
+
+                                    <!-- Certificado Cadastrado (se existir) -->
+                                    <div v-else-if="dados?.temCertificado" class="mb-8">
+                                        <div class="card border border-success">
+                                            <div class="card-body p-5">
+                                                <div class="d-flex align-items-center mb-4">
+                                                    <i class="ki-duotone ki-shield-tick fs-2hx text-success me-4">
+                                                        <span class="path1"></span>
+                                                        <span class="path2"></span>
+                                                        <span class="path3"></span>
+                                                    </i>
+                                                    <div class="flex-grow-1">
+                                                        <h5 class="mb-2 text-success">Certificado Digital Cadastrado</h5>
+                                                        <ul class="list-unstyled mb-0">
+                                                            <li><strong>Arquivo:</strong> @{{ dados.certificado.nome_arquivo }}</li>
+                                                            <li><strong>CN:</strong> @{{ dados.certificado.cn }}</li>
+                                                            <li><strong>Validade:</strong> @{{ dados.certificado.validade }}</li>
+                                                            <li><strong>Senha salva:</strong> @{{ dados.certificado.senhaSalva ? 'Sim' : 'Não' }}</li>
+                                                            <li><strong>Status:</strong> 
+                                                                <span :class="dados.certValido ? 'badge badge-success' : 'badge badge-danger'">
+                                                                    @{{ dados.certValido ? 'Válido' : 'Expirado/Inválido' }}
+                                                                </span>
+                                                            </li>
+                                                        </ul>
+                                                    </div>
+                                                </div>
+
+                                                <button 
+                                                    type="button" 
+                                                    class="btn btn-primary"
+                                                    :disabled="busy || !dados.certValido"
+                                                    @click="usarCertificadoCadastrado">
+                                                    <i class="ki-duotone ki-check fs-4 me-1">
+                                                        <span class="path1"></span>
+                                                        <span class="path2"></span>
+                                                    </i>
+                                                    Usar Este Certificado
+                                                </button>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Campo de senha (renderizado quando necessário) -->
+                                        <div v-if="mostrarCampoSenha" class="mt-4">
+                                            <div class="card">
+                                                <div class="card-body">
+                                                    <label class="form-label">Senha do certificado*</label>
+                                                    <input 
+                                                        type="password"
+                                                        autocomplete="new-password"
+                                                        class="form-control form-control-solid"
+                                                        v-model.trim="senhaManual"
+                                                        placeholder="Digite a senha do seu certificado"
+                                                        @keyup.enter="assinarComSenha">
+                                                    <button 
+                                                        class="btn btn-success mt-3" 
+                                                        :disabled="busy || !senhaManual.trim()" 
+                                                        @click="assinarComSenha">
+                                                        <i class="ki-duotone ki-check fs-4 me-1">
+                                                            <span class="path1"></span>
+                                                            <span class="path2"></span>
+                                                        </i>
+                                                        Assinar Digitalmente
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Botão para usar outro certificado -->
+                                        <div v-if="!mostrarCampoSenha" class="text-center mt-4">
+                                            <button 
+                                                type="button" 
+                                                class="btn btn-light btn-sm"
+                                                @click="certificadoSelecionado = null">
+                                                <i class="ki-duotone ki-arrow-left fs-5 me-1"></i>
+                                                Usar Outro Certificado
+                                            </button>
+                                        </div>
+
+                                        <div v-if="certificadoSelecionado === null && !mostrarCampoSenha" class="separator separator-dashed my-6"></div>
+                                        
+                                        <div v-if="certificadoSelecionado === null && !mostrarCampoSenha" class="text-center text-muted">
+                                            <small>Ou selecione outro certificado abaixo</small>
+                                        </div>
+                                    </div>
+
+                                    <!-- Sem certificado cadastrado -->
+                                    <div v-else-if="!carregando" class="alert alert-warning d-flex align-items-center p-5 mb-8">
+                                        <i class="ki-duotone ki-information-5 fs-2hx text-warning me-4">
+                                            <span class="path1"></span>
+                                            <span class="path2"></span>
+                                            <span class="path3"></span>
+                                        </i>
+                                        <div>
+                                            <h5 class="text-warning mb-1">Nenhum certificado cadastrado</h5>
+                                            <p class="mb-0">Faça o upload do seu certificado .pfx para continuar.</p>
+                                        </div>
+                                    </div>
+                                    
                                     <!-- Seleção do Tipo de Certificado -->
-                                    <div class="mb-8">
+                                    <div v-if="(!dados?.temCertificado || certificadoSelecionado !== null) && !mostrarCampoSenha" class="mb-8">
                                         <label class="required fs-6 fw-semibold mb-2">Tipo de Certificado Digital</label>
                                         <div class="row g-4">
                                             <div 
@@ -502,7 +608,7 @@
                                     </div>
                                     
                                     <!-- Campo de Senha -->
-                                    <div v-if="certificadoSelecionado" class="mb-8">
+                                    <div v-if="certificadoSelecionado && certificadoSelecionado !== 'cadastrado'" class="mb-8">
                                         <label class="required fs-6 fw-semibold mb-2">Senha do Certificado</label>
                                         <input 
                                             type="password" 
@@ -630,9 +736,12 @@ const { createApp } = Vue;
 createApp({
     data() {
         return {
-            proposicao: @json($proposicao ?? null),
-            userRole: '{{ strtoupper(auth()->user()->getRoleNames()->first() ?? "guest") }}',
-            userId: {{ auth()->user()->id ?? 0 }},
+            proposicaoId: {{ $proposicaoId ?? 0 }},
+            dados: null,
+            carregando: true,
+            busy: false,
+            senhaManual: '',
+            mostrarCampoSenha: false,
             csrfToken: '{{ csrf_token() }}',
             
             // PDF states
@@ -643,7 +752,6 @@ createApp({
             // Assinatura states
             confirmacaoLeitura: false,
             certificadoSelecionado: null,
-            senhaCertificado: '',
             arquivoCertificado: null,
             uploadProgress: 0,
             uploadedFileName: '',
@@ -681,9 +789,16 @@ createApp({
         }
     },
     
-    mounted() {
+    async mounted() {
         console.log('Assinatura App mounted');
+        await this.carregarDados();
         this.initializePdf();
+    },
+
+    computed: {
+        proposicao() {
+            return this.dados?.proposicao || null;
+        }
     },
     
     methods: {
@@ -761,6 +876,145 @@ createApp({
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
+            }
+        },
+        
+        // Métodos de dados do certificado
+        async carregarDados() {
+            try {
+                const response = await fetch(`/proposicoes/${this.proposicaoId}/assinatura-digital/dados`, {
+                    headers: { 'Accept': 'application/json' }
+                });
+                
+                if (!response.ok) throw new Error('Erro ao carregar dados');
+                
+                const data = await response.json();
+                if (data?.success) {
+                    this.dados = data;
+                    console.log('Dados carregados:', data);
+                }
+            } catch (e) {
+                console.error('Erro ao carregar dados:', e);
+                this.showToast('Erro ao carregar dados do certificado', '#dc3545', 'fas fa-exclamation-circle');
+            } finally {
+                this.carregando = false;
+            }
+        },
+
+        async usarCertificadoCadastrado() {
+            this.busy = true;
+            this.mostrarCampoSenha = false;
+            
+            try {
+                this.showToast('Tentando usar certificado automaticamente...', '#17a2b8', 'fas fa-spinner fa-spin');
+                
+                // Tentativa automática (sem senha, se salva)
+                const response = await fetch(`/proposicoes/${this.proposicaoId}/assinatura-digital/processar`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': this.csrfToken,
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify({ 
+                        usar_certificado_cadastrado: true 
+                    })
+                });
+
+                console.log('Enviando requisição de assinatura:', {
+                    url: `/proposicoes/${this.proposicaoId}/assinatura-digital/processar`,
+                    payload: { usar_certificado_cadastrado: true }
+                });
+
+                console.log('Response status:', response.status, 'Content-Type:', response.headers.get('content-type'));
+                
+                if (!response.headers.get('content-type')?.includes('application/json')) {
+                    throw new Error('Resposta não é JSON válida');
+                }
+
+                const data = await response.json();
+                console.log('Response data:', data);
+
+                // Sucesso na assinatura
+                if (response.ok && data?.success) {
+                    this.showToast('Documento assinado com sucesso!', '#28a745', 'fas fa-check-circle');
+                    if (data?.pdf_assinado_url) {
+                        window.location.href = data.pdf_assinado_url;
+                    }
+                    return;
+                }
+
+                // Status 422 ou falha: solicitar senha manualmente
+                if (response.status === 422 || !data?.success) {
+                    // Códigos específicos que indicam necessidade de senha
+                    const needsPasswordCodes = ['senha_obrigatoria', 'senha_salva_nula', 'senha_salva_corrompida', 'senha_salva_invalida'];
+                    
+                    if (needsPasswordCodes.includes(data?.code)) {
+                        this.showToast(data.message || 'Por favor, informe a senha do certificado.', '#ffc107', 'fas fa-key');
+                        this.mostrarCampoSenha = true;
+                        return;
+                    }
+                    
+                    // Outros erros
+                    this.showToast(data?.message || 'Erro ao processar assinatura.', '#dc3545', 'fas fa-exclamation-circle');
+                    return;
+                }
+
+            } catch (e) {
+                console.error('Erro na assinatura:', e);
+                // 422 = precisa de senha / senha inválida
+                if (e?.response?.status === 422) {
+                    this.mostrarCampoSenha = true;
+                    this.showToast(e?.response?.data?.message || 'Informe a senha do certificado.', '#ffc107', 'fas fa-exclamation-triangle');
+                } else {
+                    this.showToast('Falha ao processar assinatura.', '#dc3545', 'fas fa-exclamation-circle');
+                }
+            } finally {
+                this.busy = false;
+            }
+        },
+
+        async assinarComSenha() {
+            this.busy = true;
+            try {
+                console.log('Enviando requisição de assinatura:', {
+                    url: `/proposicoes/${this.proposicaoId}/assinatura-digital/processar`,
+                    payload: { usar_certificado_cadastrado: true, senha_certificado: this.senhaManual }
+                });
+
+                const response = await fetch(`/proposicoes/${this.proposicaoId}/assinatura-digital/processar`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': this.csrfToken,
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify({ 
+                        usar_certificado_cadastrado: true, 
+                        senha_certificado: this.senhaManual 
+                    })
+                });
+
+                console.log('Response status:', response.status, 'Content-Type:', response.headers.get('content-type'));
+
+                const data = await response.json();
+                console.log('Response data:', data);
+                
+                if (data?.success) {
+                    this.showToast('Documento assinado com sucesso!', '#28a745', 'fas fa-check-circle');
+                    if (data?.pdf_assinado_url) {
+                        window.location.href = data.pdf_assinado_url;
+                    }
+                } else {
+                    this.showToast(data?.message || 'Não foi possível assinar.', '#dc3545', 'fas fa-exclamation-circle');
+                }
+            } catch (e) {
+                console.error('Erro na assinatura:', e);
+                this.showToast(e?.response?.data?.message || 'Senha inválida.', '#dc3545', 'fas fa-exclamation-circle');
+            } finally {
+                this.busy = false;
             }
         },
         
@@ -873,12 +1127,23 @@ createApp({
         
         // Validation Methods
         canSign() {
-            return this.confirmacaoLeitura && 
-                   this.certificadoSelecionado && 
-                   this.senhaCertificado && 
+            if (!this.confirmacaoLeitura || !this.certificadoSelecionado || this.assinaturaLoading) {
+                return false;
+            }
+            
+            // Certificado cadastrado
+            if (this.certificadoSelecionado === 'cadastrado') {
+                // Se senha está salva, não precisa preencher
+                if (this.senhaSalva) return true;
+                // Se senha não está salva, permitir tentativa automática (certificado pode não ter senha)
+                // ou permite senha manual se preenchida
+                return true; // Sempre permite tentar com certificado cadastrado
+            }
+            
+            // Outros tipos de certificado
+            return this.senhaCertificado && 
                    this.senhaCertificado.length >= 4 &&
-                   (this.certificadoSelecionado !== 'pfx' || this.arquivoCertificado) &&
-                   !this.assinaturaLoading;
+                   (this.certificadoSelecionado !== 'pfx' || this.arquivoCertificado);
         },
         
         // Assinatura Processing
@@ -889,36 +1154,59 @@ createApp({
             this.assinaturaLoadingText = 'Processando assinatura digital...';
             
             try {
-                const formData = new FormData();
-                formData.append('_token', this.csrfToken);
-                formData.append('tipo_certificado', this.certificadoSelecionado);
-                formData.append('senha_certificado', this.senhaCertificado);
-                formData.append('assinatura_digital', this.gerarAssinaturaDigital());
-                formData.append('certificado_digital', this.obterCertificadoDigital());
+                // Criar payload JSON simples para certificado cadastrado
+                const payload = {
+                    usar_certificado_cadastrado: true,
+                    senha_certificado: this.senhaCertificado || undefined
+                };
                 
-                if (this.arquivoCertificado) {
-                    formData.append('arquivo_certificado', this.arquivoCertificado);
-                }
+                // Configurar headers para FORÇAR JSON
+                const headers = {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': this.csrfToken,
+                    'X-Requested-With': 'XMLHttpRequest'
+                };
                 
-                const response = await fetch(`/proposicoes/${this.proposicao.id}/processar-assinatura`, {
+                console.log('Enviando requisição de assinatura:', { url: `/proposicoes/${this.proposicao.id}/assinatura-digital/processar`, payload, headers });
+                
+                const response = await fetch(`/proposicoes/${this.proposicao.id}/assinatura-digital/processar`, {
                     method: 'POST',
-                    body: formData
+                    headers: headers,
+                    body: JSON.stringify(payload)
                 });
                 
+                console.log('Response status:', response.status, 'Content-Type:', response.headers.get('Content-Type'));
+                
+                // Verificar se a resposta é JSON
+                const contentType = response.headers.get('Content-Type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    throw new Error(`Servidor retornou ${contentType} ao invés de JSON. Status: ${response.status}`);
+                }
+                
                 const data = await response.json();
+                console.log('Response data:', data);
                 
                 if (data.success) {
-                    this.showToast(data.message, '#28a745', 'fas fa-check-circle');
+                    this.showToast(data.message || 'Proposição assinada com sucesso!', '#28a745', 'fas fa-check-circle');
                     setTimeout(() => {
-                        window.location.href = '/proposicoes/assinatura';
+                        if (data.redirect) {
+                            window.location.href = data.redirect;
+                        } else {
+                            window.location.href = '/proposicoes/assinatura';
+                        }
                     }, 2000);
                 } else {
+                    // Se o erro indica que precisa de senha, garantir que o campo apareça
+                    if (data.message && data.message.includes('senha')) {
+                        this.senhaSalva = false; // Forçar exibição do campo de senha
+                    }
                     this.showToast(data.message || 'Erro ao processar assinatura', '#dc3545', 'fas fa-exclamation-circle');
                     this.assinaturaLoading = false;
                 }
             } catch (error) {
                 console.error('Error processing signature:', error);
-                this.showToast('Erro ao processar assinatura', '#dc3545', 'fas fa-exclamation-circle');
+                this.showToast(`Erro ao processar assinatura: ${error.message}`, '#dc3545', 'fas fa-exclamation-circle');
                 this.assinaturaLoading = false;
             }
         },
@@ -1054,6 +1342,15 @@ createApp({
         
         removeToast(id) {
             this.toasts = this.toasts.filter(toast => toast.id !== id);
+        },
+        
+        // Certificado cadastrado methods
+        
+        // Formatação
+        formatDate(date) {
+            if (!date) return '';
+            const d = new Date(date);
+            return d.toLocaleDateString('pt-BR');
         }
     }
 }).mount('#assinatura-app');

@@ -87,6 +87,31 @@ docker exec -it legisinc-app php artisan migrate:fresh --seed
 3. Edite no OnlyOffice
 4. Confirme que alterações são preservadas
 
+## 🔐 Certificados Digitais
+
+### **Configuração via Comando Artisan**
+```bash
+# Configurar certificado para usuário
+docker exec legisinc-app php artisan certificado:configurar \
+  jessica@sistema.gov.br \
+  /tmp/certificado_teste.pfx \
+  123Ligado \
+  --salvar-senha
+```
+
+### **Certificado de Teste**
+- **Arquivo**: `BRUNO JOSE PEREIRA RANGEL_31748726854.pfx`
+- **Senha**: `123Ligado`
+- **CN**: `BRUNO JOSE PEREIRA RANGEL:31748726854`
+- **Validade**: 09/09/2026
+
+### **Helper de Certificados**
+- **Localização**: `/app/Helpers/CertificadoHelper.php`
+- **Funções principais**:
+  - `validar()`: Valida certificado com senha
+  - `getStatus()`: Retorna status completo
+  - `configurarCertificadoPadrao()`: Configura certificado
+
 ## 🔒 ARQUIVOS CRÍTICOS
 
 ### Processamento
