@@ -22,3 +22,5 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+/storage/backups/dados-criticos*.json
+/storage/backups/*latest*.json
