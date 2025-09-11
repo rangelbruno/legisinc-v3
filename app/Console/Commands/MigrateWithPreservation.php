@@ -137,6 +137,9 @@ class MigrateWithPreservation extends Command
         // Depois executar todos os seeders
         Artisan::call('db:seed', $params);
         
+        // Corrigir permissões do storage após seeders
+        $this->fixStoragePermissions();
+        
         $this->info('✅ Seeders executados');
     }
 
@@ -177,6 +180,46 @@ class MigrateWithPreservation extends Command
         }
 
         $this->info("📊 Arquivos validados: {$validados}/" . count($arquivosCriticos));
+    }
+
+    private function fixStoragePermissions(): void
+    {
+        $this->info('🔒 Corrigindo permissões do storage...');
+        
+        try {
+            // Corrigir ownership para o usuário correto (laravel)
+            $commands = [
+                'chown -R laravel:laravel /var/www/html/storage',
+                'chmod -R 755 /var/www/html/storage',
+                'chmod -R 755 /var/www/html/storage/framework/views'
+            ];
+            
+            foreach ($commands as $command) {
+                exec($command, $output, $returnVar);
+                if ($returnVar !== 0) {
+                    $this->warn("⚠️ Comando falhou: {$command}");
+                }
+            }
+            
+            // Limpar cache de views compiladas
+            if (file_exists(base_path('storage/framework/views'))) {
+                $files = glob(base_path('storage/framework/views/*.php'));
+                foreach ($files as $file) {
+                    if (is_file($file)) {
+                        unlink($file);
+                    }
+                }
+            }
+            
+            // Usar artisan para limpar cache
+            Artisan::call('view:clear');
+            
+            $this->info('✅ Permissões do storage corrigidas');
+            
+        } catch (\Exception $e) {
+            $this->warn('⚠️ Erro ao corrigir permissões: ' . $e->getMessage());
+            $this->info('💡 Execute manualmente: chown -R laravel:laravel /var/www/html/storage && chmod -R 755 /var/www/html/storage');
+        }
     }
 
     private function attemptRecovery(): void

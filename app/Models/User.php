@@ -39,6 +39,8 @@ class User extends Authenticatable
         'certificado_digital_validade',
         'certificado_digital_cn',
         'certificado_digital_ativo',
+        'certificado_digital_senha',
+        'certificado_digital_senha_salva',
     ];
 
     /**

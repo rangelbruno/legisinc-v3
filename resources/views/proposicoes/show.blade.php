@@ -1452,8 +1452,8 @@ createApp({
         canSign() {
             if (!this.proposicao) return false;
             const isOwner = this.proposicao.autor_id === this.userId;
-            // Botão só aparece quando status é exatamente 'aprovado'
-            const canSignStatuses = ['aprovado'];
+            // Botão só aparece quando status permite assinatura
+            const canSignStatuses = ['aprovado', 'aprovado_assinatura'];
             const hasPermission = isOwner || this.userRole === 'PARLAMENTAR';
             const statusAllowed = canSignStatuses.includes(this.proposicao.status);
             

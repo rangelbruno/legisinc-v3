@@ -213,7 +213,20 @@
                                 <label class="form-label">Senha do Certificado</label>
                                 <input type="password" class="form-control" name="senha_teste" required placeholder="Digite a senha do certificado">
                                 <div class="form-hint">
-                                    A senha será usada para validar o certificado. Ela não será armazenada no sistema.
+                                    A senha será usada para validar o certificado.
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-check">
+                                    <input type="checkbox" class="form-check-input" name="salvar_senha_substituicao" value="1" checked>
+                                    <span class="form-check-label">
+                                        <strong>Salvar senha do certificado (criptografada)</strong>
+                                    </span>
+                                </label>
+                                <div class="form-hint">
+                                    Ao marcar esta opção, a senha será salva de forma segura e criptografada. 
+                                    Isso permitirá assinar documentos sem precisar digitar a senha novamente.
                                 </div>
                             </div>
 

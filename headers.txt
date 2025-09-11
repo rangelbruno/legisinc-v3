@@ -1,0 +1,13 @@
+HTTP/1.1 419 unknown status
+Server: nginx
+Content-Type: text/html; charset=UTF-8
+Transfer-Encoding: chunked
+Connection: keep-alive
+Cache-Control: no-cache, private
+date: Wed, 10 Sep 2025 23:45:29 GMT
+Set-Cookie: legisinc_session=eyJpdiI6InhoSmtYT2NUR0hycG9yNEhzRjBHWHc9PSIsInZhbHVlIjoicis3eDIzQUJxL1dNMTIveGRLOG11cXM4c0N0ZjNrZkFkbTNWWm52Vkg1KzhTUG91bFk5VHBvTndoblZPR3lkT21zdGh2SGk2dHFEUHdQU3pEajhGdU5OY0ZFKzZML0IzdlBBYjJ5NnIvUlJhY0JYTk1scVgzM3VsMTl3T1diZ20iLCJtYWMiOiJkMWFhN2I2YmZlZDI0MTM2ZTM0YWI3ZmI1OTljODYzNmRjYmIyYjMwYzg2M2I3YmNkZjRjODQxMmJjNmU4NTRhIiwidGFnIjoiIn0%3D; expires=Thu, 11 Sep 2025 01:45:29 GMT; Max-Age=7200; path=/; httponly; samesite=lax
+X-Frame-Options: SAMEORIGIN
+X-Content-Type-Options: nosniff
+X-XSS-Protection: 1; mode=block
+Referrer-Policy: strict-origin-when-cross-origin
+
