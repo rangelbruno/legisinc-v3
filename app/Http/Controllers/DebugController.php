@@ -284,24 +284,39 @@ class DebugController extends Controller
      */
     public function getDatabaseQueries(Request $request)
     {
-        if (!session('debug_logger_active', false)) {
+        try {
+            $dbDebug = new DatabaseDebugService();
+            $queries = $dbDebug->getCapturedQueries();
+            $stats = $dbDebug->getQueryStatistics();
+            
+            // Allow access to cached data even when session is not active
+            $isActive = session('debug_logger_active', false);
+            $sessionId = session('debug_session_id', 'inactive');
+            
+            return response()->json([
+                'success' => true,
+                'queries' => $queries,
+                'statistics' => $stats,
+                'session_id' => $sessionId,
+                'session_active' => $isActive,
+                'message' => $isActive ? 'Active session' : 'Showing cached data'
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Error in getDatabaseQueries', [
+                'error' => $e->getMessage(),
+                'line' => $e->getLine(),
+                'file' => $e->getFile()
+            ]);
+            
             return response()->json([
                 'success' => false,
-                'message' => 'Debug session not active',
-                'queries' => []
+                'message' => 'Error retrieving database queries',
+                'queries' => [],
+                'statistics' => [],
+                'error' => $e->getMessage()
             ]);
         }
-        
-        $dbDebug = new DatabaseDebugService();
-        $queries = $dbDebug->getCapturedQueries();
-        $stats = $dbDebug->getQueryStatistics();
-        
-        return response()->json([
-            'success' => true,
-            'queries' => $queries,
-            'statistics' => $stats,
-            'session_id' => session('debug_session_id')
-        ]);
     }
     
     /**
@@ -325,5 +340,53 @@ class DebugController extends Controller
             'stats' => $stats,
             'session_id' => session('debug_session_id')
         ]);
+    }
+    
+    /**
+     * Clear cached debug data
+     */
+    public function clearCache(Request $request)
+    {
+        // Allow clearing cache even if session is not active
+        $sessionActive = session('debug_logger_active', false);
+        
+        $sessionId = session('debug_session_id');
+        
+        try {
+            // Clear cached queries
+            Cache::forget('db_debug_queries');
+            
+            // Clear other debug-related cache if needed
+            if ($request->input('clear_all', false)) {
+                Cache::forget('db_debug_capturing');
+                Cache::forget('db_debug_start_time');
+            }
+            
+            Log::info('Debug cache cleared', [
+                'session_id' => $sessionId,
+                'user_id' => Auth::id(),
+                'cleared_at' => now()
+            ]);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Cache cleared successfully',
+                'session_id' => $sessionId,
+                'session_active' => $sessionActive,
+                'cleared_items' => ['db_debug_queries']
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Error clearing debug cache', [
+                'error' => $e->getMessage(),
+                'session_id' => $sessionId
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Error clearing cache',
+                'error' => $e->getMessage()
+            ]);
+        }
     }
 }

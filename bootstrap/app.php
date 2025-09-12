@@ -32,6 +32,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'check.assinatura.permission' => \App\Http\Middleware\CheckAssinaturaPermission::class,
             'debug.logger' => \App\Http\Middleware\DebugActionLogger::class,
             'database.debug' => \App\Http\Middleware\DatabaseDebugMiddleware::class,
+            'request.tracing' => \App\Http\Middleware\RequestTracing::class,
         ]);
         
         // Aplica middleware para prevenir navegação com botão voltar em todas as rotas autenticadas
@@ -39,6 +40,7 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\PreventBackHistory::class,
             \App\Http\Middleware\DebugActionLogger::class,
             \App\Http\Middleware\DatabaseDebugMiddleware::class,
+            \App\Http\Middleware\RequestTracing::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

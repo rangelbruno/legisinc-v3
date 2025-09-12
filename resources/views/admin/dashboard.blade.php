@@ -825,6 +825,151 @@
                     </div>
                 </div>
 
+                <!-- Seção: Observabilidade & Monitoramento -->
+                <div class="col-12 mb-5 mt-5">
+                    <h2 class="fs-2 fw-bold text-gray-800 border-bottom pb-3">🔍 Observabilidade & Monitoramento</h2>
+                </div>
+                
+                <!-- Dashboard de Monitoramento -->
+                <div class="col-xl-4 col-lg-6 col-md-6">
+                    <div class="card card-xl-stretch mb-xl-8 card-hover cursor-pointer" onclick="window.location.href='{{ route('admin.monitoring.index') }}'">
+                        <div class="card-body d-flex align-items-center pt-3 pb-0">
+                            <div class="d-flex flex-column flex-grow-1 py-2 py-lg-13 me-2">
+                                <a href="{{ route('admin.monitoring.index') }}" class="fw-bold text-gray-900 fs-4 mb-2 text-hover-primary d-flex align-items-center">
+                                    🔍 Dashboard Geral
+                                    <span class="badge badge-light-success ms-2">NOVO</span>
+                                    <i class="ki-duotone ki-arrow-right fs-5 ms-2">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                    </i>
+                                </a>
+                                <span class="fw-semibold text-muted fs-5">Visão geral do sistema</span>
+                            </div>
+                            <i class="ki-duotone ki-chart-line-up text-success fs-4x align-self-end h-100px">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                            </i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Monitoramento de Banco -->
+                <div class="col-xl-4 col-lg-6 col-md-6">
+                    <div class="card card-xl-stretch mb-xl-8 card-hover cursor-pointer" onclick="window.location.href='{{ route('admin.monitoring.database') }}'">
+                        <div class="card-body d-flex align-items-center pt-3 pb-0">
+                            <div class="d-flex flex-column flex-grow-1 py-2 py-lg-13 me-2">
+                                <a href="{{ route('admin.monitoring.database') }}" class="fw-bold text-gray-900 fs-4 mb-2 text-hover-primary d-flex align-items-center">
+                                    🗃️ Banco de Dados
+                                    <span class="badge badge-light-info ms-2">REAL-TIME</span>
+                                    <i class="ki-duotone ki-arrow-right fs-5 ms-2">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                    </i>
+                                </a>
+                                <span class="fw-semibold text-muted fs-5">Conexões, queries e performance</span>
+                            </div>
+                            <i class="ki-duotone ki-database text-info fs-4x align-self-end h-100px">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                            </i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Performance & Métricas -->
+                <div class="col-xl-4 col-lg-6 col-md-6">
+                    <div class="card card-xl-stretch mb-xl-8 card-hover cursor-pointer" onclick="window.location.href='{{ route('admin.monitoring.performance') }}'">
+                        <div class="card-body d-flex align-items-center pt-3 pb-0">
+                            <div class="d-flex flex-column flex-grow-1 py-2 py-lg-13 me-2">
+                                <a href="{{ route('admin.monitoring.performance') }}" class="fw-bold text-gray-900 fs-4 mb-2 text-hover-primary d-flex align-items-center">
+                                    ⚡ Performance
+                                    <span class="badge badge-light-warning ms-2">MÉTRICAS</span>
+                                    <i class="ki-duotone ki-arrow-right fs-5 ms-2">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                    </i>
+                                </a>
+                                <span class="fw-semibold text-muted fs-5">Latência, throughput e erros</span>
+                            </div>
+                            <i class="ki-duotone ki-rocket text-warning fs-4x align-self-end h-100px">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                                <span class="path3"></span>
+                            </i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Logs do Sistema -->
+                <div class="col-xl-4 col-lg-6 col-md-6">
+                    <div class="card card-xl-stretch mb-xl-8 card-hover cursor-pointer" onclick="window.location.href='{{ route('admin.monitoring.logs') }}'">
+                        <div class="card-body d-flex align-items-center pt-3 pb-0">
+                            <div class="d-flex flex-column flex-grow-1 py-2 py-lg-13 me-2">
+                                <a href="{{ route('admin.monitoring.logs') }}" class="fw-bold text-gray-900 fs-4 mb-2 text-hover-primary d-flex align-items-center">
+                                    📝 Logs do Sistema
+                                    <span class="badge badge-light-dark ms-2">LOGS</span>
+                                    <i class="ki-duotone ki-arrow-right fs-5 ms-2">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                    </i>
+                                </a>
+                                <span class="fw-semibold text-muted fs-5">Busca e análise de logs</span>
+                            </div>
+                            <i class="ki-duotone ki-file-search text-dark fs-4x align-self-end h-100px">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                            </i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Alertas & Notificações -->
+                <div class="col-xl-4 col-lg-6 col-md-6">
+                    <div class="card card-xl-stretch mb-xl-8 card-hover cursor-pointer" onclick="window.location.href='{{ route('admin.monitoring.alerts') }}'">
+                        <div class="card-body d-flex align-items-center pt-3 pb-0">
+                            <div class="d-flex flex-column flex-grow-1 py-2 py-lg-13 me-2">
+                                <a href="{{ route('admin.monitoring.alerts') }}" class="fw-bold text-gray-900 fs-4 mb-2 text-hover-primary d-flex align-items-center">
+                                    🚨 Alertas
+                                    <span class="badge badge-light-danger ms-2">ALERTAS</span>
+                                    <i class="ki-duotone ki-arrow-right fs-5 ms-2">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                    </i>
+                                </a>
+                                <span class="fw-semibold text-muted fs-5">Configuração e histórico</span>
+                            </div>
+                            <i class="ki-duotone ki-notification-bing text-danger fs-4x align-self-end h-100px">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                                <span class="path3"></span>
+                            </i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Health Check -->
+                <div class="col-xl-4 col-lg-6 col-md-6">
+                    <div class="card card-xl-stretch mb-xl-8 card-hover cursor-pointer" onclick="window.open('{{ route('monitoring.health') }}', '_blank')">
+                        <div class="card-body d-flex align-items-center pt-3 pb-0">
+                            <div class="d-flex flex-column flex-grow-1 py-2 py-lg-13 me-2">
+                                <a href="{{ route('monitoring.health') }}" target="_blank" class="fw-bold text-gray-900 fs-4 mb-2 text-hover-primary d-flex align-items-center">
+                                    💚 Health Check
+                                    <span class="badge badge-light-success ms-2">API</span>
+                                    <i class="ki-duotone ki-arrow-right fs-5 ms-2">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                    </i>
+                                </a>
+                                <span class="fw-semibold text-muted fs-5">Status de saúde do sistema</span>
+                            </div>
+                            <i class="ki-duotone ki-heart text-success fs-4x align-self-end h-100px">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                            </i>
+                        </div>
+                    </div>
+                </div>
+
             <!--end::Row-->
             @endif
         

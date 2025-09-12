@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\MonitoringController;
 use App\Http\Controllers\ApiDocumentationController;
 use App\Http\Controllers\Auth\TokenController;
 use App\Http\Controllers\AuthController;
@@ -1554,3 +1555,29 @@ Route::get('/debug/exports/{filename}', function ($filename) {
 Route::middleware(['web', 'auth'])->get('/test-debug', function () {
     return view('test-debug');
 })->name('test.debug.logger');
+
+// Rotas de Monitoramento - Admin apenas
+Route::middleware(['web', 'auth'])->prefix('admin/monitoring')->name('admin.monitoring.')->group(function () {
+    Route::get('/', [MonitoringController::class, 'index'])->name('index');
+    Route::get('/database', [MonitoringController::class, 'database'])->name('database');
+    Route::get('/performance', [MonitoringController::class, 'performance'])->name('performance');
+    Route::get('/logs', [MonitoringController::class, 'logs'])->name('logs');
+    Route::get('/alerts', [MonitoringController::class, 'alerts'])->name('alerts');
+    
+    // API endpoints para AJAX
+    Route::get('/api/database-stats', [MonitoringController::class, 'apiDatabaseStats'])->name('api.database-stats');
+});
+
+// Health check público (para monitoring externo)
+Route::get('/health', [MonitoringController::class, 'health'])->name('monitoring.health');
+
+// Teste temporário sem auth
+Route::get('/monitoring-test', [MonitoringController::class, 'database'])->name('monitoring.test');
+
+// Server-Sent Events for real-time monitoring
+Route::get('/admin/monitoring/stream', [MonitoringController::class, 'stream'])
+    ->name('admin.monitoring.stream')
+    ->middleware('auth');
+
+// Include debug routes
+require __DIR__.'/debug.php';

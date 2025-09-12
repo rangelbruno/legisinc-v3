@@ -27,6 +27,12 @@ class DatabaseDebugService
         // Store in cache for real-time access
         Cache::put('db_debug_capturing', true, 3600);
         Cache::put('db_debug_start_time', $this->startTime, 3600);
+        Cache::forget('db_debug_queries'); // Clear previous queries
+        
+        // Listen to database queries and store them with HTTP context
+        DB::listen(function ($query) {
+            $this->captureQueryWithContext($query);
+        });
     }
     
     /**
@@ -50,22 +56,38 @@ class DatabaseDebugService
      */
     public function getCapturedQueries()
     {
-        // First get queries from current request
-        $currentQueries = DB::getQueryLog();
-        
-        // Then get cached queries from previous requests
-        $cachedQueries = Cache::get('db_debug_queries', []);
-        
-        // Merge all queries
-        $allQueries = array_merge($cachedQueries, $currentQueries);
-        
-        $processedQueries = [];
-        
-        foreach ($allQueries as $query) {
-            $processedQueries[] = $this->processQuery($query);
+        try {
+            // First get queries from current request
+            $currentQueries = DB::getQueryLog() ?: [];
+            
+            // Then get cached queries from previous requests
+            $cachedQueries = Cache::get('db_debug_queries', []);
+            
+            // Merge all queries
+            $allQueries = array_merge($cachedQueries, $currentQueries);
+            
+            $processedQueries = [];
+            
+            foreach ($allQueries as $query) {
+                if (is_array($query)) {
+                    $processedQuery = $this->processQuery($query);
+                    if ($processedQuery) {
+                        $processedQueries[] = $processedQuery;
+                    }
+                }
+            }
+            
+            return $processedQueries;
+            
+        } catch (\Exception $e) {
+            Log::error('Error getting captured queries', [
+                'error' => $e->getMessage(),
+                'line' => $e->getLine(),
+                'file' => $e->getFile()
+            ]);
+            
+            return [];
         }
-        
-        return $processedQueries;
     }
     
     /**
@@ -73,9 +95,15 @@ class DatabaseDebugService
      */
     private function processQuery($query)
     {
-        $sql = $query['query'];
+        // Handle different query formats (from DB::getQueryLog() vs DB::listen())
+        $sql = $query['query'] ?? $query['sql'] ?? '';
         $bindings = $query['bindings'] ?? [];
         $time = $query['time'] ?? 0;
+        
+        // Skip if no SQL
+        if (empty($sql)) {
+            return null;
+        }
         
         // Replace bindings in SQL
         foreach ($bindings as $binding) {
@@ -214,6 +242,77 @@ class DatabaseDebugService
         return array_unique($tables);
     }
     
+    /**
+     * Capture query with HTTP context
+     */
+    private function captureQueryWithContext($query)
+    {
+        if (!Cache::get('db_debug_capturing', false)) {
+            return;
+        }
+        
+        $httpContext = $this->getHttpContext();
+        $processedQuery = $this->processQuery([
+            'sql' => $query->sql,
+            'bindings' => $query->bindings,
+            'time' => $query->time
+        ]);
+        
+        // Add HTTP context to the query
+        $processedQuery['http_method'] = $httpContext['method'] ?? 'CLI';
+        $processedQuery['http_url'] = $httpContext['url'] ?? 'command-line';
+        $processedQuery['route_name'] = $httpContext['route_name'] ?? null;
+        $processedQuery['request_id'] = $httpContext['request_id'] ?? uniqid();
+        
+        // Store in cache for real-time access
+        $cachedQueries = Cache::get('db_debug_queries', []);
+        $cachedQueries[] = $processedQuery;
+        
+        // Keep only last 1000 queries to prevent memory issues
+        if (count($cachedQueries) > 1000) {
+            $cachedQueries = array_slice($cachedQueries, -1000);
+        }
+        
+        Cache::put('db_debug_queries', $cachedQueries, 3600);
+    }
+    
+    /**
+     * Get HTTP context from current request
+     */
+    private function getHttpContext()
+    {
+        $context = [];
+        
+        if (app()->runningInConsole()) {
+            return [
+                'method' => 'CLI',
+                'url' => 'command-line',
+                'route_name' => null,
+                'request_id' => 'cli_' . getmypid()
+            ];
+        }
+        
+        try {
+            $request = request();
+            $context = [
+                'method' => $request->method(),
+                'url' => $request->fullUrl(),
+                'route_name' => $request->route()?->getName(),
+                'request_id' => $request->header('X-Request-ID', session()->getId() ?? uniqid())
+            ];
+        } catch (\Exception $e) {
+            // Fallback if request is not available
+            $context = [
+                'method' => 'UNKNOWN',
+                'url' => 'unknown',
+                'route_name' => null,
+                'request_id' => uniqid()
+            ];
+        }
+        
+        return $context;
+    }
+
     /**
      * Get simplified backtrace for debugging
      */

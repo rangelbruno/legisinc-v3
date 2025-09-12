@@ -26,6 +26,9 @@ Route::middleware(['web', 'auth'])->prefix('debug')->name('debug.')->group(funct
     Route::get('/database/queries', [DebugController::class, 'getDatabaseQueries'])->name('database.queries');
     Route::get('/database/stats', [DebugController::class, 'getDatabaseStats'])->name('database.stats');
     
+    // Cache management
+    Route::post('/clear-cache', [DebugController::class, 'clearCache'])->name('clear-cache');
+    
 });
 
 // Rota pública para servir arquivos de debug exportados
