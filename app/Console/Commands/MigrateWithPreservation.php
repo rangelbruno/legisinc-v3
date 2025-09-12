@@ -33,15 +33,24 @@ class MigrateWithPreservation extends Command
             // 3. Executar migration
             $this->executeMigration();
 
-            // 4. Executar seeders se solicitado
+            // 4. Corrigir permissões iniciais após migration
+            $this->fixStoragePermissions();
+
+            // 5. Corrigir namespaces no DatabaseSeeder
+            $this->fixSeederNamespaces();
+
+            // 6. Executar seeders se solicitado
             if ($this->option('seed')) {
                 $this->executeSeeders();
             }
 
-            // 5. Restaurar melhorias
+            // 7. Restaurar melhorias
             $this->restoreImprovements();
 
-            // 6. Validar resultado
+            // 8. Corrigir permissões finais
+            $this->fixStoragePermissions();
+
+            // 9. Validar resultado
             $this->validateResult();
 
             $this->newLine();
@@ -190,8 +199,14 @@ class MigrateWithPreservation extends Command
             // Corrigir ownership para o usuário correto (laravel)
             $commands = [
                 'chown -R laravel:laravel /var/www/html/storage',
-                'chmod -R 755 /var/www/html/storage',
-                'chmod -R 755 /var/www/html/storage/framework/views'
+                'chown -R laravel:laravel /var/www/html/bootstrap/cache',
+                'find /var/www/html/storage -type d -exec chmod 775 {} \;',
+                'find /var/www/html/storage -type f -exec chmod 664 {} \;',
+                'chmod -R 775 /var/www/html/bootstrap/cache',
+                'mkdir -p /var/www/html/storage/logs',
+                'touch /var/www/html/storage/logs/laravel.log',
+                'chown laravel:laravel /var/www/html/storage/logs/laravel.log',
+                'chmod 664 /var/www/html/storage/logs/laravel.log'
             ];
             
             foreach ($commands as $command) {
@@ -201,24 +216,50 @@ class MigrateWithPreservation extends Command
                 }
             }
             
-            // Limpar cache de views compiladas
-            if (file_exists(base_path('storage/framework/views'))) {
-                $files = glob(base_path('storage/framework/views/*.php'));
-                foreach ($files as $file) {
-                    if (is_file($file)) {
-                        unlink($file);
+            // Limpar todos os caches compilados
+            try {
+                Artisan::call('optimize:clear');
+                $this->line('  ✓ Cache limpo com optimize:clear');
+            } catch (\Exception $e) {
+                $this->warn("⚠️ Erro ao limpar cache: " . $e->getMessage());
+                
+                // Fallback manual
+                if (file_exists(base_path('storage/framework/views'))) {
+                    $files = glob(base_path('storage/framework/views/*.php'));
+                    foreach ($files as $file) {
+                        if (is_file($file)) {
+                            unlink($file);
+                        }
                     }
                 }
+                
+                Artisan::call('view:clear');
             }
-            
-            // Usar artisan para limpar cache
-            Artisan::call('view:clear');
             
             $this->info('✅ Permissões do storage corrigidas');
             
         } catch (\Exception $e) {
             $this->warn('⚠️ Erro ao corrigir permissões: ' . $e->getMessage());
-            $this->info('💡 Execute manualmente: chown -R laravel:laravel /var/www/html/storage && chmod -R 755 /var/www/html/storage');
+            $this->info('💡 Execute manualmente: chown -R laravel:laravel /var/www/html/storage && chmod -R 775 /var/www/html/storage');
+        }
+    }
+
+    private function fixSeederNamespaces(): void
+    {
+        $this->info('🔧 Corrigindo namespaces no DatabaseSeeder...');
+        
+        try {
+            Artisan::call('fix:seeder-namespaces');
+            $output = Artisan::output();
+            
+            if (strpos($output, 'Fixed') !== false) {
+                $this->info('✅ Namespaces corrigidos no DatabaseSeeder');
+            } else {
+                $this->line('  ✓ Namespaces já estão corretos');
+            }
+            
+        } catch (\Exception $e) {
+            $this->warn('⚠️ Erro ao corrigir namespaces: ' . $e->getMessage());
         }
     }
 

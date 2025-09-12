@@ -1,5 +1,803 @@
 # Melhorias Automáticas Detectadas
 
+## Melhoria #118 - 2025-09-12 02:48:45
+
+**Arquivos alterados:** 33
+
+- `app/Http/Controllers/ProposicaoAssinaturaController.php` (modificado)
+- `app/Http/Controllers/ProposicaoProtocoloController.php` (modificado)
+- `app/Services/OnlyOffice/OnlyOfficeService.php` (modificado)
+- `app/Services/Template/TemplateProcessorService.php` (modificado)
+- `app/Services/Template/TemplateVariableService.php` (modificado)
+- `app/Models/Proposicao.php` (modificado)
+- `config/dompdf.php` (modificado)
+- `resources/views/proposicoes/assinatura/assinar-pdf-vue.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/assinar-vue.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/assinar.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/historico.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/index.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/visualizar-pdf-otimizado.blade.php` (modificado)
+- `resources/views/proposicoes/consulta/nao-encontrada.blade.php` (modificado)
+- `resources/views/proposicoes/consulta/publica.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/aguardando-protocolo.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/editar.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/index.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/onlyoffice-editor.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/relatorio-dados.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/relatorio-pdf.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/relatorio.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/revisar.blade.php` (modificado)
+- `resources/views/proposicoes/parlamentar/onlyoffice-editor.blade.php` (modificado)
+- `resources/views/proposicoes/pdf/protocolo-otimizado.blade.php` (modificado)
+- `resources/views/proposicoes/pdf/template-optimized.blade.php` (modificado)
+- `resources/views/proposicoes/pdf/template.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/index-melhorado.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/index-original.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/index.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/protocolar-simples.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/protocolar.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/protocolos-hoje.blade.php` (modificado)
+
+**Seeder criado:** `PreservarMelhorias118Seeder`
+
+---
+
+## Melhoria #116 - 2025-09-12 02:47:04
+
+**Arquivos alterados:** 33
+
+- `app/Http/Controllers/ProposicaoAssinaturaController.php` (modificado)
+- `app/Http/Controllers/ProposicaoProtocoloController.php` (modificado)
+- `app/Services/OnlyOffice/OnlyOfficeService.php` (modificado)
+- `app/Services/Template/TemplateProcessorService.php` (modificado)
+- `app/Services/Template/TemplateVariableService.php` (modificado)
+- `app/Models/Proposicao.php` (modificado)
+- `config/dompdf.php` (modificado)
+- `resources/views/proposicoes/assinatura/assinar-pdf-vue.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/assinar-vue.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/assinar.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/historico.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/index.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/visualizar-pdf-otimizado.blade.php` (modificado)
+- `resources/views/proposicoes/consulta/nao-encontrada.blade.php` (modificado)
+- `resources/views/proposicoes/consulta/publica.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/aguardando-protocolo.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/editar.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/index.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/onlyoffice-editor.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/relatorio-dados.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/relatorio-pdf.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/relatorio.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/revisar.blade.php` (modificado)
+- `resources/views/proposicoes/parlamentar/onlyoffice-editor.blade.php` (modificado)
+- `resources/views/proposicoes/pdf/protocolo-otimizado.blade.php` (modificado)
+- `resources/views/proposicoes/pdf/template-optimized.blade.php` (modificado)
+- `resources/views/proposicoes/pdf/template.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/index-melhorado.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/index-original.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/index.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/protocolar-simples.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/protocolar.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/protocolos-hoje.blade.php` (modificado)
+
+**Seeder criado:** `PreservarMelhorias116Seeder`
+
+---
+
+## Melhoria #114 - 2025-09-12 02:45:33
+
+**Arquivos alterados:** 33
+
+- `app/Http/Controllers/ProposicaoAssinaturaController.php` (modificado)
+- `app/Http/Controllers/ProposicaoProtocoloController.php` (modificado)
+- `app/Services/OnlyOffice/OnlyOfficeService.php` (modificado)
+- `app/Services/Template/TemplateProcessorService.php` (modificado)
+- `app/Services/Template/TemplateVariableService.php` (modificado)
+- `app/Models/Proposicao.php` (modificado)
+- `config/dompdf.php` (modificado)
+- `resources/views/proposicoes/assinatura/assinar-pdf-vue.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/assinar-vue.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/assinar.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/historico.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/index.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/visualizar-pdf-otimizado.blade.php` (modificado)
+- `resources/views/proposicoes/consulta/nao-encontrada.blade.php` (modificado)
+- `resources/views/proposicoes/consulta/publica.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/aguardando-protocolo.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/editar.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/index.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/onlyoffice-editor.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/relatorio-dados.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/relatorio-pdf.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/relatorio.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/revisar.blade.php` (modificado)
+- `resources/views/proposicoes/parlamentar/onlyoffice-editor.blade.php` (modificado)
+- `resources/views/proposicoes/pdf/protocolo-otimizado.blade.php` (modificado)
+- `resources/views/proposicoes/pdf/template-optimized.blade.php` (modificado)
+- `resources/views/proposicoes/pdf/template.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/index-melhorado.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/index-original.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/index.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/protocolar-simples.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/protocolar.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/protocolos-hoje.blade.php` (modificado)
+
+**Seeder criado:** `PreservarMelhorias114Seeder`
+
+---
+
+## Melhoria #112 - 2025-09-12 02:43:37
+
+**Arquivos alterados:** 33
+
+- `app/Http/Controllers/ProposicaoAssinaturaController.php` (modificado)
+- `app/Http/Controllers/ProposicaoProtocoloController.php` (modificado)
+- `app/Services/OnlyOffice/OnlyOfficeService.php` (modificado)
+- `app/Services/Template/TemplateProcessorService.php` (modificado)
+- `app/Services/Template/TemplateVariableService.php` (modificado)
+- `app/Models/Proposicao.php` (modificado)
+- `config/dompdf.php` (modificado)
+- `resources/views/proposicoes/assinatura/assinar-pdf-vue.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/assinar-vue.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/assinar.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/historico.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/index.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/visualizar-pdf-otimizado.blade.php` (modificado)
+- `resources/views/proposicoes/consulta/nao-encontrada.blade.php` (modificado)
+- `resources/views/proposicoes/consulta/publica.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/aguardando-protocolo.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/editar.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/index.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/onlyoffice-editor.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/relatorio-dados.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/relatorio-pdf.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/relatorio.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/revisar.blade.php` (modificado)
+- `resources/views/proposicoes/parlamentar/onlyoffice-editor.blade.php` (modificado)
+- `resources/views/proposicoes/pdf/protocolo-otimizado.blade.php` (modificado)
+- `resources/views/proposicoes/pdf/template-optimized.blade.php` (modificado)
+- `resources/views/proposicoes/pdf/template.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/index-melhorado.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/index-original.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/index.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/protocolar-simples.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/protocolar.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/protocolos-hoje.blade.php` (modificado)
+
+**Seeder criado:** `PreservarMelhorias112Seeder`
+
+---
+
+## Melhoria #110 - 2025-09-12 02:41:48
+
+**Arquivos alterados:** 33
+
+- `app/Http/Controllers/ProposicaoAssinaturaController.php` (modificado)
+- `app/Http/Controllers/ProposicaoProtocoloController.php` (modificado)
+- `app/Services/OnlyOffice/OnlyOfficeService.php` (modificado)
+- `app/Services/Template/TemplateProcessorService.php` (modificado)
+- `app/Services/Template/TemplateVariableService.php` (modificado)
+- `app/Models/Proposicao.php` (modificado)
+- `config/dompdf.php` (modificado)
+- `resources/views/proposicoes/assinatura/assinar-pdf-vue.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/assinar-vue.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/assinar.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/historico.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/index.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/visualizar-pdf-otimizado.blade.php` (modificado)
+- `resources/views/proposicoes/consulta/nao-encontrada.blade.php` (modificado)
+- `resources/views/proposicoes/consulta/publica.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/aguardando-protocolo.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/editar.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/index.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/onlyoffice-editor.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/relatorio-dados.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/relatorio-pdf.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/relatorio.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/revisar.blade.php` (modificado)
+- `resources/views/proposicoes/parlamentar/onlyoffice-editor.blade.php` (modificado)
+- `resources/views/proposicoes/pdf/protocolo-otimizado.blade.php` (modificado)
+- `resources/views/proposicoes/pdf/template-optimized.blade.php` (modificado)
+- `resources/views/proposicoes/pdf/template.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/index-melhorado.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/index-original.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/index.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/protocolar-simples.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/protocolar.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/protocolos-hoje.blade.php` (modificado)
+
+**Seeder criado:** `PreservarMelhorias110Seeder`
+
+---
+
+## Melhoria #108 - 2025-09-12 02:40:43
+
+**Arquivos alterados:** 33
+
+- `app/Http/Controllers/ProposicaoAssinaturaController.php` (modificado)
+- `app/Http/Controllers/ProposicaoProtocoloController.php` (modificado)
+- `app/Services/OnlyOffice/OnlyOfficeService.php` (modificado)
+- `app/Services/Template/TemplateProcessorService.php` (modificado)
+- `app/Services/Template/TemplateVariableService.php` (modificado)
+- `app/Models/Proposicao.php` (modificado)
+- `config/dompdf.php` (modificado)
+- `resources/views/proposicoes/assinatura/assinar-pdf-vue.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/assinar-vue.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/assinar.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/historico.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/index.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/visualizar-pdf-otimizado.blade.php` (modificado)
+- `resources/views/proposicoes/consulta/nao-encontrada.blade.php` (modificado)
+- `resources/views/proposicoes/consulta/publica.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/aguardando-protocolo.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/editar.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/index.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/onlyoffice-editor.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/relatorio-dados.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/relatorio-pdf.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/relatorio.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/revisar.blade.php` (modificado)
+- `resources/views/proposicoes/parlamentar/onlyoffice-editor.blade.php` (modificado)
+- `resources/views/proposicoes/pdf/protocolo-otimizado.blade.php` (modificado)
+- `resources/views/proposicoes/pdf/template-optimized.blade.php` (modificado)
+- `resources/views/proposicoes/pdf/template.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/index-melhorado.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/index-original.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/index.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/protocolar-simples.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/protocolar.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/protocolos-hoje.blade.php` (modificado)
+
+**Seeder criado:** `PreservarMelhorias108Seeder`
+
+---
+
+## Melhoria #106 - 2025-09-12 02:39:04
+
+**Arquivos alterados:** 33
+
+- `app/Http/Controllers/ProposicaoAssinaturaController.php` (modificado)
+- `app/Http/Controllers/ProposicaoProtocoloController.php` (modificado)
+- `app/Services/OnlyOffice/OnlyOfficeService.php` (modificado)
+- `app/Services/Template/TemplateProcessorService.php` (modificado)
+- `app/Services/Template/TemplateVariableService.php` (modificado)
+- `app/Models/Proposicao.php` (modificado)
+- `config/dompdf.php` (modificado)
+- `resources/views/proposicoes/assinatura/assinar-pdf-vue.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/assinar-vue.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/assinar.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/historico.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/index.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/visualizar-pdf-otimizado.blade.php` (modificado)
+- `resources/views/proposicoes/consulta/nao-encontrada.blade.php` (modificado)
+- `resources/views/proposicoes/consulta/publica.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/aguardando-protocolo.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/editar.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/index.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/onlyoffice-editor.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/relatorio-dados.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/relatorio-pdf.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/relatorio.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/revisar.blade.php` (modificado)
+- `resources/views/proposicoes/parlamentar/onlyoffice-editor.blade.php` (modificado)
+- `resources/views/proposicoes/pdf/protocolo-otimizado.blade.php` (modificado)
+- `resources/views/proposicoes/pdf/template-optimized.blade.php` (modificado)
+- `resources/views/proposicoes/pdf/template.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/index-melhorado.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/index-original.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/index.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/protocolar-simples.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/protocolar.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/protocolos-hoje.blade.php` (modificado)
+
+**Seeder criado:** `PreservarMelhorias106Seeder`
+
+---
+
+## Melhoria #104 - 2025-09-12 02:37:30
+
+**Arquivos alterados:** 33
+
+- `app/Http/Controllers/ProposicaoAssinaturaController.php` (modificado)
+- `app/Http/Controllers/ProposicaoProtocoloController.php` (modificado)
+- `app/Services/OnlyOffice/OnlyOfficeService.php` (modificado)
+- `app/Services/Template/TemplateProcessorService.php` (modificado)
+- `app/Services/Template/TemplateVariableService.php` (modificado)
+- `app/Models/Proposicao.php` (modificado)
+- `config/dompdf.php` (modificado)
+- `resources/views/proposicoes/assinatura/assinar-pdf-vue.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/assinar-vue.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/assinar.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/historico.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/index.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/visualizar-pdf-otimizado.blade.php` (modificado)
+- `resources/views/proposicoes/consulta/nao-encontrada.blade.php` (modificado)
+- `resources/views/proposicoes/consulta/publica.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/aguardando-protocolo.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/editar.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/index.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/onlyoffice-editor.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/relatorio-dados.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/relatorio-pdf.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/relatorio.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/revisar.blade.php` (modificado)
+- `resources/views/proposicoes/parlamentar/onlyoffice-editor.blade.php` (modificado)
+- `resources/views/proposicoes/pdf/protocolo-otimizado.blade.php` (modificado)
+- `resources/views/proposicoes/pdf/template-optimized.blade.php` (modificado)
+- `resources/views/proposicoes/pdf/template.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/index-melhorado.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/index-original.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/index.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/protocolar-simples.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/protocolar.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/protocolos-hoje.blade.php` (modificado)
+
+**Seeder criado:** `PreservarMelhorias104Seeder`
+
+---
+
+## Melhoria #102 - 2025-09-12 02:33:20
+
+**Arquivos alterados:** 33
+
+- `app/Http/Controllers/ProposicaoAssinaturaController.php` (modificado)
+- `app/Http/Controllers/ProposicaoProtocoloController.php` (modificado)
+- `app/Services/OnlyOffice/OnlyOfficeService.php` (modificado)
+- `app/Services/Template/TemplateProcessorService.php` (modificado)
+- `app/Services/Template/TemplateVariableService.php` (modificado)
+- `app/Models/Proposicao.php` (modificado)
+- `config/dompdf.php` (modificado)
+- `resources/views/proposicoes/assinatura/assinar-pdf-vue.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/assinar-vue.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/assinar.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/historico.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/index.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/visualizar-pdf-otimizado.blade.php` (modificado)
+- `resources/views/proposicoes/consulta/nao-encontrada.blade.php` (modificado)
+- `resources/views/proposicoes/consulta/publica.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/aguardando-protocolo.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/editar.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/index.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/onlyoffice-editor.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/relatorio-dados.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/relatorio-pdf.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/relatorio.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/revisar.blade.php` (modificado)
+- `resources/views/proposicoes/parlamentar/onlyoffice-editor.blade.php` (modificado)
+- `resources/views/proposicoes/pdf/protocolo-otimizado.blade.php` (modificado)
+- `resources/views/proposicoes/pdf/template-optimized.blade.php` (modificado)
+- `resources/views/proposicoes/pdf/template.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/index-melhorado.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/index-original.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/index.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/protocolar-simples.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/protocolar.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/protocolos-hoje.blade.php` (modificado)
+
+**Seeder criado:** `PreservarMelhorias102Seeder`
+
+---
+
+## Melhoria #100 - 2025-09-12 02:17:33
+
+**Arquivos alterados:** 33
+
+- `app/Http/Controllers/ProposicaoAssinaturaController.php` (modificado)
+- `app/Http/Controllers/ProposicaoProtocoloController.php` (modificado)
+- `app/Services/OnlyOffice/OnlyOfficeService.php` (modificado)
+- `app/Services/Template/TemplateProcessorService.php` (modificado)
+- `app/Services/Template/TemplateVariableService.php` (modificado)
+- `app/Models/Proposicao.php` (modificado)
+- `config/dompdf.php` (modificado)
+- `resources/views/proposicoes/assinatura/assinar-pdf-vue.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/assinar-vue.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/assinar.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/historico.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/index.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/visualizar-pdf-otimizado.blade.php` (modificado)
+- `resources/views/proposicoes/consulta/nao-encontrada.blade.php` (modificado)
+- `resources/views/proposicoes/consulta/publica.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/aguardando-protocolo.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/editar.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/index.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/onlyoffice-editor.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/relatorio-dados.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/relatorio-pdf.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/relatorio.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/revisar.blade.php` (modificado)
+- `resources/views/proposicoes/parlamentar/onlyoffice-editor.blade.php` (modificado)
+- `resources/views/proposicoes/pdf/protocolo-otimizado.blade.php` (modificado)
+- `resources/views/proposicoes/pdf/template-optimized.blade.php` (modificado)
+- `resources/views/proposicoes/pdf/template.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/index-melhorado.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/index-original.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/index.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/protocolar-simples.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/protocolar.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/protocolos-hoje.blade.php` (modificado)
+
+**Seeder criado:** `PreservarMelhorias100Seeder`
+
+---
+
+## Melhoria #98 - 2025-09-12 02:16:12
+
+**Arquivos alterados:** 33
+
+- `app/Http/Controllers/ProposicaoAssinaturaController.php` (modificado)
+- `app/Http/Controllers/ProposicaoProtocoloController.php` (modificado)
+- `app/Services/OnlyOffice/OnlyOfficeService.php` (modificado)
+- `app/Services/Template/TemplateProcessorService.php` (modificado)
+- `app/Services/Template/TemplateVariableService.php` (modificado)
+- `app/Models/Proposicao.php` (modificado)
+- `config/dompdf.php` (modificado)
+- `resources/views/proposicoes/assinatura/assinar-pdf-vue.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/assinar-vue.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/assinar.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/historico.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/index.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/visualizar-pdf-otimizado.blade.php` (modificado)
+- `resources/views/proposicoes/consulta/nao-encontrada.blade.php` (modificado)
+- `resources/views/proposicoes/consulta/publica.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/aguardando-protocolo.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/editar.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/index.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/onlyoffice-editor.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/relatorio-dados.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/relatorio-pdf.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/relatorio.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/revisar.blade.php` (modificado)
+- `resources/views/proposicoes/parlamentar/onlyoffice-editor.blade.php` (modificado)
+- `resources/views/proposicoes/pdf/protocolo-otimizado.blade.php` (modificado)
+- `resources/views/proposicoes/pdf/template-optimized.blade.php` (modificado)
+- `resources/views/proposicoes/pdf/template.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/index-melhorado.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/index-original.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/index.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/protocolar-simples.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/protocolar.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/protocolos-hoje.blade.php` (modificado)
+
+**Seeder criado:** `PreservarMelhorias98Seeder`
+
+---
+
+## Melhoria #96 - 2025-09-12 01:53:42
+
+**Arquivos alterados:** 33
+
+- `app/Http/Controllers/ProposicaoAssinaturaController.php` (modificado)
+- `app/Http/Controllers/ProposicaoProtocoloController.php` (modificado)
+- `app/Services/OnlyOffice/OnlyOfficeService.php` (modificado)
+- `app/Services/Template/TemplateProcessorService.php` (modificado)
+- `app/Services/Template/TemplateVariableService.php` (modificado)
+- `app/Models/Proposicao.php` (modificado)
+- `config/dompdf.php` (modificado)
+- `resources/views/proposicoes/assinatura/assinar-pdf-vue.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/assinar-vue.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/assinar.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/historico.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/index.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/visualizar-pdf-otimizado.blade.php` (modificado)
+- `resources/views/proposicoes/consulta/nao-encontrada.blade.php` (modificado)
+- `resources/views/proposicoes/consulta/publica.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/aguardando-protocolo.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/editar.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/index.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/onlyoffice-editor.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/relatorio-dados.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/relatorio-pdf.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/relatorio.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/revisar.blade.php` (modificado)
+- `resources/views/proposicoes/parlamentar/onlyoffice-editor.blade.php` (modificado)
+- `resources/views/proposicoes/pdf/protocolo-otimizado.blade.php` (modificado)
+- `resources/views/proposicoes/pdf/template-optimized.blade.php` (modificado)
+- `resources/views/proposicoes/pdf/template.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/index-melhorado.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/index-original.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/index.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/protocolar-simples.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/protocolar.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/protocolos-hoje.blade.php` (modificado)
+
+**Seeder criado:** `PreservarMelhorias96Seeder`
+
+---
+
+## Melhoria #94 - 2025-09-12 01:45:11
+
+**Arquivos alterados:** 33
+
+- `app/Http/Controllers/ProposicaoAssinaturaController.php` (modificado)
+- `app/Http/Controllers/ProposicaoProtocoloController.php` (modificado)
+- `app/Services/OnlyOffice/OnlyOfficeService.php` (modificado)
+- `app/Services/Template/TemplateProcessorService.php` (modificado)
+- `app/Services/Template/TemplateVariableService.php` (modificado)
+- `app/Models/Proposicao.php` (modificado)
+- `config/dompdf.php` (modificado)
+- `resources/views/proposicoes/assinatura/assinar-pdf-vue.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/assinar-vue.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/assinar.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/historico.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/index.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/visualizar-pdf-otimizado.blade.php` (modificado)
+- `resources/views/proposicoes/consulta/nao-encontrada.blade.php` (modificado)
+- `resources/views/proposicoes/consulta/publica.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/aguardando-protocolo.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/editar.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/index.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/onlyoffice-editor.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/relatorio-dados.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/relatorio-pdf.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/relatorio.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/revisar.blade.php` (modificado)
+- `resources/views/proposicoes/parlamentar/onlyoffice-editor.blade.php` (modificado)
+- `resources/views/proposicoes/pdf/protocolo-otimizado.blade.php` (modificado)
+- `resources/views/proposicoes/pdf/template-optimized.blade.php` (modificado)
+- `resources/views/proposicoes/pdf/template.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/index-melhorado.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/index-original.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/index.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/protocolar-simples.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/protocolar.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/protocolos-hoje.blade.php` (modificado)
+
+**Seeder criado:** `PreservarMelhorias94Seeder`
+
+---
+
+## Melhoria #92 - 2025-09-12 01:37:45
+
+**Arquivos alterados:** 33
+
+- `app/Http/Controllers/ProposicaoAssinaturaController.php` (modificado)
+- `app/Http/Controllers/ProposicaoProtocoloController.php` (modificado)
+- `app/Services/OnlyOffice/OnlyOfficeService.php` (modificado)
+- `app/Services/Template/TemplateProcessorService.php` (modificado)
+- `app/Services/Template/TemplateVariableService.php` (modificado)
+- `app/Models/Proposicao.php` (modificado)
+- `config/dompdf.php` (modificado)
+- `resources/views/proposicoes/assinatura/assinar-pdf-vue.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/assinar-vue.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/assinar.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/historico.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/index.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/visualizar-pdf-otimizado.blade.php` (modificado)
+- `resources/views/proposicoes/consulta/nao-encontrada.blade.php` (modificado)
+- `resources/views/proposicoes/consulta/publica.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/aguardando-protocolo.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/editar.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/index.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/onlyoffice-editor.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/relatorio-dados.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/relatorio-pdf.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/relatorio.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/revisar.blade.php` (modificado)
+- `resources/views/proposicoes/parlamentar/onlyoffice-editor.blade.php` (modificado)
+- `resources/views/proposicoes/pdf/protocolo-otimizado.blade.php` (modificado)
+- `resources/views/proposicoes/pdf/template-optimized.blade.php` (modificado)
+- `resources/views/proposicoes/pdf/template.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/index-melhorado.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/index-original.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/index.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/protocolar-simples.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/protocolar.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/protocolos-hoje.blade.php` (modificado)
+
+**Seeder criado:** `PreservarMelhorias92Seeder`
+
+---
+
+## Melhoria #90 - 2025-09-12 01:27:49
+
+**Arquivos alterados:** 33
+
+- `app/Http/Controllers/ProposicaoAssinaturaController.php` (modificado)
+- `app/Http/Controllers/ProposicaoProtocoloController.php` (modificado)
+- `app/Services/OnlyOffice/OnlyOfficeService.php` (modificado)
+- `app/Services/Template/TemplateProcessorService.php` (modificado)
+- `app/Services/Template/TemplateVariableService.php` (modificado)
+- `app/Models/Proposicao.php` (modificado)
+- `config/dompdf.php` (modificado)
+- `resources/views/proposicoes/assinatura/assinar-pdf-vue.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/assinar-vue.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/assinar.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/historico.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/index.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/visualizar-pdf-otimizado.blade.php` (modificado)
+- `resources/views/proposicoes/consulta/nao-encontrada.blade.php` (modificado)
+- `resources/views/proposicoes/consulta/publica.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/aguardando-protocolo.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/editar.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/index.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/onlyoffice-editor.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/relatorio-dados.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/relatorio-pdf.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/relatorio.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/revisar.blade.php` (modificado)
+- `resources/views/proposicoes/parlamentar/onlyoffice-editor.blade.php` (modificado)
+- `resources/views/proposicoes/pdf/protocolo-otimizado.blade.php` (modificado)
+- `resources/views/proposicoes/pdf/template-optimized.blade.php` (modificado)
+- `resources/views/proposicoes/pdf/template.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/index-melhorado.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/index-original.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/index.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/protocolar-simples.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/protocolar.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/protocolos-hoje.blade.php` (modificado)
+
+**Seeder criado:** `PreservarMelhorias90Seeder`
+
+---
+
+## Melhoria #88 - 2025-09-12 01:19:57
+
+**Arquivos alterados:** 33
+
+- `app/Http/Controllers/ProposicaoAssinaturaController.php` (modificado)
+- `app/Http/Controllers/ProposicaoProtocoloController.php` (modificado)
+- `app/Services/OnlyOffice/OnlyOfficeService.php` (modificado)
+- `app/Services/Template/TemplateProcessorService.php` (modificado)
+- `app/Services/Template/TemplateVariableService.php` (modificado)
+- `app/Models/Proposicao.php` (modificado)
+- `config/dompdf.php` (modificado)
+- `resources/views/proposicoes/assinatura/assinar-pdf-vue.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/assinar-vue.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/assinar.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/historico.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/index.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/visualizar-pdf-otimizado.blade.php` (modificado)
+- `resources/views/proposicoes/consulta/nao-encontrada.blade.php` (modificado)
+- `resources/views/proposicoes/consulta/publica.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/aguardando-protocolo.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/editar.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/index.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/onlyoffice-editor.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/relatorio-dados.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/relatorio-pdf.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/relatorio.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/revisar.blade.php` (modificado)
+- `resources/views/proposicoes/parlamentar/onlyoffice-editor.blade.php` (modificado)
+- `resources/views/proposicoes/pdf/protocolo-otimizado.blade.php` (modificado)
+- `resources/views/proposicoes/pdf/template-optimized.blade.php` (modificado)
+- `resources/views/proposicoes/pdf/template.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/index-melhorado.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/index-original.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/index.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/protocolar-simples.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/protocolar.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/protocolos-hoje.blade.php` (modificado)
+
+**Seeder criado:** `PreservarMelhorias88Seeder`
+
+---
+
+## Melhoria #86 - 2025-09-12 00:44:21
+
+**Arquivos alterados:** 33
+
+- `app/Http/Controllers/ProposicaoAssinaturaController.php` (modificado)
+- `app/Http/Controllers/ProposicaoProtocoloController.php` (modificado)
+- `app/Services/OnlyOffice/OnlyOfficeService.php` (modificado)
+- `app/Services/Template/TemplateProcessorService.php` (modificado)
+- `app/Services/Template/TemplateVariableService.php` (modificado)
+- `app/Models/Proposicao.php` (modificado)
+- `config/dompdf.php` (modificado)
+- `resources/views/proposicoes/assinatura/assinar-pdf-vue.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/assinar-vue.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/assinar.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/historico.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/index.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/visualizar-pdf-otimizado.blade.php` (modificado)
+- `resources/views/proposicoes/consulta/nao-encontrada.blade.php` (modificado)
+- `resources/views/proposicoes/consulta/publica.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/aguardando-protocolo.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/editar.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/index.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/onlyoffice-editor.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/relatorio-dados.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/relatorio-pdf.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/relatorio.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/revisar.blade.php` (modificado)
+- `resources/views/proposicoes/parlamentar/onlyoffice-editor.blade.php` (modificado)
+- `resources/views/proposicoes/pdf/protocolo-otimizado.blade.php` (modificado)
+- `resources/views/proposicoes/pdf/template-optimized.blade.php` (modificado)
+- `resources/views/proposicoes/pdf/template.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/index-melhorado.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/index-original.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/index.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/protocolar-simples.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/protocolar.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/protocolos-hoje.blade.php` (modificado)
+
+**Seeder criado:** `PreservarMelhorias86Seeder`
+
+---
+
+## Melhoria #84 - 2025-09-11 21:47:41
+
+**Arquivos alterados:** 33
+
+- `app/Http/Controllers/ProposicaoAssinaturaController.php` (modificado)
+- `app/Http/Controllers/ProposicaoProtocoloController.php` (modificado)
+- `app/Services/OnlyOffice/OnlyOfficeService.php` (modificado)
+- `app/Services/Template/TemplateProcessorService.php` (modificado)
+- `app/Services/Template/TemplateVariableService.php` (modificado)
+- `app/Models/Proposicao.php` (modificado)
+- `config/dompdf.php` (modificado)
+- `resources/views/proposicoes/assinatura/assinar-pdf-vue.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/assinar-vue.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/assinar.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/historico.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/index.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/visualizar-pdf-otimizado.blade.php` (modificado)
+- `resources/views/proposicoes/consulta/nao-encontrada.blade.php` (modificado)
+- `resources/views/proposicoes/consulta/publica.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/aguardando-protocolo.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/editar.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/index.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/onlyoffice-editor.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/relatorio-dados.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/relatorio-pdf.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/relatorio.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/revisar.blade.php` (modificado)
+- `resources/views/proposicoes/parlamentar/onlyoffice-editor.blade.php` (modificado)
+- `resources/views/proposicoes/pdf/protocolo-otimizado.blade.php` (modificado)
+- `resources/views/proposicoes/pdf/template-optimized.blade.php` (modificado)
+- `resources/views/proposicoes/pdf/template.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/index-melhorado.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/index-original.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/index.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/protocolar-simples.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/protocolar.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/protocolos-hoje.blade.php` (modificado)
+
+**Seeder criado:** `PreservarMelhorias84Seeder`
+
+---
+
+## Melhoria #82 - 2025-09-11 19:33:46
+
+**Arquivos alterados:** 33
+
+- `app/Http/Controllers/ProposicaoAssinaturaController.php` (modificado)
+- `app/Http/Controllers/ProposicaoProtocoloController.php` (modificado)
+- `app/Services/OnlyOffice/OnlyOfficeService.php` (modificado)
+- `app/Services/Template/TemplateProcessorService.php` (modificado)
+- `app/Services/Template/TemplateVariableService.php` (modificado)
+- `app/Models/Proposicao.php` (modificado)
+- `config/dompdf.php` (modificado)
+- `resources/views/proposicoes/assinatura/assinar-pdf-vue.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/assinar-vue.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/assinar.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/historico.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/index.blade.php` (modificado)
+- `resources/views/proposicoes/assinatura/visualizar-pdf-otimizado.blade.php` (modificado)
+- `resources/views/proposicoes/consulta/nao-encontrada.blade.php` (modificado)
+- `resources/views/proposicoes/consulta/publica.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/aguardando-protocolo.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/editar.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/index.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/onlyoffice-editor.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/relatorio-dados.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/relatorio-pdf.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/relatorio.blade.php` (modificado)
+- `resources/views/proposicoes/legislativo/revisar.blade.php` (modificado)
+- `resources/views/proposicoes/parlamentar/onlyoffice-editor.blade.php` (modificado)
+- `resources/views/proposicoes/pdf/protocolo-otimizado.blade.php` (modificado)
+- `resources/views/proposicoes/pdf/template-optimized.blade.php` (modificado)
+- `resources/views/proposicoes/pdf/template.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/index-melhorado.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/index-original.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/index.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/protocolar-simples.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/protocolar.blade.php` (modificado)
+- `resources/views/proposicoes/protocolo/protocolos-hoje.blade.php` (modificado)
+
+**Seeder criado:** `PreservarMelhorias82Seeder`
+
+---
+
 ## Melhoria #80 - 2025-09-11 18:20:17
 
 **Arquivos alterados:** 33

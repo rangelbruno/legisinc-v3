@@ -846,77 +846,24 @@ class AssinaturaDigitalController extends Controller
                 return false;
             }
 
-            // Ler conteúdo do certificado
-            $certificateData = file_get_contents($arquivoPFX);
-            if ($certificateData === false) {
-                Log::error('Erro ao ler arquivo PFX para validação');
-                return false;
-            }
-
-            $certificates = [];
+            // Usar exec com openssl -legacy que funciona com certificados mais antigos
+            $command = sprintf(
+                'openssl pkcs12 -in %s -passin pass:%s -noout -legacy 2>&1',
+                escapeshellarg($arquivoPFX),
+                escapeshellarg($senha)
+            );
             
-            // VALIDAÇÃO ROBUSTA seguindo as melhores práticas
-            // 1. Tentar com a senha fornecida
-            $validacaoComSenha = @openssl_pkcs12_read($certificateData, $certificates, $senha);
+            exec($command, $output, $returnCode);
             
-            if (!$validacaoComSenha) {
-                // 2. Se falhou, verificar se devemos tentar sem senha
-                if (empty($senha)) {
-                    // Usuário não forneceu senha, tentar PFX sem proteção
-                    $validacaoSemSenha = @openssl_pkcs12_read($certificateData, $certificates, '');
-                    if (!$validacaoSemSenha) {
-                        $opensslError = openssl_error_string();
-                        Log::info('Arquivo PFX inválido ou corrompido', [
-                            'arquivo' => basename($arquivoPFX),
-                            'openssl_error' => $opensslError
-                        ]);
-                        return false;
-                    }
-                    Log::info('PFX validado sem senha (certificado não protegido)');
-                } else {
-                    // 3. Senha foi fornecida mas está incorreta
-                    $opensslError = openssl_error_string();
-                    Log::info('Senha PFX incorreta na validação', [
-                        'arquivo' => basename($arquivoPFX),
-                        'senha_length' => strlen($senha),
-                        'openssl_error' => $opensslError
-                    ]);
-                    return false;
-                }
-            } else {
-                Log::info('PFX validado com senha fornecida');
-            }
-
-            // Verificar se o certificado contém os dados necessários
-            if (!isset($certificates['cert']) || !isset($certificates['pkey'])) {
-                Log::error('Certificado PFX inválido - dados necessários não encontrados');
-                return false;
-            }
-
-            // Verificar validade do certificado
-            $certInfo = openssl_x509_parse($certificates['cert']);
-            if (!$certInfo) {
-                Log::error('Erro ao analisar certificado X.509');
-                return false;
-            }
-
-            // Verificar se não expirou
-            $validTo = $certInfo['validTo_time_t'];
-            if ($validTo < time()) {
-                Log::error('Certificado PFX expirado', [
-                    'valido_ate' => date('d/m/Y H:i:s', $validTo)
-                ]);
-                return false;
-            }
-
-            Log::info('Validação de senha PFX bem-sucedida', [
+            Log::info('Validação de senha PFX via exec', [
                 'arquivo' => basename($arquivoPFX),
-                'subject' => $certInfo['subject']['CN'] ?? 'N/A',
-                'valido_ate' => date('d/m/Y H:i:s', $validTo)
+                'comando' => $command,
+                'return_code' => $returnCode,
+                'output' => implode("\n", $output)
             ]);
-
-            return true;
-
+            
+            return $returnCode === 0;
+            
         } catch (\Exception $e) {
             Log::error('Erro na validação de senha PFX: ' . $e->getMessage(), [
                 'arquivo' => basename($arquivoPFX ?? ''),
@@ -958,11 +905,8 @@ class AssinaturaDigitalController extends Controller
             // Obter caminho do certificado primeiro
             $caminhoCompleto = $user->getCaminhoCompletoCertificado();
             
-            // Verificar se a senha está salva ou foi fornecida
-            $senhaCertificado = null;
-            
             // Tentar usar senha salva primeiro
-            if ($user->certificado_digital_senha_salva) {
+            if ($user->certificado_digital_senha_salva && $user->certificado_digital_senha) {
                 try {
                     $senhaTestar = $user->getSenhaCertificado();
                     if (!$senhaTestar) {
@@ -979,6 +923,12 @@ class AssinaturaDigitalController extends Controller
                     // Validar se a senha descriptografada funciona com o certificado
                     $caminhoCompletoCertificado = $user->getCaminhoCompletoCertificado();
                     if (!$this->validarSenhaPFX($caminhoCompletoCertificado, $senhaTestar)) {
+                        // Log para debug
+                        Log::warning('Senha salva não confere com certificado', [
+                            'user_id' => $user->id,
+                            'certificado_path' => $caminhoCompletoCertificado
+                        ]);
+                        
                         // Senha salva não confere - remover e exigir nova
                         $user->removerSenhaCertificado();
                         
@@ -989,6 +939,7 @@ class AssinaturaDigitalController extends Controller
                         ], 422);
                     }
                     
+                    Log::info('Usando senha salva do certificado', ['user_id' => $user->id]);
                     $senhaCertificado = $senhaTestar;
                     
                 } catch (\Throwable $e) {

@@ -965,6 +965,7 @@ Route::prefix('proposicoes')->name('proposicoes.')->middleware(['auth', 'check.s
     Route::post('/{proposicao}/processar-assinatura-vue', [App\Http\Controllers\ProposicaoAssinaturaController::class, 'processarAssinaturaVue'])->name('processar-assinatura-vue')->middleware('role.permission:proposicoes.assinar');
     Route::get('/{proposicao}/verificar-assinatura', [App\Http\Controllers\ProposicaoAssinaturaController::class, 'verificarAssinatura'])->name('verificar-assinatura')->middleware('role.permission:proposicoes.view.own');
     Route::get('/{proposicao}/conteudo-onlyoffice', [App\Http\Controllers\ProposicaoAssinaturaController::class, 'obterConteudoOnlyOffice'])->name('conteudo-onlyoffice')->middleware('role.permission:proposicoes.view.own');
+    Route::post('/{proposicao}/assinatura-digital/processar', [App\Http\Controllers\ProposicaoAssinaturaController::class, 'processarAssinaturaDigital'])->name('processar-assinatura-digital')->middleware('role.permission:proposicoes.assinar');
 
     Route::get('/{proposicao}/pdf-original', [App\Http\Controllers\ProposicaoAssinaturaController::class, 'visualizarPDFOriginal'])->name('pdf-original')->middleware('role.permission:proposicoes.view.own');
     Route::delete('/{proposicao}/excluir-documento', [App\Http\Controllers\ProposicaoAssinaturaController::class, 'excluirDocumento'])->name('excluir-documento')->middleware('role.permission:proposicoes.assinar');

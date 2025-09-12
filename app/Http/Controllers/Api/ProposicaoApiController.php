@@ -497,13 +497,20 @@ class ProposicaoApiController extends Controller
      */
     private function verificarExistenciaPDF($proposicao): bool
     {
+        // REGRA CRÍTICA: PDF só deve aparecer após aprovação pelo Legislativo
+        $statusComPDF = ['aprovado', 'aprovado_assinatura', 'assinado', 'enviado_protocolo', 'protocolado'];
+        
+        // Se não está em status que deveria ter PDF, não mostrar
+        if (!in_array($proposicao->status, $statusComPDF)) {
+            return false;
+        }
+
         // 1. Verificar campo arquivo_pdf_path (método rápido)
         if (!empty($proposicao->arquivo_pdf_path)) {
             return true;
         }
 
-        // 2. Para status avançados, verificar fisicamente se existe PDF
-        $statusComPDF = ['aprovado', 'assinado', 'protocolado', 'aprovado_assinatura'];
+        // 2. Verificar fisicamente se existe PDF
         if (in_array($proposicao->status, $statusComPDF)) {
             
             // Verificar múltiplos diretórios onde pode estar o PDF

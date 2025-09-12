@@ -452,7 +452,7 @@
                                                             <li><strong>Arquivo:</strong> @{{ dados.certificado.nome_arquivo }}</li>
                                                             <li><strong>CN:</strong> @{{ dados.certificado.cn }}</li>
                                                             <li><strong>Validade:</strong> @{{ dados.certificado.validade }}</li>
-                                                            <li><strong>Senha salva:</strong> @{{ dados.certificado.senhaSalva ? 'Sim' : 'Não' }}</li>
+                                                            <li><strong>Senha salva:</strong> @{{ dados.certificado.senha_salva ? 'Sim' : 'Não' }}</li>
                                                             <li><strong>Status:</strong> 
                                                                 <span :class="dados.certValido ? 'badge badge-success' : 'badge badge-danger'">
                                                                     @{{ dados.certValido ? 'Válido' : 'Expirado/Inválido' }}
@@ -471,8 +471,21 @@
                                                         <span class="path1"></span>
                                                         <span class="path2"></span>
                                                     </i>
-                                                    Usar Este Certificado
+                                                    <span v-if="!busy">Usar Este Certificado</span>
+                                                    <span v-if="busy">Processando...</span>
                                                 </button>
+                                                
+                                                <!-- Aviso sobre senha na primeira vez -->
+                                                <div class="mt-2">
+                                                    <small class="text-muted">
+                                                        <i class="ki-duotone ki-information-5 text-primary">
+                                                            <span class="path1"></span>
+                                                            <span class="path2"></span>
+                                                            <span class="path3"></span>
+                                                        </i>
+                                                        Na primeira vez, pode ser necessário informar a senha do certificado.
+                                                    </small>
+                                                </div>
                                             </div>
                                         </div>
                                         
@@ -653,8 +666,8 @@
                                         </div>
                                     </div>
                                     
-                                    <!-- Botões de Ação -->
-                                    <div class="d-flex justify-content-end">
+                                    <!-- Botões de Ação - Escondidos quando há certificado cadastrado -->
+                                    <div class="d-flex justify-content-end" v-if="!dados?.temCertificado">
                                         <div>
                                             <button 
                                                 type="button" 
@@ -728,6 +741,8 @@
 </div>
 
 <!-- Vue.js 3 CDN -->
+<!-- SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
 
 <script>
@@ -938,10 +953,19 @@ createApp({
 
                 // Sucesso na assinatura
                 if (response.ok && data?.success) {
-                    this.showToast('Documento assinado com sucesso!', '#28a745', 'fas fa-check-circle');
-                    if (data?.pdf_assinado_url) {
-                        window.location.href = data.pdf_assinado_url;
-                    }
+                    // Usar SweetAlert para sucesso
+                    Swal.fire({
+                        title: 'Sucesso!',
+                        text: 'Documento assinado digitalmente com sucesso!',
+                        icon: 'success',
+                        confirmButtonText: 'OK',
+                        confirmButtonColor: '#28a745'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            // Redirecionar para a página da proposição
+                            window.location.href = `/proposicoes/${this.proposicaoId}`;
+                        }
+                    });
                     return;
                 }
 
@@ -951,7 +975,16 @@ createApp({
                     const needsPasswordCodes = ['senha_obrigatoria', 'senha_salva_nula', 'senha_salva_corrompida', 'senha_salva_invalida'];
                     
                     if (needsPasswordCodes.includes(data?.code)) {
-                        this.showToast(data.message || 'Por favor, informe a senha do certificado.', '#ffc107', 'fas fa-key');
+                        let mensagem = 'Por favor, informe a senha do certificado.';
+                        if (data?.code === 'senha_salva_nula') {
+                            mensagem = 'Sua senha salva foi perdida. Por favor, informe a senha novamente.';
+                        } else if (data?.code === 'senha_salva_invalida') {
+                            mensagem = 'Sua senha salva não confere. Por favor, informe a senha correta.';
+                        } else if (data?.code === 'senha_salva_corrompida') {
+                            mensagem = 'Não foi possível recuperar sua senha salva. Por favor, informe a senha novamente.';
+                        }
+                        
+                        this.showToast(mensagem, '#ffc107', 'fas fa-key');
                         this.mostrarCampoSenha = true;
                         return;
                     }
@@ -1003,10 +1036,19 @@ createApp({
                 console.log('Response data:', data);
                 
                 if (data?.success) {
-                    this.showToast('Documento assinado com sucesso!', '#28a745', 'fas fa-check-circle');
-                    if (data?.pdf_assinado_url) {
-                        window.location.href = data.pdf_assinado_url;
-                    }
+                    // Usar SweetAlert para sucesso
+                    Swal.fire({
+                        title: 'Sucesso!',
+                        text: 'Documento assinado digitalmente com sucesso!',
+                        icon: 'success',
+                        confirmButtonText: 'OK',
+                        confirmButtonColor: '#28a745'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            // Redirecionar para a página da proposição
+                            window.location.href = `/proposicoes/${this.proposicaoId}`;
+                        }
+                    });
                 } else {
                     this.showToast(data?.message || 'Não foi possível assinar.', '#dc3545', 'fas fa-exclamation-circle');
                 }
@@ -1134,7 +1176,7 @@ createApp({
             // Certificado cadastrado
             if (this.certificadoSelecionado === 'cadastrado') {
                 // Se senha está salva, não precisa preencher
-                if (this.senhaSalva) return true;
+                if (this.dados?.certificado?.senha_salva) return true;
                 // Se senha não está salva, permitir tentativa automática (certificado pode não ter senha)
                 // ou permite senha manual se preenchida
                 return true; // Sempre permite tentar com certificado cadastrado
@@ -1199,7 +1241,7 @@ createApp({
                 } else {
                     // Se o erro indica que precisa de senha, garantir que o campo apareça
                     if (data.message && data.message.includes('senha')) {
-                        this.senhaSalva = false; // Forçar exibição do campo de senha
+                        // Forçar exibição do campo de senha (não podemos alterar dados do backend)
                     }
                     this.showToast(data.message || 'Erro ao processar assinatura', '#dc3545', 'fas fa-exclamation-circle');
                     this.assinaturaLoading = false;

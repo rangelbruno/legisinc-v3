@@ -101,25 +101,39 @@ class ProposicaoProtocoloController extends Controller
             'verificacoes_realizadas' => $verificacoes,
         ]);
 
-        // Update RTF with protocol number and regenerate PDF preserving digital signature
+        // CORREÇÃO: Forçar regeneração de PDF com número de protocolo usando template service
         try {
-            error_log("Protocolo: Atualizando RTF com protocolo para proposição {$proposicao->id} com protocolo {$numeroProcesso}");
+            error_log("Protocolo: Invalidando PDF antigo e forçando regeneração para proposição {$proposicao->id} com protocolo {$numeroProcesso}");
             
-            $this->atualizarRTFComProtocolo($proposicao->fresh(), $numeroProcesso);
-            error_log("Protocolo: RTF atualizado e PDF regenerado com sucesso para proposição {$proposicao->id}");
+            // CRÍTICO: Invalidar PDF antigo para forçar regeneração com protocolo
+            $proposicao->update([
+                'arquivo_pdf_path' => null,
+                'pdf_gerado_em' => null,
+                'pdf_conversor_usado' => null,
+            ]);
             
-            // Validar se PDF foi gerado corretamente (validação robusta)
-            $this->validarPDFGerado($proposicao->fresh(), $numeroProcesso);
+            // NOVO: Usar geração via controller de assinatura que já funciona corretamente
+            $assinaturaController = app(\App\Http\Controllers\ProposicaoAssinaturaController::class);
+            
+            // Forçar regeneração de PDF atualizado
+            $novoPDF = $this->forcarRegeneracaoPDFComProtocolo($proposicao->fresh(), $numeroProcesso);
+            
+            if ($novoPDF) {
+                error_log("Protocolo: ✅ PDF regenerado com protocolo para proposição {$proposicao->id}: {$novoPDF}");
+                $this->validarPDFGerado($proposicao->fresh(), $numeroProcesso);
+            } else {
+                throw new \Exception("Falha ao regenerar PDF com protocolo");
+            }
             
         } catch (\Exception $e) {
-            error_log("Protocolo: ERRO CRÍTICO ao atualizar protocolo no RTF para proposição {$proposicao->id}: ".$e->getMessage());
+            error_log("Protocolo: ERRO CRÍTICO ao regenerar PDF com protocolo para proposição {$proposicao->id}: ".$e->getMessage());
             
-            // Fallback to PDF stamping if RTF update fails
+            // Fallback to PDF stamping if regeneration fails
             error_log("Protocolo: Tentando fallback para stamp PDF");
             try {
                 $this->aplicarStampProtocolo($proposicao->fresh(), $numeroProcesso);
             } catch (\Exception $stampError) {
-                throw new \Exception("Falha ao aplicar protocolo tanto no RTF quanto no PDF. RTF: " . $e->getMessage() . " | PDF: " . $stampError->getMessage());
+                throw new \Exception("Falha ao aplicar protocolo tanto na regeneração quanto no PDF stamp. Regeneração: " . $e->getMessage() . " | Stamp: " . $stampError->getMessage());
             }
         }
 
@@ -312,11 +326,28 @@ class ProposicaoProtocoloController extends Controller
                 'observacoes_protocolo' => 'Protocolado automaticamente pelo sistema',
             ]);
 
-            // Update RTF with protocol and regenerate PDF
+            // CORREÇÃO: Usar mesmo método de regeneração forçada
             try {
-                $this->atualizarRTFComProtocolo($proposicao->fresh(), $numeroProcesso);
+                error_log("Protocolo Automático: Invalidando PDF e forçando regeneração para proposição {$proposicao->id}");
+                
+                // Invalidar PDF antigo
+                $proposicao->update([
+                    'arquivo_pdf_path' => null,
+                    'pdf_gerado_em' => null,
+                    'pdf_conversor_usado' => null,
+                ]);
+                
+                // Forçar regeneração de PDF atualizado
+                $novoPDF = $this->forcarRegeneracaoPDFComProtocolo($proposicao->fresh(), $numeroProcesso);
+                
+                if (!$novoPDF) {
+                    throw new \Exception("Falha ao regenerar PDF com protocolo automático");
+                }
+                
+                error_log("Protocolo Automático: ✅ PDF regenerado com sucesso");
+                
             } catch (\Exception $e) {
-                Log::error('ERRO CRÍTICO: Falha ao atualizar protocolo no RTF', [
+                Log::error('ERRO CRÍTICO: Falha ao regenerar PDF com protocolo automático', [
                     'proposicao_id' => $proposicao->id,
                     'numero_protocolo' => $numeroProcesso,
                     'error' => $e->getMessage()
@@ -326,7 +357,7 @@ class ProposicaoProtocoloController extends Controller
                 try {
                     $this->aplicarStampProtocolo($proposicao->fresh(), $numeroProcesso);
                 } catch (\Exception $stampError) {
-                    throw new \Exception("Impossível protocolar: Falha em RTF e PDF. RTF: " . $e->getMessage() . " | PDF: " . $stampError->getMessage());
+                    throw new \Exception("Impossível protocolar: Falha na regeneração e stamp. Regeneração: " . $e->getMessage() . " | Stamp: " . $stampError->getMessage());
                 }
             }
 
@@ -754,6 +785,76 @@ class ProposicaoProtocoloController extends Controller
         } catch (\Exception $e) {
             error_log("Protocolo: Erro ao validar PDF: {$e->getMessage()}");
             return false;
+        }
+    }
+
+    /**
+     * Forçar regeneração de PDF com número de protocolo correto
+     * Este método contorna os problemas do ProtocoloRTFService usando o Template Universal
+     */
+    private function forcarRegeneracaoPDFComProtocolo(Proposicao $proposicao, string $numeroProcesso): ?string
+    {
+        try {
+            error_log("Protocolo: Iniciando regeneração forçada de PDF para proposição {$proposicao->id}");
+            
+            // 1. Usar o Template Universal Service que já funciona corretamente com variáveis
+            $templateService = app(\App\Services\Template\TemplateUniversalService::class);
+            
+            // 2. Gerar RTF com protocolo usando o Template Universal
+            $rtfAtualizado = $templateService->aplicarTemplateParaProposicao($proposicao);
+            
+            if (!$rtfAtualizado) {
+                throw new \Exception("Falha ao gerar RTF com Template Universal");
+            }
+            
+            // 3. Salvar RTF atualizado no disco 'private'
+            $novoRTFPath = 'proposicoes/proposicao_' . $proposicao->id . '_protocolo_' . time() . '.rtf';
+            \Storage::disk('private')->put($novoRTFPath, $rtfAtualizado);
+            
+            // 4. Atualizar proposição com novo RTF
+            $proposicao->update(['arquivo_path' => $novoRTFPath]);
+            
+            error_log("Protocolo: RTF regenerado via Template Universal: {$novoRTFPath}");
+            
+            // 5. Converter RTF para PDF usando DocumentConversionService
+            $conversionService = app(\App\Services\DocumentConversionService::class);
+            $rtfFullPath = \Storage::disk('private')->path($novoRTFPath);
+            $pdfOutputPath = str_replace('.rtf', '.pdf', $rtfFullPath);
+            
+            $result = $conversionService->convertToPDF($rtfFullPath, $pdfOutputPath);
+            
+            if ($result['success'] && file_exists($pdfOutputPath)) {
+                // 6. Salvar PDF em local correto
+                $pdfFinalPath = 'proposicoes/pdfs/' . $proposicao->id . '/proposicao_' . $proposicao->id . '_protocolo_' . time() . '.pdf';
+                
+                // Criar diretório se não existir
+                $pdfDir = dirname(\Storage::path($pdfFinalPath));
+                if (!is_dir($pdfDir)) {
+                    mkdir($pdfDir, 0755, true);
+                }
+                
+                // Copiar PDF para local final
+                if (copy($pdfOutputPath, \Storage::path($pdfFinalPath))) {
+                    // 7. Atualizar proposição
+                    $proposicao->update([
+                        'arquivo_pdf_path' => $pdfFinalPath,
+                        'pdf_gerado_em' => now(),
+                        'pdf_conversor_usado' => 'template_universal_protocolo'
+                    ]);
+                    
+                    // Limpar arquivo temporário
+                    unlink($pdfOutputPath);
+                    
+                    error_log("Protocolo: ✅ PDF final salvo: {$pdfFinalPath}");
+                    return \Storage::path($pdfFinalPath);
+                }
+            }
+            
+            throw new \Exception("Falha na conversão RTF para PDF");
+            
+        } catch (\Exception $e) {
+            error_log("Protocolo: ERRO na regeneração forçada: {$e->getMessage()}");
+            return null;
         }
     }
 

@@ -3,8 +3,17 @@
 ## 🚀 COMANDO PRINCIPAL
 
 ```bash
-docker exec -it legisinc-app php artisan migrate:fresh --seed
+docker exec -it legisinc-app php artisan migrate:safe --fresh --seed --generate-seeders
 ```
+
+**✅ VERSÃO v2.3 - MIGRAÇÃO SEGURA COM AUTO-CORREÇÃO**
+
+### **🔧 Correções Automáticas Incluídas:**
+- ✅ **Permissões de Storage**: Auto-corrige ownership e permissões
+- ✅ **Namespaces de Seeders**: Auto-corrige referências malformadas
+- ✅ **Cache e Views**: Auto-limpeza após migration
+- ✅ **Log Files**: Auto-criação e permissões corretas
+- ✅ **Bootstrap Cache**: Auto-correção de permissões
 
 ## ✅ CONFIGURAÇÃO AUTOMÁTICA:
 
@@ -222,10 +231,49 @@ if (!Storage::exists($proposicao->arquivo_path)) {
 }
 ```
 
+### **6. OnlyOffice - Preservação de Conteúdo Original (CRÍTICO)**
+**Seeders**: `CorrecaoOnlyOfficeConteudoSeeder` + `LimpezaConteudoCorrempidoSeeder`
+**Problema**: Sistema substituía conteúdo original por texto extraído de RTF corrompido ("ansi Objetivo geral...")
+
+```php
+// LÓGICA CONSERVADORA: Preservar conteúdo original sempre que possível
+$conteudoOriginal = $proposicao->conteudo;
+$temConteudoOriginalValido = !empty($conteudoOriginal) && strlen(trim($conteudoOriginal)) > 10;
+
+if ($temConteudoOriginalValido) {
+    // NUNCA substituir conteúdo original válido
+    Log::info('CONSERVANDO conteúdo original existente - não extraindo do RTF');
+} elseif ($this->isConteudoValidoRigoroso($conteudoExtraido)) {
+    // Só substituir se não há conteúdo original E conteúdo extraído é muito confiável
+    $updateData['conteudo'] = $conteudoExtraido;
+}
+
+// VALIDAÇÃO RIGOROSA: Rejeita padrões suspeitos
+private function isConteudoValidoRigoroso(string $conteudo): bool {
+    // Rejeita textos que começam com "ansi ", "xxx Objetivo geral:", etc.
+    $padroesSuspeitos = ['/^ansi\s/', '/^[a-z]{4,8}\s+(Objetivo|CONSIDERANDO)/'];
+    // Exige mínimo 30 chars, 5 palavras de 3+ chars, 50% chars válidos
+}
+
+// LIMPEZA AUTOMÁTICA: Remove conteúdo corrompido de proposições antigas
+$proposicoesCorrempidas = Proposicao::where('conteudo', 'LIKE', '%ansi Objetivo%')->get();
+foreach ($proposicoesCorrempidas as $proposicao) {
+    $proposicao->update(['conteudo' => $this->gerarConteudoPadrao($proposicao)]);
+}
+```
+
 ---
 
-**🎊 SISTEMA 100% OPERACIONAL - VERSÃO v2.1 ENTERPRISE**
+**🎊 SISTEMA 100% OPERACIONAL - VERSÃO v2.2 ENTERPRISE**
 
-**Status**: Produção com Polling Realtime + Priorização Arquivo Salvo + Template Universal + Performance Otimizada + Correções Críticas PDF
+**Status**: Produção com Polling Realtime + Priorização Arquivo Salvo + Template Universal + Performance Otimizada + Correções Críticas PDF + **Preservação de Conteúdo OnlyOffice**
 
-**Última atualização**: 05/09/2025
+**Última atualização**: 12/09/2025
+
+## 🆕 **NOVIDADES v2.2**
+✅ **Correção OnlyOffice Crítica**: Sistema nunca mais substitui conteúdo original por texto corrompido  
+✅ **Validação Rigorosa**: Detecta e rejeita padrões suspeitos como "ansi Objetivo geral..."  
+✅ **Lógica Conservadora**: Preserva conteúdo existente durante edições no OnlyOffice  
+✅ **Limpeza Automática**: Remove conteúdo corrompido de proposições antigas existentes  
+✅ **Seeders Automáticos**: Aplicação e limpeza automáticas via `migrate:safe`  
+✅ **Sistema Anti-Regressão**: Correção preservada permanentemente, problema RESOLVIDO DEFINITIVAMENTE

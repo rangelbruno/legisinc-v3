@@ -3162,7 +3162,10 @@ Status: ".ucfirst(str_replace('_', ' ', $proposicao->status))."\par
                     $updateData['modificado_por'] = auth()->id();
                 }
 
-                // ESTRATÉGIA HÍBRIDA: Tentar atualizar conteúdo se foi extraído com sucesso
+                // ESTRATÉGIA CONSERVADORA: PRIORIZAR PRESERVAÇÃO DO CONTEÚDO ORIGINAL
+                $conteudoOriginal = $proposicao->conteudo;
+                $temConteudoOriginalValido = !empty($conteudoOriginal) && strlen(trim($conteudoOriginal)) > 10;
+                
                 if (isset($pularExtracaoConteudo) && $pularExtracaoConteudo) {
                     // Estratégia antiga - manter conteúdo do banco
                     Log::info('Mantendo conteúdo atual do banco - não extraindo do callback', [
@@ -3170,20 +3173,41 @@ Status: ".ucfirst(str_replace('_', ' ', $proposicao->status))."\par
                         'estrategia' => 'preservar_conteudo_banco'
                     ]);
                 } else {
-                    // Lógica anterior (para casos especiais onde queremos extrair)
-                    if (! empty($conteudoExtraido) && $this->isConteudoValido($conteudoExtraido)) {
-                        $updateData['conteudo'] = $conteudoExtraido;
-                        Log::info('Conteúdo válido será atualizado na proposição', [
+                    // NOVA LÓGICA CONSERVADORA: Preservar conteúdo original sempre que possível
+                    if ($temConteudoOriginalValido) {
+                        // Se já tem conteúdo válido, NÃO substituir - apenas salvar arquivo
+                        Log::info('CONSERVANDO conteúdo original existente - não extraindo do RTF', [
                             'proposicao_id' => $proposicao->id,
-                            'content_length' => strlen($conteudoExtraido),
-                            'content_preview' => substr($conteudoExtraido, 0, 100),
+                            'estrategia' => 'preservar_conteudo_original_existente',
+                            'conteudo_original_length' => strlen($conteudoOriginal),
+                            'conteudo_extraido_length' => strlen($conteudoExtraido ?? ''),
                         ]);
+                    } elseif (! empty($conteudoExtraido) && $this->isConteudoValidoRigoroso($conteudoExtraido)) {
+                        // PROTEÇÃO EXTRA: Verificar se conteúdo extraído não contém padrões suspeitos específicos
+                        $temPadraoSuspeito = preg_match('/ansi\s+Objetivo\s+geral:|Objetivo\s+geral:\s+Oferecer\s+informações/', $conteudoExtraido);
+                        
+                        if ($temPadraoSuspeito) {
+                            Log::warning('Conteúdo extraído REJEITADO por conter padrão "ansi Objetivo geral" específico', [
+                                'proposicao_id' => $proposicao->id,
+                                'content_preview' => substr($conteudoExtraido, 0, 150),
+                                'estrategia' => 'protecao_extra_ansi_objetivo'
+                            ]);
+                        } else {
+                            // Só substituir se não há conteúdo original E conteúdo extraído é muito confiável E não tem padrão suspeito
+                            $updateData['conteudo'] = $conteudoExtraido;
+                            Log::info('Conteúdo extraído será usado (não havia conteúdo original)', [
+                                'proposicao_id' => $proposicao->id,
+                                'content_length' => strlen($conteudoExtraido),
+                                'content_preview' => substr($conteudoExtraido, 0, 100),
+                            ]);
+                        }
                     } else {
-                        Log::warning('Conteúdo extraído inválido ou vazio, mantendo conteúdo anterior', [
+                        Log::warning('Conteúdo extraído não é confiável, mantendo conteúdo anterior', [
                             'proposicao_id' => $proposicao->id,
-                            'content_length' => strlen($conteudoExtraido),
+                            'content_length' => strlen($conteudoExtraido ?? ''),
                             'is_empty' => empty($conteudoExtraido),
-                            'is_valid' => !empty($conteudoExtraido) ? $this->isConteudoValido($conteudoExtraido) : false,
+                            'is_valid_rigoroso' => !empty($conteudoExtraido) ? $this->isConteudoValidoRigoroso($conteudoExtraido) : false,
+                            'tinha_conteudo_original' => $temConteudoOriginalValido,
                         ]);
                     }
                 }
@@ -3846,7 +3870,82 @@ Status: ".ucfirst(str_replace('_', ' ', $proposicao->status))."\par
     }
     
     /**
-     * Validar se conteúdo extraído é texto válido (não corrompido)
+     * Validar se conteúdo extraído é texto válido (não corrompido) - VERSÃO RIGOROSA
+     */
+    private function isConteudoValidoRigoroso(string $conteudo): bool
+    {
+        Log::info('Validando conteúdo extraído RIGOROSAMENTE', [
+            'tamanho' => strlen($conteudo),
+            'preview' => substr($conteudo, 0, 150)
+        ]);
+        
+        // REJEITAR IMEDIATAMENTE se começa com padrões suspeitos
+        $padroesSuspeitos = [
+            '/^ansi\s/',                    // Começa com "ansi " - muito suspeito
+            '/ansi\s+Objetivo\s+geral:/',   // Específico: "ansi Objetivo geral:"
+            '/^[a-z]{3,8}\s+(Objetivo|CONSIDERANDO|RESOLVE)/',  // Padrão específico do problema
+            '/^\w{3,6}\s+\w+\s+geral:/',   // Padrão "xxx xxx geral:"
+            '/^[*\s;:]{10,}/',             // Começa com lixo RTF
+            '/Objetivo\s+geral:\s+Oferecer\s+informações/',  // Padrão específico reportado
+            '/^\s*[a-z]+\s+Objetivo\s+geral:\s+Oferecer/',    // Variações com espaços
+        ];
+        
+        foreach ($padroesSuspeitos as $padrao) {
+            if (preg_match($padrao, $conteudo)) {
+                Log::warning('Conteúdo REJEITADO por padrão suspeito', [
+                    'padrao' => $padrao,
+                    'preview' => substr($conteudo, 0, 100)
+                ]);
+                return false;
+            }
+        }
+        
+        // Conteúdo muito pequeno não é válido
+        if (strlen($conteudo) < 30) {
+            Log::info('Conteúdo rejeitado: muito pequeno para ser confiável', ['tamanho' => strlen($conteudo)]);
+            return false;
+        }
+        
+        // Se após limpeza ainda contém muito padrão RTF corrompido, rejeitar
+        if (preg_match('/[*\s]{5,}[;:]/', $conteudo)) {
+            Log::info('Conteúdo rejeitado: ainda contém muito padrão RTF corrompido');
+            return false;
+        }
+        
+        // Deve ter MUITAS palavras reais (pelo menos 5 palavras de 3+ caracteres)
+        $palavras = preg_match_all('/\b[a-zA-ZÀ-ÿ]{3,}\b/', $conteudo);
+        if ($palavras < 5) {
+            Log::info('Conteúdo rejeitado: poucas palavras válidas para ser confiável', ['palavras_encontradas' => $palavras]);
+            return false;
+        }
+        
+        // Pelo menos 50% do conteúdo deve ser caracteres alfanuméricos ou espaços (mais rigoroso)
+        $totalChars = mb_strlen($conteudo, 'UTF-8');
+        if ($totalChars == 0) {
+            Log::info('Conteúdo rejeitado: vazio após limpeza');
+            return false;
+        }
+        
+        $validChars = preg_match_all('/[a-zA-ZÀ-ÿ0-9\s]/', $conteudo);
+        $porcentagemValida = $validChars / $totalChars;
+        
+        if ($porcentagemValida < 0.5) { // MAIS RIGOROSO: 50% em vez de 30%
+            Log::info('Conteúdo rejeitado: muitos caracteres especiais para ser confiável', [
+                'porcentagem_valida' => round($porcentagemValida * 100, 2) . '%'
+            ]);
+            return false;
+        }
+        
+        Log::info('Conteúdo APROVADO na validação rigorosa', [
+            'palavras' => $palavras,
+            'porcentagem_valida' => round($porcentagemValida * 100, 2) . '%'
+        ]);
+        
+        return true;
+    }
+    
+    /**
+     * Validar se conteúdo extraído é texto válido (não corrompido) - VERSÃO ORIGINAL
      */
     private function isConteudoValido(string $conteudo): bool
     {
@@ -3884,14 +3983,14 @@ Status: ".ucfirst(str_replace('_', ' ', $proposicao->status))."\par
         $validChars = preg_match_all('/[a-zA-ZÀ-ÿ0-9\s]/', $conteudo);
         $porcentagemValida = $validChars / $totalChars;
         
-        if ($porcentagemValida < 0.3) { // Reduzido de 60% para 30%
+        if ($porcentagemValida < 0.3) {
             Log::info('Conteúdo rejeitado: muitos caracteres especiais', [
                 'porcentagem_valida' => round($porcentagemValida * 100, 2) . '%'
             ]);
             return false;
         }
         
-        Log::info('Conteúdo aprovado na validação', [
+        Log::info('Conteúdo aprovado na validação original', [
             'palavras' => $palavras,
             'porcentagem_valida' => round($porcentagemValida * 100, 2) . '%'
         ]);
@@ -4519,7 +4618,19 @@ Status: ".ucfirst(str_replace('_', ' ', $proposicao->status))."\par
                 $conteudoExtraido = $this->extrairTextoDOCXCompleto($caminho);
             }
 
-            if ($conteudoExtraido && $this->isConteudoExtraidoValido($conteudoExtraido)) {
+            if ($conteudoExtraido && $this->isConteudoValidoRigoroso($conteudoExtraido)) {
+                // PROTEÇÃO EXTRA: Verificar se conteúdo extraído não contém padrões suspeitos específicos
+                $temPadraoSuspeito = preg_match('/ansi\s+Objetivo\s+geral:|Objetivo\s+geral:\s+Oferecer\s+informações/', $conteudoExtraido);
+                
+                if ($temPadraoSuspeito) {
+                    Log::warning('⚠️ Conteúdo extraído REJEITADO por conter padrão "ansi Objetivo geral" específico', [
+                        'proposicao_id' => $proposicao->id,
+                        'content_preview' => substr($conteudoExtraido, 0, 150),
+                        'estrategia' => 'protecao_extra_ansi_objetivo_sincronizacao'
+                    ]);
+                    return false;
+                }
+                
                 // Atualizar banco com conteúdo extraído
                 $proposicao->updateQuietly([
                     'conteudo' => $conteudoExtraido,

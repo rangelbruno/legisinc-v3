@@ -72,7 +72,7 @@ class User extends Authenticatable
             'certificado_digital_upload_em' => 'datetime',
             'certificado_digital_validade' => 'date',
             'certificado_digital_ativo' => 'boolean',
-            'certificado_digital_senha' => 'encrypted',
+            // 'certificado_digital_senha' => 'encrypted', // Removido pois estava causando problemas
             'certificado_digital_senha_salva' => 'boolean',
         ];
     }
@@ -730,7 +730,7 @@ class User extends Authenticatable
     public function salvarSenhaCertificado(string $senha): bool
     {
         return $this->update([
-            'certificado_digital_senha' => $senha, // O cast 'encrypted' cuida da criptografia
+            'certificado_digital_senha' => encrypt($senha), // Criptografar manualmente
             'certificado_digital_senha_salva' => true,
         ]);
     }
@@ -740,9 +740,21 @@ class User extends Authenticatable
      */
     public function getSenhaCertificado(): ?string
     {
-        // O cast 'encrypted' já cuida da descriptografia automaticamente
-        // Só retornar o valor do atributo que será descriptografado pelo cast
-        return $this->certificado_digital_senha;
+        if (empty($this->getAttributes()['certificado_digital_senha'])) {
+            return null;
+        }
+        
+        try {
+            // Descriptografar manualmente pois o cast encrypted não está funcionando corretamente
+            return decrypt($this->getAttributes()['certificado_digital_senha']);
+        } catch (\Exception $e) {
+            // Se falha na descriptografia, retornar null e limpar o campo
+            $this->update([
+                'certificado_digital_senha' => null,
+                'certificado_digital_senha_salva' => false,
+            ]);
+            return null;
+        }
     }
     
     /**
@@ -770,7 +782,7 @@ class User extends Authenticatable
             'nome_arquivo' => basename($this->certificado_digital_path),
             'cn' => $this->certificado_digital_cn,
             'validade' => optional($this->certificado_digital_validade)->format('d/m/Y'),
-            'senhaSalva' => (bool) $this->certificado_digital_senha_salva,
+            'senha_salva' => (bool) $this->certificado_digital_senha_salva,
         ];
     }
 }

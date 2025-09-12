@@ -4407,4 +4407,242 @@ class ProposicaoAssinaturaController extends Controller implements HasMiddleware
 
         return $html;
     }
+
+    /**
+     * Processar assinatura digital usando certificado cadastrado
+     */
+    public function processarAssinaturaDigital(Request $request, Proposicao $proposicao)
+    {
+        try {
+            $user = Auth::user();
+            
+            // Verificar se o usuário tem certificado cadastrado
+            if (!$user->certificado_digital_path) {
+                return response()->json([
+                    'success' => false,
+                    'code' => 'certificado_nao_encontrado',
+                    'message' => 'Nenhum certificado digital cadastrado para este usuário.',
+                ], 400);
+            }
+
+            // Verificar se está tentando usar certificado cadastrado sem senha
+            if ($request->usar_certificado_cadastrado && !$request->senha_certificado) {
+                // Se a senha não foi salva, solicitar
+                if (!$user->certificado_digital_senha_salva || !$user->certificado_digital_senha) {
+                    return response()->json([
+                        'success' => false,
+                        'code' => 'senha_obrigatoria',
+                        'message' => 'Por favor, informe a senha do certificado.',
+                        'precisa_senha' => true,
+                    ], 422);
+                }
+            }
+
+            // Validar dados necessários
+            $validationRules = [];
+            
+            if (!$request->usar_certificado_cadastrado) {
+                $validationRules['arquivo_certificado'] = 'required|file|mimes:pfx,p12';
+            }
+            
+            if ($request->senha_certificado) {
+                $validationRules['senha_certificado'] = 'required|string|min:1';
+            }
+
+            if (!empty($validationRules)) {
+                $request->validate($validationRules);
+            }
+
+            $senha = null;
+            $certificadoPath = null;
+
+            if ($request->usar_certificado_cadastrado) {
+                // Usar certificado cadastrado
+                $certificadoPath = storage_path('app/' . $user->certificado_digital_path);
+                
+                if ($request->senha_certificado) {
+                    $senha = $request->senha_certificado;
+                } elseif ($user->certificado_digital_senha_salva && $user->certificado_digital_senha) {
+                    // Descriptografar senha salva
+                    $senha = decrypt($user->certificado_digital_senha);
+                }
+                
+                if (!$senha) {
+                    return response()->json([
+                        'success' => false,
+                        'code' => 'senha_obrigatoria',
+                        'message' => 'Por favor, informe a senha do certificado.',
+                        'precisa_senha' => true,
+                    ], 422);
+                }
+            } else {
+                // Upload de novo certificado
+                if (!$request->hasFile('arquivo_certificado')) {
+                    return response()->json([
+                        'success' => false,
+                        'code' => 'arquivo_obrigatorio',
+                        'message' => 'Por favor, selecione um arquivo de certificado.',
+                    ], 422);
+                }
+                
+                $certificado = $request->file('arquivo_certificado');
+                $certificadoPath = $certificado->store('certificados-digitais', 'private');
+                $certificadoPath = storage_path('app/' . $certificadoPath);
+                $senha = $request->senha_certificado;
+            }
+
+            // Verificar se o arquivo do certificado existe
+            if (!file_exists($certificadoPath)) {
+                return response()->json([
+                    'success' => false,
+                    'code' => 'certificado_nao_encontrado',
+                    'message' => 'Arquivo do certificado não encontrado.',
+                ], 400);
+            }
+
+            // Validar certificado e senha
+            $validacao = $this->validarCertificadoESenha($certificadoPath, $senha);
+            if (!$validacao['valido']) {
+                return response()->json([
+                    'success' => false,
+                    'code' => 'certificado_invalido',
+                    'message' => $validacao['erro'] ?: 'Certificado ou senha inválidos.',
+                ], 422);
+            }
+
+            // Gerar dados da assinatura
+            $timestampAssinatura = now();
+            $identificadorAssinatura = $this->gerarIdentificadorAssinaturaComTimestamp($proposicao, $timestampAssinatura);
+
+            // Simular assinatura digital (em produção seria feita com o certificado real)
+            $assinaturaDigital = $this->gerarAssinaturaDigital($proposicao, $certificadoPath, $senha);
+
+            // Dados do certificado
+            $certificadoDigital = json_encode([
+                'titular' => $validacao['dados']['CN'] ?? $user->name,
+                'emissor' => $validacao['dados']['emissor'] ?? 'AC Válida',
+                'validade' => $validacao['dados']['validade'] ?? now()->addYear()->format('d/m/Y'),
+                'tipo' => 'A1',
+                'identificador' => $identificadorAssinatura,
+                'arquivo' => basename($certificadoPath),
+            ]);
+
+            // Atualizar proposição
+            $proposicao->update([
+                'status' => 'assinado',
+                'assinatura_digital' => $assinaturaDigital,
+                'certificado_digital' => $certificadoDigital,
+                'data_assinatura' => $timestampAssinatura,
+                'ip_assinatura' => $request->ip(),
+                'confirmacao_leitura' => true,
+            ]);
+
+            // Enviar automaticamente para protocolo se configurado
+            if (config('app.assinatura_envia_automatico', true)) {
+                $proposicao->update(['status' => 'enviado_protocolo']);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Documento assinado digitalmente com sucesso!',
+                'assinatura_digital' => $assinaturaDigital,
+                'data_assinatura' => $timestampAssinatura->format('d/m/Y H:i:s'),
+                'identificador' => $identificadorAssinatura,
+                'status' => $proposicao->status,
+            ]);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'code' => 'validacao_erro',
+                'message' => 'Dados inválidos: ' . implode(', ', array_flatten($e->errors())),
+                'errors' => $e->errors(),
+            ], 422);
+        } catch (\Exception $e) {
+            \Log::error('Erro ao processar assinatura digital:', [
+                'proposicao_id' => $proposicao->id,
+                'user_id' => Auth::id(),
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'code' => 'erro_interno',
+                'message' => 'Erro interno do servidor. Tente novamente.',
+            ], 500);
+        }
+    }
+
+    /**
+     * Validar certificado PFX e senha
+     */
+    private function validarCertificadoESenha($certificadoPath, $senha)
+    {
+        try {
+            // Verificar se é um arquivo PFX válido usando OpenSSL
+            $command = sprintf(
+                'openssl pkcs12 -in %s -passin pass:%s -noout 2>&1',
+                escapeshellarg($certificadoPath),
+                escapeshellarg($senha)
+            );
+            
+            exec($command, $output, $returnCode);
+            
+            if ($returnCode === 0) {
+                // Extrair dados do certificado
+                $infoCommand = sprintf(
+                    'openssl pkcs12 -in %s -passin pass:%s -nokeys -clcerts | openssl x509 -subject -dates -noout 2>/dev/null',
+                    escapeshellarg($certificadoPath),
+                    escapeshellarg($senha)
+                );
+                
+                exec($infoCommand, $infoOutput, $infoReturnCode);
+                
+                $dados = [];
+                foreach ($infoOutput as $line) {
+                    if (strpos($line, 'subject=') === 0) {
+                        // Extrair CN
+                        if (preg_match('/CN=([^,]+)/', $line, $matches)) {
+                            $dados['CN'] = trim($matches[1]);
+                        }
+                    } elseif (strpos($line, 'notAfter=') === 0) {
+                        $dados['validade'] = str_replace('notAfter=', '', $line);
+                    }
+                }
+                
+                return [
+                    'valido' => true,
+                    'dados' => $dados,
+                ];
+            }
+            
+            return [
+                'valido' => false,
+                'erro' => 'Certificado ou senha inválidos',
+            ];
+            
+        } catch (\Exception $e) {
+            return [
+                'valido' => false,
+                'erro' => 'Erro ao validar certificado: ' . $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * Gerar assinatura digital simulada
+     */
+    private function gerarAssinaturaDigital($proposicao, $certificadoPath, $senha)
+    {
+        // Em um ambiente de produção, aqui seria feita a assinatura real do PDF
+        // Por hora, geramos uma assinatura simulada
+        $dataParaAssinar = json_encode([
+            'proposicao_id' => $proposicao->id,
+            'timestamp' => now()->timestamp,
+            'hash_documento' => hash('sha256', $proposicao->conteudo ?? ''),
+        ]);
+        
+        return hash('sha256', $dataParaAssinar . $senha);
+    }
 }

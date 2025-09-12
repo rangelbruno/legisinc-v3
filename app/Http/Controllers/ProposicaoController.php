@@ -4939,20 +4939,51 @@ class ProposicaoController extends Controller implements HasMiddleware
             if ($pdfExistente) {
                 $caminhoAbsoluto = storage_path('app/' . $pdfExistente);
                 if (file_exists($caminhoAbsoluto)) {
-                    Log::info('🔴 PDF REQUEST: Servindo PDF existente (assinado/mais recente)', [
-                        'proposicao_id' => $proposicao->id,
-                        'pdf_path' => $pdfExistente,
-                        'tamanho' => filesize($caminhoAbsoluto)
-                    ]);
+                    // CRÍTICO: Verificar se RTF foi modificado após a geração do PDF
+                    $pdfModificado = filemtime($caminhoAbsoluto);
+                    $rtfModificado = null;
                     
-                    return response()->file($caminhoAbsoluto, [
-                        'Content-Type' => 'application/pdf',
-                        'Content-Disposition' => 'inline; filename="proposicao_' . $proposicao->id . '.pdf"',
-                        'Cache-Control' => 'no-cache, no-store, must-revalidate, max-age=0',
-                        'Pragma' => 'no-cache',
-                        'Expires' => '-1',
-                        'X-PDF-Source' => 'existing-signed'
-                    ]);
+                    if ($proposicao->arquivo_path && Storage::exists($proposicao->arquivo_path)) {
+                        $caminhoRTF = Storage::path($proposicao->arquivo_path);
+                        if (file_exists($caminhoRTF)) {
+                            $rtfModificado = filemtime($caminhoRTF);
+                        }
+                    }
+                    
+                    // Se RTF é mais novo que PDF, forçar regeneração
+                    if ($rtfModificado && $rtfModificado > $pdfModificado) {
+                        Log::warning('🔴 PDF REQUEST: RTF mais novo que PDF - Forçando regeneração', [
+                            'proposicao_id' => $proposicao->id,
+                            'rtf_modificado' => date('Y-m-d H:i:s', $rtfModificado),
+                            'pdf_modificado' => date('Y-m-d H:i:s', $pdfModificado),
+                            'diferenca_segundos' => $rtfModificado - $pdfModificado
+                        ]);
+                        
+                        // Invalidar PDF antigo para forçar regeneração
+                        $proposicao->update([
+                            'arquivo_pdf_path' => null,
+                            'pdf_gerado_em' => null,
+                            'pdf_conversor_usado' => null,
+                        ]);
+                        
+                        // Continuar para gerar novo PDF
+                    } else {
+                        // PDF está atualizado, servir normalmente
+                        Log::info('🔴 PDF REQUEST: Servindo PDF existente (assinado/mais recente)', [
+                            'proposicao_id' => $proposicao->id,
+                            'pdf_path' => $pdfExistente,
+                            'tamanho' => filesize($caminhoAbsoluto)
+                        ]);
+                        
+                        return response()->file($caminhoAbsoluto, [
+                            'Content-Type' => 'application/pdf',
+                            'Content-Disposition' => 'inline; filename="proposicao_' . $proposicao->id . '.pdf"',
+                            'Cache-Control' => 'no-cache, no-store, must-revalidate, max-age=0',
+                            'Pragma' => 'no-cache',
+                            'Expires' => '-1',
+                            'X-PDF-Source' => 'existing-signed'
+                        ]);
+                    }
                 }
             }
             
@@ -5177,6 +5208,16 @@ class ProposicaoController extends Controller implements HasMiddleware
     {
         try {
             $diretorioDestino = dirname($caminhoDestino);
+            
+            // 🎯 SOLUÇÃO DEFINITIVA: SEMPRE APLICAR TEMPLATE UNIVERSAL ANTES DA CONVERSÃO
+            $caminhoComTemplate = $this->garantirTemplateUniversal($caminhoOrigem);
+            if ($caminhoComTemplate !== $caminhoOrigem) {
+                Log::info('🔴 PDF REQUEST: Template universal aplicado', [
+                    'original' => $caminhoOrigem,
+                    'com_template' => $caminhoComTemplate
+                ]);
+                $caminhoOrigem = $caminhoComTemplate; // Usar RTF com template
+            }
             
             // Comando LibreOffice para conversão
             $comando = sprintf(
@@ -5429,6 +5470,21 @@ class ProposicaoController extends Controller implements HasMiddleware
      */
     private function verificarExistenciaPDF($proposicao): bool
     {
+        // REGRA CRÍTICA: PDF só deve aparecer após aprovação pelo Legislativo
+        // Status onde PDF é disponibilizado:
+        $statusComPDF = [
+            'aprovado',           // Aprovado pelo Legislativo - PDF gerado para assinatura
+            'aprovado_assinatura',// Aprovado para assinatura
+            'assinado',           // Assinado digitalmente
+            'enviado_protocolo',  // Enviado para protocolo
+            'protocolado'         // Protocolado oficialmente
+        ];
+        
+        // Se não está em status que deveria ter PDF, não mostrar
+        if (!in_array($proposicao->status, $statusComPDF)) {
+            return false;
+        }
+        
         // Verificar arquivo_pdf_path
         if ($proposicao->arquivo_pdf_path && Storage::exists($proposicao->arquivo_pdf_path)) {
             return true;
@@ -5568,122 +5624,35 @@ class ProposicaoController extends Controller implements HasMiddleware
      */
     private function encontrarPDFMaisRecenteRobusta(Proposicao $proposicao): ?string
     {
-        $pdfsPossiveis = [];
-
-        // 1. Verificar diretório principal de PDFs da proposição
-        $diretorioPrincipal = storage_path("app/private/proposicoes/pdfs/{$proposicao->id}");
-        if (is_dir($diretorioPrincipal)) {
-            $arquivos = glob($diretorioPrincipal.'/*.pdf');
-            foreach ($arquivos as $arquivo) {
-                if (file_exists($arquivo)) {
-                    $pdfsPossiveis[] = [
-                        'path' => $arquivo,
-                        'relative_path' => str_replace(storage_path('app/'), '', $arquivo),
-                        'timestamp' => filemtime($arquivo),
-                        'tipo' => 'pdf_onlyoffice',
-                    ];
-                }
-            }
-        }
-
-        // 2. PRIORIDADE: Verificar PDFs assinados e protocolados primeiro
-        if ($proposicao->arquivo_pdf_protocolado) {
-            $caminhoCompleto = storage_path('app/'.$proposicao->arquivo_pdf_protocolado);
-            if (file_exists($caminhoCompleto)) {
-                $pdfsPossiveis[] = [
-                    'path' => $caminhoCompleto,
-                    'relative_path' => $proposicao->arquivo_pdf_protocolado,
-                    'timestamp' => filemtime($caminhoCompleto),
-                    'tipo' => 'pdf_protocolado',
-                ];
-            }
-        }
+        // 🚨 CORREÇÃO: APÓS MIGRATE:SAFE, USAR APENAS DADOS DO BANCO ATUAL
+        // Não buscar arquivos antigos que podem ter dados de estados anteriores
         
-        if ($proposicao->arquivo_pdf_assinado) {
-            $caminhoCompleto = storage_path('app/'.$proposicao->arquivo_pdf_assinado);
-            if (file_exists($caminhoCompleto)) {
-                $pdfsPossiveis[] = [
-                    'path' => $caminhoCompleto,
-                    'relative_path' => $proposicao->arquivo_pdf_assinado,
-                    'timestamp' => filemtime($caminhoCompleto),
-                    'tipo' => 'pdf_assinado',
-                ];
-            }
-        }
-
-        // 3. Verificar se há PDF no arquivo_pdf_path (fallback para PDFs não assinados)
-        if ($proposicao->arquivo_pdf_path) {
-            $caminhoCompleto = storage_path('app/'.$proposicao->arquivo_pdf_path);
-            if (file_exists($caminhoCompleto)) {
-                $pdfsPossiveis[] = [
-                    'path' => $caminhoCompleto,
-                    'relative_path' => $proposicao->arquivo_pdf_path,
-                    'timestamp' => filemtime($caminhoCompleto),
-                    'tipo' => 'pdf_basico',
-                ];
-            }
-        }
-
-        // 4. Verificar diretórios alternativos
-        $diretorios = [
-            storage_path("app/proposicoes/{$proposicao->id}"),
-            storage_path("app/private/proposicoes/{$proposicao->id}"),
-            storage_path("app/public/proposicoes/{$proposicao->id}"),
-        ];
-
-        foreach ($diretorios as $diretorio) {
-            if (is_dir($diretorio)) {
-                $arquivos = glob($diretorio.'/*.pdf');
-                foreach ($arquivos as $arquivo) {
-                    if (file_exists($arquivo)) {
-                        $pdfsPossiveis[] = [
-                            'path' => $arquivo,
-                            'relative_path' => str_replace(storage_path('app/'), '', $arquivo),
-                            'timestamp' => filemtime($arquivo),
-                            'tipo' => 'pdf_backup',
-                        ];
-                    }
-                }
-            }
-        }
-
-        // ORDENAR POR PRIORIDADE DE TIPO PRIMEIRO, depois por data de modificação
-        // Ordem de prioridade: 1=protocolado, 2=assinado, 3=basico, 4=onlyoffice, 5=backup
-        $prioridades = [
-            'pdf_protocolado' => 1,
-            'pdf_assinado' => 2,
-            'pdf_basico' => 3,
-            'pdf_onlyoffice' => 4,
-            'pdf_backup' => 5,
-        ];
-        
-        usort($pdfsPossiveis, function ($a, $b) use ($prioridades) {
-            $prioridadeA = $prioridades[$a['tipo']] ?? 99;
-            $prioridadeB = $prioridades[$b['tipo']] ?? 99;
-            
-            // Se prioridades diferentes, ordenar por prioridade
-            if ($prioridadeA !== $prioridadeB) {
-                return $prioridadeA - $prioridadeB;
-            }
-            
-            // Se mesma prioridade, ordenar por timestamp (mais recente primeiro)
-            return $b['timestamp'] - $a['timestamp'];
-        });
-
-        Log::info('🔴 DEBUG: encontrarPDFMaisRecenteRobusta encontrou', [
+        Log::info('🔴 PDF REQUEST: encontrarPDFMaisRecenteRobusta - usando apenas dados do banco atual', [
             'proposicao_id' => $proposicao->id,
-            'total_pdfs' => count($pdfsPossiveis),
-            'pdfs_encontrados' => array_map(function($pdf) {
-                return [
-                    'tipo' => $pdf['tipo'],
-                    'path' => $pdf['relative_path'],
-                    'timestamp' => date('Y-m-d H:i:s', $pdf['timestamp'])
-                ];
-            }, $pdfsPossiveis),
-            'mais_recente' => !empty($pdfsPossiveis) ? $pdfsPossiveis[0]['relative_path'] : null
+            'status' => $proposicao->status,
+            'arquivo_pdf_path' => $proposicao->arquivo_pdf_path
+        ]);
+        
+        // APENAS verificar se há PDF no arquivo_pdf_path do banco atual
+        if ($proposicao->arquivo_pdf_path && Storage::exists($proposicao->arquivo_pdf_path)) {
+            $caminhoCompleto = Storage::path($proposicao->arquivo_pdf_path);
+            if (file_exists($caminhoCompleto)) {
+                Log::info('🔴 PDF REQUEST: PDF encontrado no banco atual', [
+                    'proposicao_id' => $proposicao->id,
+                    'pdf_path' => $proposicao->arquivo_pdf_path,
+                    'pdf_size' => filesize($caminhoCompleto)
+                ]);
+                return $proposicao->arquivo_pdf_path;
+            }
+        }
+        
+        Log::info('🔴 PDF REQUEST: Nenhum PDF válido no banco atual - forçará regeneração', [
+            'proposicao_id' => $proposicao->id,
+            'arquivo_pdf_path_exists' => $proposicao->arquivo_pdf_path ? Storage::exists($proposicao->arquivo_pdf_path) : false
         ]);
 
-        return !empty($pdfsPossiveis) ? $pdfsPossiveis[0]['relative_path'] : null;
+        
+        return null; // Não encontrou PDF válido no banco atual
     }
 
     /**
@@ -5771,5 +5740,132 @@ class ProposicaoController extends Controller implements HasMiddleware
         }
         
         return false;
+    }
+    
+    /**
+     * 🎯 SOLUÇÃO DEFINITIVA: Garantir que RTF sempre use template universal
+     * 
+     * Este método verifica se o RTF tem template aplicado, e se não tiver,
+     * aplica automaticamente o template universal correto para o tipo da proposição.
+     * 
+     * @param string $caminhoRTF Caminho do RTF original
+     * @return string Caminho do RTF com template aplicado
+     */
+    private function garantirTemplateUniversal(string $caminhoRTF): string
+    {
+        try {
+            // Extrair ID da proposição do nome do arquivo
+            // Exemplo: proposicoes/proposicao_1_1757619341.rtf -> ID = 1
+            $nomeArquivo = basename($caminhoRTF);
+            if (!preg_match('/proposicao_(\d+)_/', $nomeArquivo, $matches)) {
+                Log::warning('🔴 PDF REQUEST: Não conseguiu extrair ID da proposição do RTF', [
+                    'caminho' => $caminhoRTF
+                ]);
+                return $caminhoRTF; // Retornar original se não conseguir extrair ID
+            }
+            
+            $proposicaoId = (int) $matches[1];
+            $proposicao = Proposicao::find($proposicaoId);
+            
+            if (!$proposicao) {
+                Log::warning('🔴 PDF REQUEST: Proposição não encontrada', [
+                    'id' => $proposicaoId
+                ]);
+                return $caminhoRTF;
+            }
+            
+            // Verificar se RTF é pequeno demais (indica que não tem template aplicado)
+            $caminhoAbsoluto = Storage::path(str_replace(storage_path('app/'), '', $caminhoRTF));
+            if (!Storage::exists($caminhoAbsoluto)) {
+                // Tentar caminho relativo diretamente
+                $caminhoRelativo = str_replace(storage_path('app/'), '', $caminhoRTF);
+                if (!Storage::exists($caminhoRelativo)) {
+                    Log::warning('🔴 PDF REQUEST: RTF não encontrado no Storage', [
+                        'caminho_absoluto' => $caminhoAbsoluto,
+                        'caminho_relativo' => $caminhoRelativo
+                    ]);
+                    return $caminhoRTF;
+                }
+                $caminhoAbsoluto = $caminhoRelativo;
+            }
+            
+            $rtfContent = Storage::get($caminhoAbsoluto);
+            $rtfSize = strlen($rtfContent);
+            
+            // Se RTF é pequeno (< 10KB) ou não contém elementos de template, aplicar template
+            $precisaTemplate = $rtfSize < 10000 || 
+                              !str_contains($rtfContent, 'CÂMARA MUNICIPAL') &&
+                              !str_contains($rtfContent, 'pict\\pngblip') &&
+                              !str_contains($rtfContent, 'SUBEMENDA Nº');
+            
+            if (!$precisaTemplate) {
+                Log::info('🔴 PDF REQUEST: RTF já tem template aplicado', [
+                    'proposicao_id' => $proposicaoId,
+                    'size' => $rtfSize
+                ]);
+                return $caminhoRTF;
+            }
+            
+            Log::info('🔴 PDF REQUEST: RTF precisa de template universal', [
+                'proposicao_id' => $proposicaoId,
+                'size' => $rtfSize,
+                'tem_camara' => str_contains($rtfContent, 'CÂMARA MUNICIPAL'),
+                'tem_imagem' => str_contains($rtfContent, 'pict\\pngblip')
+            ]);
+            
+            // Buscar template correto para o tipo da proposição
+            $template = \App\Models\TipoProposicaoTemplate::where('tipo_proposicao_id', $proposicao->tipoProposicao->id)
+                ->where('ativo', true)
+                ->first();
+            
+            if (!$template) {
+                Log::warning('🔴 PDF REQUEST: Template não encontrado para tipo', [
+                    'tipo_id' => $proposicao->tipoProposicao->id,
+                    'tipo_nome' => $proposicao->tipoProposicao->nome
+                ]);
+                return $caminhoRTF;
+            }
+            
+            // Aplicar template usando TemplateProcessorService
+            $templateService = app(\App\Services\Template\TemplateProcessorService::class);
+            
+            $dadosEditaveis = [
+                'ementa' => $proposicao->ementa ?: 'Ementa da proposição',
+                'texto' => $proposicao->texto ?: $proposicao->ementa ?: 'Conteúdo da proposição',
+                'justificativa' => $proposicao->justificativa ?: '',
+                'observacoes' => '',
+            ];
+            
+            $rtfComTemplate = $templateService->processarTemplate($template, $proposicao, $dadosEditaveis);
+            
+            // Salvar RTF processado com nome único
+            $novoNome = 'proposicoes/proposicao_' . $proposicaoId . '_template_' . time() . '.rtf';
+            Storage::put($novoNome, $rtfComTemplate);
+            
+            // Atualizar proposição para usar novo RTF (para próximas vezes)
+            $proposicao->update([
+                'arquivo_path' => $novoNome,
+                'arquivo_pdf_path' => null, // Forçar regeneração de PDF futuro
+            ]);
+            
+            Log::info('🔴 PDF REQUEST: Template universal aplicado com sucesso', [
+                'proposicao_id' => $proposicaoId,
+                'template_id' => $template->id,
+                'novo_rtf' => $novoNome,
+                'size_original' => $rtfSize,
+                'size_com_template' => strlen($rtfComTemplate)
+            ]);
+            
+            // Retornar caminho absoluto do novo RTF
+            return Storage::path($novoNome);
+            
+        } catch (\Exception $e) {
+            Log::error('🔴 PDF REQUEST: Erro ao aplicar template universal', [
+                'caminho' => $caminhoRTF,
+                'erro' => $e->getMessage(),
+                'linha' => $e->getLine()
+            ]);
+            return $caminhoRTF; // Em caso de erro, usar RTF original
+        }
     }
 }

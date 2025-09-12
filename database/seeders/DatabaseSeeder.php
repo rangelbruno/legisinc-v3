@@ -13,16 +13,18 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        // 🛡️ PROTEÇÃO CRÍTICA: Problema "ansi Objetivo" (SEMPRE EXECUTAR PRIMEIRO)
+        // Comentado temporariamente até o seeder ser criado
+        // $this->call([
+        //     CriticoAnsiObjetivoProtectionSeeder::class,
+        // ]);
+
         // Primeiro criar tabelas OnlyOffice e roles/permissões básicos
         $this->call([
             OnlyOfficeTablesSeeder::class,
             RolesAndPermissionsSeeder::class,
         ]);
 
-        // BACKUP RTFs OnlyOffice ANTES de qualquer reset
-        $this->call([
-            BackupRTFsOnlyOfficeSeeder::class,
-        ]);
 
         // PRESERVAÇÃO INTELIGENTE: Sistema automático v2.0 que detecta e preserva melhorias
         $this->call([
@@ -437,7 +439,162 @@ class DatabaseSeeder extends Seeder
             PreservarMelhorias79Seeder::class,
         ]);
 
-        // ÚLTIMO: Correções HTML de estrutura de botões (DEVE ser executado POR ÚLTIMO)
+        // PRESERVAÇÃO AUTOMÁTICA: Melhorias detectadas automaticamente
+        $this->call([
+            PreservarMelhorias81Seeder::class,
+        ]);
+
+        // PRESERVAÇÃO AUTOMÁTICA: Melhorias detectadas automaticamente
+        $this->call([
+            PreservarMelhorias83Seeder::class,
+        ]);
+
+        // PRESERVAÇÃO AUTOMÁTICA: Melhorias detectadas automaticamente
+        $this->call([
+            PreservarMelhorias85Seeder::class,
+        ]);
+
+        // PRESERVAÇÃO AUTOMÁTICA: Melhorias detectadas automaticamente
+        $this->call([
+            PreservarMelhorias87Seeder::class,
+        ]);
+
+        // PRESERVAÇÃO AUTOMÁTICA: Melhorias detectadas automaticamente
+        $this->call([
+            PreservarMelhorias89Seeder::class,
+        ]);
+
+        // PRESERVAÇÃO AUTOMÁTICA: Melhorias detectadas automaticamente
+        $this->call([
+            PreservarMelhorias91Seeder::class,
+        ]);
+
+        // PRESERVAÇÃO AUTOMÁTICA: Melhorias detectadas automaticamente
+        $this->call([
+            PreservarMelhorias93Seeder::class,
+        ]);
+
+        // PRESERVAÇÃO AUTOMÁTICA: Melhorias detectadas automaticamente
+        $this->call([
+            PreservarMelhorias95Seeder::class,
+        ]);
+
+        // PRESERVAÇÃO AUTOMÁTICA: Melhorias detectadas automaticamente
+        $this->call([
+            PreservarMelhorias97Seeder::class,
+        ]);
+
+        // CORREÇÃO CRÍTICA AUTO-REGISTRADA: OnlyOffice Content Protection
+        $this->call([
+            CorrecaoOnlyOfficeConteudoSeeder::class,
+        ]);
+
+        // LIMPEZA CRÍTICA AUTO-REGISTRADA: Content Corruption Cleanup
+        $this->call([
+            LimpezaConteudoCorrempidoSeeder::class,
+        ]);
+
+                // PRESERVAÇÃO AUTOMÁTICA: Melhorias detectadas automaticamente
+        $this->call([
+            PreservarMelhorias99Seeder::class,
+        ]);
+
+        // CORREÇÃO CRÍTICA AUTO-REGISTRADA: OnlyOffice Content Protection
+        $this->call([
+            CorrecaoOnlyOfficeConteudoSeeder::class,
+        ]);
+
+                // LIMPEZA CRÍTICA AUTO-REGISTRADA: Content Corruption Cleanup
+        $this->call([
+            LimpezaConteudoCorrempidoSeeder::class,
+        ]);
+
+                // PRESERVAÇÃO AUTOMÁTICA: Melhorias detectadas automaticamente
+        $this->call([
+            PreservarMelhorias101Seeder::class,
+        ]);
+
+        // PRESERVAÇÃO AUTOMÁTICA: Melhorias detectadas automaticamente
+        $this->call([
+            PreservarMelhorias103Seeder::class,
+        ]);
+
+        // PRESERVAÇÃO AUTOMÁTICA: Melhorias detectadas automaticamente
+        $this->call([
+            PreservarMelhorias105Seeder::class,
+        ]);
+
+        // PRESERVAÇÃO AUTOMÁTICA: Melhorias detectadas automaticamente
+        $this->call([
+            PreservarMelhorias107Seeder::class,
+        ]);
+
+        // CORREÇÃO CRÍTICA AUTO-REGISTRADA: OnlyOffice Content Protection
+        $this->call([
+            CorrecaoOnlyOfficeConteudoSeeder::class,
+        ]);
+
+                // LIMPEZA CRÍTICA AUTO-REGISTRADA: Content Corruption Cleanup
+        $this->call([
+            LimpezaConteudoCorrempidoSeeder::class,
+        ]);
+
+                // PRESERVAÇÃO AUTOMÁTICA: Melhorias detectadas automaticamente
+        $this->call([
+            PreservarMelhorias109Seeder::class,
+        ]);
+
+        // PRESERVAÇÃO AUTOMÁTICA: Melhorias detectadas automaticamente
+        $this->call([
+            PreservarMelhorias111Seeder::class,
+        ]);
+
+        // CORREÇÃO CRÍTICA AUTO-REGISTRADA: OnlyOffice Content Protection
+        $this->call([
+            CorrecaoOnlyOfficeConteudoSeeder::class,
+        ]);
+
+                // LIMPEZA CRÍTICA AUTO-REGISTRADA: Content Corruption Cleanup
+        $this->call([
+            LimpezaConteudoCorrempidoSeeder::class,
+        ]);
+
+                // PRESERVAÇÃO AUTOMÁTICA: Melhorias detectadas automaticamente
+        $this->call([
+            PreservarMelhorias113Seeder::class,
+        ]);
+
+        // PRESERVAÇÃO AUTOMÁTICA: Melhorias detectadas automaticamente
+        $this->call([
+            PreservarMelhorias115Seeder::class,
+        ]);
+
+        // CORREÇÃO CRÍTICA AUTO-REGISTRADA: OnlyOffice Content Protection
+        $this->call([
+            CorrecaoOnlyOfficeConteudoSeeder::class,
+        ]);
+
+                // LIMPEZA CRÍTICA AUTO-REGISTRADA: Content Corruption Cleanup
+        $this->call([
+            LimpezaConteudoCorrempidoSeeder::class,
+        ]);
+
+                // PRESERVAÇÃO AUTOMÁTICA: Melhorias detectadas automaticamente
+        $this->call([
+            PreservarMelhorias117Seeder::class,
+        ]);
+
+        // CORREÇÃO CRÍTICA AUTO-REGISTRADA: OnlyOffice Content Protection
+        $this->call([
+            Database\Seeders\CorrecaoOnlyOfficeConteudoSeeder::class,
+        ]);
+
+                // LIMPEZA CRÍTICA AUTO-REGISTRADA: Content Corruption Cleanup
+        $this->call([
+            Database\Seeders\LimpezaConteudoCorrempidoSeeder::class,
+        ]);
+
+                // ÚLTIMO: Correções HTML de estrutura de botões (DEVE ser executado POR ÚLTIMO)
         $this->call([
             HTMLButtonsFixSeeder::class,
         ]);
@@ -508,6 +665,16 @@ class DatabaseSeeder extends Seeder
         // LARAVEL BOOST: Correção robusta de validação OnlyOffice (DEFINITIVA)
         $this->call([
             OnlyOfficeRobustValidationSeeder::class,
+        ]);
+
+        // CORREÇÃO CRÍTICA: Preservação de conteúdo original no OnlyOffice (evita substituição por texto corrompido)
+        $this->call([
+            CorrecaoOnlyOfficeConteudoSeeder::class,
+        ]);
+
+        // LIMPEZA: Remover conteúdo corrompido de proposições antigas (que foram afetadas antes da correção)
+        $this->call([
+            LimpezaConteudoCorrempidoSeeder::class,
         ]);
 
         // CORREÇÕES CRÍTICAS FINAIS: PDF Viewer (EXECUTAR POR ÚLTIMO)

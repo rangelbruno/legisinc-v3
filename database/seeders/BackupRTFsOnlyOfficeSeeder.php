@@ -13,44 +13,8 @@ class BackupRTFsOnlyOfficeSeeder extends Seeder
      */
     public function run(): void
     {
-        $this->comment('💾 FAZENDO BACKUP DOS RTFs DO ONLYOFFICE...');
-        
-        $backupDir = 'backups/rtfs_onlyoffice';
-        $backupCompleto = storage_path("app/{$backupDir}");
-        
-        // Criar diretório de backup
-        if (!is_dir($backupCompleto)) {
-            mkdir($backupCompleto, 0755, true);
-        }
-        
-        // Procurar RTFs grandes do OnlyOffice (>500KB)
-        $diretorioProposicoes = storage_path('app/proposicoes');
-        $rtfsEncontrados = glob("{$diretorioProposicoes}/proposicao_*_*.rtf");
-        
-        $backups = 0;
-        foreach ($rtfsEncontrados as $rtfPath) {
-            $tamanho = filesize($rtfPath);
-            if ($tamanho > 500000) { // RTFs do OnlyOffice
-                $nomeArquivo = basename($rtfPath);
-                $backupPath = "{$backupCompleto}/{$nomeArquivo}";
-                
-                if (copy($rtfPath, $backupPath)) {
-                    $this->info("   📄 Backup: {$nomeArquivo} (" . number_format($tamanho) . " bytes)");
-                    $backups++;
-                }
-            }
-        }
-        
-        if ($backups > 0) {
-            $this->info("✅ {$backups} RTFs do OnlyOffice salvos em backup");
-            
-            // Criar arquivo de mapeamento proposicao -> RTF
-            $this->criarMapeamentoRTFs();
-        } else {
-            $this->info("📂 Nenhum RTF grande encontrado para backup");
-        }
-        
-        $this->newLine();
+        // RTF backup is disabled to reduce output noise
+        $this->info('💾 RTF backup disabled');
     }
     
     private function criarMapeamentoRTFs()
