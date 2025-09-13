@@ -1563,7 +1563,22 @@ Route::middleware(['web', 'auth'])->prefix('admin/monitoring')->name('admin.moni
     Route::get('/performance', [MonitoringController::class, 'performance'])->name('performance');
     Route::get('/logs', [MonitoringController::class, 'logs'])->name('logs');
     Route::get('/alerts', [MonitoringController::class, 'alerts'])->name('alerts');
-    
+
+    // Database Activity Routes
+    Route::get('/database-activity', [App\Http\Controllers\Admin\DatabaseActivityController::class, 'index'])->name('database-activity');
+    Route::get('/database-activity/recent', [App\Http\Controllers\Admin\DatabaseActivityController::class, 'getRecentActivity'])->name('database-activity.recent');
+    Route::get('/database-activity/table-stats', [App\Http\Controllers\Admin\DatabaseActivityController::class, 'getTableStats'])->name('database-activity.table-stats');
+    Route::get('/database-activity/realtime-metrics', [App\Http\Controllers\Admin\DatabaseActivityController::class, 'getRealTimeMetrics'])->name('database-activity.realtime-metrics');
+    Route::get('/database-activity/filter', [App\Http\Controllers\Admin\DatabaseActivityController::class, 'filterActivities'])->name('database-activity.filter');
+    Route::get('/database-activity/active-tables', [App\Http\Controllers\Admin\DatabaseActivityController::class, 'getActiveTables'])->name('database-activity.active-tables');
+
+    // Detailed Analysis Routes
+    Route::get('/database-activity/detailed', function() { return view('admin.monitoring.database-activity-detailed'); })->name('database-activity.detailed');
+    Route::get('/database-activity/record-flow', [App\Http\Controllers\Admin\DatabaseActivityController::class, 'getRecordFlow'])->name('database-activity.record-flow');
+    Route::get('/database-activity/column-analysis', [App\Http\Controllers\Admin\DatabaseActivityController::class, 'getColumnAnalysis'])->name('database-activity.column-analysis');
+    Route::get('/database-activity/table-records', [App\Http\Controllers\Admin\DatabaseActivityController::class, 'getTableRecords'])->name('database-activity.table-records');
+    Route::get('/database-activity/export', [App\Http\Controllers\Admin\DatabaseActivityController::class, 'exportActivities'])->name('database-activity.export');
+
     // API endpoints para AJAX
     Route::get('/api/database-stats', [MonitoringController::class, 'apiDatabaseStats'])->name('api.database-stats');
 });

@@ -240,6 +240,7 @@ class MonitoringController extends Controller
                         'iteration' => $iteration,
                         'database' => $this->dbMonitor->getDatabaseSummary(),
                         'performance' => $this->getRecentPerformanceMetrics(),
+                        'database_activity' => $this->getDatabaseActivityMetrics(),
                         'buffer_size' => app(MetricsFlushService::class)->getBufferSize(),
                         'active_alerts' => $this->getActiveAlertsCount(),
                     ];
@@ -320,6 +321,43 @@ class MonitoringController extends Controller
                 ->count();
         } catch (\Exception $e) {
             return 0;
+        }
+    }
+
+    private function getDatabaseActivityMetrics(): array
+    {
+        try {
+            $lastMinute = now()->subMinute();
+
+            $metrics = \DB::table('database_activities')
+                ->where('created_at', '>=', $lastMinute)
+                ->selectRaw('
+                    COUNT(*) as operations_last_minute,
+                    AVG(query_time_ms) as avg_query_time_ms,
+                    COUNT(CASE WHEN operation_type = \'INSERT\' THEN 1 END) as inserts,
+                    COUNT(CASE WHEN operation_type = \'UPDATE\' THEN 1 END) as updates,
+                    COUNT(CASE WHEN operation_type = \'DELETE\' THEN 1 END) as deletes,
+                    COUNT(CASE WHEN operation_type = \'SELECT\' THEN 1 END) as selects
+                ')
+                ->first();
+
+            return [
+                'operations_last_minute' => $metrics->operations_last_minute ?? 0,
+                'avg_query_time_ms' => round($metrics->avg_query_time_ms ?? 0, 2),
+                'inserts' => $metrics->inserts ?? 0,
+                'updates' => $metrics->updates ?? 0,
+                'deletes' => $metrics->deletes ?? 0,
+                'selects' => $metrics->selects ?? 0,
+            ];
+        } catch (\Exception $e) {
+            return [
+                'operations_last_minute' => 0,
+                'avg_query_time_ms' => 0,
+                'inserts' => 0,
+                'updates' => 0,
+                'deletes' => 0,
+                'selects' => 0,
+            ];
         }
     }
 }

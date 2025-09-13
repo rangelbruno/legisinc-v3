@@ -260,15 +260,15 @@
                             </div>
                         </div>
                         <div class="col-md-4">
-                            <div class="component-box">
+                            <div class="component-box" onclick="location.href='{{ route('admin.monitoring.database-activity') }}'">
                                 <div class="component-icon">
-                                    <i class="ki-duotone ki-folder fs-2x text-info">
+                                    <i class="ki-duotone ki-chart-line-down fs-2x text-success">
                                         <span class="path1"></span>
                                         <span class="path2"></span>
                                     </i>
                                 </div>
-                                <div class="component-title">Storage</div>
-                                <div class="component-subtitle">Arquivos do sistema</div>
+                                <div class="component-title">Atividade DB</div>
+                                <div class="component-subtitle" id="db-activity-widget">Carregando...</div>
                             </div>
                         </div>
                     </div>
@@ -386,12 +386,20 @@ function updateRealtimeData(data) {
     if (data.database) {
         updateDatabaseWidget(data.database);
     }
-    
+
     if (data.performance) {
         const perfWidget = document.getElementById('performance-widget');
         perfWidget.innerHTML = `Req/s: ${data.performance.total_requests || 0} | ${data.performance.avg_response_time_ms || 0}ms`;
     }
-    
+
+    // Atualizar atividade do banco de dados
+    if (data.database_activity) {
+        const dbActivityWidget = document.getElementById('db-activity-widget');
+        const totalOps = data.database_activity.operations_last_minute || 0;
+        const avgTime = data.database_activity.avg_query_time_ms || 0;
+        dbActivityWidget.innerHTML = `${totalOps} ops/min | ${avgTime}ms médio`;
+    }
+
     // Atualizar sistema
     document.getElementById('system-uptime').textContent = `Buffer Redis: ${data.buffer_size || 0} items`;
 }

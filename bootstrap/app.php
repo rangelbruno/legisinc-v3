@@ -33,6 +33,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'check.assinatura.permission' => \App\Http\Middleware\CheckAssinaturaPermission::class,
             'debug.logger' => \App\Http\Middleware\DebugActionLogger::class,
             'database.debug' => \App\Http\Middleware\DatabaseDebugMiddleware::class,
+            'database.activity' => \App\Http\Middleware\DatabaseActivityLogger::class,
             'request.tracing' => \App\Http\Middleware\RequestTracing::class,
         ]);
         
@@ -41,6 +42,7 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\PreventBackHistory::class,
             \App\Http\Middleware\DebugActionLogger::class,
             \App\Http\Middleware\DatabaseDebugMiddleware::class,
+            \App\Http\Middleware\DatabaseActivityLogger::class,
             \App\Http\Middleware\RequestTracing::class,
         ]);
     })
