@@ -29,13 +29,13 @@ class RequestTracing
         // Store request ID in container for global access
         app()->instance('request_id', $requestId);
         
-        // Inject request ID into log context
+        // Inject request ID into log context with proper truncation
         Log::withContext([
             'request_id' => $requestId,
             'user_id' => auth()->id(),
             'ip' => $request->ip(),
-            'user_agent' => $request->userAgent(),
-            'url' => $request->fullUrl(),
+            'user_agent' => substr($request->userAgent() ?? '', 0, 120), // Truncate user agent
+            'url' => substr($request->fullUrl(), 0, 512), // Truncate URL
             'method' => $request->method(),
         ]);
 
@@ -63,23 +63,59 @@ class RequestTracing
             return;
         }
         
-        // Prepare metric data
-        $metric = [
-            'metric_type' => 'http_request',
-            'metric_name' => 'duration_ms',
-            'value' => round($duration, 2),
-            'tags' => [
-                'route' => $route,
-                'method' => $request->method(),
-                'status_code' => $statusCode,
-                'is_error' => $statusCode >= 400,
+        // Prepare multiple metric data points  
+        $metrics = [
+            // Request duration metric
+            [
+                'metric_type' => 'http',
+                'metric_name' => 'request_duration_ms',
+                'value' => round($duration, 2),
+                'tags' => [
+                    'route' => $route,
+                    'method' => $request->method(),
+                    'status' => $statusCode,
+                    'status_class' => $this->getStatusClass($statusCode),
+                ],
+                'created_at' => now()->toDateTimeString(),
+                'request_id' => $requestId,
             ],
-            'created_at' => now()->toDateTimeString(),
-            'request_id' => $requestId,
+            // Request count metric
+            [
+                'metric_type' => 'http',
+                'metric_name' => 'request_count',
+                'value' => 1,
+                'tags' => [
+                    'route' => $route,
+                    'method' => $request->method(),
+                    'status' => $statusCode,
+                    'status_class' => $this->getStatusClass($statusCode),
+                ],
+                'created_at' => now()->toDateTimeString(),
+                'request_id' => $requestId,
+            ],
         ];
         
-        // Buffer metric in Redis for batch processing
-        $this->bufferMetric($metric);
+        // Add error metric for non-2xx responses
+        if ($statusCode >= 400) {
+            $metrics[] = [
+                'metric_type' => 'http',
+                'metric_name' => 'error_count',
+                'value' => 1,
+                'tags' => [
+                    'route' => $route,
+                    'method' => $request->method(),
+                    'status' => $statusCode,
+                    'error_type' => $statusCode >= 500 ? 'server_error' : 'client_error',
+                ],
+                'created_at' => now()->toDateTimeString(),
+                'request_id' => $requestId,
+            ];
+        }
+        
+        // Buffer metrics in Redis for batch processing
+        foreach ($metrics as $metric) {
+            $this->bufferMetric($metric);
+        }
         
         // Log performance for slow requests
         if ($duration > 1000 || $statusCode >= 500) {
@@ -136,5 +172,17 @@ class RequestTracing
                 ]);
             }
         }
+    }
+
+    /**
+     * Get HTTP status class (2xx, 3xx, 4xx, 5xx)
+     */
+    protected function getStatusClass(int $status): string
+    {
+        if ($status >= 200 && $status < 300) return '2xx';
+        if ($status >= 300 && $status < 400) return '3xx';
+        if ($status >= 400 && $status < 500) return '4xx';
+        if ($status >= 500) return '5xx';
+        return '1xx';
     }
 }

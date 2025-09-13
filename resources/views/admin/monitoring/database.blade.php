@@ -4,6 +4,390 @@
 
 @section('content')
 
+<style>
+.card-hover {
+    transition: all 0.3s ease;
+}
+
+.card-hover:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1) !important;
+}
+
+.cursor-pointer {
+    cursor: pointer;
+}
+
+.card-hover:hover .text-gray-900 {
+    color: var(--kt-primary) !important;
+}
+
+.card-hover:hover i {
+    color: var(--kt-primary) !important;
+}
+
+.stats-card {
+    border: none;
+    border-radius: 0.75rem;
+    transition: all 0.3s ease;
+}
+
+.stats-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+
+.monitoring-alert {
+    border-radius: 0.75rem;
+    border: none;
+    backdrop-filter: blur(10px);
+}
+
+.nav-tabs {
+    border-bottom: none;
+    gap: 0.5rem;
+}
+
+.nav-tabs .nav-item {
+    margin-bottom: 0;
+}
+
+.nav-tabs .nav-link {
+    border: 2px solid transparent;
+    border-radius: 0.75rem;
+    padding: 1rem 1.5rem;
+    font-weight: 600;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+    background: #f8f9fa;
+    color: #6c757d;
+    position: relative;
+    overflow: hidden;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 70px;
+    margin-right: 0.5rem;
+    margin-bottom: 0;
+}
+
+.nav-tabs .nav-link::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, rgba(241, 65, 108, 0.1) 0%, rgba(114, 57, 234, 0.1) 100%);
+    transition: left 0.3s ease;
+    z-index: 1;
+}
+
+.nav-tabs .nav-link:hover::before {
+    left: 0;
+}
+
+.nav-tabs .nav-link:hover {
+    border-color: var(--kt-primary);
+    background: #ffffff;
+    color: var(--kt-primary);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+
+.nav-tabs .nav-link.active {
+    background: linear-gradient(135deg, #F1416C 0%, #7239EA 100%);
+    color: white;
+    border-color: transparent;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(241, 65, 108, 0.3);
+}
+
+.nav-tabs .nav-link.active::before {
+    display: none;
+}
+
+.nav-tabs .nav-link > * {
+    position: relative;
+    z-index: 2;
+}
+
+.nav-tabs .badge {
+    font-size: 0.7rem;
+    padding: 0.15rem 0.4rem;
+    border-radius: 6px;
+    font-weight: 600;
+    min-width: 18px;
+    text-align: center;
+    margin-top: 0;
+    border: none;
+    background: #e9ecef;
+    color: #6c757d;
+}
+
+.nav-tabs .nav-link.active .badge {
+    background: var(--kt-primary) !important;
+    color: white !important;
+}
+
+.nav-tabs .nav-link:hover .badge {
+    background: #dee2e6 !important;
+    color: #495057 !important;
+}
+
+/* Responsividade compacta */
+@media (max-width: 992px) {
+    .nav-tabs {
+        gap: 1.5rem;
+    }
+    
+    .nav-tabs .nav-link {
+        padding: 1.25rem 1.5rem;
+        min-height: 65px;
+        min-width: 140px;
+        max-width: 180px;
+    }
+}
+
+@media (max-width: 768px) {
+    .card-header.bg-light {
+        padding: 1.5rem 1rem 1rem;
+    }
+    
+    .card-header .d-flex {
+        flex-direction: column;
+        align-items: start !important;
+        gap: 1rem;
+    }
+    
+    .nav-tabs {
+        gap: 1rem;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+    
+    .nav-tabs .nav-link {
+        min-height: 60px;
+        padding: 1rem 1.25rem;
+        min-width: 120px;
+        max-width: 160px;
+    }
+    
+    .nav-tabs .nav-link .fw-bold {
+        font-size: 0.9rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .nav-tabs {
+        gap: 0.5rem;
+        justify-content: stretch;
+    }
+    
+    .nav-tabs .nav-item {
+        flex: 1 1 auto;
+    }
+    
+    .nav-tabs .nav-link {
+        flex-direction: row;
+        text-align: left;
+        justify-content: space-between;
+        align-items: center;
+        min-height: 50px;
+        min-width: auto;
+        max-width: none;
+        padding: 0.75rem 1rem;
+    }
+    
+    .nav-tabs .nav-link .fw-bold {
+        font-size: 0.85rem;
+        margin-bottom: 0;
+    }
+    
+    .nav-tabs .nav-link .fs-8 {
+        display: none;
+    }
+    
+    .nav-tabs .badge {
+        margin-top: 0;
+        margin-left: 0;
+    }
+}
+
+/* Card header ultra minimalista */
+.card-header.bg-light {
+    background: #ffffff !important;
+    border-bottom: 1px solid #e9ecef;
+    padding: 2.5rem 2rem 1.5rem;
+}
+
+.card-header .card-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #212529;
+    letter-spacing: -0.01em;
+}
+
+.card-header .text-muted {
+    font-size: 0.85rem;
+    color: #8b949e !important;
+    font-weight: 400;
+}
+
+.card-header .badge {
+    font-size: 0.7rem;
+    padding: 0.2rem 0.5rem;
+    font-weight: 600;
+    border-radius: 4px;
+}
+
+/* Tabs compactas e proporcionais */
+.nav-tabs {
+    border-bottom: 1px solid #e9ecef;
+    gap: 2rem;
+    padding: 0;
+    background: transparent;
+    margin-bottom: 0;
+    justify-content: center;
+    display: flex;
+}
+
+.nav-tabs .nav-item {
+    margin-bottom: 0;
+    flex: 0 0 auto;
+}
+
+.nav-tabs .nav-link {
+    border: none;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+    padding: 1.5rem 2rem;
+    font-weight: 500;
+    font-size: 0.95rem;
+    transition: all 0.15s ease;
+    background: transparent;
+    color: #8b949e;
+    text-decoration: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 70px;
+    min-width: 160px;
+    max-width: 200px;
+    margin: 0;
+    position: relative;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.nav-tabs .nav-link:hover {
+    color: #495057;
+    background: rgba(248, 249, 250, 0.5);
+    border-bottom-color: #dee2e6;
+}
+
+.nav-tabs .nav-link.active {
+    background: transparent;
+    color: #212529;
+    border-bottom-color: var(--kt-primary);
+    font-weight: 600;
+}
+
+.nav-tabs .nav-link i {
+    display: none;
+}
+
+.nav-tabs .nav-link .fw-bold {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+    letter-spacing: 0.01em;
+}
+
+.nav-tabs .nav-link .fs-8 {
+    font-size: 0.8rem;
+    font-weight: 400;
+    color: #8b949e;
+    margin-bottom: 0.5rem;
+}
+
+.nav-tabs .nav-link.active .fs-8 {
+    color: #6c757d;
+}
+
+.query-card {
+    border: none;
+    border-radius: 0.75rem;
+    /* Transição removida para evitar animações */
+    margin-bottom: 1rem;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.query-card:hover {
+    /* Hover removido para reduzir animações */
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+}
+
+.method-card {
+    border: none;
+    border-radius: 0.75rem;
+    overflow: hidden;
+    /* Transição removida para evitar animações */
+}
+
+.method-card:hover {
+    /* Hover removido para reduzir animações */
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+}
+
+.empty-state {
+    padding: 3rem 2rem;
+    text-align: center;
+    border-radius: 0.75rem;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border: 2px dashed #dee2e6;
+}
+
+.empty-state i {
+    opacity: 0.5;
+}
+
+/* Cards do Dashboard - Conforme guia */
+.dashboard-card-primary {
+    background: linear-gradient(135deg, #F1416C 0%, #e02454 100%) !important;
+    background-image: url("/assets/media/patterns/vector-1.png"), linear-gradient(135deg, #F1416C 0%, #e02454 100%) !important;
+    background-repeat: no-repeat !important;
+    background-size: contain, cover !important;
+    background-position: right center, center !important;
+}
+
+.dashboard-card-info {
+    background: linear-gradient(135deg, #7239EA 0%, #5a2bc4 100%) !important;
+    background-image: url("/assets/media/patterns/vector-1.png"), linear-gradient(135deg, #7239EA 0%, #5a2bc4 100%) !important;
+    background-repeat: no-repeat !important;
+    background-size: contain, cover !important;
+    background-position: right center, center !important;
+}
+
+.dashboard-card-success {
+    background: linear-gradient(135deg, #17C653 0%, #13a342 100%) !important;
+    background-image: url("/assets/media/patterns/vector-1.png"), linear-gradient(135deg, #17C653 0%, #13a342 100%) !important;
+    background-repeat: no-repeat !important;
+    background-size: contain, cover !important;
+    background-position: right center, center !important;
+}
+
+.dashboard-card-warning {
+    background: linear-gradient(135deg, #FFC700 0%, #e6b300 100%) !important;
+    background-image: url("/assets/media/patterns/vector-1.png"), linear-gradient(135deg, #FFC700 0%, #e6b300 100%) !important;
+    background-repeat: no-repeat !important;
+    background-size: contain, cover !important;
+    background-position: right center, center !important;
+}
+</style>
+
 <!--begin::Content wrapper-->
 <div class="d-flex flex-column flex-column-fluid">
     <!--begin::Toolbar-->
@@ -84,7 +468,7 @@
             <!-- Status do Monitoramento -->
             <div class="row g-5 g-xl-8 mb-5" id="monitoring-status" style="display: none;">
                 <div class="col-12">
-                    <div class="alert alert-success d-flex align-items-center">
+                    <div class="alert alert-success monitoring-alert d-flex align-items-center">
                         <i class="ki-duotone ki-check-circle fs-2x me-4">
                             <span class="path1"></span>
                             <span class="path2"></span>
@@ -97,57 +481,127 @@
                 </div>
             </div>
 
-            <!-- Widgets de Estatísticas -->
+            <!-- Widgets de Estatísticas - Dashboard Style -->
             <div class="row g-5 g-xl-8">
                 
                 <!-- Total de Queries -->
-                <div class="col-xl-3">
-                    <div class="card card-xl-stretch mb-xl-8">
-                        <div class="card-header border-0 bg-primary py-5">
-                            <h3 class="card-title fw-bold text-white">📊 Total Queries</h3>
+                <div class="col-xl-3 col-lg-6 col-md-6 col-sm-12">
+                    <div class="card card-flush h-100 mb-5 mb-xl-10 dashboard-card-primary cursor-pointer">
+                        <div class="card-header pt-5 pb-3">
+                            <div class="d-flex flex-center rounded-circle h-70px w-70px bg-white bg-opacity-20">
+                                <i class="ki-duotone ki-chart-line-up text-white fs-2x">
+                                    <span class="path1"></span>
+                                    <span class="path2"></span>
+                                </i>
+                            </div>
                         </div>
-                        <div class="card-body py-3">
-                            <div class="text-gray-900 fw-bold fs-2x mb-1" id="total-queries">0</div>
-                            <div class="fw-semibold text-muted fs-7">Queries executadas</div>
+                        
+                        <div class="card-body d-flex flex-column justify-content-end pt-0">
+                            <div class="d-flex align-items-center mb-3">
+                                <span class="fs-2hx fw-bold text-white me-2" id="total-queries">0</span>
+                                <span class="fs-6 fw-semibold text-white opacity-75">queries</span>
+                            </div>
+                            
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <span class="fs-6 fw-bold text-white">Total Executadas</span>
+                                <span class="badge badge-light-primary fs-8" id="queries-percentage">100%</span>
+                            </div>
+                            
+                            <div class="progress h-6px bg-white bg-opacity-50">
+                                <div class="progress-bar bg-white" style="width: 100%" id="queries-progress"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Tempo Médio -->
-                <div class="col-xl-3">
-                    <div class="card card-xl-stretch mb-xl-8">
-                        <div class="card-header border-0 bg-warning py-5">
-                            <h3 class="card-title fw-bold text-white">⚡ Tempo Médio</h3>
+                <div class="col-xl-3 col-lg-6 col-md-6 col-sm-12">
+                    <div class="card card-flush h-100 mb-5 mb-xl-10 dashboard-card-warning cursor-pointer">
+                        <div class="card-header pt-5 pb-3">
+                            <div class="d-flex flex-center rounded-circle h-70px w-70px bg-white bg-opacity-20">
+                                <i class="ki-duotone ki-timer text-white fs-2x">
+                                    <span class="path1"></span>
+                                    <span class="path2"></span>
+                                    <span class="path3"></span>
+                                </i>
+                            </div>
                         </div>
-                        <div class="card-body py-3">
-                            <div class="text-gray-900 fw-bold fs-2x mb-1" id="avg-time">0ms</div>
-                            <div class="fw-semibold text-muted fs-7">Tempo de execução</div>
+                        
+                        <div class="card-body d-flex flex-column justify-content-end pt-0">
+                            <div class="d-flex align-items-center mb-3">
+                                <span class="fs-2hx fw-bold text-white me-2" id="avg-time">0</span>
+                                <span class="fs-6 fw-semibold text-white opacity-75">ms</span>
+                            </div>
+                            
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <span class="fs-6 fw-bold text-white">Tempo Médio</span>
+                                <span class="badge badge-light-warning fs-8" id="time-performance">Bom</span>
+                            </div>
+                            
+                            <div class="progress h-6px bg-white bg-opacity-50">
+                                <div class="progress-bar bg-white" style="width: 75%" id="time-progress"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Queries Lentas -->
-                <div class="col-xl-3">
-                    <div class="card card-xl-stretch mb-xl-8">
-                        <div class="card-header border-0 bg-danger py-5">
-                            <h3 class="card-title fw-bold text-white">🐌 Queries Lentas</h3>
+                <div class="col-xl-3 col-lg-6 col-md-6 col-sm-12">
+                    <div class="card card-flush h-100 mb-5 mb-xl-10 dashboard-card-primary cursor-pointer">
+                        <div class="card-header pt-5 pb-3">
+                            <div class="d-flex flex-center rounded-circle h-70px w-70px bg-white bg-opacity-20">
+                                <i class="ki-duotone ki-speed-down text-white fs-2x">
+                                    <span class="path1"></span>
+                                    <span class="path2"></span>
+                                </i>
+                            </div>
                         </div>
-                        <div class="card-body py-3">
-                            <div class="text-gray-900 fw-bold fs-2x mb-1" id="slow-queries">0</div>
-                            <div class="fw-semibold text-muted fs-7">Mais de 100ms</div>
+                        
+                        <div class="card-body d-flex flex-column justify-content-end pt-0">
+                            <div class="d-flex align-items-center mb-3">
+                                <span class="fs-2hx fw-bold text-white me-2" id="slow-queries">0</span>
+                                <span class="fs-6 fw-semibold text-white opacity-75">lentas</span>
+                            </div>
+                            
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <span class="fs-6 fw-bold text-white">Queries > 100ms</span>
+                                <span class="badge badge-light-primary fs-8" id="slow-percentage">0%</span>
+                            </div>
+                            
+                            <div class="progress h-6px bg-white bg-opacity-50">
+                                <div class="progress-bar bg-white" style="width: 0%" id="slow-progress"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Tabelas Mais Usadas -->
-                <div class="col-xl-3">
-                    <div class="card card-xl-stretch mb-xl-8">
-                        <div class="card-header border-0 bg-info py-5">
-                            <h3 class="card-title fw-bold text-white">🎯 Tabela Principal</h3>
+                <!-- Tabela Principal -->
+                <div class="col-xl-3 col-lg-6 col-md-6 col-sm-12">
+                    <div class="card card-flush h-100 mb-5 mb-xl-10 dashboard-card-info cursor-pointer">
+                        <div class="card-header pt-5 pb-3">
+                            <div class="d-flex flex-center rounded-circle h-70px w-70px bg-white bg-opacity-20">
+                                <i class="ki-duotone ki-tablet-ok text-white fs-2x">
+                                    <span class="path1"></span>
+                                    <span class="path2"></span>
+                                    <span class="path3"></span>
+                                </i>
+                            </div>
                         </div>
-                        <div class="card-body py-3">
-                            <div class="text-gray-900 fw-bold fs-2x mb-1" id="main-table">-</div>
-                            <div class="fw-semibold text-muted fs-7" id="main-table-count">Tabela mais utilizada</div>
+                        
+                        <div class="card-body d-flex flex-column justify-content-end pt-0">
+                            <div class="d-flex align-items-center mb-3">
+                                <span class="fs-2hx fw-bold text-white me-2" id="main-table-short">-</span>
+                                <span class="fs-6 fw-semibold text-white opacity-75">table</span>
+                            </div>
+                            
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <span class="fs-6 fw-bold text-white" id="main-table">Tabela Principal</span>
+                                <span class="badge badge-light-info fs-8" id="table-usage">0%</span>
+                            </div>
+                            
+                            <div class="progress h-6px bg-white bg-opacity-50">
+                                <div class="progress-bar bg-white" style="width: 60%" id="table-progress"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -158,22 +612,52 @@
             <div class="row g-5 g-xl-8 mt-5">
                 <div class="col-12">
                     <div class="card">
-                        <div class="card-header">
-                            <ul class="nav nav-tabs nav-line-tabs nav-line-tabs-2x mb-5 fs-6">
-                                <li class="nav-item">
-                                    <a class="nav-link active" data-bs-toggle="tab" href="#queries-tab">
-                                        🔍 Queries em Tempo Real
-                                        <span class="badge badge-sm badge-circle badge-light-primary ms-2" id="queries-count">0</span>
+                        <div class="card-header bg-light">
+                            <div class="d-flex flex-column flex-lg-row align-items-start align-items-lg-center justify-content-between mb-3">
+                                <div>
+                                    <h3 class="card-title fw-bold text-gray-800 mb-1">
+                                        Análise Detalhada
+                                    </h3>
+                                    <p class="text-muted mb-0 fs-7">Visualize queries SQL, métodos HTTP e estatísticas em tempo real</p>
+                                </div>
+                                <div class="badge badge-light-success px-2 py-1 fs-8">
+                                    Live
+                                </div>
+                            </div>
+                            
+                            <ul class="nav nav-tabs d-flex" role="tablist">
+                                <li class="nav-item" role="presentation">
+                                    <a class="nav-link active" data-bs-toggle="tab" href="#queries-tab" aria-selected="true" role="tab">
+                                        <i class="ki-duotone ki-search-list">
+                                            <span class="path1"></span>
+                                            <span class="path2"></span>
+                                            <span class="path3"></span>
+                                        </i>
+                                        <span class="fw-bold">Queries</span>
+                                        <span class="fs-8 text-center">Tempo Real</span>
+                                        <span class="badge badge-sm badge-circle badge-light-primary" id="queries-count">0</span>
                                     </a>
                                 </li>
-                                <li class="nav-item">
-                                    <a class="nav-link" data-bs-toggle="tab" href="#methods-tab">
-                                        🌐 Métodos HTTP → SQL
-                                        <span class="badge badge-sm badge-circle badge-light-warning ms-2" id="methods-count">0</span>
+                                <li class="nav-item" role="presentation">
+                                    <a class="nav-link" data-bs-toggle="tab" href="#methods-tab" aria-selected="false" tabindex="-1" role="tab">
+                                        <i class="ki-duotone ki-route">
+                                            <span class="path1"></span>
+                                            <span class="path2"></span>
+                                        </i>
+                                        <span class="fw-bold">HTTP → SQL</span>
+                                        <span class="fs-8 text-center">Mapeamento</span>
+                                        <span class="badge badge-sm badge-circle badge-light-warning" id="methods-count">0</span>
                                     </a>
                                 </li>
-                                <li class="nav-item">
-                                    <a class="nav-link" data-bs-toggle="tab" href="#stats-tab">📈 Estatísticas</a>
+                                <li class="nav-item" role="presentation">
+                                    <a class="nav-link" data-bs-toggle="tab" href="#stats-tab" aria-selected="false" tabindex="-1" role="tab">
+                                        <i class="ki-duotone ki-chart-pie-simple">
+                                            <span class="path1"></span>
+                                            <span class="path2"></span>
+                                        </i>
+                                        <span class="fw-bold">Estatísticas</span>
+                                        <span class="fs-8 text-center">Detalhadas</span>
+                                    </a>
                                 </li>
                             </ul>
                         </div>
@@ -183,13 +667,18 @@
                                 <!-- Tab: Queries em Tempo Real -->
                                 <div class="tab-pane fade show active" id="queries-tab">
                                     <div id="queries-container">
-                                        <div class="text-center text-muted py-10">
-                                            <i class="ki-duotone ki-database fs-4x mb-5">
+                                        <div class="empty-state">
+                                            <i class="ki-duotone ki-database fs-4x mb-4">
                                                 <span class="path1"></span>
                                                 <span class="path2"></span>
                                             </i>
-                                            <h3>Inicie o monitoramento para ver as queries</h3>
-                                            <p>Clique em "Iniciar Monitoramento" para capturar queries SQL em tempo real</p>
+                                            <h3 class="text-gray-800 mb-3">Inicie o monitoramento para ver as queries</h3>
+                                            <p class="text-muted mb-4">Clique em "Iniciar Monitoramento" para capturar queries SQL em tempo real</p>
+                                            <div class="d-flex justify-content-center">
+                                                <div class="spinner-border text-primary" role="status" style="display: none;">
+                                                    <span class="visually-hidden">Loading...</span>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -197,13 +686,13 @@
                                 <!-- Tab: Métodos HTTP → SQL -->
                                 <div class="tab-pane fade" id="methods-tab">
                                     <div id="methods-container">
-                                        <div class="text-center text-muted py-10">
-                                            <i class="ki-duotone ki-router fs-4x mb-5">
+                                        <div class="empty-state">
+                                            <i class="ki-duotone ki-router fs-4x mb-4">
                                                 <span class="path1"></span>
                                                 <span class="path2"></span>
                                             </i>
-                                            <h3>Mapeamento HTTP → SQL</h3>
-                                            <p>Quando o monitoramento estiver ativo, você verá quais métodos HTTP geram quais operações SQL</p>
+                                            <h3 class="text-gray-800 mb-3">Mapeamento HTTP → SQL</h3>
+                                            <p class="text-muted">Quando o monitoramento estiver ativo, você verá quais métodos HTTP geram quais operações SQL</p>
                                         </div>
                                     </div>
                                 </div>
@@ -211,13 +700,13 @@
                                 <!-- Tab: Estatísticas -->
                                 <div class="tab-pane fade" id="stats-tab">
                                     <div id="stats-container">
-                                        <div class="text-center text-muted py-10">
-                                            <i class="ki-duotone ki-chart-pie-simple fs-4x mb-5">
+                                        <div class="empty-state">
+                                            <i class="ki-duotone ki-chart-pie-simple fs-4x mb-4">
                                                 <span class="path1"></span>
                                                 <span class="path2"></span>
                                             </i>
-                                            <h3>Estatísticas detalhadas</h3>
-                                            <p>Estatísticas por tipo de query, tabela e performance</p>
+                                            <h3 class="text-gray-800 mb-3">Estatísticas detalhadas</h3>
+                                            <p class="text-muted">Estatísticas por tipo de query, tabela e performance</p>
                                         </div>
                                     </div>
                                 </div>
@@ -244,11 +733,25 @@ let pollingInterval = null;
 let httpMethodsMap = new Map();
 let sessionId = null;
 let hasData = false;
+let isRequestInProgress = false;
 
-// Check status on page load
+// Performance optimization - debounce function
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+// Check status on page load with passive listeners
 document.addEventListener('DOMContentLoaded', function() {
     checkMonitoringStatus();
-});
+}, { passive: true });
 
 function checkMonitoringStatus() {
     fetch('{{ route("debug.status") }}')
@@ -370,6 +873,9 @@ function updateUIForInactiveMonitoring() {
     updateButtonStates();
 }
 
+// Debounced version of fetchQueries to prevent excessive requests
+const debouncedFetchQueries = debounce(fetchQueries, 1000);
+
 function startPolling() {
     if (pollingInterval) {
         clearInterval(pollingInterval);
@@ -377,9 +883,9 @@ function startPolling() {
     
     pollingInterval = setInterval(() => {
         if (monitoringActive) {
-            fetchQueries();
+            debouncedFetchQueries();
         }
-    }, 2000); // Poll every 2 seconds
+    }, 3000); // Poll every 3 seconds (reduced frequency)
 }
 
 function stopPolling() {
@@ -390,26 +896,59 @@ function stopPolling() {
 }
 
 function fetchQueries() {
-    fetch('{{ route("debug.database.queries") }}')
-        .then(response => response.json())
+    if (isRequestInProgress) {
+        return Promise.resolve(); // Skip if already in progress
+    }
+    
+    isRequestInProgress = true;
+    
+    return fetch('{{ route("debug.database.queries") }}')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return response.json();
+        })
         .then(data => {
-            if (data.success) {
-                updateQueryDisplay(data.queries);
-                updateStatistics(data.statistics, data.queries);
+            if (data && data.success) {
+                updateQueryDisplay(data.queries || []);
+                updateStatistics(data.statistics || {}, data.queries || []);
                 updateTimestamp();
                 
                 // Update data availability
                 hasData = data.queries && data.queries.length > 0;
                 updateButtonStates();
+            } else {
+                console.warn('Resposta de query sem sucesso:', data);
             }
         })
         .catch(error => {
             console.error('Erro ao buscar queries:', error);
+            // Handle error gracefully without stopping the monitoring
+            updateQueryDisplay([]);
+            updateStatistics({}, []);
+        })
+        .finally(() => {
+            isRequestInProgress = false;
         });
 }
 
+// Performance optimization: Track last query count to avoid unnecessary DOM updates
+let lastQueryCount = 0;
+let lastUpdateTime = 0;
+const MIN_UPDATE_INTERVAL = 1000; // Minimum 1 second between DOM updates
+
 function updateQueryDisplay(queries) {
     const container = document.getElementById('queries-container');
+    
+    // Performance optimization: Skip DOM updates if data hasn't changed much
+    const now = Date.now();
+    if (queries.length === lastQueryCount && now - lastUpdateTime < MIN_UPDATE_INTERVAL) {
+        return;
+    }
+    
+    lastQueryCount = queries.length;
+    lastUpdateTime = now;
     
     if (queries.length === 0) {
         container.innerHTML = `
@@ -428,38 +967,57 @@ function updateQueryDisplay(queries) {
     let html = '<div class="row g-5">';
     
     queries.slice(-10).reverse().forEach((query, index) => {
-        const performanceClass = getPerformanceClass(query.performance);
-        const typeClass = getTypeClass(query.type);
+        if (!query) return;
+        
+        const performanceClass = getPerformanceClass(query.performance || 'fast');
+        const typeClass = getTypeClass(query.type || 'select');
         
         html += `
             <div class="col-12">
-                <div class="card shadow-sm">
-                    <div class="card-header py-3">
+                <div class="card query-card">
+                    <div class="card-header py-3 bg-light">
                         <div class="d-flex justify-content-between align-items-center">
                             <div class="d-flex align-items-center">
-                                <span class="badge badge-${typeClass} me-3">${query.type}</span>
-                                <span class="badge badge-${performanceClass}">${query.time_formatted}</span>
-                                ${query.tables.length > 0 ? `<span class="badge badge-light-info ms-2">${query.tables.join(', ')}</span>` : ''}
+                                <span class="badge badge-${typeClass} me-3 px-3 py-2">${query.type || 'UNKNOWN'}</span>
+                                <span class="badge badge-${performanceClass} px-3 py-2">${query.time_formatted || '0ms'}</span>
+                                ${(query.tables && query.tables.length > 0) ? `<span class="badge badge-light-info ms-2 px-3 py-2">${query.tables.join(', ')}</span>` : ''}
                             </div>
-                            <small class="text-muted">${formatTimestamp(query.timestamp)}</small>
+                            <small class="text-muted fw-semibold">${formatTimestamp(query.timestamp || new Date())}</small>
                         </div>
                     </div>
                     <div class="card-body">
-                        <div class="mb-3">
-                            <code class="text-dark fs-7">${escapeHtml(query.formatted_sql)}</code>
+                        <div class="mb-3 p-3 bg-light rounded">
+                            <code class="text-dark fs-7 fw-semibold">${escapeHtml(query.sql || query.formatted_sql || 'SQL não disponível')}</code>
                         </div>
                         ${query.backtrace && query.backtrace.length > 0 ? `
                             <div class="collapse" id="backtrace-${index}">
-                                <div class="border-top pt-3">
-                                    <h6>Backtrace:</h6>
-                                    ${query.backtrace.map(item => `
-                                        <div class="text-muted fs-8">
-                                            ${item.file}:${item.line} - ${item.class}${item.function}
-                                        </div>
-                                    `).join('')}
+                                <div class="border-top pt-3 mt-3">
+                                    <h6 class="text-gray-800 fw-bold mb-3">
+                                        <i class="ki-duotone ki-code fs-5 me-2">
+                                            <span class="path1"></span>
+                                            <span class="path2"></span>
+                                            <span class="path3"></span>
+                                            <span class="path4"></span>
+                                        </i>
+                                        Backtrace
+                                    </h6>
+                                    <div class="bg-light p-3 rounded">
+                                        ${query.backtrace.slice(0, 3).map(item => `
+                                            <div class="text-muted fs-8 mb-1">
+                                                <span class="text-primary">${item.file}:${item.line}</span> - 
+                                                <span class="text-gray-700">${item.class}${item.function}</span>
+                                            </div>
+                                        `).join('')}
+                                        ${query.backtrace.length > 3 ? `<div class="text-muted fs-8 fst-italic">... and ${query.backtrace.length - 3} more</div>` : ''}
+                                    </div>
                                 </div>
                             </div>
-                            <button class="btn btn-sm btn-light" type="button" data-bs-toggle="collapse" data-bs-target="#backtrace-${index}">
+                            <button class="btn btn-sm btn-light-primary" type="button" data-bs-toggle="collapse" data-bs-target="#backtrace-${index}" onclick="this.style.display='none'">
+                                <i class="ki-duotone ki-eye fs-6 me-1">
+                                    <span class="path1"></span>
+                                    <span class="path2"></span>
+                                    <span class="path3"></span>
+                                </i>
                                 Ver Backtrace
                             </button>
                         ` : ''}
@@ -477,16 +1035,38 @@ function updateQueryDisplay(queries) {
 }
 
 function updateStatistics(stats, queries) {
-    document.getElementById('total-queries').textContent = stats.total_queries || 0;
-    document.getElementById('avg-time').textContent = Math.round(stats.average_time || 0) + 'ms';
-    document.getElementById('slow-queries').textContent = (stats.slow_queries || 0) + (stats.very_slow_queries || 0);
+    const totalQueries = stats.total_queries || 0;
+    const avgTime = Math.round(stats.average_time || 0);
+    const slowQueries = (stats.slow_queries || 0) + (stats.very_slow_queries || 0);
+    
+    // Update total queries card
+    document.getElementById('total-queries').textContent = totalQueries;
+    
+    // Update avg time card
+    document.getElementById('avg-time').textContent = avgTime;
+    const timePerformance = avgTime < 50 ? 'Excelente' : avgTime < 100 ? 'Bom' : avgTime < 200 ? 'Regular' : 'Lento';
+    document.getElementById('time-performance').textContent = timePerformance;
+    const timeProgress = Math.max(10, Math.min(100, 100 - (avgTime / 10)));
+    document.getElementById('time-progress').style.width = timeProgress + '%';
+    
+    // Update slow queries card
+    document.getElementById('slow-queries').textContent = slowQueries;
+    const slowPercentage = totalQueries > 0 ? Math.round((slowQueries / totalQueries) * 100) : 0;
+    document.getElementById('slow-percentage').textContent = slowPercentage + '%';
+    document.getElementById('slow-progress').style.width = slowPercentage + '%';
     
     // Most used table
     const tables = stats.by_table || {};
-    const mostUsedTable = Object.keys(tables).reduce((a, b) => tables[a].count > tables[b].count ? a : b, '');
-    if (mostUsedTable) {
+    const tableEntries = Object.entries(tables);
+    if (tableEntries.length > 0) {
+        const [mostUsedTable, tableData] = tableEntries.reduce((a, b) => tables[a[0]].count > tables[b[0]].count ? a : b);
+        const tableShortName = mostUsedTable.length > 8 ? mostUsedTable.substring(0, 8) + '...' : mostUsedTable;
+        const tableUsage = Math.round((tableData.count / totalQueries) * 100) || 0;
+        
+        document.getElementById('main-table-short').textContent = tableShortName;
         document.getElementById('main-table').textContent = mostUsedTable;
-        document.getElementById('main-table-count').textContent = `${tables[mostUsedTable].count} queries`;
+        document.getElementById('table-usage').textContent = tableUsage + '%';
+        document.getElementById('table-progress').style.width = Math.max(10, tableUsage) + '%';
     }
     
     // Update methods tab with queries data
@@ -499,12 +1079,19 @@ function updateStatistics(stats, queries) {
 function updateMethodsDisplay(stats, queries) {
     const container = document.getElementById('methods-container');
     
+    // Verify queries is an array
+    if (!queries || !Array.isArray(queries)) {
+        queries = [];
+    }
+    
     // Group queries by HTTP method and SQL operation
     const httpMethodMap = new Map();
     
     queries.forEach(query => {
+        if (!query) return;
+        
         const httpMethod = query.http_method || 'UNKNOWN';
-        const sqlType = query.type;
+        const sqlType = query.type || 'unknown';
         const route = query.route_name || 'N/A';
         
         const key = `${httpMethod}`;
@@ -520,7 +1107,7 @@ function updateMethodsDisplay(stats, queries) {
         
         const methodData = httpMethodMap.get(key);
         methodData.total_queries++;
-        methodData.total_time += query.time;
+        methodData.total_time += (query.time || 0);
         
         if (!methodData.operations.has(sqlType)) {
             methodData.operations.set(sqlType, {
@@ -533,8 +1120,14 @@ function updateMethodsDisplay(stats, queries) {
         
         const operationData = methodData.operations.get(sqlType);
         operationData.count++;
-        operationData.time += query.time;
-        query.tables.forEach(table => operationData.tables.add(table));
+        operationData.time += (query.time || 0);
+        
+        // Safely handle tables array
+        const tables = query.tables || [];
+        if (Array.isArray(tables)) {
+            tables.forEach(table => operationData.tables.add(table));
+        }
+        
         if (route !== 'N/A') operationData.routes.add(route);
     });
     
@@ -559,22 +1152,25 @@ function updateMethodsDisplay(stats, queries) {
         
         html += `
             <div class="col-12">
-                <div class="card shadow-sm mb-4">
+                <div class="card method-card mb-4">
                     <div class="card-header bg-light-${methodClass} py-4">
                         <div class="d-flex justify-content-between align-items-center">
                             <div class="d-flex align-items-center">
-                                <span class="badge badge-${methodClass} badge-lg me-3">${methodData.method}</span>
+                                <span class="badge badge-${methodClass} badge-lg me-3 px-4 py-2 fs-6 fw-bold">${methodData.method}</span>
                                 <div>
-                                    <div class="text-gray-900 fw-bold">${methodData.total_queries} queries</div>
-                                    <div class="text-muted fs-7">${Math.round(methodData.total_time)}ms total</div>
+                                    <div class="text-gray-900 fw-bold fs-5">${methodData.total_queries} queries</div>
+                                    <div class="text-muted fs-7 fw-semibold">${Math.round(methodData.total_time)}ms total</div>
                                 </div>
                             </div>
-                            <i class="ki-duotone ki-code fs-2x text-${methodClass}">
-                                <span class="path1"></span>
-                                <span class="path2"></span>
-                                <span class="path3"></span>
-                                <span class="path4"></span>
-                            </i>
+                            <div class="text-end">
+                                <i class="ki-duotone ki-code fs-2x text-${methodClass}">
+                                    <span class="path1"></span>
+                                    <span class="path2"></span>
+                                    <span class="path3"></span>
+                                    <span class="path4"></span>
+                                </i>
+                                <div class="text-muted fs-8 mt-1">API Endpoint</div>
+                            </div>
                         </div>
                     </div>
                     <div class="card-body">
@@ -651,7 +1247,7 @@ function updateStatsDisplay(stats) {
                         <tbody>
     `;
     
-    Object.entries(types).forEach(([type, data]) => {
+    Object.entries(types || {}).forEach(([type, data]) => {
         const avgTime = data.count > 0 ? Math.round(data.time / data.count) : 0;
         html += `
             <tr>
@@ -682,7 +1278,7 @@ function updateStatsDisplay(stats) {
                         <tbody>
     `;
     
-    Object.entries(tables).slice(0, 10).forEach(([table, data]) => {
+    Object.entries(tables || {}).slice(0, 10).forEach(([table, data]) => {
         html += `
             <tr>
                 <td><code>${table}</code></td>
@@ -726,6 +1322,10 @@ function getTypeClass(type) {
     }
 }
 
+// Cache button state checks to prevent excessive API calls
+let lastButtonStateCheck = 0;
+const BUTTON_STATE_CHECK_INTERVAL = 5000; // 5 seconds
+
 function updateButtonStates() {
     const exportButton = document.getElementById('export-data');
     const clearButton = document.getElementById('clear-data');
@@ -736,6 +1336,17 @@ function updateButtonStates() {
         clearButton.disabled = false;
         return;
     }
+    
+    // Throttle API calls for button state checking
+    const now = Date.now();
+    if (now - lastButtonStateCheck < BUTTON_STATE_CHECK_INTERVAL) {
+        // Use cached state
+        exportButton.disabled = !hasData;
+        clearButton.disabled = !hasData;
+        return;
+    }
+    
+    lastButtonStateCheck = now;
     
     // Se não está ativo, verificar se há dados no servidor para sincronizar estado
     fetch('{{ route("debug.database.queries") }}')
@@ -761,11 +1372,23 @@ function updateButtonStates() {
 }
 
 function clearQueryResults() {
+    // Reset dashboard cards
     document.getElementById('total-queries').textContent = '0';
-    document.getElementById('avg-time').textContent = '0ms';
+    document.getElementById('avg-time').textContent = '0';
     document.getElementById('slow-queries').textContent = '0';
-    document.getElementById('main-table').textContent = '-';
-    document.getElementById('main-table-count').textContent = 'Tabela mais utilizada';
+    document.getElementById('main-table-short').textContent = '-';
+    document.getElementById('main-table').textContent = 'Tabela Principal';
+    
+    // Reset badges and progress bars
+    document.getElementById('time-performance').textContent = 'Bom';
+    document.getElementById('slow-percentage').textContent = '0%';
+    document.getElementById('table-usage').textContent = '0%';
+    
+    document.getElementById('time-progress').style.width = '75%';
+    document.getElementById('slow-progress').style.width = '0%';
+    document.getElementById('table-progress').style.width = '60%';
+    
+    // Reset tab counters
     document.getElementById('queries-count').textContent = '0';
     document.getElementById('methods-count').textContent = '0';
     
@@ -784,6 +1407,9 @@ function formatTimestamp(timestamp) {
 }
 
 function escapeHtml(text) {
+    if (!text || typeof text !== 'string') {
+        return '';
+    }
     const map = {
         '&': '&amp;',
         '<': '&lt;',

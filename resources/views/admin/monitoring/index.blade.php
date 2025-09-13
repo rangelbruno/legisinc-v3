@@ -4,6 +4,81 @@
 
 @section('content')
 
+<style>
+.dashboard-layer {
+    border: 2px solid #e1e5e9;
+    border-radius: 0.75rem;
+    background: #ffffff;
+    margin-bottom: 1.5rem;
+    /* Transição removida para design minimalista */
+}
+
+.dashboard-layer:hover {
+    /* Hover removido para design minimalista */
+}
+
+.layer-header {
+    background: #f8f9fa;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #e1e5e9;
+    border-radius: 0.75rem 0.75rem 0 0;
+    font-weight: 600;
+    font-size: 1.1rem;
+    text-align: center;
+    color: #3f4254;
+}
+
+.layer-content {
+    padding: 1.5rem;
+}
+
+.component-box {
+    border: 1px solid #e1e5e9;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    text-align: center;
+    background: #ffffff;
+    /* Transição removida para design minimalista */
+    cursor: pointer;
+    height: 100%;
+}
+
+.component-box:hover {
+    /* Hover removido para design minimalista */
+    border-color: #e1e5e9;
+    background: #ffffff;
+}
+
+.component-icon {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+    display: block;
+}
+
+.component-title {
+    font-weight: 600;
+    color: #3f4254;
+    margin-bottom: 0.25rem;
+}
+
+.component-subtitle {
+    font-size: 0.875rem;
+    color: #a1a5b7;
+}
+
+.main-title {
+    text-align: center;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #3f4254;
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 0.75rem;
+}
+</style>
+
 <!--begin::Content wrapper-->
 <div class="d-flex flex-column flex-column-fluid">
     <!--begin::Toolbar-->
@@ -47,125 +122,153 @@
     <div id="kt_app_content" class="app-content flex-column-fluid">
         <div id="kt_app_content_container" class="app-container container-xxl">
 
-            <!-- Widgets de Status Rápido -->
-            <div class="row g-5 g-xl-8">
-                
-                <!-- Status Geral do Sistema -->
-                <div class="col-xl-3">
-                    <div class="card card-xl-stretch mb-xl-8">
-                        <div class="card-header border-0 bg-success py-5">
-                            <h3 class="card-title fw-bold text-white">🟢 Sistema</h3>
-                        </div>
-                        <div class="card-body py-3">
-                            <div class="text-gray-900 fw-bold fs-6 mb-1">Status: Operacional</div>
-                            <div class="fw-semibold text-muted fs-7" id="system-uptime">Carregando...</div>
-                        </div>
-                    </div>
-                </div>
+            <!-- Título Principal -->
+            <div class="main-title">
+                Dashboard Admin
+            </div>
 
-                <!-- Database Status -->
-                <div class="col-xl-3">
-                    <div class="card card-xl-stretch mb-xl-8">
-                        <div class="card-header border-0 bg-info py-5">
-                            <h3 class="card-title fw-bold text-white">🗃️ PostgreSQL</h3>
-                        </div>
-                        <div class="card-body py-3" id="database-widget">
-                            <div class="fw-semibold text-muted fs-7">Carregando dados...</div>
-                        </div>
-                    </div>
+            <!-- Camada de Dashboard Admin -->
+            <div class="dashboard-layer">
+                <div class="layer-header">
+                    Dashboard Admin
                 </div>
-
-                <!-- Performance -->
-                <div class="col-xl-3">
-                    <div class="card card-xl-stretch mb-xl-8">
-                        <div class="card-header border-0 bg-warning py-5">
-                            <h3 class="card-title fw-bold text-white">⚡ Performance</h3>
+                <div class="layer-content">
+                    <div class="row g-4">
+                        <div class="col-md-4">
+                            <div class="component-box" onclick="location.href='{{ route('admin.monitoring.performance') }}'">
+                                <div class="component-icon">
+                                    <i class="ki-duotone ki-chart-simple fs-2x text-primary">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                        <span class="path3"></span>
+                                        <span class="path4"></span>
+                                    </i>
+                                </div>
+                                <div class="component-title">Métricas</div>
+                                <div class="component-subtitle" id="performance-widget">Carregando...</div>
+                            </div>
                         </div>
-                        <div class="card-body py-3" id="performance-widget">
-                            <div class="fw-semibold text-muted fs-7">Carregando métricas...</div>
+                        <div class="col-md-4">
+                            <div class="component-box" onclick="location.href='{{ route('admin.monitoring.logs') }}'">
+                                <div class="component-icon">
+                                    <i class="ki-duotone ki-notebook fs-2x text-info">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                        <span class="path3"></span>
+                                        <span class="path4"></span>
+                                    </i>
+                                </div>
+                                <div class="component-title">Logs</div>
+                                <div class="component-subtitle">Sistema de logs</div>
+                            </div>
                         </div>
-                    </div>
-                </div>
-
-                <!-- Alertas -->
-                <div class="col-xl-3">
-                    <div class="card card-xl-stretch mb-xl-8">
-                        <div class="card-header border-0 bg-danger py-5">
-                            <h3 class="card-title fw-bold text-white">🚨 Alertas</h3>
-                        </div>
-                        <div class="card-body py-3" id="alerts-widget">
-                            <div class="text-success fw-bold fs-6">✅ Nenhum alerta ativo</div>
-                            <div class="fw-semibold text-muted fs-7">Sistema funcionando normalmente</div>
+                        <div class="col-md-4">
+                            <div class="component-box" onclick="location.href='{{ route('admin.monitoring.alerts') }}'">
+                                <div class="component-icon">
+                                    <i class="ki-duotone ki-notification-status fs-2x text-warning">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                        <span class="path3"></span>
+                                        <span class="path4"></span>
+                                    </i>
+                                </div>
+                                <div class="component-title">Alertas</div>
+                                <div class="component-subtitle" id="alerts-widget">✅ Nenhum alerta ativo</div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-            <!--end::Row-->
 
-            <!-- Seção de Navegação Rápida -->
-            <div class="row g-5 g-xl-8 mt-5">
-                <div class="col-12">
-                    <div class="card">
-                        <div class="card-header">
-                            <h3 class="card-title">🔗 Acesso Rápido às Funcionalidades</h3>
+            <!-- Camada de Coleta -->
+            <div class="dashboard-layer">
+                <div class="layer-header">
+                    Camada de Coleta
+                </div>
+                <div class="layer-content">
+                    <div class="row g-4">
+                        <div class="col-md-4">
+                            <div class="component-box" onclick="connectSSE()">
+                                <div class="component-icon">
+                                    <i class="ki-duotone ki-arrows-circle fs-2x text-success">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                    </i>
+                                </div>
+                                <div class="component-title">Collector</div>
+                                <div class="component-subtitle">Tempo real</div>
+                            </div>
                         </div>
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-2 text-center mb-4">
-                                    <a href="{{ route('admin.monitoring.database') }}" class="btn btn-light-info btn-block">
-                                        <i class="ki-duotone ki-database fs-2x">
-                                            <span class="path1"></span>
-                                            <span class="path2"></span>
-                                        </i><br>
-                                        <small class="fw-bold mt-2">Banco de Dados</small>
-                                    </a>
+                        <div class="col-md-4">
+                            <div class="component-box">
+                                <div class="component-icon">
+                                    <i class="ki-duotone ki-package fs-2x text-secondary">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                        <span class="path3"></span>
+                                    </i>
                                 </div>
-                                <div class="col-md-2 text-center mb-4">
-                                    <a href="{{ route('admin.monitoring.performance') }}" class="btn btn-light-warning btn-block">
-                                        <i class="ki-duotone ki-chart-line-up fs-2x">
-                                            <span class="path1"></span>
-                                            <span class="path2"></span>
-                                        </i><br>
-                                        <small class="fw-bold mt-2">Performance</small>
-                                    </a>
+                                <div class="component-title">Queues</div>
+                                <div class="component-subtitle" id="system-uptime">Carregando...</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="component-box" onclick="location.href='{{ route('monitoring.health') }}'" target="_blank">
+                                <div class="component-icon">
+                                    <i class="ki-duotone ki-chart-line-up fs-2x text-primary">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                    </i>
                                 </div>
-                                <div class="col-md-2 text-center mb-4">
-                                    <a href="{{ route('admin.monitoring.logs') }}" class="btn btn-light-dark btn-block">
-                                        <i class="ki-duotone ki-file-search fs-2x">
-                                            <span class="path1"></span>
-                                            <span class="path2"></span>
-                                        </i><br>
-                                        <small class="fw-bold mt-2">Logs</small>
-                                    </a>
+                                <div class="component-title">Metrics</div>
+                                <div class="component-subtitle">Health check</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Camada de Armazenamento -->
+            <div class="dashboard-layer">
+                <div class="layer-header">
+                    Camada de Armazenamento
+                </div>
+                <div class="layer-content">
+                    <div class="row g-4">
+                        <div class="col-md-4">
+                            <div class="component-box" onclick="location.href='{{ route('admin.monitoring.database') }}'">
+                                <div class="component-icon">
+                                    <i class="ki-duotone ki-database fs-2x text-primary">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                    </i>
                                 </div>
-                                <div class="col-md-2 text-center mb-4">
-                                    <a href="{{ route('admin.monitoring.alerts') }}" class="btn btn-light-danger btn-block">
-                                        <i class="ki-duotone ki-notification-bing fs-2x">
-                                            <span class="path1"></span>
-                                            <span class="path2"></span>
-                                            <span class="path3"></span>
-                                        </i><br>
-                                        <small class="fw-bold mt-2">Alertas</small>
-                                    </a>
+                                <div class="component-title">PostgreSQL</div>
+                                <div class="component-subtitle" id="database-widget">Carregando...</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="component-box">
+                                <div class="component-icon">
+                                    <i class="ki-duotone ki-flash fs-2x text-danger">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                    </i>
                                 </div>
-                                <div class="col-md-2 text-center mb-4">
-                                    <a href="{{ route('monitoring.health') }}" target="_blank" class="btn btn-light-success btn-block">
-                                        <i class="ki-duotone ki-heart fs-2x">
-                                            <span class="path1"></span>
-                                            <span class="path2"></span>
-                                        </i><br>
-                                        <small class="fw-bold mt-2">Health Check</small>
-                                    </a>
+                                <div class="component-title">Redis</div>
+                                <div class="component-subtitle">Cache em memória</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="component-box">
+                                <div class="component-icon">
+                                    <i class="ki-duotone ki-folder fs-2x text-info">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                    </i>
                                 </div>
-                                <div class="col-md-2 text-center mb-4">
-                                    <button onclick="connectSSE()" class="btn btn-light-primary btn-block">
-                                        <i class="ki-duotone ki-arrows-circle fs-2x">
-                                            <span class="path1"></span>
-                                            <span class="path2"></span>
-                                        </i><br>
-                                        <small class="fw-bold mt-2">Tempo Real</small>
-                                    </button>
-                                </div>
+                                <div class="component-title">Storage</div>
+                                <div class="component-subtitle">Arquivos do sistema</div>
                             </div>
                         </div>
                     </div>
@@ -231,10 +334,7 @@ function updateDatabaseWidget(data) {
     const widget = document.getElementById('database-widget');
     const connections = data.connections || {};
     
-    widget.innerHTML = `
-        <div class="text-gray-900 fw-bold fs-6 mb-1">Conexões: ${connections.active || 0}/${connections.max || 100}</div>
-        <div class="fw-semibold text-muted fs-7">Uso: ${connections.usage_percent || 0}%</div>
-    `;
+    widget.innerHTML = `Conexões: ${connections.active || 0}/${connections.max || 100} (${connections.usage_percent || 0}%)`;
 }
 
 function updateTimestamp() {
@@ -289,10 +389,7 @@ function updateRealtimeData(data) {
     
     if (data.performance) {
         const perfWidget = document.getElementById('performance-widget');
-        perfWidget.innerHTML = `
-            <div class="text-gray-900 fw-bold fs-6 mb-1">Req/s: ${data.performance.total_requests || 0}</div>
-            <div class="fw-semibold text-muted fs-7">Latência: ${data.performance.avg_response_time_ms || 0}ms</div>
-        `;
+        perfWidget.innerHTML = `Req/s: ${data.performance.total_requests || 0} | ${data.performance.avg_response_time_ms || 0}ms`;
     }
     
     // Atualizar sistema

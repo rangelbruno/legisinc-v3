@@ -6,27 +6,20 @@ use App\Models\Proposicao;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
-use Illuminate\Routing\Controllers\HasMiddleware;
-use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
-class ProposicaoAssinaturaController extends Controller implements HasMiddleware
+class ProposicaoAssinaturaController extends Controller
 {
     use AuthorizesRequests;
 
-    /**
-     * Get the middleware that should be assigned to the controller.
-     */
-    public static function middleware(): array
+    public function __construct()
     {
-        return [
-            'auth',
-            new Middleware('can:sign,proposicao', only: ['assinar', 'processarAssinatura']),
-            new Middleware('role:PARLAMENTAR,ADMIN', only: ['assinar', 'processarAssinatura']),
-        ];
+        $this->middleware('auth');
+        $this->middleware('can:sign,proposicao')->only(['assinar', 'processarAssinatura']);
+        $this->middleware('role:PARLAMENTAR,ADMIN')->only(['assinar', 'processarAssinatura']);
     }
 
     /**

@@ -12,6 +12,11 @@ use Illuminate\Support\Facades\Cache;
 
 class DebugController extends Controller
 {
+    public function __construct()
+    {
+        // Apply RBAC middleware - only users with monitoring.debug permission
+        $this->middleware(['auth', 'can:monitoring.debug']);
+    }
     /**
      * Ativar debug logger na sessão
      */
@@ -33,10 +38,19 @@ class DebugController extends Controller
             'user_agent' => $request->userAgent()
         ]);
         
-        // Iniciar captura de queries do banco de dados
-        if (config('app.debug')) {
-            $dbDebug = new DatabaseDebugService();
-            $dbDebug->startCapture();
+        // Iniciar captura de queries do banco de dados com validação
+        $dbResult = null;
+        if (config('monitoring.debug.enabled', false)) {
+            try {
+                $dbDebug = new DatabaseDebugService();
+                $dbResult = $dbDebug->startCapture();
+            } catch (\Exception $e) {
+                Log::warning('Failed to start DB debug capture', [
+                    'error' => $e->getMessage(),
+                    'user_id' => Auth::id()
+                ]);
+                $dbResult = ['status' => 'error', 'message' => $e->getMessage()];
+            }
         }
 
         return response()->json([
@@ -48,7 +62,8 @@ class DebugController extends Controller
                 'email' => Auth::user()->email,
                 'role' => Auth::user()->roles()->first()?->name
             ],
-            'db_capture' => config('app.debug') ? 'enabled' : 'disabled'
+            'db_capture' => config('monitoring.debug.enabled', false) ? 'enabled' : 'disabled',
+            'db_result' => $dbResult
         ]);
     }
 
@@ -73,15 +88,25 @@ class DebugController extends Controller
             'duration_seconds' => $duration
         ]);
         
-        // Parar captura de queries do banco de dados
-        if (config('app.debug')) {
-            $dbDebug = new DatabaseDebugService();
-            $dbDebug->stopCapture();
+        // Parar captura de queries do banco de dados com validação  
+        $dbResult = null;
+        if (config('monitoring.debug.enabled', false)) {
+            try {
+                $dbDebug = new DatabaseDebugService();
+                $dbResult = $dbDebug->stopCapture();
+            } catch (\Exception $e) {
+                Log::warning('Failed to stop DB debug capture', [
+                    'error' => $e->getMessage(),
+                    'user_id' => Auth::id()
+                ]);
+                $dbResult = ['status' => 'error', 'message' => $e->getMessage()];
+            }
         }
 
         return response()->json([
             'status' => 'stopped',
-            'duration' => $duration
+            'duration' => $duration,
+            'db_result' => $dbResult
         ]);
     }
 
@@ -387,6 +412,94 @@ class DebugController extends Controller
                 'message' => 'Error clearing cache',
                 'error' => $e->getMessage()
             ]);
+        }
+    }
+    
+    /**
+     * Export captured queries (admin only)
+     */
+    public function exportDebugData(Request $request)
+    {
+        // Additional permission check for export
+        if (!auth()->user()->can('monitoring.debug.export')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Export permission required'
+            ], 403);
+        }
+        
+        try {
+            $dbDebug = new DatabaseDebugService();
+            $export = $dbDebug->exportQueries();
+            
+            Log::info('Debug data exported via API', [
+                'user_id' => Auth::id(),
+                'query_count' => count($export['queries'])
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'export' => $export,
+                'message' => 'Export successful'
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Failed to export debug data', [
+                'error' => $e->getMessage(),
+                'user_id' => Auth::id()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to export: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+    
+    /**
+     * Get production-safe database statistics
+     */
+    public function getProductionDbStats(Request $request)
+    {
+        try {
+            // Use improved PostgreSQL queries
+            $stats = [];
+            
+            // Table sizes
+            $tables = \DB::select("
+                SELECT n.nspname AS schema,
+                       c.relname AS table,
+                       pg_size_pretty(pg_total_relation_size(c.oid)) AS total_size
+                FROM pg_class c
+                JOIN pg_namespace n ON n.oid = c.relnamespace
+                WHERE c.relkind = 'r'
+                  AND n.nspname NOT IN ('pg_catalog','information_schema')
+                ORDER BY pg_total_relation_size(c.oid) DESC
+                LIMIT 50
+            ");
+            
+            $stats['tables'] = $tables;
+            
+            // Cache hit ratio
+            $cacheRatio = \DB::selectOne("
+                SELECT sum(blks_hit)::float / NULLIF(sum(blks_hit)+sum(blks_read),0) AS cache_hit_ratio
+                FROM pg_statio_user_tables
+            ");
+            
+            $stats['cache_hit_ratio'] = round(($cacheRatio->cache_hit_ratio ?? 0) * 100, 2);
+            
+            return response()->json([
+                'success' => true,
+                'stats' => $stats
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Error getting production DB stats: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Unable to fetch database statistics',
+                'error' => $e->getMessage()
+            ], 500);
         }
     }
 }

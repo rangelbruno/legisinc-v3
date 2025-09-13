@@ -586,6 +586,51 @@ class DatabaseSeeder extends Seeder
 
         // CORREÇÃO CRÍTICA AUTO-REGISTRADA: OnlyOffice Content Protection
         $this->call([
+            CorrecaoOnlyOfficeConteudoSeeder::class,
+        ]);
+
+                // LIMPEZA CRÍTICA AUTO-REGISTRADA: Content Corruption Cleanup
+        $this->call([
+            LimpezaConteudoCorrempidoSeeder::class,
+        ]);
+
+                // PRESERVAÇÃO AUTOMÁTICA: Melhorias detectadas automaticamente
+        $this->call([
+            PreservarMelhorias121Seeder::class,
+        ]);
+
+        // CORREÇÃO CRÍTICA AUTO-REGISTRADA: OnlyOffice Content Protection
+        $this->call([
+            CorrecaoOnlyOfficeConteudoSeeder::class,
+        ]);
+
+                // LIMPEZA CRÍTICA AUTO-REGISTRADA: Content Corruption Cleanup
+        $this->call([
+            LimpezaConteudoCorrempidoSeeder::class,
+        ]);
+
+                // PRESERVAÇÃO AUTOMÁTICA: Melhorias detectadas automaticamente
+        $this->call([
+            PreservarMelhorias123Seeder::class,
+        ]);
+
+        // CORREÇÃO CRÍTICA AUTO-REGISTRADA: OnlyOffice Content Protection
+        $this->call([
+            CorrecaoOnlyOfficeConteudoSeeder::class,
+        ]);
+
+                // LIMPEZA CRÍTICA AUTO-REGISTRADA: Content Corruption Cleanup
+        $this->call([
+            LimpezaConteudoCorrempidoSeeder::class,
+        ]);
+
+                // PRESERVAÇÃO AUTOMÁTICA: Melhorias detectadas automaticamente
+        $this->call([
+            PreservarMelhorias125Seeder::class,
+        ]);
+
+        // CORREÇÃO CRÍTICA AUTO-REGISTRADA: OnlyOffice Content Protection
+        $this->call([
             Database\Seeders\CorrecaoOnlyOfficeConteudoSeeder::class,
         ]);
 
@@ -685,6 +730,12 @@ class DatabaseSeeder extends Seeder
         // CORREÇÃO DEFINITIVA: PDF Desatualizado Entre Endpoints (CRÍTICO - NÃO REMOVER)
         $this->call([
             PDFDesatualizadoFixSeeder::class,
+        ]);
+
+        // MONITORING SYSTEM: Configuration preservation and synthetic metrics
+        $this->call([
+            MonitoringDashboardConfigSeeder::class, // Preserve monitoring dashboard improvements
+            MonitoringSyntheticSeeder::class, // Generate synthetic metrics for testing
         ]);
 
         // Processar imagens dos templates admin

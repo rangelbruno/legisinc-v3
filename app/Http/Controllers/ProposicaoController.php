@@ -14,31 +14,21 @@ use App\Services\Template\TemplateUniversalService;
 use App\Services\TemplateVariablesService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use Illuminate\Routing\Controllers\HasMiddleware;
-use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
-class ProposicaoController extends Controller implements HasMiddleware
+class ProposicaoController extends Controller
 {
     public function __construct(
         private TemplateUniversalService $templateUniversalService
-    ) {}
-
-    /**
-     * Get the middleware that should be assigned to the controller.
-     */
-    public static function middleware(): array
-    {
-        return [
-            'auth',
-            new Middleware('can:create,App\Models\Proposicao', only: ['create', 'store', 'createModern']),
-            new Middleware('can:update,proposicao', only: ['update', 'edit']),
-            new Middleware('can:delete,proposicao', only: ['destroy']),
-            new Middleware('can:view,proposicao', only: ['show']),
-        ];
+    ) {
+        $this->middleware('auth');
+        $this->middleware('can:create,App\Models\Proposicao')->only(['create', 'store', 'createModern']);
+        $this->middleware('can:update,proposicao')->only(['update', 'edit']);
+        $this->middleware('can:delete,proposicao')->only(['destroy']);
+        $this->middleware('can:view,proposicao')->only(['show']);
     }
 
     /**

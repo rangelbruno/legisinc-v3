@@ -5,89 +5,275 @@ namespace App\Services;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Database\Events\QueryExecuted;
+use Illuminate\Support\Str;
 
 class DatabaseDebugService
 {
+    const CAPTURE_KEY = 'db_debug_capturing';
+    const DATA_KEY    = 'db_debug_queries';
+    const START_KEY   = 'db_debug_start_time';
+    const LIMIT       = 1000;
+    const SESSION_TIMEOUT = 600; // 10 minutes
+    
     private $queries = [];
     private $startTime;
     private $isCapturing = false;
+    protected bool $listening = false;
     
     /**
      * Start capturing database queries
      */
-    public function startCapture()
+    public function startCapture(): array
     {
+        if (!config('monitoring.debug.enabled', false)) {
+            abort(403, 'Database debug is disabled');
+        }
+
+        $this->validatePermissions();
+
+        Cache::put(self::CAPTURE_KEY, true, now()->addSeconds(self::SESSION_TIMEOUT));
+        Cache::put(self::START_KEY, now()->toIso8601String(), self::SESSION_TIMEOUT);
+        Cache::put(self::DATA_KEY, [], self::SESSION_TIMEOUT);
+
+        if ($this->listening) {
+            return ['status' => 'already_running', 'started_at' => Cache::get(self::START_KEY)];
+        }
+
+        DB::listen(function (QueryExecuted $query) {
+            if (!Cache::get(self::CAPTURE_KEY)) return;
+            $this->captureQueryWithContext($query);
+        });
+
+        $this->listening = true;
         $this->isCapturing = true;
         $this->startTime = microtime(true);
         $this->queries = [];
-        
-        // Enable query log
-        DB::enableQueryLog();
-        
-        // Store in cache for real-time access
-        Cache::put('db_debug_capturing', true, 3600);
-        Cache::put('db_debug_start_time', $this->startTime, 3600);
-        Cache::forget('db_debug_queries'); // Clear previous queries
-        
-        // Listen to database queries and store them with HTTP context
-        DB::listen(function ($query) {
-            $this->captureQueryWithContext($query);
-        });
+
+        Log::info('Database debug capture started', [
+            'user_id' => auth()->id(),
+            'session_timeout' => self::SESSION_TIMEOUT
+        ]);
+
+        return [
+            'status' => 'started',
+            'started_at' => Cache::get(self::START_KEY),
+            'timeout_seconds' => self::SESSION_TIMEOUT,
+            'limit' => self::LIMIT
+        ];
     }
     
     /**
      * Stop capturing database queries
      */
-    public function stopCapture()
+    public function stopCapture(): array
     {
+        $this->validatePermissions();
+
+        $wasRunning = Cache::get(self::CAPTURE_KEY, false);
+        $startedAt = Cache::get(self::START_KEY);
+        $queryCount = count(Cache::get(self::DATA_KEY, []));
+
+        Cache::forget(self::CAPTURE_KEY);
+        // Keep START_KEY and DATA_KEY for post-session export
+
         $this->isCapturing = false;
+
+        Log::info('Database debug capture stopped', [
+            'user_id' => auth()->id(),
+            'was_running' => $wasRunning,
+            'query_count' => $queryCount,
+            'started_at' => $startedAt
+        ]);
+
+        return [
+            'status' => 'stopped',
+            'was_running' => $wasRunning,
+            'query_count' => $queryCount,
+            'started_at' => $startedAt
+        ];
+    }
+    
+    /**
+     * Get debug status
+     */
+    public function getStatus(): array
+    {
+        $this->validatePermissions();
+
+        $isRunning = Cache::get(self::CAPTURE_KEY, false);
+        $startedAt = Cache::get(self::START_KEY);
+        $queryCount = count(Cache::get(self::DATA_KEY, []));
+
+        return [
+            'running' => $isRunning,
+            'started_at' => $startedAt,
+            'query_count' => $queryCount,
+            'limit' => self::LIMIT,
+            'timeout_seconds' => self::SESSION_TIMEOUT
+        ];
+    }
+    
+    /**
+     * Clear captured data
+     */
+    public function clearData(): array
+    {
+        $this->validatePermissions();
+
+        $queryCount = count(Cache::get(self::DATA_KEY, []));
         
-        // Disable query log
-        DB::disableQueryLog();
-        
-        // Clear cache
-        Cache::forget('db_debug_capturing');
-        Cache::forget('db_debug_start_time');
-        Cache::forget('db_debug_queries');
+        Cache::put(self::DATA_KEY, [], self::SESSION_TIMEOUT);
+        Cache::forget(self::START_KEY);
+
+        Log::info('Database debug data cleared', [
+            'user_id' => auth()->id(),
+            'cleared_count' => $queryCount
+        ]);
+
+        return [
+            'status' => 'cleared',
+            'cleared_count' => $queryCount
+        ];
+    }
+
+    /**
+     * Export queries (admin only)
+     */
+    public function exportQueries(): array
+    {
+        $this->validatePermissions();
+
+        if (!auth()->user()->can('monitoring.debug.export')) {
+            abort(403, 'Export permission required');
+        }
+
+        $queries = $this->getCapturedQueries();
+        $metadata = $this->getStatus();
+
+        return [
+            'metadata' => $metadata,
+            'queries' => $queries,
+            'exported_at' => now()->toIso8601String(),
+            'exported_by' => auth()->user()->email ?? 'unknown'
+        ];
     }
     
     /**
      * Get captured queries
      */
-    public function getCapturedQueries()
+    public function getCapturedQueries(): array
     {
-        try {
-            // First get queries from current request
-            $currentQueries = DB::getQueryLog() ?: [];
-            
-            // Then get cached queries from previous requests
-            $cachedQueries = Cache::get('db_debug_queries', []);
-            
-            // Merge all queries
-            $allQueries = array_merge($cachedQueries, $currentQueries);
-            
-            $processedQueries = [];
-            
-            foreach ($allQueries as $query) {
-                if (is_array($query)) {
-                    $processedQuery = $this->processQuery($query);
-                    if ($processedQuery) {
-                        $processedQueries[] = $processedQuery;
-                    }
+        $this->validatePermissions();
+        
+        $queries = Cache::get(self::DATA_KEY, []);
+        
+        // Process raw queries to ensure consistent format
+        $processedQueries = [];
+        foreach ($queries as $query) {
+            // Check if this is already a processed query (has 'sql' field and proper structure)
+            if (isset($query['sql']) && isset($query['type']) && isset($query['timestamp'])) {
+                // Already processed, use as-is
+                $processedQueries[] = $query;
+            } else {
+                // Raw query from DB::getQueryLog(), needs processing
+                $processed = $this->processRawQuery($query);
+                if ($processed) {
+                    $processedQueries[] = $processed;
                 }
             }
-            
-            return $processedQueries;
-            
-        } catch (\Exception $e) {
-            Log::error('Error getting captured queries', [
-                'error' => $e->getMessage(),
-                'line' => $e->getLine(),
-                'file' => $e->getFile()
-            ]);
-            
-            return [];
         }
+        
+        // Apply sampling if too many queries
+        if (count($processedQueries) > 500) {
+            $processedQueries = $this->applySampling($processedQueries, 500);
+        }
+
+        return $processedQueries;
+    }
+    
+    /**
+     * Validate user permissions for debug operations
+     */
+    protected function validatePermissions(): void
+    {
+        if (!auth()->check()) {
+            abort(401, 'Authentication required');
+        }
+
+        if (!auth()->user()->can('monitoring.debug')) {
+            abort(403, 'Debug monitoring permission required');
+        }
+    }
+    
+    /**
+     * Apply sampling to reduce query count
+     */
+    protected function applySampling(array $queries, int $maxCount): array
+    {
+        $step = max(1, floor(count($queries) / $maxCount));
+        $sampled = [];
+        
+        for ($i = 0; $i < count($queries); $i += $step) {
+            $sampled[] = $queries[$i];
+        }
+        
+        return array_slice($sampled, 0, $maxCount);
+    }
+    
+    /**
+     * Process raw query from DB::getQueryLog() into consistent format
+     */
+    private function processRawQuery($query)
+    {
+        // Handle different query formats (from DB::getQueryLog() vs DB::listen())
+        $sql = $query['query'] ?? $query['sql'] ?? '';
+        $bindings = $query['bindings'] ?? [];
+        $time = $query['time'] ?? 0;
+        
+        // Skip if no SQL
+        if (empty($sql)) {
+            return null;
+        }
+        
+        // Format SQL with bindings
+        $formattedSql = $this->formatSqlWithBindings($sql, $bindings);
+        
+        return [
+            'sql' => $formattedSql,
+            'bindings' => $this->maskBindings($bindings),
+            'time' => round($time, 2),
+            'time_formatted' => number_format($time, 2) . ' ms',
+            'type' => $this->getQueryType($sql),
+            'performance' => $this->analyzePerformance($time),
+            'tables' => $this->extractTables($sql),
+            'timestamp' => $query['timestamp'] ?? now()->toIso8601String(),
+            'http_method' => request()->method() ?? null,
+            'http_url' => $this->sanitizeUrl(request()->fullUrl() ?? ''),
+            'route_name' => optional(request()->route())->getName(),
+        ];
+    }
+    
+    /**
+     * Format SQL with bindings replaced
+     */
+    private function formatSqlWithBindings($sql, $bindings)
+    {
+        foreach ($bindings as $binding) {
+            if (is_string($binding)) {
+                $binding = "'" . $binding . "'";
+            } elseif (is_null($binding)) {
+                $binding = 'NULL';
+            } elseif (is_bool($binding)) {
+                $binding = $binding ? 'true' : 'false';
+            } elseif (is_array($binding) || is_object($binding)) {
+                $binding = "'" . json_encode($binding) . "'";
+            }
+            
+            $sql = preg_replace('/\?/', $binding, $sql, 1);
+        }
+        
+        return $sql;
     }
     
     /**
@@ -147,21 +333,19 @@ class DatabaseDebugService
     /**
      * Get query type (SELECT, INSERT, UPDATE, DELETE, etc.)
      */
-    private function getQueryType($sql)
+    
+    private function getQueryType(string $sql): string
     {
-        $sql = trim(strtoupper($sql));
+        $sql = strtolower(trim($sql));
         
-        if (strpos($sql, 'SELECT') === 0) return 'SELECT';
-        if (strpos($sql, 'INSERT') === 0) return 'INSERT';
-        if (strpos($sql, 'UPDATE') === 0) return 'UPDATE';
-        if (strpos($sql, 'DELETE') === 0) return 'DELETE';
-        if (strpos($sql, 'CREATE') === 0) return 'CREATE';
-        if (strpos($sql, 'DROP') === 0) return 'DROP';
-        if (strpos($sql, 'ALTER') === 0) return 'ALTER';
-        if (strpos($sql, 'TRUNCATE') === 0) return 'TRUNCATE';
-        if (strpos($sql, 'BEGIN') === 0) return 'TRANSACTION';
-        if (strpos($sql, 'COMMIT') === 0) return 'TRANSACTION';
-        if (strpos($sql, 'ROLLBACK') === 0) return 'TRANSACTION';
+        if (strpos($sql, 'select') === 0) return 'SELECT';
+        if (strpos($sql, 'insert') === 0) return 'INSERT';
+        if (strpos($sql, 'update') === 0) return 'UPDATE';
+        if (strpos($sql, 'delete') === 0) return 'DELETE';
+        if (strpos($sql, 'create') === 0) return 'CREATE';
+        if (strpos($sql, 'alter') === 0) return 'ALTER';
+        if (strpos($sql, 'drop') === 0) return 'DROP';
+        if (strpos($sql, 'truncate') === 0) return 'TRUNCATE';
         
         return 'OTHER';
     }
@@ -177,6 +361,7 @@ class DatabaseDebugService
         if ($time < 100) return 'slow';
         return 'very_slow';
     }
+    
     
     /**
      * Format SQL for better readability
@@ -206,7 +391,7 @@ class DatabaseDebugService
         
         return $formatted;
     }
-    
+
     /**
      * Extract table names from SQL
      */
@@ -243,37 +428,38 @@ class DatabaseDebugService
     }
     
     /**
-     * Capture query with HTTP context
+     * Capture query with HTTP context (updated with security)
      */
-    private function captureQueryWithContext($query)
+    protected function captureQueryWithContext(QueryExecuted $query): void
     {
-        if (!Cache::get('db_debug_capturing', false)) {
-            return;
+        $data = Cache::get(self::DATA_KEY, []);
+        
+        // Implement sliding window - remove oldest when limit reached
+        if (count($data) >= self::LIMIT) {
+            array_shift($data);
         }
+
+        $sql = $this->formatSqlForCapture($query->sql);
         
-        $httpContext = $this->getHttpContext();
-        $processedQuery = $this->processQuery([
-            'sql' => $query->sql,
-            'bindings' => $query->bindings,
-            'time' => $query->time
-        ]);
-        
-        // Add HTTP context to the query
-        $processedQuery['http_method'] = $httpContext['method'] ?? 'CLI';
-        $processedQuery['http_url'] = $httpContext['url'] ?? 'command-line';
-        $processedQuery['route_name'] = $httpContext['route_name'] ?? null;
-        $processedQuery['request_id'] = $httpContext['request_id'] ?? uniqid();
-        
-        // Store in cache for real-time access
-        $cachedQueries = Cache::get('db_debug_queries', []);
-        $cachedQueries[] = $processedQuery;
-        
-        // Keep only last 1000 queries to prevent memory issues
-        if (count($cachedQueries) > 1000) {
-            $cachedQueries = array_slice($cachedQueries, -1000);
-        }
-        
-        Cache::put('db_debug_queries', $cachedQueries, 3600);
+        $entry = [
+            'sql'            => $this->truncate($sql, 4000),
+            'bindings'       => $this->maskBindings($query->bindings),
+            'time'           => round($query->time, 2),
+            'time_formatted' => number_format($query->time, 2) . ' ms',
+            'type'           => $this->getQueryType($sql),
+            'performance'    => $this->analyzePerformance($query->time),
+            'tables'         => $this->extractTables($sql),
+            'timestamp'      => now()->toIso8601String(),
+            'http_method'    => request()->method() ?? null,
+            'http_url'       => $this->sanitizeUrl(request()->fullUrl() ?? ''),
+            'route_name'     => optional(request()->route())->getName(),
+            'request_id'     => app('request_id') ?? null,
+            'user_id'        => auth()->id(),
+            'backtrace'      => $this->filteredBacktrace(),
+        ];
+
+        $data[] = $entry;
+        Cache::put(self::DATA_KEY, $data, self::SESSION_TIMEOUT);
     }
     
     /**
@@ -431,31 +617,158 @@ class DatabaseDebugService
         ];
         
         foreach ($queries as $query) {
+            // Skip invalid queries
+            if (!is_array($query)) {
+                continue;
+            }
+            
             // Count by type
-            $type = $query['type'];
+            $type = $query['type'] ?? 'unknown';
             if (!isset($stats['by_type'][$type])) {
                 $stats['by_type'][$type] = ['count' => 0, 'time' => 0];
             }
             $stats['by_type'][$type]['count']++;
-            $stats['by_type'][$type]['time'] += $query['time'];
+            $stats['by_type'][$type]['time'] += $query['time'] ?? 0;
             
             // Count by table
-            foreach ($query['tables'] as $table) {
-                if (!isset($stats['by_table'][$table])) {
-                    $stats['by_table'][$table] = ['count' => 0, 'time' => 0];
+            $tables = $query['tables'] ?? [];
+            if (is_array($tables)) {
+                foreach ($tables as $table) {
+                    if (!isset($stats['by_table'][$table])) {
+                        $stats['by_table'][$table] = ['count' => 0, 'time' => 0];
+                    }
+                    $stats['by_table'][$table]['count']++;
+                    $stats['by_table'][$table]['time'] += $query['time'] ?? 0;
                 }
-                $stats['by_table'][$table]['count']++;
-                $stats['by_table'][$table]['time'] += $query['time'];
             }
             
             // Count slow queries
-            if ($query['performance'] === 'slow') {
+            $performance = $query['performance'] ?? 'fast';
+            if ($performance === 'slow') {
                 $stats['slow_queries']++;
-            } elseif ($query['performance'] === 'very_slow') {
+            } elseif ($performance === 'very_slow') {
                 $stats['very_slow_queries']++;
             }
         }
         
         return $stats;
+    }
+    
+    // New security helper methods
+    
+    /**
+     * Format SQL for better readability and security
+     */
+    protected function formatSqlForCapture(string $sql): string
+    {
+        return preg_replace('/\s+/', ' ', trim($sql));
+    }
+
+    /**
+     * Truncate text to prevent memory issues
+     */
+    protected function truncate(string $text, int $maxLength = 4000): string
+    {
+        return mb_strlen($text) > $maxLength 
+            ? mb_substr($text, 0, $maxLength) . '…' 
+            : $text;
+    }
+
+    /**
+     * Mask sensitive data in bindings
+     */
+    protected function maskBindings(array $bindings): array
+    {
+        return array_map(function ($value) {
+            if (!is_scalar($value)) {
+                return '[complex]';
+            }
+
+            $stringValue = (string) $value;
+
+            // Mask potential PII patterns
+            if (filter_var($stringValue, FILTER_VALIDATE_EMAIL)) {
+                return $this->maskEmail($stringValue);
+            }
+
+            if (preg_match('/^\d{11}$|^\d{3}\.\d{3}\.\d{3}-\d{2}$/', $stringValue)) {
+                return '[CPF]';
+            }
+
+            if (preg_match('/^[a-zA-Z0-9]{20,}$/', $stringValue)) {
+                return '[TOKEN]';
+            }
+
+            return $stringValue;
+        }, $bindings);
+    }
+
+    /**
+     * Mask email addresses
+     */
+    protected function maskEmail(string $email): string
+    {
+        $parts = explode('@', $email);
+        if (count($parts) !== 2) return $email;
+        
+        $local = $parts[0];
+        $domain = $parts[1];
+        
+        $maskedLocal = strlen($local) > 2 
+            ? substr($local, 0, 2) . str_repeat('*', strlen($local) - 2)
+            : str_repeat('*', strlen($local));
+            
+        return $maskedLocal . '@' . $domain;
+    }
+
+    /**
+     * Sanitize URL to remove sensitive query parameters
+     */
+    protected function sanitizeUrl(string $url): string
+    {
+        // Remove query parameters that might contain sensitive data
+        $parsed = parse_url($url);
+        if (!$parsed) return '[invalid_url]';
+        
+        $clean = ($parsed['scheme'] ?? 'http') . '://' . ($parsed['host'] ?? 'localhost');
+        if (isset($parsed['port'])) {
+            $clean .= ':' . $parsed['port'];
+        }
+        if (isset($parsed['path'])) {
+            $clean .= $parsed['path'];
+        }
+        
+        return $this->truncate($clean, 512);
+    }
+
+    /**
+     * Get filtered backtrace excluding vendor files
+     */
+    protected function filteredBacktrace(): array
+    {
+        $trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 20);
+        $filtered = [];
+        
+        foreach ($trace as $frame) {
+            $file = $frame['file'] ?? '';
+            
+            // Skip vendor files and framework internals
+            if ($file && !str_contains($file, DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR)) {
+                // Relative path from project root
+                $relativePath = str_replace(base_path() . DIRECTORY_SEPARATOR, '', $file);
+                
+                $filtered[] = [
+                    'file' => $relativePath,
+                    'line' => $frame['line'] ?? null,
+                    'function' => $frame['function'] ?? null,
+                    'class' => $frame['class'] ?? null,
+                ];
+            }
+            
+            // Limit to 6 frames to keep data manageable
+            if (count($filtered) >= 6) break;
+        }
+        
+        return $filtered;
     }
 }

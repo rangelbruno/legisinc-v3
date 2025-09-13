@@ -80,6 +80,8 @@ return new class extends Migration
             -- Índices para monitoring_metrics
             CREATE INDEX IF NOT EXISTS idx_metrics_type_time 
                 ON monitoring_metrics (metric_type, created_at DESC);
+            CREATE INDEX IF NOT EXISTS idx_metrics_name_time
+                ON monitoring_metrics (metric_name, created_at DESC);
             CREATE INDEX IF NOT EXISTS idx_metrics_tags 
                 ON monitoring_metrics USING GIN (tags);
             

@@ -9,30 +9,20 @@ use App\Models\TipoProposicao;
 use App\Services\OnlyOffice\OnlyOfficeService;
 use App\Services\Template\TemplateProcessorService;
 use Illuminate\Http\Request;
-use Illuminate\Routing\Controllers\HasMiddleware;
-use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
-class TemplateUniversalController extends Controller implements HasMiddleware
+class TemplateUniversalController extends Controller
 {
     public function __construct(
         private OnlyOfficeService $onlyOfficeService,
         private TemplateProcessorService $templateProcessor
-    ) {}
-
-    /**
-     * Get the middleware that should be assigned to the controller.
-     */
-    public static function middleware(): array
-    {
-        return [
-            'auth',
-            new Middleware('role:ADMIN', only: ['index', 'create', 'store', 'destroy']),
-            new Middleware('role:ADMIN|LEGISLATIVO', only: ['show', 'editor']),
-            new Middleware('can:update,template', only: ['update']),
-        ];
+    ) {
+        $this->middleware('auth');
+        $this->middleware('role:ADMIN')->only(['index', 'create', 'store', 'destroy']);
+        $this->middleware('role:ADMIN|LEGISLATIVO')->only(['show', 'editor']);
+        $this->middleware('can:update,template')->only(['update']);
     }
 
     /**
