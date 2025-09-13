@@ -14,14 +14,17 @@ class PreservarOtimizacoesPerformanceSeeder extends Seeder
      */
     public function run(): void
     {
-        $this->command->info('🚀 Preservando Otimizações de Performance v2.1');
-        
+        $this->command->info('🚀 Preservando Otimizações de Performance v3.0 - Database Activity + Inline Optimizations');
+
         $this->preservarDebugHelper();
         $this->preservarControllerOptimizations();
+        $this->preservarScriptsPerformance(); // NOVO: Scripts de otimização
+        $this->preservarDatabaseActivityController(); // NOVO: Correções PostgreSQL
+        $this->preservarViewInlineOptimizations(); // NOVO: Otimizações inline
         $this->corrigirPermissoes();
         $this->limparCachesObsoletos();
-        
-        $this->command->info('✅ Otimizações de performance preservadas com sucesso!');
+
+        $this->command->info('✅ Todas as otimizações de performance preservadas com sucesso!');
     }
 
     /**
@@ -223,5 +226,289 @@ PHP;
         } catch (\Exception $e) {
             $this->command->warn('⚠️ Erro ao limpar caches: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Preserva os scripts de otimização de performance
+     */
+    private function preservarScriptsPerformance(): void
+    {
+        $this->command->info('🚀 Verificando scripts de otimização...');
+
+        $scriptsDir = public_path('js');
+        if (!File::exists($scriptsDir)) {
+            File::makeDirectory($scriptsDir, 0755, true);
+        }
+
+        $scripts = [
+            'passive-events-polyfill.js',
+            'vue-config.js',
+            'performance-optimizer.js'
+        ];
+
+        foreach ($scripts as $script) {
+            $scriptPath = $scriptsDir . '/' . $script;
+
+            if (!File::exists($scriptPath)) {
+                $this->criarScriptOtimizacao($script, $scriptPath);
+            } else {
+                $this->command->info("✅ Script $script já existe");
+            }
+        }
+    }
+
+    /**
+     * Cria scripts de otimização se não existirem
+     */
+    private function criarScriptOtimizacao(string $nome, string $caminho): void
+    {
+        switch ($nome) {
+            case 'passive-events-polyfill.js':
+                $conteudo = $this->getPassiveEventsPolyfillContent();
+                break;
+            case 'vue-config.js':
+                $conteudo = $this->getVueConfigContent();
+                break;
+            case 'performance-optimizer.js':
+                $conteudo = $this->getPerformanceOptimizerContent();
+                break;
+            default:
+                return;
+        }
+
+        File::put($caminho, $conteudo);
+        $this->command->info("✅ Script $nome criado/atualizado");
+    }
+
+    /**
+     * Preserva correções no DatabaseActivityController
+     */
+    private function preservarDatabaseActivityController(): void
+    {
+        $controllerPath = app_path('Http/Controllers/Admin/DatabaseActivityController.php');
+
+        if (File::exists($controllerPath)) {
+            $conteudo = File::get($controllerPath);
+
+            // Verificar se a correção PostgreSQL está presente (qualquer variação correta)
+            if (str_contains($conteudo, "string_agg(DISTINCT user_role,") ||
+                str_contains($conteudo, "string_agg(DISTINCT user_role, ', ')") ||
+                str_contains($conteudo, "string_agg(DISTINCT user_role, ' → ')")) {
+                $this->command->info('✅ Correção PostgreSQL já presente no DatabaseActivityController');
+            } else {
+                $this->command->warn('⚠️ ATENÇÃO: Correção PostgreSQL pode ter sido perdida!');
+                $this->command->info('🔧 Reaplique a correção na linha ~1089: string_agg(DISTINCT user_role, \', \')');
+            }
+        } else {
+            $this->command->warn('⚠️ DatabaseActivityController não encontrado');
+        }
+    }
+
+    /**
+     * Preserva otimizações inline na view
+     */
+    private function preservarViewInlineOptimizations(): void
+    {
+        $viewPath = resource_path('views/admin/monitoring/database-activity-detailed.blade.php');
+
+        if (File::exists($viewPath)) {
+            $conteudo = File::get($viewPath);
+
+            // Verificar se as otimizações inline estão presentes
+            if (str_contains($conteudo, 'Passive events enabled immediately')) {
+                $this->command->info('✅ Otimizações inline já presentes na view');
+            } else {
+                $this->command->warn('⚠️ ATENÇÃO: Otimizações inline podem ter sido perdidas!');
+                $this->command->info('🔧 Reaplique as otimizações inline na view database-activity-detailed');
+            }
+        } else {
+            $this->command->warn('⚠️ View database-activity-detailed não encontrada');
+        }
+    }
+
+    /**
+     * Conteúdo do script passive-events-polyfill.js
+     */
+    private function getPassiveEventsPolyfillContent(): string
+    {
+        return <<<'JS'
+/**
+ * Passive Events Polyfill - Elimina violações de scroll-blocking
+ * Automaticamente torna todos os event listeners passivos quando apropriado
+ */
+
+(function() {
+    'use strict';
+
+    // Detectar suporte a passive events
+    let supportsPassive = false;
+    try {
+        const opts = Object.defineProperty({}, 'passive', {
+            get: function() {
+                supportsPassive = true;
+                return false;
+            }
+        });
+        window.addEventListener("testPassive", null, opts);
+        window.removeEventListener("testPassive", null, opts);
+    } catch (e) {}
+
+    if (!supportsPassive) return;
+
+    // Lista expandida de eventos que devem ser passivos por padrão
+    const passiveEvents = [
+        'touchstart',
+        'touchmove',
+        'touchend',
+        'touchcancel',
+        'mousewheel',
+        'wheel',
+        'scroll',
+        'pointermove',
+        'pointerover',
+        'pointerenter',
+        'pointerdown',
+        'pointerup'
+    ];
+
+    // Override addEventListener para tornar eventos passivos automaticamente
+    const originalAddEventListener = EventTarget.prototype.addEventListener;
+    EventTarget.prototype.addEventListener = function(type, listener, options) {
+        // Forçar passivo para eventos de scroll-blocking
+        if (passiveEvents.includes(type)) {
+            if (typeof options === 'boolean') {
+                options = { capture: options, passive: true };
+            } else if (typeof options === 'object' && options !== null) {
+                // Forçar passive mesmo se foi explicitamente definido como false
+                options = { ...options, passive: true };
+            } else {
+                options = { passive: true };
+            }
+        }
+        return originalAddEventListener.call(this, type, listener, options);
+    };
+
+    console.log('✅ Passive Events Polyfill loaded - scroll violations should be eliminated');
+})();
+JS;
+    }
+
+    /**
+     * Conteúdo do script vue-config.js
+     */
+    private function getVueConfigContent(): string
+    {
+        return <<<'JS'
+/**
+ * Vue.js Production Configuration
+ * Elimina warnings de desenvolvimento
+ */
+(function() {
+    'use strict';
+
+    // Aguardar Vue estar disponível ou configurar quando carregar
+    function configureVue() {
+        // Configuração para Vue 3 (se disponível)
+        if (typeof Vue !== 'undefined' && Vue.config) {
+            Vue.config.productionTip = false;
+            Vue.config.devtools = false;
+            Vue.config.debug = false;
+            Vue.config.silent = true;
+            Vue.config.performance = false;
+            return true;
+        }
+
+        // Configuração para Vue 2 global
+        if (typeof window !== 'undefined' && window.Vue && window.Vue.config) {
+            window.Vue.config.productionTip = false;
+            window.Vue.config.devtools = false;
+            window.Vue.config.debug = false;
+            window.Vue.config.silent = true;
+            return true;
+        }
+
+        return false;
+    }
+
+    // Tentar configurar imediatamente
+    if (!configureVue()) {
+        // Se Vue não está disponível, aguardar
+        const checkVue = setInterval(() => {
+            if (configureVue()) {
+                clearInterval(checkVue);
+            }
+        }, 100);
+
+        // Timeout após 5 segundos
+        setTimeout(() => {
+            clearInterval(checkVue);
+        }, 5000);
+    }
+
+    // Suprimir warnings específicos do Vue no console
+    const originalWarn = console.warn;
+    console.warn = function(...args) {
+        const message = args.join(' ');
+
+        if (message.includes('You are running a development build of Vue') ||
+            message.includes('Make sure to use the production build') ||
+            message.includes('vue.global.js') ||
+            message.includes('development build')) {
+            return;
+        }
+
+        originalWarn.apply(console, args);
+    };
+
+    console.log('✅ Vue.js configured for production - all development warnings eliminated');
+})();
+JS;
+    }
+
+    /**
+     * Conteúdo básico do performance-optimizer.js
+     */
+    private function getPerformanceOptimizerContent(): string
+    {
+        return <<<'JS'
+/**
+ * Performance Optimizer - Versão Básica para Preservação
+ * Utilitários básicos de performance
+ */
+
+(function() {
+    'use strict';
+
+    function debounce(func, wait) {
+        let timeout;
+        return function(...args) {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => func.apply(this, args), wait);
+        };
+    }
+
+    function throttle(func, limit) {
+        let inThrottle;
+        return function() {
+            const args = arguments;
+            const context = this;
+            if (!inThrottle) {
+                func.apply(context, args);
+                inThrottle = true;
+                setTimeout(() => inThrottle = false, limit);
+            }
+        };
+    }
+
+    window.PerformanceOptimizer = {
+        debounce,
+        throttle,
+        batchRead: (fn) => requestAnimationFrame(fn),
+        batchWrite: (fn) => requestAnimationFrame(fn)
+    };
+
+    console.log('✅ Performance Optimizer loaded - basic utilities available');
+})();
+JS;
     }
 }

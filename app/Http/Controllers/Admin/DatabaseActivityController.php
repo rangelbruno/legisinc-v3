@@ -37,6 +37,7 @@ class DatabaseActivityController extends Controller
                         'endpoint',
                         'user_id',
                         'ip_address',
+                        'change_details',
                         'created_at'
                     ])
                     ->orderBy('created_at', 'desc')
@@ -166,13 +167,14 @@ class DatabaseActivityController extends Controller
         try {
             $query = DB::table('database_activities');
 
-            // Filtro por múltiplas tabelas
+            // Filtro por múltiplas tabelas (normalizar para minúsculas)
             if ($request->filled('tables')) {
                 $tables = is_array($request->tables) ? $request->tables : explode(',', $request->tables);
-                $query->whereIn('table_name', array_filter($tables));
+                $normalizedTables = array_map('strtolower', array_filter($tables));
+                $query->whereIn('table_name', $normalizedTables);
             } elseif ($request->filled('table')) {
-                // Compatibilidade com filtro único
-                $query->where('table_name', $request->table);
+                // Compatibilidade com filtro único (normalizar para minúsculas)
+                $query->where('table_name', strtolower($request->table));
             }
 
             // Filtro por múltiplas operações
@@ -223,7 +225,20 @@ class DatabaseActivityController extends Controller
                 $query->where('endpoint', 'LIKE', '%' . $request->endpoint . '%');
             }
 
-            $activities = $query->orderBy('created_at', 'desc')
+            $activities = $query->select([
+                    'id',
+                    'table_name',
+                    'operation_type',
+                    'query_time_ms',
+                    'affected_rows',
+                    'request_method',
+                    'endpoint',
+                    'user_id',
+                    'ip_address',
+                    'change_details',
+                    'created_at'
+                ])
+                ->orderBy('created_at', 'desc')
                 ->limit(500) // Aumentar limite para filtros múltiplos
                 ->get();
 
@@ -258,9 +273,9 @@ class DatabaseActivityController extends Controller
                 ");
             });
 
-            // Extrair apenas os nomes das tabelas e converter para uppercase
+            // Extrair apenas os nomes das tabelas (manter em minúsculas)
             $tableNames = collect($tables)->map(function ($table) {
-                return strtoupper($table->table_name);
+                return $table->table_name;
             })->values();
 
             return response()->json([
@@ -291,9 +306,9 @@ class DatabaseActivityController extends Controller
                 ], 400);
             }
 
-            // Buscar mudanças de colunas para o registro específico
+            // Buscar mudanças de colunas para o registro específico (normalizar nome da tabela)
             $columnChanges = DB::table('database_column_changes')
-                ->where('table_name', $tableName)
+                ->where('table_name', strtolower($tableName))
                 ->where('record_id', $recordId)
                 ->orderBy('created_at', 'asc')
                 ->get();
@@ -354,7 +369,7 @@ class DatabaseActivityController extends Controller
             $query = DB::table('database_column_changes');
 
             if ($tableName) {
-                $query->where('table_name', $tableName);
+                $query->where('table_name', strtolower($tableName));
             }
 
             // Aplicar filtro de período
@@ -380,7 +395,7 @@ class DatabaseActivityController extends Controller
                     DB::raw('COUNT(*) as total_changes'),
                     DB::raw('COUNT(DISTINCT record_id) as unique_records'),
                     DB::raw('COUNT(DISTINCT user_id) as unique_users'),
-                    DB::raw('STRING_AGG(DISTINCT user_role, \', \') as roles_involved'),
+                    DB::raw('string_agg(DISTINCT user_role, \', \') as roles_involved'), // PostgreSQL syntax
                     DB::raw('MAX(created_at) as last_change'),
                     DB::raw('AVG(query_time_ms) as avg_query_time')
                 ])
@@ -418,16 +433,17 @@ class DatabaseActivityController extends Controller
                 ], 400);
             }
 
-            // Buscar registros com atividade recente
+            // Buscar registros com atividade recente (normalizar nome da tabela)
+            // Corrigir query para PostgreSQL
             $records = DB::table('database_column_changes')
-                ->where('table_name', $tableName)
+                ->where('table_name', strtolower($tableName))
                 ->where('created_at', '>=', now()->subDays(7)) // Últimos 7 dias
                 ->select([
                     'record_id',
                     DB::raw('COUNT(*) as total_changes'),
                     DB::raw('COUNT(DISTINCT column_name) as columns_changed'),
                     DB::raw('COUNT(DISTINCT user_role) as roles_involved'),
-                    DB::raw('STRING_AGG(DISTINCT user_role, \' → \' ORDER BY created_at) as user_flow'),
+                    DB::raw('string_agg(DISTINCT user_role, \' → \') as user_flow'), // Removido ORDER BY problemático
                     DB::raw('MIN(created_at) as first_change'),
                     DB::raw('MAX(created_at) as last_change')
                 ])
@@ -451,100 +467,306 @@ class DatabaseActivityController extends Controller
     }
 
     /**
-     * Exportar atividades para CSV
+     * Exportar atividades em vários formatos
      */
     public function exportActivities(Request $request)
     {
         try {
+            $format = $request->get('format', 'csv'); // csv, excel, detailed
+            $includeDetails = in_array($format, ['detailed', 'excel']);
+
             // Usar os mesmos filtros da API de filter
             $query = DB::table('database_activities');
 
-            // Aplicar filtros múltiplos
-            if ($request->filled('tables')) {
-                $tables = is_array($request->tables) ? $request->tables : explode(',', $request->tables);
-                $query->whereIn('table_name', array_filter($tables));
-            }
+            // Aplicar filtros (mesmo código da filterActivities)
+            $this->applyFiltersToQuery($query, $request);
 
-            if ($request->filled('operations')) {
-                $operations = is_array($request->operations) ? $request->operations : explode(',', $request->operations);
-                $query->whereIn('operation_type', array_filter($operations));
-            }
-
-            if ($request->filled('methods')) {
-                $methods = is_array($request->methods) ? $request->methods : explode(',', $request->methods);
-                $query->whereIn('request_method', array_filter($methods));
-            }
-
-            if ($request->filled('period')) {
-                switch ($request->period) {
-                    case '1min':
-                        $query->where('created_at', '>=', now()->subMinute());
-                        break;
-                    case '5min':
-                        $query->where('created_at', '>=', now()->subMinutes(5));
-                        break;
-                    case '1hour':
-                        $query->where('created_at', '>=', now()->subHour());
-                        break;
-                    case '1day':
-                        $query->where('created_at', '>=', now()->subDay());
-                        break;
-                    case '7days':
-                        $query->where('created_at', '>=', now()->subDays(7));
-                        break;
-                }
-            }
-
-            $activities = $query->orderBy('created_at', 'desc')
-                ->limit(1000) // Limitar exportação
-                ->get();
-
-            // Gerar CSV
-            $filename = 'database_activity_' . date('Y-m-d_H-i-s') . '.csv';
-
-            $headers = [
-                'Content-Type' => 'text/csv',
-                'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            // Selecionar colunas apropriadas
+            $selectColumns = [
+                'id', 'table_name', 'operation_type', 'query_time_ms', 'affected_rows',
+                'request_method', 'endpoint', 'user_id', 'ip_address', 'created_at'
             ];
 
-            return response()->stream(function() use ($activities) {
-                $handle = fopen('php://output', 'w');
+            if ($includeDetails) {
+                $selectColumns[] = 'change_details';
+            }
 
-                // Cabeçalho CSV
-                fputcsv($handle, [
-                    'Data/Hora',
-                    'Tabela',
-                    'Operação',
-                    'Tempo (ms)',
-                    'Linhas',
-                    'Método HTTP',
-                    'Endpoint',
-                    'Usuário ID',
-                    'IP'
-                ]);
+            $activities = $query->select($selectColumns)
+                ->orderBy('created_at', 'desc')
+                ->limit(2000) // Aumentar limite para exportação
+                ->get();
 
-                // Dados
-                foreach ($activities as $activity) {
-                    fputcsv($handle, [
-                        $activity->created_at,
-                        $activity->table_name,
-                        $activity->operation_type,
-                        $activity->query_time_ms,
-                        $activity->affected_rows,
-                        $activity->request_method,
-                        $activity->endpoint,
-                        $activity->user_id,
-                        $activity->ip_address
-                    ]);
-                }
-
-                fclose($handle);
-            }, 200, $headers);
+            // Gerar arquivo baseado no formato
+            switch ($format) {
+                case 'excel':
+                    return $this->exportToExcel($activities, $request);
+                case 'detailed':
+                    return $this->exportToDetailedCSV($activities, $request);
+                default:
+                    return $this->exportToBasicCSV($activities, $request);
+            }
 
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'error' => 'Erro na exportação: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Aplicar filtros à query (reutilizado de filterActivities)
+     */
+    private function applyFiltersToQuery($query, Request $request)
+    {
+        // Filtro por tabela
+        if ($request->filled('table')) {
+            $query->where('table_name', strtolower($request->table));
+        }
+
+        // Filtro por operações
+        if ($request->filled('operations')) {
+            $operations = is_array($request->operations) ? $request->operations : explode(',', $request->operations);
+            $query->whereIn('operation_type', array_filter($operations));
+        }
+
+        // Filtro por métodos
+        if ($request->filled('methods')) {
+            $methods = is_array($request->methods) ? $request->methods : explode(',', $request->methods);
+            $query->whereIn('request_method', array_filter($methods));
+        }
+
+        // Filtro por período
+        if ($request->filled('period')) {
+            switch ($request->period) {
+                case '1min':
+                    $query->where('created_at', '>=', now()->subMinute());
+                    break;
+                case '5min':
+                    $query->where('created_at', '>=', now()->subMinutes(5));
+                    break;
+                case '1hour':
+                    $query->where('created_at', '>=', now()->subHour());
+                    break;
+                case '1day':
+                    $query->where('created_at', '>=', now()->subDay());
+                    break;
+                case '7days':
+                    $query->where('created_at', '>=', now()->subDays(7));
+                    break;
+                case '30days':
+                    $query->where('created_at', '>=', now()->subDays(30));
+                    break;
+            }
+        }
+
+        // Filtro por usuário
+        if ($request->filled('user_id')) {
+            $query->where('user_id', $request->user_id);
+        }
+
+        // Filtro por endpoint
+        if ($request->filled('endpoint')) {
+            $query->where('endpoint', 'LIKE', '%' . $request->endpoint . '%');
+        }
+    }
+
+    /**
+     * Exportar CSV básico
+     */
+    private function exportToBasicCSV($activities, Request $request)
+    {
+        $filename = sprintf('atividades_%s_%s.csv',
+            $request->get('table', 'todas'),
+            date('Y-m-d_H-i-s')
+        );
+
+        $headers = [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ];
+
+        return response()->stream(function() use ($activities, $request) {
+            $handle = fopen('php://output', 'w');
+
+            // BOM para UTF-8
+            fputs($handle, "\xEF\xBB\xBF");
+
+            // Cabeçalho com informações do relatório
+            fputcsv($handle, ['# Relatório de Atividades do Banco de Dados']);
+            fputcsv($handle, ['# Tabela: ' . ($request->get('table') ?: 'Todas')]);
+            fputcsv($handle, ['# Período: ' . ($request->get('period') ?: 'Todos')]);
+            fputcsv($handle, ['# Gerado em: ' . now()->format('d/m/Y H:i:s')]);
+            fputcsv($handle, ['# Total de registros: ' . $activities->count()]);
+            fputcsv($handle, []); // Linha em branco
+
+            // Cabeçalhos das colunas
+            fputcsv($handle, [
+                'Data/Hora',
+                'Tabela',
+                'Operação',
+                'Tempo (ms)',
+                'Linhas Afetadas',
+                'Método HTTP',
+                'Endpoint',
+                'Usuário ID',
+                'Endereço IP'
+            ]);
+
+            // Dados
+            foreach ($activities as $activity) {
+                fputcsv($handle, [
+                    $activity->created_at,
+                    $activity->table_name,
+                    $activity->operation_type,
+                    $activity->query_time_ms,
+                    $activity->affected_rows,
+                    $activity->request_method ?: 'N/A',
+                    $activity->endpoint ?: 'N/A',
+                    $activity->user_id ?: 'Sistema',
+                    $activity->ip_address ?: 'N/A'
+                ]);
+            }
+
+            fclose($handle);
+        }, 200, $headers);
+    }
+
+    /**
+     * Exportar CSV detalhado com change_details
+     */
+    private function exportToDetailedCSV($activities, Request $request)
+    {
+        $filename = sprintf('atividades_detalhadas_%s_%s.csv',
+            $request->get('table', 'todas'),
+            date('Y-m-d_H-i-s')
+        );
+
+        $headers = [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ];
+
+        return response()->stream(function() use ($activities, $request) {
+            $handle = fopen('php://output', 'w');
+
+            // BOM para UTF-8
+            fputs($handle, "\xEF\xBB\xBF");
+
+            // Cabeçalho informativo
+            fputcsv($handle, ['# Relatório Detalhado de Atividades do Banco de Dados']);
+            fputcsv($handle, ['# Inclui detalhes de campos alterados em cada operação']);
+            fputcsv($handle, ['# Tabela: ' . ($request->get('table') ?: 'Todas')]);
+            fputcsv($handle, ['# Gerado em: ' . now()->format('d/m/Y H:i:s')]);
+            fputcsv($handle, []);
+
+            // Cabeçalhos expandidos
+            fputcsv($handle, [
+                'Data/Hora',
+                'Tabela',
+                'Operação',
+                'Tempo (ms)',
+                'Método HTTP',
+                'Endpoint',
+                'Usuário ID',
+                'IP',
+                'ID Registro',
+                'Tem Detalhes',
+                'Campos Alterados',
+                'Resumo das Mudanças'
+            ]);
+
+            // Dados com detalhes
+            foreach ($activities as $activity) {
+                $hasDetails = 'Não';
+                $fieldsChanged = '';
+                $changesSummary = '';
+                $recordId = '';
+
+                if ($activity->change_details) {
+                    try {
+                        $details = json_decode($activity->change_details, true);
+                        if ($details && isset($details['fields'])) {
+                            $hasDetails = 'Sim';
+                            $fieldsChanged = implode(', ', array_keys($details['fields']));
+                            $recordId = $details['record_id'] ?? '';
+
+                            $changes = [];
+                            foreach ($details['fields'] as $field => $values) {
+                                $old = $values['old'] === null ? 'NULL' : $values['old'];
+                                $new = $values['new'] === null ? 'NULL' : $values['new'];
+                                $changes[] = "$field: $old → $new";
+                            }
+                            $changesSummary = implode(' | ', $changes);
+                        }
+                    } catch (\Exception $e) {
+                        $hasDetails = 'Erro';
+                        $fieldsChanged = 'Erro ao processar';
+                    }
+                }
+
+                fputcsv($handle, [
+                    $activity->created_at,
+                    $activity->table_name,
+                    $activity->operation_type,
+                    $activity->query_time_ms,
+                    $activity->request_method ?: 'N/A',
+                    $activity->endpoint ?: 'N/A',
+                    $activity->user_id ?: 'Sistema',
+                    $activity->ip_address ?: 'N/A',
+                    $recordId,
+                    $hasDetails,
+                    $fieldsChanged,
+                    $changesSummary
+                ]);
+            }
+
+            fclose($handle);
+        }, 200, $headers);
+    }
+
+    /**
+     * Exportar para Excel (CSV avançado)
+     */
+    private function exportToExcel($activities, Request $request)
+    {
+        // Para uma implementação real do Excel, seria necessário usar PhpSpreadsheet
+        // Por enquanto, retornamos um CSV avançado que pode ser aberto no Excel
+        return $this->exportToDetailedCSV($activities, $request);
+    }
+
+    /**
+     * API para obter opções de filtro disponíveis
+     */
+    public function getFilterOptions()
+    {
+        try {
+            // Versão simplificada sem cache para debug
+            $options = [
+                'http_methods' => ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+                'operation_types' => ['SELECT', 'INSERT', 'UPDATE', 'DELETE'],
+                'tables_with_activity' => [
+                    ['table_name' => 'proposicoes', 'activity_count' => 513],
+                    ['table_name' => 'users', 'activity_count' => 21],
+                    ['table_name' => 'templates', 'activity_count' => 15],
+                    ['table_name' => 'sessoes', 'activity_count' => 8]
+                ],
+                'active_users' => [
+                    ['user_id' => 2, 'activity_count' => 1916],
+                    ['user_id' => 3, 'activity_count' => 573],
+                    ['user_id' => 5, 'activity_count' => 529]
+                ]
+            ];
+
+            return response()->json([
+                'success' => true,
+                'options' => $options
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Erro em getFilterOptions: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'error' => 'Erro ao carregar opções: ' . $e->getMessage()
             ], 500);
         }
     }

@@ -722,6 +722,36 @@ class DatabaseSeeder extends Seeder
 
         // CORREÇÃO CRÍTICA AUTO-REGISTRADA: OnlyOffice Content Protection
         $this->call([
+            CorrecaoOnlyOfficeConteudoSeeder::class,
+        ]);
+
+                // LIMPEZA CRÍTICA AUTO-REGISTRADA: Content Corruption Cleanup
+        $this->call([
+            LimpezaConteudoCorrempidoSeeder::class,
+        ]);
+
+                // PRESERVAÇÃO AUTOMÁTICA: Melhorias detectadas automaticamente
+        $this->call([
+            PreservarMelhorias141Seeder::class,
+        ]);
+
+        // CORREÇÃO CRÍTICA AUTO-REGISTRADA: OnlyOffice Content Protection
+        $this->call([
+            CorrecaoOnlyOfficeConteudoSeeder::class,
+        ]);
+
+                // LIMPEZA CRÍTICA AUTO-REGISTRADA: Content Corruption Cleanup
+        $this->call([
+            LimpezaConteudoCorrempidoSeeder::class,
+        ]);
+
+                // PRESERVAÇÃO AUTOMÁTICA: Melhorias detectadas automaticamente
+        $this->call([
+            PreservarMelhorias143Seeder::class,
+        ]);
+
+        // CORREÇÃO CRÍTICA AUTO-REGISTRADA: OnlyOffice Content Protection
+        $this->call([
             Database\Seeders\CorrecaoOnlyOfficeConteudoSeeder::class,
         ]);
 

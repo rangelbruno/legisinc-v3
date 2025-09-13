@@ -1571,6 +1571,7 @@ Route::middleware(['web', 'auth'])->prefix('admin/monitoring')->name('admin.moni
     Route::get('/database-activity/realtime-metrics', [App\Http\Controllers\Admin\DatabaseActivityController::class, 'getRealTimeMetrics'])->name('database-activity.realtime-metrics');
     Route::get('/database-activity/filter', [App\Http\Controllers\Admin\DatabaseActivityController::class, 'filterActivities'])->name('database-activity.filter');
     Route::get('/database-activity/active-tables', [App\Http\Controllers\Admin\DatabaseActivityController::class, 'getActiveTables'])->name('database-activity.active-tables');
+    Route::get('/database-activity/filter-options', [App\Http\Controllers\Admin\DatabaseActivityController::class, 'getFilterOptions'])->name('database-activity.filter-options');
 
     // Detailed Analysis Routes
     Route::get('/database-activity/detailed', function() { return view('admin.monitoring.database-activity-detailed'); })->name('database-activity.detailed');

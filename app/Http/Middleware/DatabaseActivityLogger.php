@@ -87,8 +87,14 @@ class DatabaseActivityLogger
 
             // Só registrar operações relevantes (evitar queries de sistema)
             if ($this->shouldLogQuery($tableName, $operationType)) {
-                // Log básico de atividade
-                $this->insertActivityLog([
+                // Extrair valores das mudanças para armazenar no log principal
+                $changeDetails = null;
+                if (in_array($operationType, ['INSERT', 'UPDATE', 'DELETE'])) {
+                    $changeDetails = $this->extractQueryDetails($sql, $query['bindings'], $tableName, $operationType);
+                }
+
+                // Log básico de atividade com detalhes das mudanças
+                $activityId = $this->insertActivityLog([
                     'table_name' => $tableName,
                     'operation_type' => $operationType,
                     'query_time_ms' => round($query['time'], 2),
@@ -98,6 +104,7 @@ class DatabaseActivityLogger
                     'user_id' => auth()->id(),
                     'ip_address' => $request->ip(),
                     'sql_hash' => hash('sha256', $sql),
+                    'change_details' => $changeDetails ? json_encode($changeDetails) : null,
                     'created_at' => now(),
                     'updated_at' => now()
                 ]);
@@ -243,11 +250,18 @@ class DatabaseActivityLogger
     private function insertActivityLog(array $data)
     {
         try {
+            // Normalizar nome da tabela para minúsculas para consistência
+            if (isset($data['table_name'])) {
+                $data['table_name'] = strtolower($data['table_name']);
+            }
+
             // Usar conexão direta para evitar recursão no logging
-            DB::table('database_activities')->insert($data);
+            DB::table('database_activities')->insertGetId($data);
+            return DB::getPdo()->lastInsertId();
         } catch (\Exception $e) {
             // Em caso de erro, apenas logar sem falhar
             Log::error('Erro ao inserir activity log: ' . $e->getMessage());
+            return null;
         }
     }
 
@@ -288,7 +302,7 @@ class DatabaseActivityLogger
             if (!empty($columnData)) {
                 foreach ($columnData as $change) {
                     $logData = [
-                        'table_name' => $tableName,
+                        'table_name' => strtolower($tableName), // Normalizar para minúsculas
                         'column_name' => $change['column'],
                         'record_id' => $change['record_id'] ?? 0,
                         'operation_type' => $operationType,
@@ -442,6 +456,90 @@ class DatabaseActivityLogger
         }
 
         return null;
+    }
+
+    /**
+     * Extrai detalhes da query para armazenar
+     */
+    private function extractQueryDetails(string $sql, array $bindings, string $tableName, string $operationType): ?array
+    {
+        try {
+            $details = [
+                'fields' => [],
+                'record_id' => null
+            ];
+
+            if ($operationType === 'INSERT') {
+                // Extrair campos e valores do INSERT
+                if (preg_match('/INSERT\s+INTO\s+["\`]?' . preg_quote($tableName) . '["\`]?\s*\(([^)]+)\)\s*VALUES/i', $sql, $matches)) {
+                    $columns = array_map(function($col) {
+                        return trim(trim($col), '"\`');
+                    }, explode(',', $matches[1]));
+
+                    foreach ($columns as $index => $column) {
+                        if (isset($bindings[$index])) {
+                            $details['fields'][$column] = [
+                                'old' => null,
+                                'new' => $this->formatValue($bindings[$index])
+                            ];
+                        }
+                    }
+                }
+            } elseif ($operationType === 'UPDATE') {
+                // Extrair campos do UPDATE
+                if (preg_match('/UPDATE\s+["\`]?' . preg_quote($tableName) . '["\`]?\s+SET\s+(.+?)\s+WHERE/i', $sql, $matches)) {
+                    $setClause = $matches[1];
+
+                    // Extrair pares campo = valor
+                    if (preg_match_all('/(["\`]?[a-zA-Z0-9_]+["\`]?)\s*=\s*\?/i', $setClause, $columnMatches)) {
+                        $columns = $columnMatches[1];
+
+                        foreach ($columns as $index => $column) {
+                            $cleanColumn = trim(trim($column), '"\`');
+                            if (isset($bindings[$index])) {
+                                $details['fields'][$cleanColumn] = [
+                                    'old' => '[valor anterior]', // Precisaria de query adicional
+                                    'new' => $this->formatValue($bindings[$index])
+                                ];
+                            }
+                        }
+                    }
+
+                    // Tentar extrair ID do WHERE
+                    $details['record_id'] = $this->extractRecordIdFromWhere($sql, $bindings, count($columns ?? []));
+                }
+            } elseif ($operationType === 'DELETE') {
+                // Extrair ID do DELETE
+                if (preg_match('/WHERE\s+["\`]?id["\`]?\s*=\s*\?/i', $sql)) {
+                    $details['record_id'] = $bindings[0] ?? null;
+                }
+            }
+
+            return !empty($details['fields']) || $details['record_id'] ? $details : null;
+        } catch (\Exception $e) {
+            Log::error('Erro ao extrair detalhes da query: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Formata valor para armazenamento
+     */
+    private function formatValue($value)
+    {
+        if (is_null($value)) {
+            return 'NULL';
+        }
+        if (is_bool($value)) {
+            return $value ? 'true' : 'false';
+        }
+        if (is_array($value) || is_object($value)) {
+            return json_encode($value);
+        }
+        if (strlen($value) > 100) {
+            return substr($value, 0, 100) . '...';
+        }
+        return $value;
     }
 
     /**
