@@ -10,7 +10,10 @@
             <h1 class="h3 text-gray-800 mb-0">Criar Nova Proposição</h1>
             <p class="text-muted">Etapa 1: Dados Básicos da Proposição</p>
         </div>
-        <div>
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-outline-warning" id="btn-limpar-cache" title="Limpar dados salvos do formulário">
+                <i class="fas fa-broom me-2"></i>Limpar Cache
+            </button>
             <a href="{{ route('proposicoes.minhas-proposicoes') }}" class="btn btn-outline-secondary">
                 <i class="fas fa-arrow-left me-2"></i>Minhas Proposições
             </a>
@@ -634,10 +637,41 @@ $(document).ready(function() {
         localStorage.removeItem(STORAGE_KEY);
         localStorage.removeItem(AI_TEXT_KEY);
         window.textoGeradoIA = null;
+        console.log('🧹 Cache do formulário limpo');
     }
-    
-    // Carregar dados salvos na inicialização
+
+    // Função para limpar cache quando usuário sai da página ou inicia nova proposição
+    function limparCacheSeNecessario() {
+        const urlAtual = window.location.href;
+
+        // Se está na página de criação com tipo específico, significa que é nova proposição
+        if (urlAtual.includes('/proposicoes/create?tipo=')) {
+            console.log('🔄 Nova proposição detectada, limpando cache...');
+            limparDadosFormulario();
+        }
+
+        // Se voltou para a lista de proposições, limpar também
+        if (urlAtual.includes('/proposicoes') && !urlAtual.includes('create')) {
+            console.log('📋 Voltou à lista, limpando cache...');
+            limparDadosFormulario();
+        }
+    }
+
+    // Verificar se deve limpar cache na inicialização
+    limparCacheSeNecessario();
+
+    // Carregar dados salvos na inicialização (apenas se não foi limpo acima)
     carregarDadosFormulario();
+
+    // Limpar cache ao sair da página (navegação ou fechamento)
+    window.addEventListener('beforeunload', function() {
+        // Se está saindo da página de criação, considerar limpar
+        const formPreenchido = $('#ementa').val() || $('#tipo').val();
+        if (!formPreenchido) {
+            console.log('🚪 Saindo sem dados preenchidos, limpando cache...');
+            limparDadosFormulario();
+        }
+    });
 
     // Configuração do DropzoneJS para Upload de Arquivos
     let myDropzone = null;
@@ -1003,6 +1037,26 @@ $(document).ready(function() {
     // Funcionalidade de geração via IA
     $('#btn-gerar-ia').on('click', function() {
         gerarTextoViaIA();
+    });
+
+    // Botão para limpar cache manualmente
+    $('#btn-limpar-cache').on('click', function() {
+        if (confirm('Tem certeza que deseja limpar todos os dados salvos do formulário?\n\nIsso irá apagar:\n• Tipo de proposição selecionado\n• Ementa digitada\n• Opções de preenchimento\n• Texto gerado por IA\n\nEsta ação não pode ser desfeita.')) {
+            limparDadosFormulario();
+
+            // Resetar formulário visualmente
+            $('#tipo').val('').trigger('change');
+            $('#ementa').val('');
+            $('input[name="opcao_preenchimento"]').prop('checked', false);
+            $('#texto_principal').val('');
+            $('#ementa-container').hide();
+            $('#opcoes-preenchimento-container').hide();
+            $('#template-info-container').hide();
+            $('#texto-manual-container').hide();
+            $('#ia-container').hide();
+
+            toastr.success('Cache limpo com sucesso! Formulário resetado.');
+        }
     });
 
     // Auto-salvar quando opção de preenchimento mudar

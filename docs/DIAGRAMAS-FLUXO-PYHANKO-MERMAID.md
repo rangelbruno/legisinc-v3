@@ -9,7 +9,7 @@ Esta documentação contém **diagramas interativos Mermaid** que mostram visual
 ## 🔄 1. Fluxo Principal de Assinatura
 
 ```mermaid
-flowchart TD
+graph TD
     A[👤 Usuário Solicita Assinatura] --> B[📁 Upload Certificado PFX]
     B --> C[🔑 Informa Senha PFX]
     C --> D{🔒 Validação OpenSSL}
@@ -45,34 +45,46 @@ flowchart TD
 
 ```mermaid
 graph TB
-    subgraph "Sistema Host"
-        A[Laravel App] --> B[AssinaturaDigitalService]
-        B --> C[Docker Command]
-    end
-    
-    subgraph "Container Efêmero PyHanko"
-        D[pyhanko CLI] --> E[Carregar pyhanko.yml]
-        E --> F[Ler Certificado PFX]
-        F --> G[Processar PDF]
-        G --> H[Aplicar Assinatura PAdES]
-        H --> I[Adicionar Timestamp]
-        I --> J[Embarcar CRL/OCSP]
-        J --> K[Gerar PDF Final]
-    end
-    
-    subgraph "Volumes Montados"
-        L[/work - Documentos]
-        M[/certs:ro - Certificados]
-        N[pyhanko.yml - Config]
-    end
-    
+    %% Sistema Host
+    A[🖥️ Laravel App]
+    B[AssinaturaDigitalService]
+    C[Docker Command]
+
+    %% Container Efêmero PyHanko
+    D[🐳 pyhanko CLI]
+    E[Carregar pyhanko.yml]
+    F[Ler Certificado PFX]
+    G[Processar PDF]
+    H[Aplicar Assinatura PAdES]
+    I[Adicionar Timestamp]
+    J[Embarcar CRL/OCSP]
+    K[Gerar PDF Final]
+
+    %% Volumes Montados
+    L[📁 /work - Documentos]
+    M[🔐 /certs:ro - Certificados]
+    N[⚙️ pyhanko.yml - Config]
+
+    %% PDF Final
+    O[PDF Assinado]
+    P[Container Destruído]
+
+    A --> B
+    B --> C
+    D --> E
+    E --> F
+    F --> G
+    G --> H
+    H --> I
+    I --> J
+    J --> K
     C -->|docker run --rm| D
     D -.-> L
     D -.-> M
     E -.-> N
-    K --> O[PDF Assinado]
-    O --> P[Container Destruído]
-    
+    K --> O
+    O --> P
+
     style D fill:#fff3e0,stroke:#f57c00
     style K fill:#e8f5e8,stroke:#2e7d32
     style P fill:#ffebee,stroke:#c62828
@@ -217,22 +229,24 @@ stateDiagram-v2
 ## 🏛️ 7. Integração com Sistema Legisinc
 
 ```mermaid
-C4Context
-    title Sistema de Assinatura Digital - Context Diagram
-    
-    Person(user, "👤 Usuário", "Parlamentar/Legislativo")
-    System(legisinc, "🏛️ Sistema Legisinc", "Plataforma legislativa v2.2")
-    
-    System_Ext(pyhanko, "🛡️ PyHanko Container", "Assinatura PAdES efêmera")
-    System_Ext(tsa, "⏰ TSA FreeTSA", "Servidor de timestamp")
-    System_Ext(crl, "📋 CRL/OCSP", "Validação certificados")
-    
-    Rel(user, legisinc, "Acessa proposições")
-    Rel(legisinc, pyhanko, "docker run --rm")
-    Rel(pyhanko, tsa, "HTTPS timestamp")
-    Rel(pyhanko, crl, "Validação cadeia")
-    
-    UpdateLayoutConfig($c4ShapeInRow="2", $c4BoundaryInRow="1")
+graph TB
+    %% Sistema de Assinatura Digital - Context Diagram
+    User[👤 Usuário<br/>Parlamentar/Legislativo]
+    Legisinc[🏛️ Sistema Legisinc<br/>Plataforma legislativa v2.2]
+    PyHanko[🛡️ PyHanko Container<br/>Assinatura PAdES efêmera]
+    TSA[⏰ TSA FreeTSA<br/>Servidor de timestamp]
+    CRL[📋 CRL/OCSP<br/>Validação certificados]
+
+    User -->|Acessa proposições| Legisinc
+    Legisinc -->|docker run --rm| PyHanko
+    PyHanko -->|HTTPS timestamp| TSA
+    PyHanko -->|Validação cadeia| CRL
+
+    style User fill:#e1f5fe
+    style Legisinc fill:#f3e5f5
+    style PyHanko fill:#fff3e0
+    style TSA fill:#e8f5e8
+    style CRL fill:#fce4ec
 ```
 
 ---
@@ -302,44 +316,37 @@ gitgraph
 ## 💻 10. Comandos em Execução
 
 ```mermaid
-block-beta
-    columns 1
-    
-    block:comandos["💻 Comandos PyHanko"]
-        A["🔍 Verificar Imagem"]
-        B["docker images | grep pyhanko"]
-        C["legisinc-pyhanko latest 397MB"]
-    end
-    
-    space
-    
-    block:teste["🧪 Testar Binário"] 
-        D["docker run --rm legisinc-pyhanko --version"]
-        E["pyHanko, version 0.29.1 (CLI 0.1.2)"]
-    end
-    
-    space
-    
-    block:assinatura["🖋️ Assinatura Efêmera"]
-        F["docker run --rm \\"]
-        G["-v /dados:/work \\"]
-        H["-v /certs:/certs:ro \\"]
-        I["-e PFX_PASS='senha' \\"]
-        J["legisinc-pyhanko sign addsig..."]
-    end
-    
-    space
-    
-    block:monitorar["👁️ Monitorar Execução"]
-        K["watch docker ps"]
-        L["PyHanko aparece temporariamente"]
-        M["Container destruído automaticamente"]
-    end
-    
-    style comandos fill:#e1f5fe,stroke:#01579b
-    style teste fill:#fff3e0,stroke:#f57c00
-    style assinatura fill:#e8f5e8,stroke:#2e7d32
-    style monitorar fill:#f3e5f5,stroke:#7b1fa2
+graph TB
+    %% Comandos PyHanko
+    A[💻 Comandos PyHanko<br/>🔍 Verificar Imagem]
+    B[docker images | grep pyhanko]
+    C[legisinc-pyhanko latest 397MB]
+
+    %% Testar Binário
+    D[🧪 Testar Binário<br/>docker run --rm legisinc-pyhanko --version]
+    E[pyHanko, version 0.29.1 (CLI 0.1.2)]
+
+    %% Assinatura Efêmera
+    F[🖋️ Assinatura Efêmera<br/>docker run --rm]
+    G[-v /dados:/work]
+    H[-v /certs:/certs:ro]
+    I[-e PFX_PASS='senha']
+    J[legisinc-pyhanko sign addsig...]
+
+    %% Monitorar Execução
+    K[👁️ Monitorar Execução<br/>watch docker ps]
+    L[PyHanko aparece temporariamente]
+    M[Container destruído automaticamente]
+
+    A --> B --> C
+    D --> E
+    F --> G --> H --> I --> J
+    K --> L --> M
+
+    style A fill:#e1f5fe,stroke:#01579b
+    style D fill:#fff3e0,stroke:#f57c00
+    style F fill:#e8f5e8,stroke:#2e7d32
+    style K fill:#f3e5f5,stroke:#7b1fa2
 ```
 
 ---

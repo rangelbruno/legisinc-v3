@@ -521,25 +521,61 @@ class AssinaturaDigitalController extends Controller
      */
     private function obterCaminhoPDFParaAssinatura(Proposicao $proposicao): ?string
     {
+        // CRÍTICO: Verificar se PDF existente está desatualizado comparado ao RTF
+        $pdfEncontrado = null;
+
         // Tentar usar PDF gerado pelo sistema
         if ($proposicao->arquivo_pdf_path) {
             $caminho = storage_path('app/' . $proposicao->arquivo_pdf_path);
             if (file_exists($caminho)) {
-                return $caminho;
+                $pdfEncontrado = $caminho;
             }
         }
 
-        // Tentar usar PDF do diretório de assinatura
-        $diretorioPDFs = storage_path("app/proposicoes/pdfs/{$proposicao->id}");
-        if (is_dir($diretorioPDFs)) {
-            $pdfs = glob($diretorioPDFs . '/*.pdf');
-            if (!empty($pdfs)) {
-                // Retornar o PDF mais recente
-                $pdfMaisRecente = array_reduce($pdfs, function($carry, $item) {
-                    return (!$carry || filemtime($item) > filemtime($carry)) ? $item : $carry;
-                });
-                return $pdfMaisRecente;
+        // Se não encontrou, tentar usar PDF do diretório de assinatura
+        if (!$pdfEncontrado) {
+            $diretorioPDFs = storage_path("app/proposicoes/pdfs/{$proposicao->id}");
+            if (is_dir($diretorioPDFs)) {
+                $pdfs = glob($diretorioPDFs . '/*.pdf');
+                if (!empty($pdfs)) {
+                    // Retornar o PDF mais recente
+                    $pdfEncontrado = array_reduce($pdfs, function($carry, $item) {
+                        return (!$carry || filemtime($item) > filemtime($carry)) ? $item : $carry;
+                    });
+                }
             }
+        }
+
+        // VERIFICAÇÃO CRÍTICA: Se PDF existe, verificar se RTF é mais novo
+        if ($pdfEncontrado) {
+            $pdfModificado = filemtime($pdfEncontrado);
+
+            // Verificar se RTF foi modificado após PDF
+            if ($proposicao->arquivo_path && Storage::exists($proposicao->arquivo_path)) {
+                $caminhoRTF = Storage::path($proposicao->arquivo_path);
+                if (file_exists($caminhoRTF)) {
+                    $rtfModificado = filemtime($caminhoRTF);
+
+                    if ($rtfModificado > $pdfModificado) {
+                        Log::warning('🔴 ASSINATURA: PDF desatualizado detectado - RTF mais novo', [
+                            'proposicao_id' => $proposicao->id,
+                            'pdf_modificado' => date('Y-m-d H:i:s', $pdfModificado),
+                            'rtf_modificado' => date('Y-m-d H:i:s', $rtfModificado),
+                            'diferenca_segundos' => $rtfModificado - $pdfModificado
+                        ]);
+
+                        // PDF está desatualizado - retornar null para forçar regeneração
+                        return null;
+                    }
+                }
+            }
+
+            Log::info('🟢 ASSINATURA: PDF válido encontrado e atualizado', [
+                'proposicao_id' => $proposicao->id,
+                'pdf_path' => $pdfEncontrado
+            ]);
+
+            return $pdfEncontrado;
         }
 
         // Tentar usar PDF do OnlyOffice (diretório antigo)

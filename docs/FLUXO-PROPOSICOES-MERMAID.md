@@ -10,93 +10,81 @@
 O **Template Universal** é um sistema inovador que elimina a necessidade de manter 23 templates separados para cada tipo de proposição. Ele se adapta automaticamente ao tipo selecionado, aplicando variáveis dinâmicas e estrutura específica conforme a legislação brasileira (LC 95/1998).
 
 ```mermaid
-flowchart TB
-    subgraph TemplateSystem["🎨 Sistema Template Universal"]
-        TU_Creation[Template Universal<br/>📄 RTF com 29 variáveis]
-        TU_Variables["Variáveis Dinâmicas<br/>tipo_proposicao<br/>ementa<br/>texto<br/>autor_nome"]
-        TU_Processing[Processamento RTF<br/>✅ UTF-8 correto<br/>✅ OnlyOffice compatível]
-        
-        TU_Creation --> TU_Variables
-        TU_Variables --> TU_Processing
-    end
-    
-    subgraph PropositionCreation["👤 Criação pelo Parlamentar"]
-        PC_Select[Parlamentar seleciona tipo]
-        PC_Template[Sistema aplica Template Universal]
-        PC_Variables[Substitui variáveis automáticas<br/>Nome, cargo, câmara, data]
-        PC_Editor[Abre OnlyOffice com template]
-        
-        PC_Select --> PC_Template
-        PC_Template --> PC_Variables
-        PC_Variables --> PC_Editor
-    end
-    
-    subgraph LegalAnalysis["⚖️ Análise Jurídica"]
-        LA_Receive[Jurídico recebe proposição]
-        LA_OpenEditor[Abre OnlyOffice para revisão]
-        LA_ContentCheck[Verifica conteúdo salvo<br/>🔍 Não usa template]
-        LA_Edit[Edita documento final]
-        
-        LA_Receive --> LA_OpenEditor
-        LA_OpenEditor --> LA_ContentCheck
-        LA_ContentCheck --> LA_Edit
-    end
-    
+graph TB
+    %% Sistema Template Universal
+    TU_Creation[🎨 Template Universal<br/>📄 RTF com 29 variáveis]
+    TU_Variables[Variáveis Dinâmicas<br/>tipo_proposicao, ementa, texto, autor_nome]
+    TU_Processing[Processamento RTF<br/>✅ UTF-8 correto ✅ OnlyOffice compatível]
+
+    %% Criação pelo Parlamentar
+    PC_Select[👤 Parlamentar seleciona tipo]
+    PC_Template[Sistema aplica Template Universal]
+    PC_Variables[Substitui variáveis automáticas<br/>Nome, cargo, câmara, data]
+    PC_Editor[Abre OnlyOffice com template]
+
+    %% Análise Jurídica
+    LA_Receive[⚖️ Jurídico recebe proposição]
+    LA_OpenEditor[Abre OnlyOffice para revisão]
+    LA_ContentCheck[Verifica conteúdo salvo<br/>🔍 Não usa template]
+    LA_Edit[Edita documento final]
+
+    TU_Creation --> TU_Variables
+    TU_Variables --> TU_Processing
     TU_Processing --> PC_Select
+    PC_Select --> PC_Template
+    PC_Template --> PC_Variables
+    PC_Variables --> PC_Editor
     PC_Editor --> LA_Receive
+    LA_Receive --> LA_OpenEditor
+    LA_OpenEditor --> LA_ContentCheck
+    LA_ContentCheck --> LA_Edit
     LA_Edit --> End([Documento final<br/>pronto para assinatura])
-    
-    style TemplateSystem fill:#e3f2fd
-    style PropositionCreation fill:#f3e5f5
-    style LegalAnalysis fill:#e8f5e8
+
+    style TU_Creation fill:#e3f2fd
+    style PC_Select fill:#f3e5f5
+    style LA_Receive fill:#e8f5e8
 ```
 
 ### Detalhamento do Template Universal
 
 ```mermaid
-flowchart LR
-    subgraph Admin["🔧 Administrador"]
-        A1[Configura Template Universal<br/>em /admin/templates/universal]
-        A2[29 variáveis disponíveis]
-        A3[Estrutura RTF válida]
-        A4[Imagem cabeçalho processada]
-        
-        A1 --> A2 --> A3 --> A4
-    end
-    
-    subgraph Variables["📊 Variáveis do Sistema"]
-        V1[Proposição: tipo, número, ementa]
-        V2[Autor: nome, cargo, partido]
-        V3[Instituição: câmara, endereço, CNPJ]
-        V4[Datas: atual, criação, protocolo]
-        V5[Dinâmicas: preâmbulo adaptável]
-        
-        V1 --> V2 --> V3 --> V4 --> V5
-    end
-    
-    subgraph Process["⚙️ Processamento"]
-        P1[Template base RTF]
-        P2["Substitui imagem_cabecalho"]
-        P3[Mantém outras como placeholder]
-        P4[Encoding UTF-8 correto]
-        P5[OnlyOffice compatível]
-        
-        P1 --> P2 --> P3 --> P4 --> P5
-    end
-    
+graph LR
+    %% Administrador
+    A1[🔧 Configura Template Universal]
+    A2[29 variáveis disponíveis]
+    A3[Estrutura RTF válida]
+    A4[Imagem cabeçalho processada]
+
+    %% Variáveis do Sistema
+    V1[📊 Proposição: tipo, número, ementa]
+    V2[Autor: nome, cargo, partido]
+    V3[Instituição: câmara, endereço, CNPJ]
+    V4[Datas: atual, criação, protocolo]
+    V5[Dinâmicas: preâmbulo adaptável]
+
+    %% Processamento
+    P1[⚙️ Template base RTF]
+    P2[Substitui imagem_cabecalho]
+    P3[Mantém outras como placeholder]
+    P4[Encoding UTF-8 correto]
+    P5[OnlyOffice compatível]
+
+    A1 --> A2 --> A3 --> A4
+    V1 --> V2 --> V3 --> V4 --> V5
+    P1 --> P2 --> P3 --> P4 --> P5
     A4 --> V1
     V5 --> P1
-    P5 --> Output([Template pronto para<br/>uso pelo Parlamentar])
-    
-    style Admin fill:#fff3e0
-    style Variables fill:#e8f5e8
-    style Process fill:#f3e5f5
+    P5 --> Output([Template pronto para uso pelo Parlamentar])
+
+    style A1 fill:#fff3e0
+    style V1 fill:#e8f5e8
+    style P1 fill:#f3e5f5
 ```
 
 ## Fluxo Principal Completo
 
 ```mermaid
-flowchart TB
+graph TB
     Start([Início]) --> CreateProposal[Parlamentar cria proposição]
     
     CreateProposal --> ChooseType{Escolhe tipo de<br/>preenchimento}
@@ -120,7 +108,7 @@ flowchart TB
     
     LegislativeReceives --> StartReview[Inicia revisão<br/>Status: 'em_revisao']
     
-    StartReview --> TechnicalAnalysis[Análise técnica:<br/>- Constitucionalidade<br/>- Juridicidade<br/>- Regimentalidade<br/>- Técnica legislativa]
+    StartReview --> TechnicalAnalysis["Análise técnica:<br/>- Constitucionalidade<br/>- Juridicidade<br/>- Regimentalidade<br/>- Técnica legislativa"]
     
     TechnicalAnalysis --> EditContent{Precisa<br/>editar?}
     EditContent -->|Sim| LegislativeEdit[Legislativo edita<br/>no OnlyOffice]
@@ -146,7 +134,7 @@ flowchart TB
     
     SendToProtocol --> ProtocolQueue[Fila do protocolo]
     
-    ProtocolQueue --> ProtocolVerifications[Verificações do protocolo:<br/>- Documento assinado<br/>- Conteúdo completo<br/>- Anexos presentes]
+    ProtocolQueue --> ProtocolVerifications["Verificações do protocolo:<br/>- Documento assinado<br/>- Conteúdo completo<br/>- Anexos presentes"]
     
     ProtocolVerifications --> AssignNumber[Atribui número de protocolo<br/>Ex: 2025/0001]
     
@@ -290,73 +278,65 @@ stateDiagram-v2
 ### Comparação: Template vs Arquivo Salvo
 
 ```mermaid
-flowchart LR
-    subgraph Parlamentar["👤 Parlamentar (Primeira vez)"]
-        P1[Template Universal aplicado]
-        P2[Variáveis substituídas]
-        P3[OnlyOffice carrega template]
-        P4[Edita e salva arquivo]
-        
-        P1 --> P2 --> P3 --> P4
-    end
-    
-    subgraph Juridico["⚖️ Jurídico (Revisão)"]
-        J1[Sistema detecta arquivo salvo]
-        J2[OnlyOffice carrega arquivo<br/>NÃO template]
-        J3[Jurídico vê conteúdo real]
-        J4[Faz revisões e salva]
-        
-        J1 --> J2 --> J3 --> J4
-    end
-    
+graph LR
+    %% Parlamentar (Primeira vez)
+    P1[👤 Template Universal aplicado]
+    P2[Variáveis substituídas]
+    P3[OnlyOffice carrega template]
+    P4[Edita e salva arquivo]
+
+    %% Jurídico (Revisão)
+    J1[⚖️ Sistema detecta arquivo salvo]
+    J2[OnlyOffice carrega arquivo<br/>NÃO template]
+    J3[Jurídico vê conteúdo real]
+    J4[Faz revisões e salva]
+
+    %% Lógica de Detecção
+    D1{🤔 Existe arquivo_path?}
+    D2[Carrega arquivo existente]
+    D3[Aplica Template Universal]
+
+    P1 --> P2 --> P3 --> P4
+    J1 --> J2 --> J3 --> J4
     P4 --> J1
-    
-    subgraph Decision["🤔 Lógica de Detecção"]
-        D1{Existe arquivo_path?}
-        D2[Carrega arquivo existente]
-        D3[Aplica Template Universal]
-        
-        D1 -->|Sim| D2
-        D1 -->|Não| D3
-    end
-    
-    style Parlamentar fill:#e3f2fd
-    style Juridico fill:#e8f5e8
-    style Decision fill:#fff3e0
+
+    D1 -->|Sim| D2
+    D1 -->|Não| D3
+
+    style P1 fill:#e3f2fd
+    style J1 fill:#e8f5e8
+    style D1 fill:#fff3e0
 ```
 
 ## Fluxo por Perfil de Usuário
 
 ```mermaid
-flowchart LR
-    subgraph Parlamentar
-        P1[Cria proposição]
-        P2[Edita conteúdo]
-        P3[Envia para legislativo]
-        P4[Faz correções]
-        P5[Assina digitalmente]
-        P1 --> P2 --> P3
-        P4 --> P3
-        P5
-    end
-    
-    subgraph Legislativo
-        L1[Recebe proposições]
-        L2[Analisa tecnicamente]
-        L3[Edita se necessário]
-        L4[Aprova ou devolve]
-        L1 --> L2 --> L3 --> L4
-    end
-    
-    subgraph Protocolo
-        PR1[Recebe assinadas]
-        PR2[Realiza verificações]
-        PR3[Atribui número]
-        PR4[Define comissões]
-        PR5[Protocoliza]
-        PR1 --> PR2 --> PR3 --> PR4 --> PR5
-    end
-    
+graph LR
+    %% Parlamentar
+    P1[👤 Cria proposição]
+    P2[Edita conteúdo]
+    P3[Envia para legislativo]
+    P4[Faz correções]
+    P5[Assina digitalmente]
+
+    %% Legislativo
+    L1[⚖️ Recebe proposições]
+    L2[Analisa tecnicamente]
+    L3[Edita se necessário]
+    L4[Aprova ou devolve]
+
+    %% Protocolo
+    PR1[📋 Recebe assinadas]
+    PR2[Realiza verificações]
+    PR3[Atribui número]
+    PR4[Define comissões]
+    PR5[Protocoliza]
+
+    P1 --> P2 --> P3
+    P4 --> P3
+    L1 --> L2 --> L3 --> L4
+    PR1 --> PR2 --> PR3 --> PR4 --> PR5
+
     P3 -.-> L1
     L4 -.->|Devolve| P4
     L4 -.->|Aprova| P5
@@ -485,107 +465,96 @@ gantt
 ## Fluxo de Decisões Detalhado
 
 ```mermaid
-flowchart TD
-    subgraph Criação
-        A1[Parlamentar acessa sistema]
-        A2{Tem permissão?}
-        A3[Acesso negado]
-        A4[Tela de criação]
-        A5[Escolhe tipo proposição]
-        A6[Preenche ementa]
-        
-        A1 --> A2
-        A2 -->|Não| A3
-        A2 -->|Sim| A4
-        A4 --> A5
-        A5 --> A6
-    end
-    
-    subgraph Preenchimento
-        B1{Método de preenchimento}
-        B2[Seleciona template]
-        B3[Sistema aplica variáveis]
-        B4[Digita manualmente]
-        B5[Solicita geração IA]
-        B6[IA gera conteúdo]
-        
-        A6 --> B1
-        B1 -->|Template| B2
-        B2 --> B3
-        B1 -->|Manual| B4
-        B1 -->|IA| B5
-        B5 --> B6
-    end
-    
-    subgraph Edição
-        C1[Abre OnlyOffice]
-        C2[Edita documento]
-        C3{Adiciona anexos?}
-        C4[Upload arquivos]
-        C5[Salva alterações]
-        
-        B3 --> C1
-        B4 --> C1
-        B6 --> C1
-        C1 --> C2
-        C2 --> C3
-        C3 -->|Sim| C4
-        C3 -->|Não| C5
-        C4 --> C5
-    end
-    
-    subgraph Envio
-        D1{Validações OK?}
-        D2[Mostra erros]
-        D3[Envia para Legislativo]
-        D4[Notifica Legislativo]
-        
-        C5 --> D1
-        D1 -->|Não| D2
-        D2 --> C2
-        D1 -->|Sim| D3
-        D3 --> D4
-    end
+graph TD
+    %% Criação
+    A1[👤 Parlamentar acessa sistema]
+    A2{Tem permissão?}
+    A3[Acesso negado]
+    A4[Tela de criação]
+    A5[Escolhe tipo proposição]
+    A6[Preenche ementa]
+
+    %% Preenchimento
+    B1{Método de preenchimento}
+    B2[Seleciona template]
+    B3[Sistema aplica variáveis]
+    B4[Digita manualmente]
+    B5[Solicita geração IA]
+    B6[IA gera conteúdo]
+
+    %% Edição
+    C1[📝 Abre OnlyOffice]
+    C2[Edita documento]
+    C3{Adiciona anexos?}
+    C4[Upload arquivos]
+    C5[Salva alterações]
+
+    %% Envio
+    D1{Validações OK?}
+    D2[Mostra erros]
+    D3[✅ Envia para Legislativo]
+    D4[Notifica Legislativo]
+
+    A1 --> A2
+    A2 -->|Não| A3
+    A2 -->|Sim| A4
+    A4 --> A5
+    A5 --> A6
+    A6 --> B1
+    B1 -->|Template| B2
+    B2 --> B3
+    B1 -->|Manual| B4
+    B1 -->|IA| B5
+    B5 --> B6
+    B3 --> C1
+    B4 --> C1
+    B6 --> C1
+    C1 --> C2
+    C2 --> C3
+    C3 -->|Sim| C4
+    C3 -->|Não| C5
+    C4 --> C5
+    C5 --> D1
+    D1 -->|Não| D2
+    D2 --> C2
+    D1 -->|Sim| D3
+    D3 --> D4
 ```
 
 ## Validações por Etapa
 
 ```mermaid
-flowchart LR
-    subgraph Validações_Criação
-        VC1[Tipo válido]
-        VC2[Ementa presente]
-        VC3[Autor autenticado]
-        VC1 --> VC2 --> VC3
-    end
-    
-    subgraph Validações_Envio
-        VE1[Status correto]
-        VE2[Conteúdo mínimo]
-        VE3[É o autor]
-        VE1 --> VE2 --> VE3
-    end
-    
-    subgraph Validações_Revisão
-        VR1[Status enviado_legislativo]
-        VR2[Análises técnicas]
-        VR3[Parecer presente]
-        VR1 --> VR2 --> VR3
-    end
-    
-    subgraph Validações_Assinatura
-        VA1[Status aprovado]
-        VA2[Leitura confirmada]
-        VA3[Certificado válido]
-        VA1 --> VA2 --> VA3
-    end
-    
-    subgraph Validações_Protocolo
-        VP1[Assinatura presente]
-        VP2[Verificações OK]
-        VP3[Número disponível]
-        VP1 --> VP2 --> VP3
-    end
+graph LR
+    %% Validações de Criação
+    VC1[🔍 Tipo válido]
+    VC2[Ementa presente]
+    VC3[Autor autenticado]
+
+    %% Validações de Envio
+    VE1[📤 Status correto]
+    VE2[Conteúdo mínimo]
+    VE3[É o autor]
+
+    %% Validações de Revisão
+    VR1[⚖️ Status enviado_legislativo]
+    VR2[Análises técnicas]
+    VR3[Parecer presente]
+
+    %% Validações de Assinatura
+    VA1[✍️ Status aprovado]
+    VA2[Leitura confirmada]
+    VA3[Certificado válido]
+
+    %% Validações de Protocolo
+    VP1[📋 Assinatura presente]
+    VP2[Verificações OK]
+    VP3[Número disponível]
+
+    VC1 --> VC2 --> VC3
+    VE1 --> VE2 --> VE3
+    VR1 --> VR2 --> VR3
+    VA1 --> VA2 --> VA3
+    VP1 --> VP2 --> VP3
 ```
 
 ## Integração com OnlyOffice
@@ -659,26 +628,31 @@ sequenceDiagram
 ### Arquitetura do Sistema
 
 ```mermaid
-C4Context
-    Person(parlamentar, "Parlamentar", "Cria proposições usando Template Universal")
-    Person(juridico, "Jurídico", "Analisa e revisa proposições")
-    Person(admin, "Administrador", "Configura Template Universal")
+graph TB
+    %% Pessoas
+    Parlamentar[🏛️ Parlamentar<br/>Cria proposições usando Template Universal]
+    Juridico[⚖️ Jurídico<br/>Analisa e revisa proposições]
+    Admin[🔧 Administrador<br/>Configura Template Universal]
 
-    System_Boundary(legisinc, "Sistema Legisinc") {
-        System(template_universal, "Template Universal", "Sistema único de templates adaptativos")
-        System(onlyoffice, "OnlyOffice", "Editor de documentos RTF")
-        System(proposicoes, "Módulo Proposições", "Gestão do fluxo legislativo")
-    }
+    %% Sistema Legisinc
+    TemplateUniversal[🎨 Template Universal<br/>Sistema único de templates adaptativos]
+    OnlyOffice[📝 OnlyOffice<br/>Editor de documentos RTF]
+    Proposicoes[📄 Módulo Proposições<br/>Gestão do fluxo legislativo]
 
-    System_Ext(database, "PostgreSQL", "Armazenamento de dados")
+    %% Sistema Externo
+    Database[🗄️ PostgreSQL<br/>Armazenamento de dados]
 
-    Rel(parlamentar, template_universal, "Usa templates")
-    Rel(juridico, proposicoes, "Analisa proposições")
-    Rel(admin, template_universal, "Configura")
-    
-    Rel(template_universal, onlyoffice, "Processa RTF")
-    Rel(proposicoes, database, "Persiste dados")
-    Rel(template_universal, database, "Armazena templates")
+    %% Relacionamentos
+    Parlamentar --> TemplateUniversal
+    Juridico --> Proposicoes
+    Admin --> TemplateUniversal
+    TemplateUniversal --> OnlyOffice
+    Proposicoes --> Database
+    TemplateUniversal --> Database
+
+    style Parlamentar fill:#e3f2fd
+    style Juridico fill:#e8f5e8
+    style Admin fill:#fff3e0
 ```
 
 ### Variáveis do Template Universal
@@ -760,32 +734,39 @@ sequenceDiagram
 ### Resolução de Problemas Técnicos
 
 ```mermaid
-flowchart TD
+graph TD
     Problem[❌ Problema: Choose TXT options]
-    
-    Problem --> Analysis{Análise do RTF}
-    Analysis --> Corrupted[RTF corrompido<br/>Headers malformados]
-    Analysis --> Encoding[Encoding incorreto<br/>text/plain vs application/rtf]
-    Analysis --> Structure[Estrutura inválida<br/>Headers malformados]
-    
-    Corrupted --> Fix1[corrigirRTFCorrompido<br/>Corrige headers RTF<br/>Valida estrutura<br/>Ajusta formatação]
-    
-    Encoding --> Fix2[Headers HTTP corretos<br/>Content-Type: application/rtf<br/>charset=utf-8<br/>fileType: rtf]
-    
-    Structure --> Fix3[garantirRTFValido<br/>Validar início RTF<br/>Codificação UTF-8<br/>Estrutura completa]
-    
-    Fix1 --> Test[🧪 Teste Automático<br/>debug_template_universal.php]
+    Analysis{Análise do RTF}
+    Corrupted[RTF corrompido<br/>Headers malformados]
+    Encoding[Encoding incorreto<br/>text/plain vs application/rtf]
+    Structure[Estrutura inválida<br/>Headers malformados]
+
+    Fix1["corrigirRTFCorrompido<br/>Corrige headers RTF<br/>Valida estrutura<br/>Ajusta formatação"]
+    Fix2["Headers HTTP corretos<br/>Content-Type: application/rtf<br/>charset=utf-8<br/>fileType: rtf"]
+    Fix3["garantirRTFValido<br/>Validar início RTF<br/>Codificação UTF-8<br/>Estrutura completa"]
+
+    Test["🧪 Teste Automático<br/>debug_template_universal.php"]
+    Success[✅ Editor OnlyOffice<br/>abre sem diálogos]
+    Fail[❌ Ainda com problemas]
+    Seeder[TemplateUniversalFixSeeder<br/>preserva correções]
+    Production[🚀 Produção]
+
+    Problem --> Analysis
+    Analysis --> Corrupted
+    Analysis --> Encoding
+    Analysis --> Structure
+    Corrupted --> Fix1
+    Encoding --> Fix2
+    Structure --> Fix3
+    Fix1 --> Test
     Fix2 --> Test
     Fix3 --> Test
-    
-    Test --> Success[✅ Editor OnlyOffice<br/>abre sem diálogos]
-    Test --> Fail[❌ Ainda com problemas]
-    
+    Test --> Success
+    Test --> Fail
     Fail --> Analysis
-    
-    Success --> Seeder[TemplateUniversalFixSeeder<br/>preserva correções]
-    Seeder --> Production[🚀 Produção]
-    
+    Success --> Seeder
+    Seeder --> Production
+
     style Problem fill:#ffebee
     style Success fill:#e8f5e8
     style Production fill:#c8e6c9
@@ -794,31 +775,27 @@ flowchart TD
 ### Benefícios do Template Universal
 
 ```mermaid
-flowchart LR
-    subgraph Antes["📝 Antes: 23 Templates"]
-        A1[23 arquivos RTF separados]
-        A2[Manutenção complexa]
-        A3[Inconsistência entre tipos]
-        A4[Templates podem corromper]
-        A5[Difícil padronização]
-        
-        A1 --> A2 --> A3 --> A4 --> A5
-    end
-    
-    subgraph Agora["🎨 Agora: Template Universal"]
-        B1[1 template adaptativo]
-        B2[Manutenção centralizada]
-        B3[Consistência garantida]
-        B4[Auto-correção automática]
-        B5[Padrão LC 95/1998]
-        
-        B1 --> B2 --> B3 --> B4 --> B5
-    end
-    
-    Antes -.->|Evolução| Agora
-    
-    style Antes fill:#ffebee
-    style Agora fill:#e8f5e8
+graph LR
+    %% Antes: 23 Templates
+    A1[📝 23 arquivos RTF separados]
+    A2[Manutenção complexa]
+    A3[Inconsistência entre tipos]
+    A4[Templates podem corromper]
+    A5[Difícil padronização]
+
+    %% Agora: Template Universal
+    B1[🎨 1 template adaptativo]
+    B2[Manutenção centralizada]
+    B3[Consistência garantida]
+    B4[Auto-correção automática]
+    B5[Padrão LC 95/1998]
+
+    A1 --> A2 --> A3 --> A4 --> A5
+    B1 --> B2 --> B3 --> B4 --> B5
+    A5 -.->|Evolução| B1
+
+    style A1 fill:#ffebee
+    style B1 fill:#e8f5e8
 ```
 
 ## 🚀 Melhorias Implementadas

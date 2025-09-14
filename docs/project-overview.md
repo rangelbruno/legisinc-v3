@@ -2,6 +2,290 @@
 
 Este documento fornece uma análise detalhada da arquitetura, tecnologias e estrutura do sistema LegisInc v2.1 Enterprise.
 
+## 📊 Mapa Completo do Sistema - Arquitetura e Fluxos
+
+### Diagrama Principal - Visão Geral do Sistema
+
+```mermaid
+graph TB
+    %% Frontend Layer
+    FRONTEND["🌐 Frontend<br/>Vue.js + Laravel Blade"]
+
+    %% Main Controllers
+    PC["📄 ProposicaoController"]
+    PLC["👤 ParlamentarController"]
+    AC["⚙️ AdminControllers"]
+    UC["👥 UserController"]
+
+    %% Services
+    OOS["📝 OnlyOfficeService"]
+    TPS["📋 TemplateProcessorService"]
+    ADS["🔏 AssinaturaDigitalService"]
+    WFS["🔄 WorkflowService"]
+
+    %% Data & Storage
+    DB[("🗄️ PostgreSQL")]
+    STORAGE["📁 Storage Files"]
+    CACHE["⚡ Redis Cache"]
+
+    %% External Services
+    ONLY["📝 OnlyOffice Server"]
+    PYHANKO["🔏 PyHanko Container"]
+
+    %% Connections
+    FRONTEND --> PC
+    FRONTEND --> PLC
+    FRONTEND --> AC
+    FRONTEND --> UC
+
+    PC --> OOS
+    PC --> TPS
+    PC --> ADS
+    PC --> WFS
+
+    OOS --> ONLY
+    ADS --> PYHANKO
+
+    PC --> DB
+    PLC --> DB
+    UC --> DB
+    AC --> DB
+
+    OOS --> STORAGE
+    TPS --> STORAGE
+    ADS --> STORAGE
+
+    PC --> CACHE
+    OOS --> CACHE
+```
+
+### Fluxo de Proposições - Ciclo de Vida Completo
+
+```mermaid
+stateDiagram-v2
+    [*] --> Rascunho: Parlamentar cria proposição
+
+    Rascunho --> EmEdicao: Parlamentar edita
+    EmEdicao --> AguardandoProtocolo: Parlamentar finaliza
+
+    AguardandoProtocolo --> Protocolada: Protocolo atribui número
+
+    Protocolada --> EmAnalise: Legislativo recebe
+    EmAnalise --> EmRevisao: Legislativo revisa
+    EmRevisao --> AprovadoLegislativo: Legislativo aprova
+    EmRevisao --> RetornadoParlamentar: Necessita ajustes
+
+    RetornadoParlamentar --> EmEdicao: Parlamentar ajusta
+
+    AprovadoLegislativo --> AguardandoAssinatura: Pronto para assinar
+    AguardandoAssinatura --> Assinado: Certificado digital aplicado
+
+    Assinado --> Publicado: Documento final
+    Publicado --> [*]
+
+    note right of EmEdicao
+        OnlyOffice Editor
+        - Edição colaborativa
+        - Auto-save
+        - Polling 15s
+    end note
+
+    note right of AguardandoAssinatura
+        PyHanko
+        - Assinatura PAdES
+        - Certificado .pfx
+        - Validação senha
+    end note
+```
+
+### Rotas e Endpoints - Mapeamento Completo
+
+```mermaid
+graph TB
+    %% Web Routes
+    WEB_AUTH["🌐 Web - Autenticação<br/>GET/POST /login<br/>POST /logout<br/>GET /register"]
+
+    WEB_PROP["🌐 Web - Proposições<br/>• CRUD operations<br/>• Protocol actions"]
+
+    WEB_PARL["🌐 Web - Parlamentares<br/>GET /parlamentares<br/>POST /parlamentares<br/>GET/PUT/DELETAR /parlamentares/{id}"]
+
+    WEB_ADMIN["🌐 Web - Admin<br/>GET /admin/dashboard<br/>GET /admin/system-configuration<br/>GET /admin/templates"]
+
+    %% API Routes
+    API_ONLY["🔌 API - OnlyOffice<br/>• Document callbacks<br/>• Real-time sync"]
+
+    API_SIGN["🔌 API - Assinatura Digital<br/>• Certificate management<br/>• Validation & processing"]
+
+    API_WORK["🔌 API - Workflows<br/>GET /api/workflows<br/>POST /api/workflows/start<br/>POST /api/workflows/advance"]
+
+    API_PARAM["🔌 API - Parâmetros<br/>GET /api/parametros-modular/modulos<br/>GET /api/parametros-modular/valor/{modulo}/{submodulo}/{campo}"]
+
+    %% Connections
+    WEB_AUTH --> WEB_PROP
+    WEB_PROP --> API_ONLY
+    WEB_PROP --> API_SIGN
+    WEB_ADMIN --> API_WORK
+    WEB_ADMIN --> API_PARAM
+```
+
+### Controllers e suas Responsabilidades
+
+```mermaid
+graph TB
+    subgraph "🎮 Controllers Principais"
+        PC["ProposicaoController<br/>📄 Gestão completa de proposições"]
+        PLC["ParlamentarController<br/>👤 Gestão de parlamentares"]
+        SC["SessionController<br/>📅 Sessões legislativas"]
+        UC["UserController<br/>👥 Gestão de usuários"]
+        AC["AdminControllers<br/>⚙️ Administração"]
+    end
+
+    subgraph "📋 Principais Ações"
+        PC_ACTIONS["📝 Ações:<br/>• Create/Edit<br/>• OnlyOffice<br/>• Protocol<br/>• Sign"]
+
+        PLC_ACTIONS["index - Listar parlamentares<br/>show - Detalhes parlamentar<br/>mesaDiretora - Composição mesa<br/>estatisticas - Dashboard dados"]
+
+        SC_ACTIONS["create/store - Nova sessão<br/>addMatter - Adicionar pauta<br/>generateXml - Exportar dados"]
+
+        UC_ACTIONS["profile - Perfil usuário<br/>updateLastAccess - Tracking"]
+
+        AC_ACTIONS["⚙️ Administração:<br/>• Configuração sistema<br/>• Permissões e templates<br/>• Workflows e atividades"]
+    end
+
+    PC --> PC_ACTIONS
+    PLC --> PLC_ACTIONS
+    SC --> SC_ACTIONS
+    UC --> UC_ACTIONS
+    AC --> AC_ACTIONS
+```
+
+### Services e Integrações
+
+```mermaid
+graph LR
+    subgraph "🔧 Services Layer"
+        OOS["📝 OnlyOfficeService<br/>• Document management<br/>• Editor integration<br/>• Callback handling"]
+
+        TPS["📋 TemplateProcessor<br/>• Template application<br/>• Variable processing<br/>• RTF generation"]
+
+        ADS["🔏 AssinaturaDigital<br/>• Certificate validation<br/>• PDF signing<br/>• QR code generation"]
+
+        WFS["🔄 WorkflowService<br/>• Workflow management<br/>• Step transitions<br/>• User notifications"]
+    end
+
+    subgraph "🔌 External Services"
+        ONLY["OnlyOffice Server<br/>📝 Editor colaborativo"]
+        PYH["PyHanko Container<br/>🔏 Assinatura PAdES"]
+        REDIS["Redis Cache<br/>⚡ Performance"]
+        PG["PostgreSQL<br/>🗄️ Database"]
+    end
+
+    OOS -.-> ONLY
+    ADS -.-> PYH
+    OOS -.-> REDIS
+    TPS -.-> PG
+```
+
+### Fluxo de Autenticação e Permissões
+
+```mermaid
+graph TB
+    %% Authentication Flow
+    USER["👤 Usuário"]
+    LOGIN["📝 Login Page"]
+    AUTH["🔐 AuthController"]
+    DB["🗄️ Database"]
+    DASH["📊 Dashboard"]
+
+    %% Permission Flow
+    MIDDLEWARE["🛡️ Middleware"]
+    PERMS["🔑 Permissões"]
+
+    %% Authentication Steps
+    USER --> LOGIN
+    LOGIN --> AUTH
+    AUTH --> DB
+    DB --> AUTH
+    AUTH --> MIDDLEWARE
+    MIDDLEWARE --> DASH
+
+    %% Permission Check
+    DASH --> MIDDLEWARE
+    MIDDLEWARE --> PERMS
+    PERMS --> DB
+```
+
+### Estrutura de Permissões (RBAC)
+
+```mermaid
+graph TD
+    subgraph "👥 Roles (Perfis)"
+        ADMIN["Administrador<br/>Acesso total"]
+        PARL["Parlamentar<br/>Criar/editar proposições"]
+        LEG["Legislativo<br/>Análise e aprovação"]
+        PROT["Protocolo<br/>Numeração oficial"]
+        ASS["Assessor<br/>Suporte parlamentar"]
+        JUR["Jurídico<br/>Pareceres"]
+    end
+
+    subgraph "🔐 Permissões"
+        PROP_PERMS["📋 Proposições:<br/>• View/Create/Edit<br/>• Protocol/Approve<br/>• Digital Sign"]
+
+        PARL_PERMS["parlamentares.view<br/>parlamentares.create<br/>parlamentares.edit<br/>parlamentares.delete"]
+
+        SYS_PERMS["system.config<br/>system.users<br/>system.permissions<br/>system.monitoring"]
+    end
+
+    ADMIN --> PROP_PERMS
+    ADMIN --> PARL_PERMS
+    ADMIN --> SYS_PERMS
+
+    PARL --> PROP_PERMS
+    PARL --> PARL_PERMS
+
+    LEG --> PROP_PERMS
+    LEG --> PARL_PERMS
+
+    PROT --> PROP_PERMS
+
+    ASS --> PROP_PERMS
+    ASS --> PARL_PERMS
+
+    JUR --> PROP_PERMS
+    JUR --> PARL_PERMS
+```
+
+### Telas/Views Principais do Sistema
+
+```mermaid
+graph TB
+    %% Authentication Views
+    AUTH_VIEWS["📱 Autenticação<br/>auth/login.blade.php<br/>auth/register.blade.php"]
+
+    %% Dashboard Views
+    DASH_VIEWS["📱 Dashboard<br/>• Main dashboard<br/>• Role-specific views<br/>• Protocol interface"]
+
+    %% Proposições Views
+    PROP_VIEWS["📱 Proposições<br/>• List/Create/Edit views<br/>• Details and preview<br/>• OnlyOffice editor"]
+
+    %% Parlamentares Views
+    PARL_VIEWS["📱 Parlamentares<br/>• Management views<br/>• CRUD operations<br/>• Profile details"]
+
+    %% Admin Views
+    ADMIN_VIEWS["📱 Admin<br/>• Admin dashboard<br/>• System config<br/>• Permissions & templates"]
+
+    %% Components
+    COMP_VIEWS["📱 Componentes<br/>• Layout components<br/>• Header and sidebar<br/>• Alert system"]
+
+    %% Flow
+    AUTH_VIEWS --> DASH_VIEWS
+    DASH_VIEWS --> PROP_VIEWS
+    DASH_VIEWS --> PARL_VIEWS
+    DASH_VIEWS --> ADMIN_VIEWS
+    COMP_VIEWS --> AUTH_VIEWS
+    COMP_VIEWS --> DASH_VIEWS
+```
+
 ## 1. Sistema de Gestão Legislativa
 
 O LegisInc é um sistema completo de gestão legislativa com foco na digitalização de processos parlamentares, especialmente proposições e documentação oficial.

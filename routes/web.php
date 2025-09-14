@@ -296,6 +296,20 @@ Route::prefix('admin/sessions')->name('admin.sessions.')->middleware(['auth', 'c
     Route::get('/search-parlamentares', [SessionController::class, 'searchParlamentares'])->name('search-parlamentares')->middleware('check.permission:sessions.view');
 });
 
+// System Diagram routes (protected with auth - Admin only)
+Route::prefix('admin/system-diagram')->name('admin.system-diagram.')->middleware(['auth', 'check.screen.permission'])->group(function () {
+    Route::get('/', [App\Http\Controllers\Admin\SystemDiagramController::class, 'index'])->name('index');
+    Route::post('/export', [App\Http\Controllers\Admin\SystemDiagramController::class, 'export'])->name('export');
+
+    // API routes for detailed lists
+    Route::get('/api/controllers', [App\Http\Controllers\Admin\SystemDiagramController::class, 'getControllers'])->name('api.controllers');
+    Route::get('/api/views', [App\Http\Controllers\Admin\SystemDiagramController::class, 'getViews'])->name('api.views');
+    Route::get('/api/routes', [App\Http\Controllers\Admin\SystemDiagramController::class, 'getRoutes'])->name('api.routes');
+    Route::get('/api/services', [App\Http\Controllers\Admin\SystemDiagramController::class, 'getServices'])->name('api.services');
+    Route::get('/api/diagrams', [App\Http\Controllers\Admin\SystemDiagramController::class, 'getDiagrams'])->name('api.diagrams');
+    Route::get('/api/categories', [App\Http\Controllers\Admin\SystemDiagramController::class, 'getCategories'])->name('api.categories');
+});
+
 // Admin Users routes (protected with auth only - Admin only)
 Route::prefix('admin/usuarios')->name('admin.usuarios.')->middleware(['auth', 'check.screen.permission'])->group(function () {
     Route::get('/', [App\Http\Controllers\AdminUserController::class, 'index'])->name('index');
@@ -309,9 +323,15 @@ Route::prefix('admin/usuarios')->name('admin.usuarios.')->middleware(['auth', 'c
 });
 
 // Admin Documentation routes (protected with auth - Admin only)
+// DEPRECATED: Redirected to centralized system diagram page
 Route::prefix('admin/docs')->name('admin.docs.')->middleware(['auth', 'check.screen.permission'])->group(function () {
-    Route::get('/fluxo-proposicoes', [App\Http\Controllers\DocsController::class, 'fluxoProposicoes'])->name('fluxo-proposicoes');
-    Route::get('/fluxo-documentos', [App\Http\Controllers\DocsController::class, 'fluxoDocumentos'])->name('fluxo-documentos');
+    Route::get('/fluxo-proposicoes', function () {
+        return redirect()->route('admin.system-diagram.index')->with('info', 'Os fluxos de proposições foram centralizados na página de Arquitetura do Sistema.');
+    })->name('fluxo-proposicoes');
+
+    Route::get('/fluxo-documentos', function () {
+        return redirect()->route('admin.system-diagram.index')->with('info', 'Os fluxos de documentos foram centralizados na página de Arquitetura do Sistema.');
+    })->name('fluxo-documentos');
 });
 
 // Screen Permissions routes (protected with auth - Admin only)
