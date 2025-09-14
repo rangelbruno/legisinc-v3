@@ -1380,8 +1380,9 @@ class ProposicaoAssinaturaController extends Controller
         // Remover tags HTML que possam estar como texto
         $conteudo = preg_replace('/<[^>]*>/', '', $conteudo);
 
-        // Remover placeholders vazios restantes
-        $conteudo = str_replace(['${', '}'], '', $conteudo);
+        // CORREÇÃO: Remover apenas placeholders de template (${variavel}) sem interferir com códigos RTF
+        // Não remover asteriscos isolados que podem ser parte da codificação Unicode RTF (\u123*)
+        $conteudo = preg_replace('/\$\{[^}]*\}/', '', $conteudo);
 
         // Remover espaços extras e quebras de linha desnecessárias
         $conteudo = preg_replace('/\s+/', ' ', $conteudo);

@@ -1,6 +1,6 @@
 # 🔐 Solução Completa: PDF com Protocolo, Assinatura Digital e QR Code
 
-## 📋 **Problema Original**
+## 📋 **Problema Original** 
 
 ### **Sintomas Identificados**
 - ✅ Proposição **assinada digitalmente** pelo Parlamentar

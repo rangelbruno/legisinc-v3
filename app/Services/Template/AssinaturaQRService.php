@@ -230,4 +230,62 @@ class AssinaturaQRService
             <div style="font-size: 11px; line-height: 1.3;">'.nl2br($texto).'</div>
         </div>';
     }
+
+    /**
+     * Gerar texto de assinatura visual para PDF no estilo padrão
+     */
+    public function gerarTextoAssinaturaVisual(Proposicao $proposicao): ?string
+    {
+        // Verificar se proposição tem assinatura digital
+        if (!$proposicao->assinatura_digital || !$proposicao->data_assinatura) {
+            return null;
+        }
+
+        $autor = $proposicao->autor;
+        $nomeAutor = $autor ? $autor->name : 'Autor não identificado';
+
+        // Obter informações da proposição
+        $tipoFormatado = strtoupper($proposicao->tipo);
+        $numeroProposicao = $proposicao->numero ?: '[AGUARDANDO PROTOCOLO]';
+        $numeroProtocolo = $proposicao->numero_protocolo ?: 'Aguardando protocolo';
+
+        // Formatar data da assinatura
+        $dataAssinatura = $proposicao->data_assinatura->format('d/m/Y H:i:s');
+
+        // Gerar código de verificação baseado na assinatura digital (primeiros 4 grupos de 4 dígitos)
+        $hashAssinatura = strtoupper(substr(md5($proposicao->assinatura_digital), 0, 16));
+        $codigoVerificacao = implode('-', str_split($hashAssinatura, 4));
+
+        // Construir texto no formato solicitado
+        $textoAssinatura = "{$tipoFormatado} Nº {$numeroProposicao} - Protocolo nº {$numeroProtocolo} recebido em {$dataAssinatura} - Esta é uma cópia do original assinado digitalmente por {$nomeAutor}\n";
+        $textoAssinatura .= "Para validar o documento, leia o código QR ou acesse https://sistema.camaracaragua.sp.gov.br/conferir_assinatura e informe o código {$codigoVerificacao}";
+
+        return $textoAssinatura;
+    }
+
+    /**
+     * Gerar HTML da assinatura visual para PDF
+     */
+    public function gerarHTMLAssinaturaVisualPDF(Proposicao $proposicao): ?string
+    {
+        $textoAssinatura = $this->gerarTextoAssinaturaVisual($proposicao);
+
+        if (!$textoAssinatura) {
+            return null;
+        }
+
+        return '<div class="assinatura-visual-pdf" style="
+            margin-top: 30px;
+            padding: 15px;
+            border: 1px solid #333;
+            background-color: #f9f9f9;
+            font-size: 10pt;
+            line-height: 1.4;
+            font-family: Arial, sans-serif;
+            page-break-inside: avoid;
+        ">
+            <strong style="color: #0066cc;">📄 DOCUMENTO ASSINADO DIGITALMENTE</strong><br><br>
+            ' . nl2br(htmlspecialchars($textoAssinatura)) . '
+        </div>';
+    }
 }

@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class ProposicaoController extends Controller
 {
@@ -4876,7 +4877,7 @@ class ProposicaoController extends Controller
     public function servePDF(Proposicao $proposicao)
     {
         // Log de início de requisição PDF
-        Log::info('🔴 PDF REQUEST: Iniciando servePDF - USANDO LÓGICA UNIFICADA', [
+        Log::info('🔴 PDF REQUEST: Iniciando servePDF - PRIORIDADE ONLYOFFICE', [
             'proposicao_id' => $proposicao->id,
             'user_id' => Auth::id(),
             'user_email' => Auth::user()->email,
@@ -4912,241 +4913,111 @@ class ProposicaoController extends Controller
             }
         }
 
-        try {
-            // NOVA ESTRATÉGIA: Usar mesma lógica da assinatura digital para consistência
-            // Isso garante que /proposicoes/{id}/pdf e /proposicoes/{id}/assinatura-digital
-            // sempre mostrem o MESMO PDF atualizado
-            
-            Log::info('🔴 PDF REQUEST: Usando estratégia unificada com assinatura digital', [
-                'proposicao_id' => $proposicao->id,
-                'status' => $proposicao->status,
-                'arquivo_path' => $proposicao->arquivo_path
-            ]);
-            
-            // 1. PRIMEIRO: Verificar se existe PDF assinado/mais recente já disponível
-            $pdfExistente = $this->encontrarPDFMaisRecenteRobusta($proposicao);
-            
-            if ($pdfExistente) {
-                $caminhoAbsoluto = storage_path('app/' . $pdfExistente);
-                if (file_exists($caminhoAbsoluto)) {
-                    // CRÍTICO: Verificar se RTF foi modificado após a geração do PDF
-                    $pdfModificado = filemtime($caminhoAbsoluto);
-                    $rtfModificado = null;
-                    
-                    if ($proposicao->arquivo_path && Storage::exists($proposicao->arquivo_path)) {
-                        $caminhoRTF = Storage::path($proposicao->arquivo_path);
-                        if (file_exists($caminhoRTF)) {
-                            $rtfModificado = filemtime($caminhoRTF);
-                        }
-                    }
-                    
-                    // Se RTF é mais novo que PDF, forçar regeneração
-                    if ($rtfModificado && $rtfModificado > $pdfModificado) {
-                        Log::warning('🔴 PDF REQUEST: RTF mais novo que PDF - Forçando regeneração', [
-                            'proposicao_id' => $proposicao->id,
-                            'rtf_modificado' => date('Y-m-d H:i:s', $rtfModificado),
-                            'pdf_modificado' => date('Y-m-d H:i:s', $pdfModificado),
-                            'diferenca_segundos' => $rtfModificado - $pdfModificado
-                        ]);
-                        
-                        // Invalidar PDF antigo para forçar regeneração
-                        $proposicao->update([
-                            'arquivo_pdf_path' => null,
-                            'pdf_gerado_em' => null,
-                            'pdf_conversor_usado' => null,
-                        ]);
-                        
-                        // Continuar para gerar novo PDF
-                    } else {
-                        // PDF está atualizado, servir normalmente
-                        Log::info('🔴 PDF REQUEST: Servindo PDF existente (assinado/mais recente)', [
-                            'proposicao_id' => $proposicao->id,
-                            'pdf_path' => $pdfExistente,
-                            'tamanho' => filesize($caminhoAbsoluto)
-                        ]);
-                        
-                        return response()->file($caminhoAbsoluto, [
-                            'Content-Type' => 'application/pdf',
-                            'Content-Disposition' => 'inline; filename="proposicao_' . $proposicao->id . '.pdf"',
-                            'Cache-Control' => 'no-cache, no-store, must-revalidate, max-age=0',
-                            'Pragma' => 'no-cache',
-                            'Expires' => '-1',
-                            'X-PDF-Source' => 'existing-signed'
-                        ]);
-                    }
-                }
-            }
-            
-            // 2. Instanciar o controller de assinatura para reutilizar métodos
-            $assinaturaController = app(ProposicaoAssinaturaController::class);
-            
-            // 2. Buscar arquivo DOCX/RTF mais recente (mesma lógica da assinatura)
-            // Isso garante que sempre usaremos o arquivo mais atualizado
-            $arquivoMaisRecente = null;
-            
-            // Verificar arquivo_path primeiro (arquivo editado no OnlyOffice)
+        // ESTRATÉGIA NOVA: 1) Sempre tenta PDF oficial OnlyOffice
+        // 2) Se falhar, usa DomPDF com configurações seguras (subsetting OFF)
+        Log::info('🔴 PDF REQUEST: Tentando PDF oficial OnlyOffice primeiro', [
+            'proposicao_id' => $proposicao->id
+        ]);
+
+        // 1) PRIORIDADE: PDF oficial OnlyOffice (buscar PDFs existentes mais recentes)
+        $pdfOficial = $this->encontrarPDFMaisRecenteRobusta($proposicao);
+        if ($pdfOficial && file_exists(storage_path('app/' . $pdfOficial))) {
+            $caminhoAbsoluto = storage_path('app/' . $pdfOficial);
+
+            // Verificar se RTF foi modificado após PDF (forçar regeneração se necessário)
+            $pdfModificado = filemtime($caminhoAbsoluto);
+            $rtfModificado = null;
+
             if ($proposicao->arquivo_path && Storage::exists($proposicao->arquivo_path)) {
-                $caminhoCompleto = Storage::path($proposicao->arquivo_path);
-                if (file_exists($caminhoCompleto)) {
-                    $arquivoMaisRecente = [
-                        'path' => $caminhoCompleto,
-                        'relative_path' => $proposicao->arquivo_path,
-                        'tipo' => pathinfo($caminhoCompleto, PATHINFO_EXTENSION),
-                        'modificado' => filemtime($caminhoCompleto)
-                    ];
-                    
-                    Log::info('🔴 PDF REQUEST: Arquivo RTF/DOCX encontrado no banco', [
-                        'proposicao_id' => $proposicao->id,
-                        'arquivo' => $proposicao->arquivo_path,
-                        'modificado' => date('Y-m-d H:i:s', $arquivoMaisRecente['modificado'])
-                    ]);
+                $caminhoRTF = Storage::path($proposicao->arquivo_path);
+                if (file_exists($caminhoRTF)) {
+                    $rtfModificado = filemtime($caminhoRTF);
                 }
             }
-            
-            // Se não encontrou, buscar em diretórios conhecidos
-            if (!$arquivoMaisRecente) {
-                $diretorios = [
-                    storage_path('app/proposicoes'),
-                    storage_path('app/private/proposicoes')
-                ];
-                
-                $arquivos = [];
-                foreach ($diretorios as $dir) {
-                    if (is_dir($dir)) {
-                        // Buscar RTF e DOCX
-                        $patterns = [
-                            $dir . "/proposicao_{$proposicao->id}_*.rtf",
-                            $dir . "/proposicao_{$proposicao->id}_*.docx",
-                            $dir . "/proposicao_{$proposicao->id}.rtf",
-                            $dir . "/proposicao_{$proposicao->id}.docx"
-                        ];
-                        
-                        foreach ($patterns as $pattern) {
-                            $encontrados = glob($pattern);
-                            foreach ($encontrados as $arquivo) {
-                                $arquivos[] = [
-                                    'path' => $arquivo,
-                                    'relative_path' => str_replace(storage_path('app/'), '', $arquivo),
-                                    'tipo' => pathinfo($arquivo, PATHINFO_EXTENSION),
-                                    'modificado' => filemtime($arquivo)
-                                ];
-                            }
-                        }
-                    }
-                }
-                
-                if (!empty($arquivos)) {
-                    // Ordenar por data de modificação (mais recente primeiro)
-                    usort($arquivos, function($a, $b) {
-                        return $b['modificado'] - $a['modificado'];
-                    });
-                    
-                    $arquivoMaisRecente = $arquivos[0];
-                    
-                    Log::info('🔴 PDF REQUEST: Arquivo RTF/DOCX encontrado via busca', [
-                        'proposicao_id' => $proposicao->id,
-                        'arquivo' => $arquivoMaisRecente['relative_path'],
-                        'modificado' => date('Y-m-d H:i:s', $arquivoMaisRecente['modificado'])
-                    ]);
-                }
-            }
-            
-            // 3. Se não encontrou arquivo RTF/DOCX, buscar PDF existente como fallback
-            if (!$arquivoMaisRecente) {
-                Log::info('🔴 PDF REQUEST: Nenhum RTF/DOCX encontrado, buscando PDF existente');
-                
-                $pdfExistente = $this->encontrarPDFMaisRecenteParaServir($proposicao);
-                
-                if ($pdfExistente) {
-                    Log::info('🔴 PDF REQUEST: Usando PDF existente como fallback', [
-                        'proposicao_id' => $proposicao->id,
-                        'pdf_path' => $pdfExistente
-                    ]);
-                    
-                    $absolutePath = Storage::exists($pdfExistente) 
-                        ? Storage::path($pdfExistente)
-                        : storage_path('app/' . ltrim($pdfExistente, '/'));
-                    
-                    if (file_exists($absolutePath)) {
-                        return response()->file($absolutePath, [
-                            'Content-Type' => 'application/pdf',
-                            'Content-Disposition' => 'inline; filename="proposicao_' . $proposicao->id . '_' . time() . '.pdf"',
-                            'Cache-Control' => 'no-cache, no-store, must-revalidate, max-age=0',
-                            'Pragma' => 'no-cache',
-                            'Expires' => '-1',
-                            'X-PDF-Source' => 'fallback-existing'
-                        ]);
-                    }
-                }
-                
-                // Se não há nenhum arquivo disponível
-                Log::error('🔴 PDF REQUEST: Nenhum arquivo encontrado', [
-                    'proposicao_id' => $proposicao->id
-                ]);
-                abort(404, 'Nenhum arquivo foi encontrado para gerar o PDF desta proposição.');
-            }
-            
-            // 4. Gerar PDF do arquivo RTF/DOCX encontrado
-            Log::info('🔴 PDF REQUEST: Gerando PDF do arquivo mais recente', [
-                'proposicao_id' => $proposicao->id,
-                'arquivo' => $arquivoMaisRecente['relative_path'],
-                'tipo' => $arquivoMaisRecente['tipo']
-            ]);
-            
-            // Gerar nome único para o PDF
-            $nomePdf = 'proposicao_' . $proposicao->id . '_unified_' . time() . '.pdf';
-            $diretorioPdf = 'proposicoes/pdfs/' . $proposicao->id;
-            $caminhoPdfRelativo = $diretorioPdf . '/' . $nomePdf;
-            $caminhoPdfAbsoluto = storage_path('app/' . $caminhoPdfRelativo);
-            
-            // Garantir que o diretório existe
-            if (!is_dir(dirname($caminhoPdfAbsoluto))) {
-                mkdir(dirname($caminhoPdfAbsoluto), 0755, true);
-            }
-            
-            // Converter para PDF usando LibreOffice (mesma estratégia da assinatura)
-            $sucesso = $this->converterArquivoParaPDFUnificado($arquivoMaisRecente['path'], $caminhoPdfAbsoluto);
-            
-            if ($sucesso && file_exists($caminhoPdfAbsoluto)) {
-                // Atualizar banco de dados
-                $proposicao->update([
-                    'arquivo_pdf_path' => $caminhoPdfRelativo,
-                    'pdf_gerado_em' => now(),
-                    'pdf_conversor_usado' => 'libreoffice-unified'
-                ]);
-                
-                Log::info('🔴 PDF REQUEST: PDF gerado com sucesso', [
+
+            // Se RTF é mais novo, invalidar PDF e regenerar com DomPDF seguro
+            if (!$rtfModificado || $pdfModificado >= $rtfModificado) {
+                Log::info('🟢 PDF REQUEST: Servindo PDF existente (OnlyOffice)', [
                     'proposicao_id' => $proposicao->id,
-                    'pdf_path' => $caminhoPdfRelativo,
-                    'tamanho' => filesize($caminhoPdfAbsoluto)
+                    'pdf_path' => $pdfOficial,
+                    'tamanho' => filesize($caminhoAbsoluto)
                 ]);
-                
-                return response()->file($caminhoPdfAbsoluto, [
+
+                return response()->file($caminhoAbsoluto, [
                     'Content-Type' => 'application/pdf',
-                    'Content-Disposition' => 'inline; filename="proposicao_' . $proposicao->id . '_' . time() . '.pdf"',
+                    'Content-Disposition' => 'inline; filename="proposicao_' . $proposicao->id . '_oficial.pdf"',
                     'Cache-Control' => 'no-cache, no-store, must-revalidate, max-age=0',
                     'Pragma' => 'no-cache',
                     'Expires' => '-1',
-                    'X-PDF-Generator' => 'libreoffice-unified',
-                    'X-PDF-Source' => 'generated-fresh'
+                    'X-PDF-Source' => 'onlyoffice-oficial'
+                ]);
+            } else {
+                Log::warning('🔴 PDF REQUEST: RTF mais novo que PDF, invalidando para regeneração', [
+                    'proposicao_id' => $proposicao->id,
+                    'rtf_modificado' => date('Y-m-d H:i:s', $rtfModificado),
+                    'pdf_modificado' => date('Y-m-d H:i:s', $pdfModificado)
+                ]);
+
+                // Invalidar PDF antigo
+                $proposicao->update([
+                    'arquivo_pdf_path' => null,
+                    'pdf_gerado_em' => null,
+                    'pdf_conversor_usado' => null,
                 ]);
             }
-            
-            // Se falhou a conversão, tentar fallback
-            Log::error('🔴 PDF REQUEST: Falha na conversão para PDF', [
+        }
+
+        // 2) FALLBACK: DomPDF com configurações seguras (subsetting OFF)
+        Log::warning('🔴 PDF REQUEST: PDF oficial OnlyOffice não encontrado, usando fallback DomPDF', [
+            'proposicao_id' => $proposicao->id
+        ]);
+
+        try {
+            // Gerar HTML para PDF usando método existente, mas com melhorias
+            $conteudo = $proposicao->conteudo ?: $proposicao->ementa ?: 'Conteúdo da proposição não disponível.';
+            $html = $this->gerarHTMLParaPDF($proposicao, $conteudo);
+
+            // Sanear encoding RTF→UTF-8 para evitar problemas de codificação
+            $html = preg_replace("/\x00/", '', $html); // Remove null bytes
+            if (!mb_detect_encoding($html, 'UTF-8', true)) {
+                $html = mb_convert_encoding($html, 'UTF-8', 'auto');
+            }
+            $html = iconv('UTF-8', 'UTF-8//IGNORE', $html); // Remove caracteres inválidos
+
+            // CRÍTICO: Forçar família de fontes segura para evitar mapeamento errado de glifos
+            $fonteSegura = "<style>*{font-family:'DejaVu Sans',Arial,sans-serif!important}</style>";
+            $html = $fonteSegura . $html;
+
+            Log::info('🔴 PDF REQUEST: Gerando PDF com DomPDF (configuração segura)', [
+                'proposicao_id' => $proposicao->id,
+                'html_length' => strlen($html)
+            ]);
+
+            // DomPDF com configurações que eliminam o problema "C C C..."
+            $pdf = Pdf::setOptions([
+                'isRemoteEnabled'        => true,
+                'isHtml5ParserEnabled'   => true,
+                'enable_font_subsetting' => false,   // <- CHAVE: elimina "C C C..."
+                'defaultFont'            => 'DejaVu Sans',
+                'dpi'                    => 96,
+                'fontCache'              => storage_path('fonts'), // usar cache limpo
+                'tempDir'                => sys_get_temp_dir(),
+            ])->loadHTML($html)->setPaper('a4', 'portrait');
+
+            Log::info('🟡 PDF REQUEST: DomPDF configurado com subsetting OFF', [
                 'proposicao_id' => $proposicao->id
             ]);
-            
-            abort(500, 'Erro ao gerar PDF da proposição.');
-            
+
+            return $pdf->stream("proposicao_{$proposicao->id}.pdf");
+
         } catch (\Exception $e) {
-            Log::error('🔴 PDF REQUEST: Exceção ao servir PDF', [
+            Log::error('🔴 PDF REQUEST: Erro ao gerar PDF', [
                 'proposicao_id' => $proposicao->id,
                 'erro' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-            
-            abort(500, 'Erro ao processar PDF: ' . $e->getMessage());
+
+            abort(500, 'Erro interno ao gerar PDF da proposição.');
         }
     }
     
@@ -5326,9 +5197,27 @@ class ProposicaoController extends Controller
             // Criar HTML para DomPDF como fallback
             $html = $this->gerarHTMLParaPDF($proposicao, $conteudo);
             
-            // Usar DomPDF para gerar PDF
-            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($html);
-            $pdf->setPaper('A4', 'portrait');
+            // Sanear encoding RTF→UTF-8
+            $html = preg_replace("/\x00/", '', $html);
+            if (!mb_detect_encoding($html, 'UTF-8', true)) {
+                $html = mb_convert_encoding($html, 'UTF-8', 'auto');
+            }
+            $html = iconv('UTF-8', 'UTF-8//IGNORE', $html);
+
+            // CRÍTICO: Forçar fonte segura
+            $fonteSegura = "<style>*{font-family:'DejaVu Sans',Arial,sans-serif!important}</style>";
+            $html = $fonteSegura . $html;
+
+            // DomPDF com configurações anti-subsetting
+            $pdf = \Barryvdh\DomPDF\Facade\Pdf::setOptions([
+                'isRemoteEnabled'        => true,
+                'isHtml5ParserEnabled'   => true,
+                'enable_font_subsetting' => false,   // <- CHAVE: elimina "C C C..."
+                'defaultFont'            => 'DejaVu Sans',
+                'dpi'                    => 96,
+                'fontCache'              => storage_path('fonts'),
+                'tempDir'                => sys_get_temp_dir(),
+            ])->loadHTML($html)->setPaper('A4', 'portrait');
             
             // Salvar PDF
             file_put_contents($caminhoPdfAbsoluto, $pdf->output());
@@ -5347,10 +5236,24 @@ class ProposicaoController extends Controller
         if (!str_contains($rtfContent, '{\rtf')) {
             return $rtfContent;
         }
-        
+
+        // CORREÇÃO: Processar sequências Unicode RTF (\u123*) antes de extrair texto
+        // Converter \u123* e \u-123* em caracteres reais (incluindo valores negativos)
+        $rtfContent = preg_replace_callback('/\\\\u(-?\d+)\*/', function($matches) {
+            $unicode = intval($matches[1]);
+            // Para valores negativos RTF, converter para valor positivo equivalente
+            if ($unicode < 0) {
+                $unicode = 65536 + $unicode;
+            }
+            if ($unicode > 0 && $unicode < 65536) {
+                return mb_chr($unicode, 'UTF-8');
+            }
+            return '';
+        }, $rtfContent);
+
         // Para RTF muito complexo como do OnlyOffice, vamos usar uma abordagem mais simples:
         // Buscar por texto real entre códigos RTF usando padrões específicos
-        
+
         $textosEncontrados = [];
         
         // 1. Buscar texto em português comum (frases)
@@ -5624,8 +5527,8 @@ class ProposicaoController extends Controller
         ]);
         
         // APENAS verificar se há PDF no arquivo_pdf_path do banco atual
-        if ($proposicao->arquivo_pdf_path && Storage::exists($proposicao->arquivo_pdf_path)) {
-            $caminhoCompleto = Storage::path($proposicao->arquivo_pdf_path);
+        if ($proposicao->arquivo_pdf_path) {
+            $caminhoCompleto = storage_path('app/' . $proposicao->arquivo_pdf_path);
             if (file_exists($caminhoCompleto)) {
                 Log::info('🔴 PDF REQUEST: PDF encontrado no banco atual', [
                     'proposicao_id' => $proposicao->id,
@@ -5638,7 +5541,7 @@ class ProposicaoController extends Controller
         
         Log::info('🔴 PDF REQUEST: Nenhum PDF válido no banco atual - forçará regeneração', [
             'proposicao_id' => $proposicao->id,
-            'arquivo_pdf_path_exists' => $proposicao->arquivo_pdf_path ? Storage::exists($proposicao->arquivo_pdf_path) : false
+            'arquivo_pdf_path_exists' => $proposicao->arquivo_pdf_path ? file_exists(storage_path('app/' . $proposicao->arquivo_pdf_path)) : false
         ]);
 
         
@@ -5857,5 +5760,125 @@ class ProposicaoController extends Controller
             ]);
             return $caminhoRTF; // Em caso de erro, usar RTF original
         }
+    }
+
+    /**
+     * Gerar HTML para PDF com formatação adequada
+     */
+    private function gerarHTMLParaPDF(Proposicao $proposicao, string $conteudo): string
+    {
+        // Gerar cabeçalho com dados da câmara e número da proposição
+        $templateVariableService = app(\App\Services\Template\TemplateVariableService::class);
+        $variables = $templateVariableService->getTemplateVariables();
+
+        // Obter número da proposição (prioriza número, depois protocolo)
+        $numeroProposicao = $proposicao->numero ?: $proposicao->numero_protocolo ?: '[AGUARDANDO PROTOCOLO]';
+
+        // Gerar cabeçalho com imagem se disponível
+        $headerHTML = '';
+        if (! empty($variables['cabecalho_imagem'])) {
+            $imagePath = public_path($variables['cabecalho_imagem']);
+            if (file_exists($imagePath)) {
+                $imageData = base64_encode(file_get_contents($imagePath));
+                $mimeType = mime_content_type($imagePath);
+                $headerHTML = '<div style="text-align: center; margin-bottom: 20px;">
+                    <img src="data:'.$mimeType.';base64,'.$imageData.'"
+                         style="max-width: 200px; height: auto;" alt="Cabeçalho" />
+                </div>';
+            }
+        }
+
+        // Cabeçalho da câmara
+        $cabeçalhoTexto = "
+        <div style='text-align: center; margin-bottom: 20px;'>
+            <strong>{$variables['cabecalho_nome_camara']}</strong><br>
+            {$variables['cabecalho_endereco']}<br>
+            {$variables['cabecalho_telefone']}<br>
+            {$variables['cabecalho_website']}
+        </div>";
+
+        // Título do documento com número da proposição
+        $tipoUppercase = strtoupper($proposicao->tipo);
+        $tituloHTML = "
+        <div style='text-align: center; margin: 20px 0;'>
+            <strong>{$tipoUppercase} Nº {$numeroProposicao}</strong>
+        </div>";
+
+        // Ementa se disponível
+        $ementaHTML = '';
+        if ($proposicao->ementa) {
+            $ementaHTML = "
+            <div style='margin: 20px 0;'>
+                <strong>EMENTA:</strong> {$proposicao->ementa}
+            </div>";
+        }
+
+        // Separar conteúdo de texto puro
+        $conteudoTexto = $conteudo ?: 'Conteúdo não disponível';
+
+        // Limpar restos de placeholders e HTML que possam estar no conteúdo
+        $conteudoTexto = $this->limparConteudoParaPDFController($conteudoTexto);
+
+        // Gerar assinatura visual se disponível
+        $assinaturaHTML = '';
+        if ($proposicao->assinatura_digital && $proposicao->data_assinatura) {
+            $assinaturaQRService = app(\App\Services\Template\AssinaturaQRService::class);
+            $assinaturaHTML = $assinaturaQRService->gerarHTMLAssinaturaVisualPDF($proposicao);
+        }
+
+        return "
+        <!DOCTYPE html>
+        <html lang='pt-BR'>
+        <head>
+            <meta charset='UTF-8'>
+            <title>Proposição {$proposicao->id}</title>
+            <style>
+                body {
+                    font-family: 'Times New Roman', serif;
+                    margin: 2.5cm 2cm 2cm 2cm;
+                    line-height: 1.6;
+                    font-size: 12pt;
+                    color: #000;
+                    text-align: justify;
+                }
+                .header {
+                    text-align: center;
+                    margin-bottom: 30px;
+                }
+                .document-content {
+                    white-space: pre-wrap;
+                    margin: 20px 0;
+                    padding: 0;
+                }
+            </style>
+        </head>
+        <body>
+            {$headerHTML}
+            {$cabeçalhoTexto}
+            {$tituloHTML}
+            {$ementaHTML}
+            <div class='document-content'>".nl2br(htmlspecialchars($conteudoTexto))."</div>
+            {$assinaturaHTML}
+        </body>
+        </html>";
+    }
+
+    /**
+     * Limpar conteúdo para PDF removendo placeholders e restos de HTML
+     */
+    private function limparConteudoParaPDFController(string $conteudo): string
+    {
+        // Remover tags HTML que possam estar como texto
+        $conteudo = preg_replace('/<[^>]*>/', '', $conteudo);
+
+        // CORREÇÃO: Remover apenas placeholders de template (${variavel}) sem interferir com códigos RTF
+        // Não remover asteriscos isolados que podem ser parte da codificação Unicode RTF (\u123*)
+        $conteudo = preg_replace('/\$\{[^}]*\}/', '', $conteudo);
+
+        // Remover espaços extras e quebras de linha desnecessárias
+        $conteudo = preg_replace('/\s+/', ' ', $conteudo);
+        $conteudo = trim($conteudo);
+
+        return $conteudo;
     }
 }
