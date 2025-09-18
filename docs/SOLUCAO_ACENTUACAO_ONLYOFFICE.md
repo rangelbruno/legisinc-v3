@@ -1,4 +1,4 @@
-# 🚨 Solução: Problema de Acentuação no OnlyOffice
+# 🚨 Solução: Problema de Acentuação no OnlyOffice 
 
 ## 📋 Descrição do Problema
 Caracteres acentuados em português (á, é, í, ó, ú, ç, ã, õ, etc.) apareciam corrompidos no editor OnlyOffice ao editar documentos RTF. Por exemplo:

@@ -310,6 +310,20 @@ Route::prefix('admin/system-diagram')->name('admin.system-diagram.')->middleware
     Route::get('/api/categories', [App\Http\Controllers\Admin\SystemDiagramController::class, 'getCategories'])->name('api.categories');
 });
 
+// Admin Architecture routes (protected with auth - Admin only)
+Route::prefix('admin/arquitetura')->name('admin.arquitetura.')->middleware(['auth'])->group(function () {
+    Route::get('/', [App\Http\Controllers\Admin\ArquiteturaController::class, 'index'])->name('index');
+    Route::get('/api/containers', [App\Http\Controllers\Admin\ArquiteturaController::class, 'statusContainers'])->name('api.containers');
+    Route::get('/api/servicos', [App\Http\Controllers\Admin\ArquiteturaController::class, 'statusServicos'])->name('api.servicos');
+});
+
+// Admin Monitoring routes (protected with auth - Admin only)
+Route::prefix('admin/monitoramento')->name('admin.monitoramento.')->middleware(['auth'])->group(function () {
+    Route::get('/', [App\Http\Controllers\Admin\MonitoramentoController::class, 'index'])->name('index');
+    Route::get('/api/status', [App\Http\Controllers\Admin\MonitoramentoController::class, 'statusServicos'])->name('status');
+    Route::get('/api/metricas', [App\Http\Controllers\Admin\MonitoramentoController::class, 'metricas'])->name('metricas');
+});
+
 // Admin Users routes (protected with auth only - Admin only)
 Route::prefix('admin/usuarios')->name('admin.usuarios.')->middleware(['auth', 'check.screen.permission'])->group(function () {
     Route::get('/', [App\Http\Controllers\AdminUserController::class, 'index'])->name('index');
@@ -1303,9 +1317,19 @@ Route::prefix('admin')->middleware(['auth', 'check.screen.permission'])->group(f
         ->name('admin.guia-desenvolvimento.index');
     Route::get('guia-desenvolvimento/biblioteca-digital', [App\Http\Controllers\Admin\GuiaDesenvolvimentoController::class, 'bibliotecaDigital'])
         ->name('admin.guia-desenvolvimento.biblioteca-digital');
+
+    // Documentação Técnica
+    Route::prefix('technical-doc')->name('admin.technical-doc.')->group(function () {
+        Route::get('/', [App\Http\Controllers\Admin\TechnicalDocController::class, 'index'])
+            ->name('index')->middleware('check.permission:admin.view');
+        Route::get('/{module}', [App\Http\Controllers\Admin\TechnicalDocController::class, 'module'])
+            ->name('module')->middleware('check.permission:admin.view');
+    });
     Route::post('guia-desenvolvimento/gerar', [App\Http\Controllers\Admin\GuiaDesenvolvimentoController::class, 'gerarExemplo'])
         ->name('admin.guia-desenvolvimento.gerar');
-    
+    Route::post('guia-desenvolvimento/consultar-docs', [App\Http\Controllers\Admin\GuiaDesenvolvimentoController::class, 'consultarDocs'])
+        ->name('admin.guia-desenvolvimento.consultar-docs');
+
     Route::get('templates', [App\Http\Controllers\TemplateController::class, 'index'])
         ->name('templates.index');
     Route::get('templates/create', [App\Http\Controllers\TemplateController::class, 'create'])
@@ -1582,6 +1606,7 @@ Route::middleware(['web', 'auth'])->prefix('admin/monitoring')->name('admin.moni
     Route::get('/database', [MonitoringController::class, 'database'])->name('database');
     Route::get('/performance', [MonitoringController::class, 'performance'])->name('performance');
     Route::get('/logs', [MonitoringController::class, 'logs'])->name('logs');
+    Route::delete('/logs/clear', [MonitoringController::class, 'clearLogs'])->name('logs.clear');
     Route::get('/alerts', [MonitoringController::class, 'alerts'])->name('alerts');
 
     // Database Activity Routes

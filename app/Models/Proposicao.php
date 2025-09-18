@@ -16,6 +16,7 @@ class Proposicao extends Model
         'conteudo',
         'arquivo_path',
         'arquivo_pdf_path',
+        'onlyoffice_key',
         'anexos',
         'total_anexos',
         'autor_id',
@@ -67,7 +68,11 @@ class Proposicao extends Model
         // 🔄 Campos do sistema de workflow
         'workflow_id',
         'etapa_workflow_atual_id',
-        'fluxo_personalizado'
+        'fluxo_personalizado',
+
+        // 📄 Campos do PDF OnlyOffice Conversion API
+        'pdf_gerado_em',
+        'pdf_conversor_usado'
     ];
 
     protected $casts = [
@@ -88,6 +93,7 @@ class Proposicao extends Model
         'anexos' => 'array',
         'total_anexos' => 'integer',
         'pdf_protocolo_aplicado' => 'boolean',
+        'pdf_gerado_em' => 'datetime',
         'data_aplicacao_protocolo' => 'datetime',
         'fluxo_personalizado' => 'boolean',
     ];

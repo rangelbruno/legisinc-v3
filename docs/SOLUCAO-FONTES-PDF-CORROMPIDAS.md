@@ -3,7 +3,7 @@
 **Data**: 14/09/2025
 **Problema**: PDFs exibindo "CCCCCCC CC CCC..." ao invés de texto legível
 **Status**: ✅ **RESOLVIDO DEFINITIVAMENTE**
-
+ 
 ---
 
 ## 🚨 **PROBLEMA IDENTIFICADO**

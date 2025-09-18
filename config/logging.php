@@ -88,6 +88,18 @@ return [
             'replace_placeholders' => true,
         ],
 
+        'database' => [
+            'driver' => 'custom',
+            'via' => App\Logging\DatabaseLogChannelFactory::class,
+            'level' => env('LOG_LEVEL', 'debug'),
+        ],
+
+        'comprehensive' => [
+            'driver' => 'stack',
+            'channels' => ['single', 'database'],
+            'ignore_exceptions' => false,
+        ],
+
         'structured' => [
             'driver' => 'single',
             'path' => storage_path('logs/structured.log'),

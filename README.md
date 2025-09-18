@@ -1,108 +1,180 @@
 # 🚀 LegisInc - Sistema de Gestão Legislativa
 
-## 📋 **Comandos Principais**
+## 🐳 **Configuração com Docker Compose**
 
-### ⚠️ **IMPORTANTE: Sistema de Backup Automático**
-
-O sistema agora possui **backup automático** dos dados críticos (proposições, protocolos, assinaturas) que são **preservados automaticamente** durante `migrate:fresh --seed`.
-
-### ✅ **1. Rodar do zero COM BACKUP AUTOMÁTICO (Recomendado)**
+### **1. Iniciar o Sistema**
 ```bash
- ./migrate-safe
-  OU
-  docker exec legisinc-app php artisan migrate:safe --fresh --seed --generate-seeders
+# Iniciar todos os containers
+docker compose up -d
+
+# Aguardar containers ficarem saudáveis (postgres, redis, onlyoffice)
+# O sistema verifica automaticamente a saúde dos serviços
 ```
 
-**🛡️ Proteção:** Este comando agora inclui:
-- `ConfiguracaoSistemaPersistenteSeeder` - Configurações do sistema
-- `PreservarDadosCriticosSeeder` - Backup automático dos dados
-- `RestaurarDadosCriticosSeeder` - Restauração automática dos dados
-
-### 🔧 **2. Comandos de Backup e Restauração**
+### **2. Configuração Inicial (Primeira Execução)**
 ```bash
-# Fazer backup manual dos dados críticos
-docker exec -it legisinc-app php artisan backup:dados-criticos
+# Instalar dependências (se necessário)
+docker exec legisinc-app composer install
 
-# Forçar backup (mesmo se recente)
-docker exec -it legisinc-app php artisan backup:dados-criticos --force
-
-# Restaurar dados críticos manualmente
-docker exec -it legisinc-app php artisan db:seed --class=RestaurarDadosCriticosSeeder
+# Executar migração segura com seeders
+docker exec legisinc-app php artisan migrate:safe --fresh --seed --generate-seeders
 ```
 
-### 🔧 **3. Executar apenas o seeder de configuração (se necessário)**
+### ✅ **Comando Principal - Migrate Safe v2.3**
 ```bash
-docker exec -it legisinc-app php artisan db:seed --class=ConfiguracaoSistemaPersistenteSeeder
+docker exec legisinc-app php artisan migrate:safe --fresh --seed --generate-seeders
 ```
 
-## 🛡️ **Sistema de Proteção Completo**
+**🛡️ Sistema de Migração Segura v2.3 inclui:**
+- ✅ **Auto-correção de permissões** de storage
+- ✅ **Auto-correção de namespaces** de seeders
+- ✅ **Auto-limpeza** de cache e views após migration
+- ✅ **Auto-criação** de log files com permissões corretas
+- ✅ **Auto-preservação** de melhorias e correções críticas
+- ✅ **23 Templates de Proposições** configurados automaticamente
+- ✅ **Dados da Câmara** de Caraguatatuba pré-configurados
+- ✅ **6 Usuários do sistema** com diferentes roles
 
-### **🔄 Backup e Restauração Automática:**
-- ✅ **Backup automático** de proposições, protocolos e assinaturas
-- ✅ **Preservação de PDFs** gerados anteriormente
-- ✅ **Restauração automática** após `migrate:fresh --seed`
-- ✅ **Metadados de controle** para auditoria
+## 🎯 **Acesso ao Sistema**
 
-### **⚙️ Configuração Persistente Automática:**
-- ✅ **Configura DomPDF** com as configurações corretas
-- ✅ **Cria diretórios** de armazenamento necessários
-- ✅ **Configura fontes** para geração de PDFs
-- ✅ **Verifica integridade** dos arquivos do sistema
-- ✅ **Configura permissões** adequadas
-- ✅ **Mantém templates** padrão funcionando
+### **URLs de Acesso:**
+- **Sistema Principal:** http://localhost:8001
+- **OnlyOffice:** http://localhost:8088 (integrado automaticamente)
 
-### **O que é preservado automaticamente:**
-- **Dados Críticos:** Proposições, protocolos, assinaturas digitais
-- **Arquivos:** PDFs gerados anteriormente
-- **Configurações:** DomPDF (`config/dompdf.php`)
-- **Recursos:** Diretório de fontes (`storage/fonts`)
-- **Estrutura:** Armazenamento (`storage/app/proposicoes/`)
-- **Templates:** Padrão (`storage/app/private/templates/`)
-- **Segurança:** Permissões de arquivos e diretórios
+### **Credenciais de Acesso:**
+| Usuário | E-mail | Senha | Permissões |
+|---------|--------|-------|------------|
+| **Admin** | bruno@sistema.gov.br | 123456 | Administração completa |
+| **Parlamentar** | jessica@sistema.gov.br | 123456 | Criar/editar proposições |
+| **Legislativo** | joao@sistema.gov.br | 123456 | Revisar proposições |
+| **Protocolo** | roberto@sistema.gov.br | 123456 | Protocolar documentos |
+| **Expediente** | expediente@sistema.gov.br | 123456 | Gestão de expediente |
+| **Assessor Jurídico** | juridico@sistema.gov.br | 123456 | Parecer jurídico |
 
+## 🏛️ **Dados da Câmara Configurados**
+- **Nome:** Câmara Municipal de Caraguatatuba
+- **Endereço:** Praça da República, 40, Centro, Caraguatatuba-SP
+- **Telefone:** (12) 3882-5588
+- **Website:** www.camaracaraguatatuba.sp.gov.br
+- **CNPJ:** 50.444.108/0001-41
 
-Principais (destacadas em azul):
-  - ${assinatura_digital_info} - Bloco completo da assinatura digital
-  - ${qrcode_html} - QR Code para consulta do documento
+## 🐳 **Arquitetura Docker**
 
-  Configuráveis:
-  - ${assinatura_posicao} - Posição da assinatura (centro, direita, esquerda)
-  - ${assinatura_texto} - Texto da assinatura digital
-  - ${qrcode_posicao} - Posição do QR Code (centro, direita, esquerda)
-  - ${qrcode_texto} - Texto do QR Code
-  - ${qrcode_tamanho} - Tamanho do QR Code em pixels
-  - ${qrcode_url_formato} - URL de consulta formatada
+### **Containers em Execução:**
+```yaml
+legisinc-app         # Aplicação Laravel (PHP 8.2 + Nginx)
+legisinc-postgres    # Banco de dados PostgreSQL 16
+legisinc-redis       # Cache Redis 7-alpine
+legisinc-onlyoffice  # Editor de documentos OnlyOffice
+```
 
-## 🔧 **Correções Implementadas**
+### **Volumes Persistentes:**
+- `postgres_data` - Dados do banco de dados
+- `redis_data` - Cache Redis
+- `onlyoffice_data` - Documentos OnlyOffice
+- `onlyoffice_logs` - Logs do OnlyOffice
+- `onlyoffice_cache` - Cache do OnlyOffice
 
-### **✅ Problemas Resolvidos:**
-1. **Erro de sintaxe** no `ProposicaoAssinaturaController` (operador `??` em strings)
-2. **Fallback para PDFs** quando não há arquivos DOCX disponíveis
-3. **Configuração automática** do DomPDF e fontes
-4. **Persistência de configurações** entre execuções de `migrate:fresh --seed`
+### **Rede:**
+- `legisinc_network` - Rede bridge para comunicação entre containers
 
-### **📄 Sistema de Fallback para PDFs:**
-- **Prioridade 1:** Busca arquivos DOCX para conversão
-- **Prioridade 2:** Usa PDFs existentes como fallback
-- **Prioridade 3:** Gera PDF via DomPDF com conteúdo do banco
+## ✨ **Funcionalidades Principais**
 
-## 🚀 **Como usar:**
+### **📝 Gestão de Proposições:**
+- Criação com templates pré-configurados
+- Editor OnlyOffice integrado
+- Fluxo completo de tramitação
+- Assinatura digital com certificado
+- Geração automática de PDFs
 
-### **1. Templates e Variáveis:**
-1. Acesse http://localhost:8001/admin/templates
-2. Escolha um tipo de proposição e clique em "Editar Template"
-3. No painel lateral "Variáveis Disponíveis", procure pela seção "ASSINATURA DIGITAL & QR CODE"
-4. Clique nas variáveis para copiá-las
-5. Use Ctrl+V para colar no documento
+### **🔄 Fluxo de Trabalho:**
+1. **Parlamentar** cria proposição
+2. **Sistema** aplica template automaticamente
+3. **OnlyOffice** permite edição colaborativa
+4. **Protocolo** atribui número oficial
+5. **Legislativo** revisa e aprova
+6. **Assinatura digital** finaliza o processo
 
-### **2. Geração de PDFs:**
-- **Automática:** O sistema gera PDFs automaticamente ao protocolar proposições
-- **Manual:** Use o comando `php artisan proposicao:regenerar-pdf {id}` para regenerar PDFs específicos
-- **Fallback:** Se não houver DOCX, o sistema usa PDFs existentes automaticamente
+### **🎨 Templates Disponíveis:**
+- 23 tipos de proposições configurados
+- Variáveis dinâmicas automáticas
+- Cabeçalho institucional com brasão
+- Formatação LC 95/1998
+- RTF com codificação UTF-8
 
-### **3. Manutenção:**
-- **✅ RECOMENDADO:** Execute `docker exec -it legisinc-app php artisan migrate:fresh-backup --seed`
-- **❌ EVITAR:** `docker exec -it legisinc-app php artisan migrate:fresh --seed` (pode perder dados)
-- **🛡️ Proteção:** Todos os dados críticos são preservados automaticamente
-- **⚙️ Configuração:** O sistema se auto-configura na primeira execução
-- **💾 Backup:** Dados salvos em `storage/backups/` para auditoria
+## 🔧 **Comandos Úteis**
+
+### **Gerenciamento de Containers:**
+```bash
+# Ver status dos containers
+docker compose ps
+
+# Ver logs da aplicação
+docker compose logs -f app
+
+# Reiniciar todos os serviços
+docker compose restart
+
+# Parar todos os serviços
+docker compose down
+
+# Remover tudo (incluindo volumes)
+docker compose down -v
+```
+
+### **Comandos Artisan:**
+```bash
+# Limpar cache
+docker exec legisinc-app php artisan optimize:clear
+
+# Gerar chave da aplicação
+docker exec legisinc-app php artisan key:generate
+
+# Ver rotas disponíveis
+docker exec legisinc-app php artisan route:list
+
+# Executar tinker (console interativo)
+docker exec legisinc-app php artisan tinker
+```
+
+### **Backup e Restauração:**
+```bash
+# Backup do banco de dados
+docker exec legisinc-postgres pg_dump -U legisinc legisinc_db > backup.sql
+
+# Restaurar banco de dados
+docker exec -i legisinc-postgres psql -U legisinc legisinc_db < backup.sql
+```
+
+## 🚀 **Troubleshooting**
+
+### **Problema: Container não inicia**
+```bash
+# Verificar logs
+docker compose logs app
+
+# Reconstruir imagem
+docker compose build --no-cache app
+docker compose up -d
+```
+
+### **Problema: Erro de permissões**
+```bash
+# Corrigir permissões do storage
+docker exec legisinc-app chmod -R 775 storage bootstrap/cache
+docker exec legisinc-app chown -R laravel:laravel storage bootstrap/cache
+```
+
+### **Problema: OnlyOffice não conecta**
+```bash
+# Verificar status do OnlyOffice
+docker compose ps onlyoffice
+
+# Reiniciar OnlyOffice
+docker compose restart onlyoffice
+```
+
+## 📚 **Documentação Adicional**
+- Detalhes técnicos em `/docs/technical/`
+- Scripts de teste em `/scripts/tests/`
+- Configurações em `/CLAUDE.md`

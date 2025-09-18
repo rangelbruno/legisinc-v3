@@ -7,6 +7,7 @@ use App\Models\Proposicao;
 use App\Models\TipoProposicao;
 use App\Models\TipoProposicaoTemplate;
 use App\Services\DocumentConversionService;
+use App\Services\OnlyOffice\OnlyOfficeConversionService;
 use App\Services\Template\TemplateInstanceService;
 use App\Services\Template\TemplateParametrosService;
 use App\Services\Template\TemplateProcessorService;
@@ -23,7 +24,8 @@ use Barryvdh\DomPDF\Facade\Pdf;
 class ProposicaoController extends Controller
 {
     public function __construct(
-        private TemplateUniversalService $templateUniversalService
+        private TemplateUniversalService $templateUniversalService,
+        private OnlyOfficeConversionService $conversionService
     ) {
         $this->middleware('auth');
         $this->middleware('can:create,App\Models\Proposicao')->only(['create', 'store', 'createModern']);
@@ -225,6 +227,17 @@ class ProposicaoController extends Controller
      */
     public function salvarRascunho(Request $request)
     {
+        // 📝 LOG: Início da criação de proposição pelo Parlamentar
+        \App\Helpers\ComprehensiveLogger::userClick('Parlamentar iniciou criação de nova proposição', [
+            'acao' => 'criar_proposicao',
+            'tipo_solicitado' => $request->tipo,
+            'ementa' => $request->ementa,
+            'opcao_preenchimento' => $request->opcao_preenchimento ?? 'modelo',
+            'usar_ia' => $request->usar_ia,
+            'has_anexos' => $request->hasFile('anexos'),
+            'total_anexos' => $request->hasFile('anexos') ? count($request->file('anexos')) : 0
+        ]);
+
         // Validar se o tipo existe e está ativo
         try {
             $tiposValidos = TipoProposicao::ativos()->pluck('codigo')->toArray();
@@ -273,6 +286,20 @@ class ProposicaoController extends Controller
         // Criar proposição no banco de dados
         $proposicao = Proposicao::create($dadosProposicao);
 
+        // 📝 LOG: Proposição criada com sucesso
+        \App\Helpers\ComprehensiveLogger::userClick('Proposição criada com sucesso pelo Parlamentar', [
+            'acao' => 'proposicao_criada',
+            'proposicao_id' => $proposicao->id,
+            'tipo' => $proposicao->tipo,
+            'ementa' => $proposicao->ementa,
+            'status_inicial' => $proposicao->status,
+            'ano' => $proposicao->ano,
+            'opcao_preenchimento' => $opcaoPreenchimento,
+            'tem_conteudo_inicial' => !empty($proposicao->conteudo),
+            'tamanho_conteudo' => strlen($proposicao->conteudo ?? ''),
+            'workflow_stage' => 'criacao_completa'
+        ]);
+
         // Processar anexos se houver
         if ($request->hasFile('anexos')) {
             $anexosData = [];
@@ -311,7 +338,34 @@ class ProposicaoController extends Controller
                 'anexos' => $anexosData,
                 'total_anexos' => $totalAnexos,
             ]);
+
+            // 📎 LOG: Anexos processados
+            \App\Helpers\ComprehensiveLogger::userClick('Anexos adicionados à proposição', [
+                'acao' => 'anexos_adicionados',
+                'proposicao_id' => $proposicao->id,
+                'total_anexos' => $totalAnexos,
+                'anexos_info' => array_map(function($anexo) {
+                    return [
+                        'nome' => $anexo['nome_original'],
+                        'tipo' => $anexo['tipo'],
+                        'tamanho_mb' => round($anexo['tamanho'] / 1024 / 1024, 2)
+                    ];
+                }, $anexosData),
+                'workflow_stage' => 'anexos_processados'
+            ]);
         }
+
+        // 🎉 LOG: Rascunho finalizado com sucesso
+        \App\Helpers\ComprehensiveLogger::userClick('Rascunho de proposição finalizado', [
+            'acao' => 'rascunho_finalizado',
+            'proposicao_id' => $proposicao->id,
+            'tipo' => $proposicao->tipo,
+            'status' => $proposicao->status,
+            'tem_anexos' => ($proposicao->total_anexos ?? 0) > 0,
+            'total_anexos' => $proposicao->total_anexos ?? 0,
+            'workflow_stage' => 'rascunho_completo',
+            'proxima_etapa' => 'edicao_conteudo'
+        ]);
 
         return response()->json([
             'success' => true,
@@ -1035,15 +1089,20 @@ class ProposicaoController extends Controller
      */
     public function enviarLegislativo(Proposicao $proposicao)
     {
-        // Log::info('Método enviarLegislativo chamado', [
-        //     'proposicao_id' => $proposicao->id,
-        //     'proposicao_status' => $proposicao->status,
-        //     'proposicao_ementa' => $proposicao->ementa ? 'presente' : 'ausente',
-        //     'proposicao_conteudo' => $proposicao->conteudo ? 'presente' : 'ausente',
-        //     'proposicao_arquivo' => $proposicao->arquivo_path ? 'presente' : 'ausente',
-        //     'user_id' => auth()->id(),
-        //     'is_author' => $proposicao->autor_id === auth()->id()
-        // ]);
+        // 📤 LOG: Parlamentar iniciou envio ao Legislativo
+        \App\Helpers\ComprehensiveLogger::userClick('Parlamentar solicitou envio de proposição ao Legislativo', [
+            'acao' => 'solicitar_envio_legislativo',
+            'proposicao_id' => $proposicao->id,
+            'proposicao_tipo' => $proposicao->tipo,
+            'proposicao_status_atual' => $proposicao->status,
+            'ementa_presente' => !empty($proposicao->ementa),
+            'conteudo_presente' => !empty($proposicao->conteudo),
+            'arquivo_presente' => !empty($proposicao->arquivo_path),
+            'tem_anexos' => ($proposicao->total_anexos ?? 0) > 0,
+            'total_anexos' => $proposicao->total_anexos ?? 0,
+            'is_author' => $proposicao->autor_id === auth()->id(),
+            'workflow_stage' => 'solicitacao_envio'
+        ]);
 
         try {
             // Verificar se o usuário é o autor da proposição
@@ -1089,16 +1148,29 @@ class ProposicaoController extends Controller
                 ], 400);
             }
 
+            // Capturar status anterior antes da atualização
+            $statusAnterior = $proposicao->status;
+
             // Atualizar status para enviado ao legislativo
             $proposicao->update([
                 'status' => 'enviado_legislativo',
             ]);
 
-            // Log::info('Proposição enviada para legislativo', [
-            //     'proposicao_id' => $proposicao->id,
-            //     'user_id' => auth()->id(),
-            //     'status_anterior' => $proposicao->getOriginal('status')
-            // ]);
+            // ✅ LOG: Proposição enviada com sucesso ao Legislativo
+            \App\Helpers\ComprehensiveLogger::userClick('Proposição enviada com sucesso ao Legislativo', [
+                'acao' => 'proposicao_enviada_legislativo',
+                'proposicao_id' => $proposicao->id,
+                'proposicao_tipo' => $proposicao->tipo,
+                'ementa' => $proposicao->ementa,
+                'status_anterior' => $statusAnterior,
+                'status_atual' => $proposicao->status,
+                'conteudo_size' => strlen($proposicao->conteudo ?? ''),
+                'arquivo_path' => $proposicao->arquivo_path,
+                'tem_anexos' => ($proposicao->total_anexos ?? 0) > 0,
+                'workflow_stage' => 'enviado_para_analise',
+                'proxima_etapa' => 'analise_legislativa',
+                'responsavel_proximo' => 'Legislativo'
+            ]);
 
             return response()->json([
                 'success' => true,
@@ -1111,11 +1183,17 @@ class ProposicaoController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            // Log::error('Erro ao enviar proposição para legislativo', [
-            //     'proposicao_id' => $proposicao->id,
-            //     'user_id' => auth()->id(),
-            //     'error' => $e->getMessage()
-            // ]);
+            // ❌ LOG: Erro ao enviar proposição ao Legislativo
+            \App\Helpers\ComprehensiveLogger::userClick('Erro ao enviar proposição ao Legislativo', [
+                'acao' => 'erro_envio_legislativo',
+                'proposicao_id' => $proposicao->id,
+                'proposicao_tipo' => $proposicao->tipo,
+                'proposicao_status' => $proposicao->status,
+                'error_message' => $e->getMessage(),
+                'error_file' => $e->getFile(),
+                'error_line' => $e->getLine(),
+                'workflow_stage' => 'erro_envio'
+            ]);
 
             return response()->json([
                 'success' => false,
@@ -4172,15 +4250,62 @@ class ProposicaoController extends Controller
                 ], 400);
             }
 
-            // Atualizar status para 'aprovado_assinatura' - próximo passo é assinar
-            $proposicao->update([
-                'status' => 'aprovado_assinatura',
-                'data_aprovacao_autor' => now(),
-                // CRÍTICO: Invalidar PDF antigo para forçar regeneração com últimas alterações do OnlyOffice
-                'arquivo_pdf_path' => null,
-                'pdf_gerado_em' => null,
-                'pdf_conversor_usado' => null,
+            // NOVA IMPLEMENTAÇÃO: Force Save + Conversão OnlyOffice → PDF
+            Log::info('🚀 APROVAÇÃO LEGISLATIVO: Iniciando conversão OnlyOffice → PDF', [
+                'proposicao_id' => $proposicao->id,
+                'rtf_path' => $proposicao->arquivo_path,
+                'onlyoffice_key' => $proposicao->onlyoffice_key,
+                'user_id' => auth()->id()
             ]);
+
+            // Verificar se proposição tem dados OnlyOffice válidos
+            if (empty($proposicao->onlyoffice_key) || empty($proposicao->arquivo_path)) {
+                Log::warning('⚠️ APROVAÇÃO: Proposição sem dados OnlyOffice, usando método tradicional', [
+                    'proposicao_id' => $proposicao->id,
+                    'onlyoffice_key' => $proposicao->onlyoffice_key,
+                    'arquivo_path' => $proposicao->arquivo_path
+                ]);
+
+                // Fallback: Invalidar PDF para forçar regeneração tradicional
+                $proposicao->update([
+                    'status' => 'aprovado_assinatura',
+                    'data_aprovacao_autor' => now(),
+                    'arquivo_pdf_path' => null,
+                    'pdf_gerado_em' => null,
+                    'pdf_conversor_usado' => null,
+                ]);
+            } else {
+                // NOVO FLUXO: Force Save + Conversão OnlyOffice
+                $conversionResult = $this->conversionService->forceConvertToPdf($proposicao);
+
+                if ($conversionResult['success']) {
+                    Log::info('✅ APROVAÇÃO: Conversão OnlyOffice → PDF concluída', [
+                        'proposicao_id' => $proposicao->id,
+                        'pdf_path' => $conversionResult['pdf_path'],
+                        'pdf_size' => $conversionResult['pdf_size']
+                    ]);
+
+                    // Atualizar status (PDF já foi atualizado no service)
+                    $proposicao->update([
+                        'status' => 'aprovado_assinatura',
+                        'data_aprovacao_autor' => now(),
+                    ]);
+                } else {
+                    Log::error('❌ APROVAÇÃO: Erro na conversão OnlyOffice → PDF', [
+                        'proposicao_id' => $proposicao->id,
+                        'error' => $conversionResult['error']
+                    ]);
+
+                    // Fallback: Atualizar status e invalidar PDF para regeneração tradicional
+                    $proposicao->update([
+                        'status' => 'aprovado_assinatura',
+                        'data_aprovacao_autor' => now(),
+                        'arquivo_pdf_path' => null,
+                        'pdf_gerado_em' => null,
+                        'pdf_conversor_usado' => null,
+                    ]);
+                }
+            }
 
             // Log::info('Edições do legislativo aprovadas pelo parlamentar', [
             //     'proposicao_id' => $proposicao->id,
@@ -4543,7 +4668,8 @@ class ProposicaoController extends Controller
     {
         // Log::info('Usando extração RTF inteligente focada em conteúdo com escape sequences');
 
-        $texto = $rtfContent;
+        // ETAPA 0: Decodificar sequências Unicode RTF primeiro (\u79* = 'O', etc)
+        $texto = $this->decodificarUnicodeRTF($rtfContent);
 
         // ETAPA 1: Converter RTF escape sequences para UTF-8 primeiro
         $escapeSequences = [
@@ -4913,14 +5039,53 @@ class ProposicaoController extends Controller
             }
         }
 
-        // ESTRATÉGIA NOVA: 1) Sempre tenta PDF oficial OnlyOffice
-        // 2) Se falhar, usa DomPDF com configurações seguras (subsetting OFF)
-        Log::info('🔴 PDF REQUEST: Tentando PDF oficial OnlyOffice primeiro', [
+        // NOVA ESTRATÉGIA: 1) PDF OnlyOffice Conversion API 2) PDF oficial 3) DomPDF fallback
+        Log::info('🔴 PDF REQUEST: Verificando PDF gerado via OnlyOffice Conversion API', [
+            'proposicao_id' => $proposicao->id,
+            'arquivo_pdf_path' => $proposicao->arquivo_pdf_path,
+            'pdf_conversor_usado' => $proposicao->pdf_conversor_usado,
+            'pdf_gerado_em' => $proposicao->pdf_gerado_em
+        ]);
+
+        // 1) MÁXIMA PRIORIDADE: PDF gerado via OnlyOffice Conversion API
+        if ($proposicao->arquivo_pdf_path &&
+            $proposicao->pdf_conversor_usado === 'onlyoffice_conversion_api' &&
+            Storage::exists($proposicao->arquivo_pdf_path)) {
+
+            $caminhoAbsoluto = Storage::path($proposicao->arquivo_pdf_path);
+
+            Log::info('✅ PDF REQUEST: Servindo PDF OnlyOffice Conversion API', [
+                'proposicao_id' => $proposicao->id,
+                'pdf_path' => $proposicao->arquivo_pdf_path,
+                'tamanho' => filesize($caminhoAbsoluto),
+                'conversor' => $proposicao->pdf_conversor_usado,
+                'gerado_em' => $proposicao->pdf_gerado_em
+            ]);
+
+            return response()->file($caminhoAbsoluto, [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'inline; filename="proposicao_' . $proposicao->id . '_onlyoffice.pdf"',
+                'Cache-Control' => 'no-cache, no-store, must-revalidate, max-age=0',
+                'Pragma' => 'no-cache',
+                'Expires' => '-1',
+                'X-PDF-Source' => 'onlyoffice-conversion-api',
+                'X-PDF-Generated' => $proposicao->pdf_gerado_em?->toISOString() ?? 'unknown'
+            ]);
+        }
+
+        // 2) SEGUNDA PRIORIDADE: PDF oficial OnlyOffice (método antigo)
+        Log::info('🔴 PDF REQUEST: PDF Conversion API não encontrado, tentando PDF oficial', [
             'proposicao_id' => $proposicao->id
         ]);
 
-        // 1) PRIORIDADE: PDF oficial OnlyOffice (buscar PDFs existentes mais recentes)
         $pdfOficial = $this->encontrarPDFMaisRecenteRobusta($proposicao);
+
+        Log::info('🔴 PDF REQUEST: Resultado da busca por PDF oficial', [
+            'proposicao_id' => $proposicao->id,
+            'pdf_oficial_encontrado' => $pdfOficial ?: 'NENHUM',
+            'pdf_existe' => $pdfOficial ? file_exists(storage_path('app/' . $pdfOficial)) : false
+        ]);
+
         if ($pdfOficial && file_exists(storage_path('app/' . $pdfOficial))) {
             $caminhoAbsoluto = storage_path('app/' . $pdfOficial);
 
@@ -4973,8 +5138,109 @@ class ProposicaoController extends Controller
         ]);
 
         try {
-            // Gerar HTML para PDF usando método existente, mas com melhorias
-            $conteudo = $proposicao->conteudo ?: $proposicao->ementa ?: 'Conteúdo da proposição não disponível.';
+            // CORREÇÃO CRÍTICA: Extrair conteúdo atualizado do RTF editado pelo Legislativo
+            $conteudo = null;
+
+            // Se existe arquivo RTF salvo pelo Legislativo, extrair conteúdo dele
+            if ($proposicao->arquivo_path) {
+                // CORREÇÃO: Usar ordem de prioridade conforme documentação técnica
+                $possiveisCaminhos = [
+                    storage_path('app/' . $proposicao->arquivo_path),           // PRIORIDADE 1: Onde callbacks salvam
+                    storage_path('app/private/' . $proposicao->arquivo_path),   // PRIORIDADE 2: Legacy
+                    storage_path('app/local/' . $proposicao->arquivo_path),     // PRIORIDADE 3: Fallback
+                ];
+
+                $caminhoRTF = null;
+                foreach ($possiveisCaminhos as $caminho) {
+                    if (file_exists($caminho)) {
+                        $caminhoRTF = $caminho;
+                        break;
+                    }
+                }
+
+                // Se não encontrou pelo arquivo_path, buscar o arquivo mais recente na pasta
+                if (!$caminhoRTF) {
+                    Log::info('PDF REQUEST: arquivo_path não encontrado, buscando arquivo mais recente', [
+                        'proposicao_id' => $proposicao->id,
+                        'arquivo_path' => $proposicao->arquivo_path
+                    ]);
+
+                    $caminhoRTF = $this->encontrarRTFMaisRecenteRobusta($proposicao);
+                }
+
+                if ($caminhoRTF) {
+                    Log::info('🔴 PDF REQUEST: Extraindo conteúdo atualizado do RTF para gerar PDF', [
+                        'proposicao_id' => $proposicao->id,
+                        'rtf_path_banco' => $proposicao->arquivo_path,
+                        'rtf_path_encontrado' => $caminhoRTF,
+                        'rtf_size' => filesize($caminhoRTF)
+                    ]);
+
+                    // Ler o conteúdo RTF do arquivo
+                    $rtfContent = file_get_contents($caminhoRTF);
+
+                    // NOVA ESTRATÉGIA: Extração mais agressiva e eficaz
+                    $conteudo = $this->extrairTextoRTFMelhorado($rtfContent);
+
+                    Log::info('🔴 PDF REQUEST: Resultado da extração melhorada', [
+                        'proposicao_id' => $proposicao->id,
+                        'conteudo_length' => strlen($conteudo),
+                        'conteudo_preview' => substr($conteudo, 0, 300),
+                        'conteudo_empty' => empty($conteudo)
+                    ]);
+
+                    // Se ainda está vazio, tentar métodos alternativos
+                    if (empty($conteudo) || strlen(trim($conteudo)) < 50) {
+                        Log::warning('🔴 PDF REQUEST: Extração melhorada retornou pouco, tentando método inteligente', [
+                            'proposicao_id' => $proposicao->id
+                        ]);
+
+                        $conteudo = $this->extrairTextoRTFInteligente($rtfContent);
+
+                        if (empty($conteudo) || strlen(trim($conteudo)) < 10) {
+                            Log::warning('🔴 PDF REQUEST: Extração inteligente também falhou, tentando método simples', [
+                                'proposicao_id' => $proposicao->id
+                            ]);
+
+                            $conteudo = $this->extrairTextoRTFSimples($rtfContent);
+                        }
+
+                        Log::info('🔴 PDF REQUEST: Resultado final da extração', [
+                            'proposicao_id' => $proposicao->id,
+                            'conteudo_length' => strlen($conteudo),
+                            'conteudo_preview' => substr($conteudo, 0, 200),
+                            'conteudo_empty' => empty($conteudo)
+                        ]);
+                    }
+                } else {
+                    Log::warning('🔴 PDF REQUEST: Arquivo RTF não encontrado em nenhum caminho', [
+                        'proposicao_id' => $proposicao->id,
+                        'rtf_path_banco' => $proposicao->arquivo_path,
+                        'caminhos_testados' => $possiveisCaminhos
+                    ]);
+                }
+            }
+
+            // Se ainda não tem conteúdo, usar fallback do banco de dados
+            if (empty($conteudo)) {
+                Log::warning('🔴 PDF REQUEST: Usando conteúdo do banco como fallback', [
+                    'proposicao_id' => $proposicao->id,
+                    'banco_conteudo_length' => strlen($proposicao->conteudo ?: ''),
+                    'banco_ementa_length' => strlen($proposicao->ementa ?: '')
+                ]);
+                $conteudo = $proposicao->conteudo ?: $proposicao->ementa ?: 'Conteúdo da proposição não disponível.';
+            }
+
+            // Limpar cache antes de gerar PDF para forçar conteúdo atualizado
+            Cache::forget('proposicao_pdf_' . $proposicao->id);
+            Cache::forget('proposicao_conteudo_' . $proposicao->id);
+
+            Log::info('🔴 PDF REQUEST: Gerando HTML para PDF com conteúdo extraído', [
+                'proposicao_id' => $proposicao->id,
+                'conteudo_final_length' => strlen($conteudo),
+                'conteudo_preview' => substr($conteudo, 0, 200)
+            ]);
+
             $html = $this->gerarHTMLParaPDF($proposicao, $conteudo);
 
             // Sanear encoding RTF→UTF-8 para evitar problemas de codificação
@@ -4985,7 +5251,7 @@ class ProposicaoController extends Controller
             $html = iconv('UTF-8', 'UTF-8//IGNORE', $html); // Remove caracteres inválidos
 
             // CRÍTICO: Forçar família de fontes segura para evitar mapeamento errado de glifos
-            $fonteSegura = "<style>*{font-family:'DejaVu Sans',Arial,sans-serif!important}</style>";
+            $fonteSegura = "<style>*{font-family:'DejaVu Sans',Arial,sans-serif!important;}</style>";
             $html = $fonteSegura . $html;
 
             Log::info('🔴 PDF REQUEST: Gerando PDF com DomPDF (configuração segura)', [
@@ -5441,15 +5707,40 @@ class ProposicaoController extends Controller
     public function updateStatus(Request $request, Proposicao $proposicao)
     {
         try {
+            // 🎯 LOG: Início da interação do usuário - clique no botão de aprovação/mudança de status
+            $user = Auth::user();
+            \App\Helpers\ComprehensiveLogger::userClick('Usuário clicou para alterar status da proposição', [
+                'timestamp' => now()->toISOString(),
+                'proposicao_id' => $proposicao->id,
+                'user_id' => $user->id,
+                'user_email' => $user->email,
+                'user_roles' => $user->roles->pluck('name')->toArray(),
+                'request_data' => $request->all(),
+                'user_agent' => $request->header('User-Agent'),
+                'ip_address' => $request->ip(),
+                'session_id' => $request->session()->getId(),
+                'current_status' => $proposicao->status,
+                'requested_status' => $request->input('status'),
+                'arquivo_atual' => $proposicao->arquivo_path,
+                'pdf_atual' => $proposicao->arquivo_pdf_path,
+                'pdf_gerado_em' => $proposicao->pdf_gerado_em,
+                'onlyoffice_interactions' => [
+                    'document_key' => $proposicao->onlyoffice_document_key ?? 'N/A',
+                    'last_modified' => $proposicao->updated_at,
+                    'has_rtf_file' => !empty($proposicao->arquivo_path) && Storage::exists($proposicao->arquivo_path),
+                    'rtf_size' => !empty($proposicao->arquivo_path) && Storage::exists($proposicao->arquivo_path)
+                        ? Storage::size($proposicao->arquivo_path) : 0,
+                    'rtf_last_modified' => !empty($proposicao->arquivo_path) && Storage::exists($proposicao->arquivo_path)
+                        ? Storage::lastModified($proposicao->arquivo_path) : null
+                ]
+            ]);
+
             $request->validate([
                 'status' => 'required|string|in:rascunho,em_edicao,enviado_legislativo,aprovado,retornado_parlamentar,enviado_protocolo,protocolado,assinado'
             ]);
 
             $statusAnterior = $proposicao->status;
             $novoStatus = $request->status;
-
-            // Verificar se o usuário pode alterar para este status
-            $user = Auth::user();
             
             // Lógica de permissões por perfil
             if ($user->isParlamentar()) {
@@ -5475,11 +5766,38 @@ class ProposicaoController extends Controller
                 }
             }
 
-            // Atualizar status
-            $proposicao->update([
+            // Preparar dados para atualização
+            $updateData = [
                 'status' => $novoStatus,
                 'updated_at' => now()
-            ]);
+            ];
+
+            // CRÍTICO: Se mudando para "aprovado", invalidar PDF para forçar regeneração com conteúdo do Legislativo
+            if ($novoStatus === 'aprovado') {
+                $updateData['arquivo_pdf_path'] = null;
+                $updateData['pdf_gerado_em'] = null;
+                $updateData['pdf_conversor_usado'] = null;
+
+                Log::info('🔥 INVALIDAÇÃO PDF: Status mudando para aprovado - PDF será invalidado', [
+                    'proposicao_id' => $proposicao->id,
+                    'status_anterior' => $statusAnterior,
+                    'novo_status' => $novoStatus,
+                    'user_role' => $user->roles->pluck('name')->toArray(),
+                    'pdf_path_anterior' => $proposicao->arquivo_pdf_path,
+                    'invalidacao_aplicada' => true
+                ]);
+            } else {
+                Log::info('📝 STATUS UPDATE: Mudança de status sem invalidação PDF', [
+                    'proposicao_id' => $proposicao->id,
+                    'status_anterior' => $statusAnterior,
+                    'novo_status' => $novoStatus,
+                    'user_role' => $user->roles->pluck('name')->toArray(),
+                    'invalidacao_aplicada' => false
+                ]);
+            }
+
+            // Atualizar status
+            $proposicao->update($updateData);
 
             // Log da alteração
             Log::info('Status da proposição alterado', [
@@ -5546,6 +5864,68 @@ class ProposicaoController extends Controller
 
         
         return null; // Não encontrou PDF válido no banco atual
+    }
+
+    /**
+     * Encontrar arquivo RTF mais recente para uma proposição
+     * Baseado na lógica de priorização da documentação técnica
+     */
+    private function encontrarRTFMaisRecenteRobusta(Proposicao $proposicao): ?string
+    {
+        Log::info('PDF REQUEST: Buscando RTF mais recente para proposição', [
+            'proposicao_id' => $proposicao->id,
+            'arquivo_path_banco' => $proposicao->arquivo_path
+        ]);
+
+        // Buscar arquivos RTF da proposição em todos os diretórios possíveis
+        $diretoriosPossiveis = [
+            storage_path('app/proposicoes/'),
+            storage_path('app/private/proposicoes/'),
+            storage_path('app/local/proposicoes/'),
+        ];
+
+        $arquivosEncontrados = [];
+
+        foreach ($diretoriosPossiveis as $diretorio) {
+            if (is_dir($diretorio)) {
+                $pattern = $diretorio . "proposicao_{$proposicao->id}_*.rtf";
+                $arquivos = glob($pattern);
+
+                foreach ($arquivos as $arquivo) {
+                    if (file_exists($arquivo)) {
+                        $arquivosEncontrados[] = [
+                            'caminho' => $arquivo,
+                            'modificado' => filemtime($arquivo),
+                            'tamanho' => filesize($arquivo)
+                        ];
+                    }
+                }
+            }
+        }
+
+        if (empty($arquivosEncontrados)) {
+            Log::warning('PDF REQUEST: Nenhum arquivo RTF encontrado para proposição', [
+                'proposicao_id' => $proposicao->id
+            ]);
+            return null;
+        }
+
+        // Ordenar por data de modificação (mais recente primeiro)
+        usort($arquivosEncontrados, function($a, $b) {
+            return $b['modificado'] - $a['modificado'];
+        });
+
+        $arquivoMaisRecente = $arquivosEncontrados[0];
+
+        Log::info('PDF REQUEST: RTF mais recente encontrado', [
+            'proposicao_id' => $proposicao->id,
+            'arquivo_path' => $arquivoMaisRecente['caminho'],
+            'modificado_em' => date('Y-m-d H:i:s', $arquivoMaisRecente['modificado']),
+            'tamanho' => $arquivoMaisRecente['tamanho'],
+            'total_arquivos' => count($arquivosEncontrados)
+        ]);
+
+        return $arquivoMaisRecente['caminho'];
     }
 
     /**
@@ -5861,6 +6241,89 @@ class ProposicaoController extends Controller
             {$assinaturaHTML}
         </body>
         </html>";
+    }
+
+    /**
+     * Método melhorado para extrair texto RTF - mais agressivo para capturar conteúdo real
+     */
+    private function extrairTextoRTFMelhorado(string $rtfContent): string
+    {
+        // ETAPA 1: Decodificar Unicode RTF primeiro
+        $texto = $this->decodificarUnicodeRTF($rtfContent);
+
+        // ETAPA 2: Extrair texto do corpo do documento RTF
+        // Buscar padrões específicos de conteúdo de proposição
+        $conteudoExtracted = [];
+
+        // Buscar títulos e texto principal com padrões mais amplos
+        $patterns = [
+            '/PROJETO DE [A-Z\s]+N[°º\s]*\[[^\]]+\]/i',
+            '/DECRETO [A-Z\s]+N[°º\s]*\[[^\]]+\]/i',
+            '/EMENTA[:\s]*([^\\\\{}]{20,})/i',
+            '/CONSIDERANDO[:\s]*([^\\\\{}]{30,})/i',
+            '/Art[.\s]*\d+[^\\\\{}]{20,}/i',
+            '/CÂMARA MUNICIPAL[^\\\\{}]{10,}/i',
+            '/Dispõe[^\\\\{}]{30,}/i'
+        ];
+
+        foreach ($patterns as $pattern) {
+            if (preg_match_all($pattern, $texto, $matches)) {
+                foreach ($matches[0] as $match) {
+                    $limpo = trim(preg_replace('/\\\\[a-z]+\d*\s*|[{}]/', ' ', $match));
+                    $limpo = preg_replace('/\s+/', ' ', $limpo);
+                    if (strlen($limpo) > 15 && !preg_match('/\b(Open Sans|Arial|Calibri|Times New Roman)\b/i', $limpo)) {
+                        $conteudoExtracted[] = $limpo;
+                    }
+                }
+            }
+        }
+
+        // Buscar parágrafos de texto entre \\par
+        if (preg_match_all('/\\\\par[^\\\\]*?([A-Z][^\\\\{}]{20,})/i', $texto, $matches)) {
+            foreach ($matches[1] as $match) {
+                $limpo = trim(preg_replace('/\\\\[a-z]+\d*\s*|[{}]/', ' ', $match));
+                if (strlen($limpo) > 20 && !preg_match('/^[0-9\s\-\*]+$/', $limpo)) {
+                    $conteudoExtracted[] = $limpo;
+                }
+            }
+        }
+
+        // Se não encontrou nada específico, fazer extração mais geral
+        if (empty($conteudoExtracted)) {
+            // Remover códigos RTF e extrair texto
+            $textoLimpo = preg_replace('/\\\\[a-z]+\d*\s*/i', ' ', $texto);
+            $textoLimpo = str_replace(['{', '}', '\\'], ' ', $textoLimpo);
+            $textoLimpo = preg_replace('/\s+/', ' ', $textoLimpo);
+
+            // Buscar sequências de texto de pelo menos 50 caracteres (menos restritivo)
+            if (preg_match_all('/([A-ZÁÀÃÂÉÊÍÓÔÕÚÇ][^\\\\{}\d]{50,})/u', $textoLimpo, $matches)) {
+                foreach ($matches[1] as $match) {
+                    $limpo = trim($match);
+                    // Filtrar metadados RTF conhecidos
+                    if (strlen($limpo) > 50 &&
+                        !preg_match('/\b(Open Sans|Arial|Calibri|Times New Roman|Cambria|Heading|Table Grid|panose)\b/i', $limpo)) {
+                        $conteudoExtracted[] = $limpo;
+                    }
+                }
+            }
+        }
+
+        // Combinar resultado
+        $resultado = implode("\n\n", $conteudoExtracted);
+        $resultado = preg_replace('/\s+/', ' ', $resultado);
+        $resultado = trim($resultado);
+
+        // Se ainda está muito pequeno, usar extração ultra-agressiva
+        if (strlen($resultado) < 100) {
+            $textoLimpo = preg_replace('/\\\\[a-z]+\d*\s*/i', ' ', $texto);
+            $textoLimpo = str_replace(['{', '}'], '', $textoLimpo);
+            $textoLimpo = preg_replace('/\s+/', ' ', $textoLimpo);
+
+            // Pegar primeiras 2000 chars de texto limpo
+            $resultado = substr(trim($textoLimpo), 0, 2000);
+        }
+
+        return $resultado;
     }
 
     /**

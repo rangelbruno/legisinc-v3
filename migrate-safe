@@ -1,4 +1,0 @@
-#!/bin/bash
-echo "🛡️ Executando Migration Segura com Preservação Automática"
-echo "=========================================================="
-docker exec -it legisinc-app php artisan migrate:safe --fresh --seed --generate-seeders

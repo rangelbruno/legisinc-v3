@@ -1,4 +1,4 @@
-# 🎯 SOLUÇÃO: Priorização de Arquivo Salvo no OnlyOffice
+# 🎯 SOLUÇÃO: Priorização de Arquivo Salvo no OnlyOffice 
 
 **Data**: 02/09/2025  
 **Versão**: 1.0  

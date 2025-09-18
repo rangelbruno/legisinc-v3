@@ -1,0 +1,77 @@
+# LegisInc v2 - Shadow Traffic Setup
+# Este compose adiciona Nova API e shadow traffic ao setup existente
+# Uso: docker-compose -f docker-compose.yml -f docker-compose.gateway-simple.yml -f docker-compose.shadow.yml up -d
+
+services:
+  # =========================
+  # NOVA API (Node.js)
+  # =========================
+  nova-api:
+    build:
+      context: ./nova-api
+      dockerfile: Dockerfile
+    container_name: legisinc-nova-api
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+    ports:
+      - "3001:3001"  # Porta para acesso direto (debug)
+    networks:
+      - legisinc_network
+    volumes:
+      # Logs para análise de shadow traffic
+      - ./logs/nova-api:/app/logs
+    labels:
+      - "traefik.enable=false"  # Desabilitado - usando labels do canary.yml
+
+  # =========================
+  # NGINX PARA SHADOW TRAFFIC
+  # =========================
+  nginx-shadow:
+    image: nginx:alpine
+    container_name: legisinc-nginx-shadow
+    restart: unless-stopped
+    ports:
+      - "8002:80"  # Porta alternativa com shadow
+    volumes:
+      - ./gateway/nginx/shadow.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./logs/nginx:/var/log/nginx
+    networks:
+      - legisinc_network
+    depends_on:
+      - nova-api
+    labels:
+      - "traefik.enable=false"  # Não expor via Traefik
+
+  # =========================
+  # SHADOW COMPARATOR
+  # =========================
+  shadow-comparator:
+    image: node:18-alpine
+    container_name: legisinc-shadow-comparator
+    restart: unless-stopped
+    working_dir: /app
+    command: sh -c "npm install express axios && node comparator.js"
+    environment:
+      - NODE_ENV=development
+    ports:
+      - "3002:3002"
+    volumes:
+      - ./gateway/shadow-comparator:/app
+      - ./logs/comparator:/app/logs
+    networks:
+      - legisinc_network
+    depends_on:
+      - nova-api
+
+networks:
+  legisinc_network:
+    external: true
+    name: legisinc-v2_legisinc_network
+
+# Criar volumes para logs
+volumes:
+  nova-api-logs:
+  nginx-logs:
+  comparator-logs:

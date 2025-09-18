@@ -1,0 +1,145 @@
+# Configuração dinâmica de rotas do Traefik
+# Este arquivo é recarregado automaticamente quando modificado
+
+http:
+  routers:
+    # ====================================
+    # CANARY: /api/parlamentares/buscar (1% Nova API)
+    # ====================================
+    api-parlamentares-buscar:
+      rule: "PathPrefix(`/api/parlamentares/buscar`)"
+      entryPoints: ["web"]
+      priority: 100  # Alta prioridade para rota específica
+      middlewares:
+        - "canary-headers"
+        - "request-metrics"
+      service: "parlamentares-weighted"
+
+    # ====================================
+    # FALLBACK: Outras rotas para Laravel
+    # ====================================
+    api-fallback:
+      rule: "PathPrefix(`/api`)"
+      entryPoints: ["web"]
+      priority: 50   # Menor prioridade
+      middlewares:
+        - "canary-headers"
+        - "request-metrics"
+      service: "laravel-svc@docker"
+
+    # ====================================
+    # ROTA: OnlyOffice
+    # ====================================
+    onlyoffice-routes:
+      rule: "PathPrefix(`/onlyoffice`) || PathPrefix(`/ds-vpath`)"
+      entryPoints: ["web"]
+      priority: 50
+      service: "onlyoffice-svc@docker"
+
+    # ====================================
+    # ROTA: Fallback (tudo mais para Laravel)
+    # ====================================
+    fallback:
+      rule: "HostRegexp(`{host:.+}`)"
+      entryPoints: ["web"]
+      priority: 1
+      middlewares:
+        - "request-id"
+        - "security-headers"
+      service: "laravel-svc@docker"
+
+  services:
+    # ====================================
+    # WEIGHTED SERVICE - CANARY
+    # ====================================
+    parlamentares-weighted:
+      weighted:
+        services:
+          # CANARY: Nova API - 1%
+          - name: "nova-api-svc@docker"
+            weight: 1
+
+          # STABLE: Laravel - 99% do tráfego
+          - name: "laravel-svc@docker"
+            weight: 99
+
+  middlewares:
+    # ====================================
+    # REQUEST ID (para rastreamento)
+    # ====================================
+    request-id:
+      headers:
+        customRequestHeaders:
+          X-Request-ID: "req-gateway"
+          X-Forwarded-Proto: "http"
+          X-Real-IP: "gateway"
+
+    # ====================================
+    # SECURITY HEADERS
+    # ====================================
+    security-headers:
+      headers:
+        # Strict Transport Security
+        stsSeconds: 31536000
+        stsIncludeSubdomains: false
+
+        # Content Security
+        contentTypeNosniff: true
+        browserXssFilter: true
+        frameDeny: true
+
+        # Custom headers
+        customResponseHeaders:
+          X-Powered-By: "LegisInc-Gateway"
+          X-Environment: "development"
+
+    # ====================================
+    # CANARY HEADERS
+    # ====================================
+    canary-headers:
+      headers:
+        customRequestHeaders:
+          X-Canary-Enabled: "true"
+          X-Request-ID: "req-canary"
+        customResponseHeaders:
+          X-Canary-Version: "v2.0"
+          X-Backend: "mixed"
+
+    # ====================================
+    # REQUEST METRICS
+    # ====================================
+    request-metrics:
+      headers:
+        customRequestHeaders:
+          X-Trace-ID: "trace-canary"
+
+    # ====================================
+    # RATE LIMITING
+    # ====================================
+    rate-limit:
+      rateLimit:
+        average: 100      # 100 requests por minuto
+        burst: 50         # Rajada de até 50
+        period: "1m"      # Janela de 1 minuto
+        sourceCriterion:
+          ipStrategy:
+            depth: 1      # IP real do cliente
+
+    # ====================================
+    # CORS (se necessário)
+    # ====================================
+    cors:
+      headers:
+        accessControlAllowMethods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - PATCH
+          - OPTIONS
+        accessControlAllowOriginList:
+          - "http://localhost"
+          - "http://localhost:3000"
+          - "http://localhost:8001"
+        accessControlAllowCredentials: true
+        accessControlMaxAge: 86400

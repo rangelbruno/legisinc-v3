@@ -1,0 +1,13 @@
+{
+  "name": "shadow-comparator",
+  "version": "1.0.0",
+  "description": "Comparador de respostas para shadow traffic",
+  "main": "comparator.js",
+  "scripts": {
+    "start": "node comparator.js"
+  },
+  "dependencies": {
+    "axios": "^1.12.2",
+    "express": "^4.21.2"
+  }
+}

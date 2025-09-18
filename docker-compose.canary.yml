@@ -1,0 +1,82 @@
+# LegisInc v2 - Canary Deployment Setup
+# Este compose adiciona canary deployment ao setup existente
+# Uso: docker-compose -f docker-compose.yml -f docker-compose.gateway-simple.yml -f docker-compose.shadow.yml -f docker-compose.canary.yml up -d
+
+services:
+  # =========================
+  # TRAEFIK CANARY CONFIG
+  # =========================
+  traefik:
+    command:
+      - --api.insecure=true
+      - --providers.docker=true
+      - --entrypoints.web.address=:80
+      - --metrics.prometheus=true
+
+      # Configuração avançada para canary
+      - --providers.file.directory=/etc/traefik/dynamic
+      - --providers.file.watch=true
+      - --log.level=INFO
+      - --accesslog=true
+      - --accesslog.format=json
+
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./gateway/traefik/dynamic:/etc/traefik/dynamic:ro
+      - ./gateway/traefik/canary:/etc/traefik/canary:ro
+
+    labels:
+      # Remoção de labels conflitantes
+      - "traefik.http.routers.laravel.rule="
+      - "traefik.http.routers.laravel.service="
+
+  # =========================
+  # NOVA API - CANARY READY
+  # =========================
+  nova-api:
+    labels:
+      # Habilitar Traefik discovery
+      - "traefik.enable=true"
+      - "traefik.http.services.nova-api-svc.loadbalancer.server.port=3001"
+      - "traefik.http.services.nova-api-svc.loadbalancer.healthcheck.path=/health"
+      - "traefik.http.services.nova-api-svc.loadbalancer.healthcheck.interval=10s"
+      - "traefik.http.services.nova-api-svc.loadbalancer.healthcheck.timeout=3s"
+
+  # =========================
+  # LARAVEL - CANARY READY
+  # =========================
+  app:
+    labels:
+      # Renomear service para consistency
+      - "traefik.http.services.laravel-svc.loadbalancer.server.port=80"
+      - "traefik.http.services.laravel-svc.loadbalancer.healthcheck.path=/health"
+      - "traefik.http.services.laravel-svc.loadbalancer.healthcheck.interval=10s"
+      - "traefik.http.services.laravel-svc.loadbalancer.healthcheck.timeout=3s"
+
+  # =========================
+  # CANARY MONITOR
+  # =========================
+  canary-monitor:
+    image: node:18-alpine
+    container_name: legisinc-canary-monitor
+    restart: unless-stopped
+    working_dir: /app
+    command: sh -c "npm install express axios && node monitor.js"
+    environment:
+      - NODE_ENV=development
+      - TRAEFIK_API=http://traefik:8080
+      - PROMETHEUS_API=http://prometheus:9090
+    ports:
+      - "3003:3003"
+    volumes:
+      - ./gateway/canary-monitor:/app
+      - ./logs/canary:/app/logs
+    networks:
+      - legisinc_network
+    depends_on:
+      - nova-api
+
+networks:
+  legisinc_network:
+    external: true
+    name: legisinc-v2_legisinc_network

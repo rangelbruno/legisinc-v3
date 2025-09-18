@@ -31,6 +31,65 @@ class GuiaDesenvolvimentoController extends Controller
     }
     
     /**
+     * Consulta documentação Laravel via MCP Laravel Boost
+     */
+    public function consultarDocs(Request $request)
+    {
+        $request->validate([
+            'topico' => 'required|string|in:routing,controllers,eloquent,blade,middleware,validation,migrations,artisan'
+        ]);
+
+        $topico = $request->topico;
+
+        try {
+            // Simular consulta via MCP Laravel Boost
+            // Em uma implementação real, aqui seria feita a consulta via MCP
+            $docs = $this->getMockLaravelDocs($topico);
+
+            return response()->json([
+                'success' => true,
+                'topic' => $topico,
+                'content' => $docs,
+                'source' => 'MCP Laravel Boost'
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Erro ao consultar documentação',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Mock da documentação Laravel para demonstração
+     * Na implementação real, seria substituído por consulta MCP
+     */
+    private function getMockLaravelDocs($topico)
+    {
+        $docs = [
+            'routing' => "# Laravel Routing\n\n## Definindo Rotas\n\nRoutes no Laravel são definidas nos arquivos do diretório routes/. Para aplicações web, as rotas são tipicamente definidas em routes/web.php.\n\n### Rota Básica\n```php\nRoute::get('/user', function () {\n    return 'Hello World';\n});\n```\n\n### Rota com Parâmetros\n```php\nRoute::get('/user/{id}', function (\$id) {\n    return 'User '.\$id;\n});\n```\n\n### Route Groups\n```php\nRoute::prefix('admin')->group(function () {\n    Route::get('/users', function () {\n        // Matches \"/admin/users\"\n    });\n});\n```\n\n### Middleware em Rotas\n```php\nRoute::middleware(['auth'])->group(function () {\n    Route::get('/dashboard', function () {\n        // Só acessível para usuários autenticados\n    });\n});\n```",
+
+            'controllers' => "# Laravel Controllers\n\n## Criando Controllers\n\nControllers agrupam lógicas de requisições relacionadas em uma única classe.\n\n### Criando um Controller\n```bash\nphp artisan make:controller UserController\n```\n\n### Controller Básico\n```php\n<?php\n\nnamespace App\\Http\\Controllers;\n\nuse App\\Http\\Controllers\\Controller;\nuse Illuminate\\Http\\Request;\n\nclass UserController extends Controller\n{\n    public function index()\n    {\n        return view('users.index');\n    }\n\n    public function show(\$id)\n    {\n        return view('users.show', ['user' => User::findOrFail(\$id)]);\n    }\n}\n```\n\n### Resource Controllers\n```bash\nphp artisan make:controller UserController --resource\n```\n\n### Registro de Rotas\n```php\nRoute::resource('users', UserController::class);\n```",
+
+            'eloquent' => "# Eloquent ORM\n\n## O que é Eloquent?\n\nEloquent é o ORM (Object-Relational Mapping) incluído no Laravel que facilita a interação com o banco de dados.\n\n### Definindo um Model\n```php\n<?php\n\nnamespace App\\Models;\n\nuse Illuminate\\Database\\Eloquent\\Model;\n\nclass User extends Model\n{\n    protected \$fillable = [\n        'name', 'email', 'password',\n    ];\n\n    protected \$hidden = [\n        'password', 'remember_token',\n    ];\n\n    protected \$casts = [\n        'email_verified_at' => 'datetime',\n    ];\n}\n```\n\n### Consultas Básicas\n```php\n// Buscar todos os usuários\n\$users = User::all();\n\n// Buscar por ID\n\$user = User::find(1);\n\n// Criar novo usuário\n\$user = User::create([\n    'name' => 'João',\n    'email' => 'joao@email.com'\n]);\n```\n\n### Relacionamentos\n```php\n// One to Many\npublic function posts()\n{\n    return \$this->hasMany(Post::class);\n}\n\n// Many to Many\npublic function roles()\n{\n    return \$this->belongsToMany(Role::class);\n}\n```",
+
+            'blade' => "# Blade Templates\n\n## O que é Blade?\n\nBlade é o motor de templates do Laravel que permite escrever código PHP elegante em suas views.\n\n### Sintaxe Básica\n```blade\n{{-- Comentário --}}\n{{ \$name }} {{-- Escaped output --}}\n{!! \$html !!} {{-- Raw output --}}\n```\n\n### Estruturas de Controle\n```blade\n@if(\$user->isAdmin())\n    <p>O usuário é admin</p>\n@elseif(\$user->isModerator())\n    <p>O usuário é moderador</p>\n@else\n    <p>Usuário regular</p>\n@endif\n\n@foreach(\$users as \$user)\n    <p>{{ \$user->name }}</p>\n@endforeach\n```\n\n### Layout e Sections\n```blade\n{{-- Layout master --}}\n@extends('layouts.app')\n\n@section('title', 'Página Inicial')\n\n@section('content')\n    <h1>Bem-vindo!</h1>\n@endsection\n```\n\n### Components\n```blade\n{{-- Definindo component --}}\n<x-alert type=\"error\" :message=\"\$message\" />\n\n{{-- Usando component --}}\n@component('alert')\n    @slot('title')\n        Erro!\n    @endslot\n    \n    Algo deu errado!\n@endcomponent\n```",
+
+            'middleware' => "# Middleware\n\n## O que é Middleware?\n\nMiddleware fornece um mecanismo conveniente para inspecionar e filtrar requisições HTTP.\n\n### Criando Middleware\n```bash\nphp artisan make:middleware EnsureTokenIsValid\n```\n\n### Implementação\n```php\n<?php\n\nnamespace App\\Http\\Middleware;\n\nuse Closure;\nuse Illuminate\\Http\\Request;\n\nclass EnsureTokenIsValid\n{\n    public function handle(Request \$request, Closure \$next)\n    {\n        if (\$request->input('token') !== 'my-secret-token') {\n            return redirect('home');\n        }\n\n        return \$next(\$request);\n    }\n}\n```\n\n### Registrando Middleware\n```php\n// app/Http/Kernel.php\nprotected \$routeMiddleware = [\n    'auth' => \\App\\Http\\Middleware\\Authenticate::class,\n    'valid.token' => \\App\\Http\\Middleware\\EnsureTokenIsValid::class,\n];\n```\n\n### Usando em Rotas\n```php\n// Middleware único\nRoute::get('/admin', function () {\n    //\n})->middleware('auth');\n\n// Múltiplos middleware\nRoute::get('/admin', function () {\n    //\n})->middleware(['auth', 'valid.token']);\n```",
+
+            'validation' => "# Validation\n\n## Validação de Dados\n\nLaravel fornece várias abordagens para validar dados de entrada da aplicação.\n\n### Validação Básica\n```php\npublic function store(Request \$request)\n{\n    \$validated = \$request->validate([\n        'title' => 'required|unique:posts|max:255',\n        'body' => 'required',\n        'email' => 'required|email',\n        'age' => 'required|integer|min:18'\n    ]);\n\n    // Dados validados...\n}\n```\n\n### Form Request Classes\n```bash\nphp artisan make:request StorePostRequest\n```\n\n```php\n<?php\n\nnamespace App\\Http\\Requests;\n\nuse Illuminate\\Foundation\\Http\\FormRequest;\n\nclass StorePostRequest extends FormRequest\n{\n    public function authorize()\n    {\n        return true;\n    }\n\n    public function rules()\n    {\n        return [\n            'title' => 'required|unique:posts|max:255',\n            'body' => 'required',\n        ];\n    }\n\n    public function messages()\n    {\n        return [\n            'title.required' => 'O título é obrigatório.',\n            'body.required' => 'O conteúdo é obrigatório.',\n        ];\n    }\n}\n```\n\n### Regras Comuns\n```php\n'required'        // Campo obrigatório\n'email'          // Deve ser email válido\n'unique:table'   // Deve ser único na tabela\n'min:3'          // Mínimo 3 caracteres\n'max:255'        // Máximo 255 caracteres\n'integer'        // Deve ser inteiro\n'boolean'        // Deve ser boolean\n'date'           // Deve ser data válida\n```",
+
+            'migrations' => "# Database Migrations\n\n## O que são Migrations?\n\nMigrations são como controle de versão para o seu banco de dados, permitindo modificar e compartilhar o schema da aplicação.\n\n### Criando Migrations\n```bash\n# Nova tabela\nphp artisan make:migration create_users_table\n\n# Modificar tabela existente\nphp artisan make:migration add_email_to_users_table --table=users\n```\n\n### Estrutura de Migration\n```php\n<?php\n\nuse Illuminate\\Database\\Migrations\\Migration;\nuse Illuminate\\Database\\Schema\\Blueprint;\nuse Illuminate\\Support\\Facades\\Schema;\n\nreturn new class extends Migration\n{\n    public function up()\n    {\n        Schema::create('users', function (Blueprint \$table) {\n            \$table->id();\n            \$table->string('name');\n            \$table->string('email')->unique();\n            \$table->timestamp('email_verified_at')->nullable();\n            \$table->string('password');\n            \$table->rememberToken();\n            \$table->timestamps();\n        });\n    }\n\n    public function down()\n    {\n        Schema::dropIfExists('users');\n    }\n};\n```\n\n### Tipos de Coluna Comuns\n```php\n\$table->id();                     // Auto-incrementing ID\n\$table->string('name');           // VARCHAR\n\$table->text('description');      // TEXT\n\$table->integer('votes');         // INTEGER\n\$table->boolean('confirmed');     // BOOLEAN\n\$table->timestamps();             // created_at e updated_at\n\$table->foreignId('user_id');     // Foreign key\n```\n\n### Executando Migrations\n```bash\nphp artisan migrate              # Executar migrations\nphp artisan migrate:rollback     # Reverter último batch\nphp artisan migrate:reset        # Reverter todas\nphp artisan migrate:fresh        # Drop all tables e migrate\n```",
+
+            'artisan' => "# Artisan Commands\n\n## O que é Artisan?\n\nArtisan é a interface de linha de comando incluída no Laravel que fornece comandos úteis durante o desenvolvimento.\n\n### Comandos Comuns\n\n#### Criação de Arquivos\n```bash\nphp artisan make:controller UserController\nphp artisan make:model User\nphp artisan make:migration create_users_table\nphp artisan make:seeder UserSeeder\nphp artisan make:factory UserFactory\nphp artisan make:middleware AuthMiddleware\nphp artisan make:request StoreUserRequest\nphp artisan make:resource UserResource\n```\n\n#### Database\n```bash\nphp artisan migrate              # Executar migrations\nphp artisan migrate:fresh --seed # Fresh migrate com seeders\nphp artisan db:seed              # Executar seeders\nphp artisan tinker               # REPL interativo\n```\n\n#### Cache e Otimização\n```bash\nphp artisan cache:clear          # Limpar cache\nphp artisan config:clear         # Limpar cache de config\nphp artisan route:clear          # Limpar cache de rotas\nphp artisan view:clear           # Limpar cache de views\nphp artisan optimize             # Otimizar para produção\n```\n\n#### Servidor de Desenvolvimento\n```bash\nphp artisan serve                # Iniciar servidor dev\nphp artisan serve --port=8080    # Porta customizada\n```\n\n### Criando Comandos Customizados\n```bash\nphp artisan make:command SendEmails\n```\n\n```php\n<?php\n\nnamespace App\\Console\\Commands;\n\nuse Illuminate\\Console\\Command;\n\nclass SendEmails extends Command\n{\n    protected \$signature = 'email:send {user}';\n    protected \$description = 'Send email to user';\n\n    public function handle()\n    {\n        \$userId = \$this->argument('user');\n        \$this->info('Email sent to user ' . \$userId);\n    }\n}\n```"
+        ];
+
+        return $docs[$topico] ?? 'Documentação não encontrada.';
+    }
+
+    /**
      * Gera código de exemplo para um novo módulo
      */
     public function gerarExemplo(Request $request)

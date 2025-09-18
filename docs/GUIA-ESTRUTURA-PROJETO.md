@@ -1,4 +1,4 @@
-# Guia de Estrutura do Projeto - Sistema Legisinc
+# Guia de Estrutura do Projeto - Sistema Legisinc 
 
 ## 📁 Estrutura de Pastas do Projeto
 

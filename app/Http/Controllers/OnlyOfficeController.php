@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Proposicao;
 use App\Models\TipoProposicao;
+use App\Services\OnlyOffice\OnlyOfficeConversionService;
 use App\Services\OnlyOffice\OnlyOfficeService;
 use App\Services\Template\TemplateUniversalService;
 use Illuminate\Http\Request;
@@ -16,7 +17,8 @@ class OnlyOfficeController extends Controller
 {
     public function __construct(
         private OnlyOfficeService $onlyOfficeService,
-        private TemplateUniversalService $templateUniversalService
+        private TemplateUniversalService $templateUniversalService,
+        private OnlyOfficeConversionService $conversionService
     ) {}
 
     /**
@@ -24,9 +26,25 @@ class OnlyOfficeController extends Controller
      */
     public function editorLegislativo(Proposicao $proposicao)
     {
-        // Log temporariamente desabilitado por problemas de permissão
-        // Log::info('OnlyOffice Editor Access - Legislativo', ...);
-        
+        // 📝 LOG: Acesso ao editor OnlyOffice pelo Legislativo
+        \App\Helpers\ComprehensiveLogger::userClick('Legislativo acessou editor OnlyOffice', [
+            'acao' => 'abrir_editor_onlyoffice',
+            'user_type' => 'legislativo',
+            'proposicao_id' => $proposicao->id,
+            'proposicao_status' => $proposicao->status,
+            'proposicao_tipo' => $proposicao->tipo,
+            'proposicao_ementa' => $proposicao->ementa,
+            'autor_id' => $proposicao->autor_id,
+            'workflow_stage' => 'edicao_legislativo',
+            'onlyoffice_interaction' => [
+                'editor_type' => 'legislativo',
+                'document_key_generated' => true,
+                'callback_configured' => true,
+                'arquivo_existente' => !empty($proposicao->arquivo_path),
+                'template_id' => $proposicao->template_id
+            ]
+        ]);
+
         // Verificar permissões
         $user = Auth::user();
         
@@ -83,7 +101,7 @@ class OnlyOfficeController extends Controller
                 // Log temporariamente desabilitado
                 // Log::info('OnlyOffice Editor Legislativo: Usando template universal', ...);
                 
-                $config = $this->generateOnlyOfficeConfigWithUniversalTemplate($proposicao);
+                $config = $this->generateOnlyOfficeConfigWithUniversalTemplate($proposicao, 'legislativo');
             } else if ($proposicao->template_id && $proposicao->template) {
                 // Log temporariamente desabilitado
                 // Log::info('OnlyOffice Editor Legislativo: Usando template específico', ...);
@@ -273,11 +291,19 @@ class OnlyOfficeController extends Controller
      */
     public function downloadById(Request $request, $id)
     {
-        Log::info('OnlyOffice Download Request', [
+        // 🐳 LOG: Container OnlyOffice solicita download de documento
+        \App\Helpers\ComprehensiveLogger::onlyOfficeContainer('Container solicitou download de documento', [
             'proposicao_id' => $id,
-            'user_agent' => $request->header('User-Agent'),
-            'ip' => $request->ip(),
-            'from_container' => str_contains($request->ip(), '172.') || $request->ip() === 'onlyoffice'
+            'download_request' => [
+                'user_agent' => $request->header('User-Agent'),
+                'ip_address' => $request->ip(),
+                'from_container' => str_contains($request->ip(), '172.') || $request->ip() === 'onlyoffice',
+                'headers' => $request->headers->all(),
+                'parameters' => $request->all(),
+                'is_auth_request' => $request->hasHeader('Authorization'),
+                'timestamp' => now()->format('Y-m-d H:i:s.u')
+            ],
+            'workflow_stage' => 'download_documento'
         ]);
 
         // INTEGRAÇÃO: Priorizar arquivo salvo, depois Template Universal (conforme CLAUDE.md)
@@ -299,11 +325,17 @@ class OnlyOfficeController extends Controller
                 
                 foreach ($caminhosPossiveis as $caminho) {
                     if (file_exists($caminho)) {
-                        Log::info('OnlyOffice Download: Usando arquivo salvo existente', [
+                        // 🐳 LOG: Container encontrou arquivo salvo para download
+                        \App\Helpers\ComprehensiveLogger::onlyOfficeContainer('Container baixou arquivo RTF salvo', [
                             'proposicao_id' => $id,
-                            'arquivo_path' => $proposicao->arquivo_path,
-                            'caminho_completo' => $caminho,
-                            'tamanho_arquivo' => filesize($caminho)
+                            'arquivo_info' => [
+                                'arquivo_path' => $proposicao->arquivo_path,
+                                'caminho_completo' => $caminho,
+                                'tamanho_arquivo' => filesize($caminho),
+                                'modificado_em' => date('Y-m-d H:i:s', filemtime($caminho)),
+                                'tipo_arquivo' => 'arquivo_salvo_existente'
+                            ],
+                            'workflow_stage' => 'download_arquivo_salvo'
                         ]);
                         
                         // ✅ HEADERS ANTI-CACHE AGRESSIVOS (baseados no Template Universal)
@@ -346,19 +378,31 @@ class OnlyOfficeController extends Controller
                 : false;
             
             if ($deveUsarUniversal) {
-                Log::info('OnlyOffice Download: Usando template universal', [
+                // 🐳 LOG: Container recebendo template universal
+                \App\Helpers\ComprehensiveLogger::onlyOfficeContainer('Container baixou template universal gerado', [
                     'proposicao_id' => $id,
-                    'tipo_proposicao' => $tipoProposicao ? $tipoProposicao->nome : $proposicao->tipo
+                    'template_info' => [
+                        'tipo_template' => 'template_universal',
+                        'tipo_proposicao' => $tipoProposicao ? $tipoProposicao->nome : $proposicao->tipo,
+                        'servico_usado' => 'TemplateUniversalService'
+                    ],
+                    'workflow_stage' => 'download_template_universal'
                 ]);
-                
+
                 // Usar TemplateUniversalService para aplicar template
                 $rtfContent = $this->templateUniversalService->aplicarTemplateParaProposicao($proposicao);
             } else {
-                Log::info('OnlyOffice Download: Usando RTF básico/específico', [
+                // 🐳 LOG: Container recebendo RTF básico/específico
+                \App\Helpers\ComprehensiveLogger::onlyOfficeContainer('Container baixou RTF básico/específico', [
                     'proposicao_id' => $id,
-                    'template_id' => $proposicao->template_id
+                    'template_info' => [
+                        'tipo_template' => 'rtf_basico_especifico',
+                        'template_id' => $proposicao->template_id,
+                        'fallback_usado' => true
+                    ],
+                    'workflow_stage' => 'download_rtf_basico'
                 ]);
-                
+
                 // Fallback para RTF básico
                 $rtfContent = $this->gerarRTFTemplateUniversal($id);
             }
@@ -480,14 +524,18 @@ Este é um documento básico gerado pelo sistema.\par
      */
     public function download(Request $request, Proposicao $proposicao)
     {
-        // Log para debug
-        Log::info('OnlyOffice Download Request', [
+        // 🐳 LOG: Container OnlyOffice solicita download de documento específico
+        \App\Helpers\ComprehensiveLogger::onlyOfficeContainer('Container solicitou download de proposição específica', [
             'proposicao_id' => $proposicao->id,
-            'user_agent' => $request->header('User-Agent'),
-            'ip' => $request->ip(),
-            'has_token' => $request->has('token'),
-            'authenticated' => Auth::check() ? Auth::id() : 'not_authenticated',
-            'arquivo_path' => $proposicao->arquivo_path
+            'download_request' => [
+                'user_agent' => $request->header('User-Agent'),
+                'ip_address' => $request->ip(),
+                'has_token' => $request->has('token'),
+                'authenticated' => Auth::check() ? Auth::id() : 'not_authenticated',
+                'arquivo_path' => $proposicao->arquivo_path,
+                'proposicao_status' => $proposicao->status
+            ],
+            'workflow_stage' => 'download_proposicao_especifica'
         ]);
         
         // Verificar token para acesso sem autenticação (OnlyOffice)
@@ -515,11 +563,25 @@ Este é um documento básico gerado pelo sistema.\par
 
         // Usar o serviço para gerar o documento - com fallback em caso de erro
         try {
+            // 🐳 LOG: Container usando OnlyOfficeService para gerar documento
+            \App\Helpers\ComprehensiveLogger::onlyOfficeContainer('Container processando documento via OnlyOfficeService', [
+                'proposicao_id' => $proposicao->id,
+                'servico_usado' => 'OnlyOfficeService::gerarDocumentoProposicao',
+                'workflow_stage' => 'geracao_documento_servico'
+            ]);
+
             return $this->onlyOfficeService->gerarDocumentoProposicao($proposicao);
         } catch (\Exception $e) {
-            Log::error('Erro ao gerar documento da proposição, usando fallback RTF', [
+            // 🐳 LOG: Erro no serviço, usando fallback
+            \App\Helpers\ComprehensiveLogger::onlyOfficeContainer('Erro no OnlyOfficeService, usando fallback RTF', [
                 'proposicao_id' => $proposicao->id,
-                'error' => $e->getMessage()
+                'error_details' => [
+                    'message' => $e->getMessage(),
+                    'line' => $e->getLine(),
+                    'file' => basename($e->getFile())
+                ],
+                'fallback_usado' => true,
+                'workflow_stage' => 'fallback_documento'
             ]);
             
             // Fallback: criar documento RTF simples direto
@@ -585,32 +647,87 @@ Sistema funcionando!\par
     public function callback(Request $request, Proposicao $proposicao, string $documentKey)
     {
         $data = $request->all();
-        
-        Log::info('OnlyOffice callback received', [
+
+        // 🐳 LOG: Interação detalhada com container OnlyOffice
+        \App\Helpers\ComprehensiveLogger::onlyOfficeContainer('Callback recebido do container OnlyOffice', [
+            'timestamp' => now()->format('Y-m-d H:i:s.u'),
             'proposicao_id' => $proposicao->id,
             'document_key' => $documentKey,
-            'status' => $data['status'] ?? null,
-            'timestamp' => now()->format('Y-m-d H:i:s.u'),
-            'data' => $data
+            'callback_status' => $data['status'] ?? null,
+            'container_info' => [
+                'server_url' => config('onlyoffice.server_url'),
+                'internal_url' => config('onlyoffice.internal_url'),
+                'callback_from_ip' => $request->ip(),
+                'callback_headers' => $request->headers->all(),
+                'callback_method' => $request->method(),
+                'callback_url' => $request->fullUrl(),
+                'user_agent' => $request->header('User-Agent'),
+                'content_type' => $request->header('Content-Type'),
+            ],
+            'document_info' => [
+                'proposicao_status' => $proposicao->status,
+                'arquivo_path' => $proposicao->arquivo_path,
+                'pdf_path' => $proposicao->arquivo_pdf_path,
+                'onlyoffice_key' => $proposicao->onlyoffice_key,
+                'ultima_modificacao' => $proposicao->updated_at,
+                'rtf_exists' => !empty($proposicao->arquivo_path) && Storage::exists($proposicao->arquivo_path),
+                'rtf_size' => !empty($proposicao->arquivo_path) && Storage::exists($proposicao->arquivo_path)
+                    ? Storage::size($proposicao->arquivo_path) : 0,
+            ],
+            'callback_data' => $data,
+            'status_meaning' => $this->getStatusMeaning($data['status'] ?? 0)
         ]);
 
         try {
             // Status 2 = documento salvo e pronto para download
-            if (isset($data['status']) && $data['status'] == 2) {
+            // Status 6 = force save (força salvamento)
+            if (isset($data['status']) && in_array($data['status'], [2, 6])) {
+                $statusName = $data['status'] == 6 ? 'Force Save' : 'Document Ready';
+                Log::info("🔄 ONLYOFFICE CONTAINER: Iniciando processamento de salvamento (Status {$data['status']} - {$statusName})", [
+                    'proposicao_id' => $proposicao->id,
+                    'document_key' => $documentKey,
+                    'url_download' => $data['url'] ?? 'N/A',
+                    'changesurl' => $data['changesurl'] ?? 'N/A',
+                    'history' => $data['history'] ?? 'N/A',
+                    'users' => $data['users'] ?? 'N/A'
+                ]);
+
                 $callbackStart = microtime(true);
                 $resultado = $this->onlyOfficeService->processarCallbackProposicao($proposicao, $documentKey, $data);
                 $callbackTime = microtime(true) - $callbackStart;
-                
+
                 // ✅ LIMPAR CACHE após salvamento para forçar refresh
                 $this->clearProposicaoCache($proposicao);
-                
-                Log::info('OnlyOffice callback processamento concluído', [
+
+                // 🔔 Marcar callback de force save se aplicável
+                if ($data['status'] == 6) {
+                    $this->conversionService->markForceSaveCallbackReceived($proposicao, $data);
+                    Log::info('🔔 FORCE SAVE CALLBACK: Marcado no cache para conversão PDF', [
+                        'proposicao_id' => $proposicao->id,
+                        'callback_status' => $data['status'],
+                        'document_key' => $documentKey
+                    ]);
+                }
+
+                Log::info('✅ ONLYOFFICE CONTAINER: Processamento de salvamento concluído', [
                     'proposicao_id' => $proposicao->id,
                     'callback_time_seconds' => round($callbackTime, 2),
                     'success' => !isset($resultado['error']) || $resultado['error'] == 0,
-                    'resultado' => $resultado
+                    'resultado' => $resultado,
+                    'container_response_to_laravel' => [
+                        'error_code' => $resultado['error'] ?? 'unknown',
+                        'file_downloaded' => isset($data['url']),
+                        'file_processed' => $callbackTime < 30, // Considera sucesso se processou em menos de 30s
+                        'cache_cleared' => true
+                    ]
                 ]);
             } else {
+                Log::info('🔄 ONLYOFFICE CONTAINER: Status não requer processamento', [
+                    'proposicao_id' => $proposicao->id,
+                    'status' => $data['status'] ?? 'unknown',
+                    'status_meaning' => $this->getStatusMeaning($data['status'] ?? 0),
+                    'action_taken' => 'none'
+                ]);
                 $resultado = ['error' => 0];
             }
             
@@ -633,26 +750,43 @@ Sistema funcionando!\par
     public function forceSave(Request $request, Proposicao $proposicao)
     {
         try {
-            // Log da tentativa de force save
-            // Log::info('Force save solicitado', [
-                //     'proposicao_id' => $proposicao->id,
-                //     'document_key' => $request->input('document_key')
-            // ]);
-            
+            // 🐳 LOG: Container OnlyOffice força salvamento
+            \App\Helpers\ComprehensiveLogger::onlyOfficeContainer('Container solicitou force save', [
+                'proposicao_id' => $proposicao->id,
+                'force_save_request' => [
+                    'document_key' => $request->input('document_key'),
+                    'user_id' => Auth::id(),
+                    'ip_address' => $request->ip(),
+                    'timestamp' => now()->format('Y-m-d H:i:s.u')
+                ],
+                'proposicao_info' => [
+                    'status_antes' => $proposicao->status,
+                    'arquivo_path' => $proposicao->arquivo_path,
+                    'updated_at_antes' => $proposicao->updated_at
+                ],
+                'workflow_stage' => 'force_save'
+            ]);
+
             // Marcar a proposição como salva recentemente
             $proposicao->touch(); // Atualiza updated_at
-            
+
             return response()->json([
                 'success' => true,
                 'message' => 'Salvamento forçado iniciado',
                 'proposicao_id' => $proposicao->id
             ]);
         } catch (\Exception $e) {
-            // Log::error('Erro no force save', [
-                //     'proposicao_id' => $proposicao->id,
-                //     'error' => $e->getMessage()
-            // ]);
-            
+            // 🐳 LOG: Erro no force save
+            \App\Helpers\ComprehensiveLogger::onlyOfficeContainer('Erro no force save', [
+                'proposicao_id' => $proposicao->id,
+                'error_details' => [
+                    'message' => $e->getMessage(),
+                    'line' => $e->getLine(),
+                    'file' => basename($e->getFile())
+                ],
+                'workflow_stage' => 'force_save_erro'
+            ]);
+
             return response()->json([
                 'success' => false,
                 'message' => 'Erro ao forçar salvamento'
@@ -665,15 +799,28 @@ Sistema funcionando!\par
      */
     public function editorParlamentar(Proposicao $proposicao, Request $request)
     {
-        // Log do acesso
-        Log::info('OnlyOffice Editor Access - Parlamentar', [
-            'user_id' => Auth::id(),
+        // 📝 LOG: Acesso ao editor OnlyOffice pelo Parlamentar
+        \App\Helpers\ComprehensiveLogger::userClick('Parlamentar acessou editor OnlyOffice', [
+            'acao' => 'abrir_editor_onlyoffice',
+            'user_type' => 'parlamentar',
             'proposicao_id' => $proposicao->id,
-            'ai_content' => $request->has('ai_content'),
-            'manual_content' => $request->has('manual_content'),
             'proposicao_status' => $proposicao->status,
-            'proposicao_conteudo_length' => strlen($proposicao->conteudo ?? ''),
-            'proposicao_conteudo_preview' => $proposicao->conteudo ? substr($proposicao->conteudo, 0, 100) : 'VAZIO'
+            'proposicao_tipo' => $proposicao->tipo,
+            'proposicao_ementa' => $proposicao->ementa,
+            'workflow_stage' => 'edicao_parlamentar',
+            'parametros_edicao' => [
+                'ai_content' => $request->has('ai_content'),
+                'manual_content' => $request->has('manual_content'),
+                'conteudo_length' => strlen($proposicao->conteudo ?? ''),
+                'tem_conteudo' => !empty($proposicao->conteudo),
+                'eh_autor' => $proposicao->autor_id === Auth::id()
+            ],
+            'onlyoffice_interaction' => [
+                'editor_type' => 'parlamentar',
+                'arquivo_existente' => !empty($proposicao->arquivo_path),
+                'template_id' => $proposicao->template_id,
+                'forcar_regeneracao' => $request->has('ai_content') || $request->has('manual_content')
+            ]
         ]);
         
         $user = Auth::user();
@@ -781,7 +928,7 @@ Sistema funcionando!\par
         
         if ($temArquivoSalvo) {
             // PRIORIDADE 1: Usar arquivo salvo existente
-            $config = $this->generateOnlyOfficeConfigWithUniversalTemplate($proposicao);
+            $config = $this->generateOnlyOfficeConfigWithUniversalTemplate($proposicao, 'parlamentar');
         } else {
             $deveUsarUniversal = $tipoProposicao 
                 ? $this->templateUniversalService->deveUsarTemplateUniversal($tipoProposicao)
@@ -795,7 +942,7 @@ Sistema funcionando!\par
                 ]);
                 
                 // PRIORIDADE 2: Usar template universal quando não há arquivo salvo
-                $config = $this->generateOnlyOfficeConfigWithUniversalTemplate($proposicao);
+                $config = $this->generateOnlyOfficeConfigWithUniversalTemplate($proposicao, 'parlamentar');
             } else if ($proposicao->template_id && $proposicao->template) {
                 Log::info('OnlyOffice Editor: Usando template específico', [
                     'proposicao_id' => $proposicao->id,
@@ -868,7 +1015,7 @@ Sistema funcionando!\par
     /**
      * Gerar configuração OnlyOffice usando Template Universal
      */
-    private function generateOnlyOfficeConfigWithUniversalTemplate(Proposicao $proposicao)
+    private function generateOnlyOfficeConfigWithUniversalTemplate(Proposicao $proposicao, $userType = 'legislativo')
     {
         // ✅ LÓGICA INTELIGENTE DE DOCUMENT_KEY (baseada no Template Universal)
         $documentKey = $this->generateIntelligentDocumentKey($proposicao);
@@ -893,12 +1040,19 @@ Sistema funcionando!\par
         if (config('app.env') === 'local') {
             $documentUrl = str_replace('localhost:8001', 'legisinc-app:80', $documentUrl);
         }
-        
-        $callbackUrl = route('api.onlyoffice.callback.legislativo', [
-            'proposicao' => $proposicao,
-            'documentKey' => $documentKey
-        ]);
-        
+
+        // Usar callback específico baseado no tipo de usuário
+        if ($userType === 'parlamentar') {
+            $callbackUrl = route('api.onlyoffice.callback.proposicao', [
+                'proposicao' => $proposicao
+            ]);
+        } else {
+            $callbackUrl = route('api.onlyoffice.callback.legislativo', [
+                'proposicao' => $proposicao,
+                'documentKey' => $documentKey
+            ]);
+        }
+
         // Ajustar URL para comunicação entre containers
         if (config('app.env') === 'local') {
             $callbackUrl = str_replace(['http://localhost:8001', 'http://127.0.0.1:8001'], 'http://legisinc-app', $callbackUrl);
@@ -982,36 +1136,59 @@ Sistema funcionando!\par
      */
     private function generateIntelligentDocumentKey(Proposicao $proposicao): string
     {
-        // ✅ DOCUMENT KEY DETERMINÍSTICO: Baseado no conteúdo, não no tempo
-        // Isso garante que o mesmo conteúdo sempre gere a mesma key
-        // evitando regeneração desnecessária no OnlyOffice
-        
-        // Hash baseado no conteúdo e arquivo_path para detectar mudanças
-        $contentForHash = ($proposicao->conteudo ?? '') . 
-                         ($proposicao->arquivo_path ?? '') . 
-                         ($proposicao->ementa ?? '') .
-                         ($proposicao->updated_at ? $proposicao->updated_at->timestamp : '');
-        
-        $currentContentHash = md5($contentForHash);
-        $hashSuffix = substr($currentContentHash, 0, 8);
-        
-        // Key determinística que só muda quando o conteúdo muda
+        // ✅ DOCUMENT KEY ESTÁVEL: Baseado apenas no ID e data de criação
+        // Isso permite continuidade da sessão OnlyOffice entre Parlamentar e Legislativo
+        // A key só muda quando a proposição é recriada, não a cada edição
+
+        // Se já existe uma chave OnlyOffice salva, usar ela para manter sessão
+        if (!empty($proposicao->onlyoffice_key)) {
+            return $proposicao->onlyoffice_key;
+        }
+
+        // Hash baseado em dados imutáveis da proposição
+        $stableData = $proposicao->id . '|' .
+                     ($proposicao->created_at ? $proposicao->created_at->timestamp : '0') . '|' .
+                     ($proposicao->autor_id ?? '0');
+
+        $stableHash = md5($stableData);
+        $hashSuffix = substr($stableHash, 0, 8);
+
+        // Key estável que não muda com edições de conteúdo
         $documentKey = "proposicao_{$proposicao->id}_{$hashSuffix}";
-        
-        // Log removido para evitar problemas de permissão
-        // Log::info('Document key inteligente gerada', ...);
-        
+
+        // Salvar a chave na proposição para garantir consistência
+        $proposicao->update(['onlyoffice_key' => $documentKey]);
+
         return $documentKey;
     }
 
     /**
      * Limpar cache da proposição após salvamento (versão sem cache)
      */
+    /**
+     * Obter significado dos status do OnlyOffice para logs detalhados
+     */
+    private function getStatusMeaning(int $status): string
+    {
+        $meanings = [
+            0 => 'NotFound - Documento não encontrado',
+            1 => 'Editing - Documento sendo editado',
+            2 => 'MustSave - Documento salvo e pronto para download',
+            3 => 'Corrupted - Documento corrompido',
+            4 => 'Closed - Documento fechado sem alterações',
+            5 => 'ForceSave - Salvamento forçado em andamento',
+            6 => 'ForceSaveReady - Force save concluído, documento salvo',
+            7 => 'MustForceSave - Deve forçar salvamento'
+        ];
+
+        return $meanings[$status] ?? "Unknown status: {$status}";
+    }
+
     private function clearProposicaoCache(Proposicao $proposicao): void
     {
         // Versão sem cache - apenas atualizar timestamp para forçar nova document key
         $proposicao->touch();
-        
+
         // Log removido para evitar problemas de permissão
         // Log::info('Proposição atualizada após salvamento', ...);
     }

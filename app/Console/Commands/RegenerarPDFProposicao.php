@@ -50,7 +50,7 @@ class RegenerarPDFProposicao extends Command
             // Regenerar PDF
             $this->info('Iniciando regeneração do PDF...');
             $assinaturaController = app(ProposicaoAssinaturaController::class);
-            $assinaturaController->regenerarPDFSimplificado($proposicao);
+            $assinaturaController->regenerarPDFAtualizado($proposicao);
 
             $this->info('✅ PDF regenerado com sucesso!');
             $this->info('Caminho: '.($proposicao->arquivo_pdf_path ?? 'N/A'));

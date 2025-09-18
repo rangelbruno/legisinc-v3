@@ -1,6 +1,7 @@
 *.log
 .DS_Store
 .env
+.env.local
 .env.backup
 .env.production
 .phpactor.json
@@ -24,3 +25,12 @@ Homestead.yaml
 Thumbs.db
 /storage/backups/dados-criticos*.json
 /storage/backups/*latest*.json
+
+# IDE and development tools
+.claude
+.cursor
+.playwright-mcp
+.mcp.json
+CLAUDE.md
+tests
+mcp

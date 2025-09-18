@@ -1,0 +1,213 @@
+# Queries customizadas para monitoramento do PostgreSQL LegisInc
+# Este arquivo define métricas específicas para o contexto da aplicação
+
+pg_replication:
+  query: "SELECT CASE WHEN NOT pg_is_in_recovery() THEN 0 ELSE GREATEST (0, EXTRACT(EPOCH FROM (now() - pg_last_xact_replay_timestamp()))) END AS lag"
+  master: true
+  metrics:
+    - lag:
+        usage: "GAUGE"
+        description: "Replication lag behind master in seconds"
+
+pg_postmaster:
+  query: "SELECT pg_postmaster_start_time as start_time_seconds from pg_postmaster_start_time()"
+  master: true
+  metrics:
+    - start_time_seconds:
+        usage: "GAUGE"
+        description: "Time at which postmaster started"
+
+pg_stat_user_tables:
+  query: |
+    SELECT
+      current_database() datname,
+      schemaname,
+      relname,
+      seq_scan,
+      seq_tup_read,
+      idx_scan,
+      idx_tup_fetch,
+      n_tup_ins,
+      n_tup_upd,
+      n_tup_del,
+      n_tup_hot_upd,
+      n_live_tup,
+      n_dead_tup,
+      n_mod_since_analyze,
+      COALESCE(last_vacuum, '1970-01-01Z') as last_vacuum,
+      COALESCE(last_autovacuum, '1970-01-01Z') as last_autovacuum,
+      COALESCE(last_analyze, '1970-01-01Z') as last_analyze,
+      COALESCE(last_autoanalyze, '1970-01-01Z') as last_autoanalyze,
+      vacuum_count,
+      autovacuum_count,
+      analyze_count,
+      autoanalyze_count
+    FROM pg_stat_user_tables
+  metrics:
+    - datname:
+        usage: "LABEL"
+        description: "Name of current database"
+    - schemaname:
+        usage: "LABEL"
+        description: "Name of the schema that this table is in"
+    - relname:
+        usage: "LABEL"
+        description: "Name of this table"
+    - seq_scan:
+        usage: "COUNTER"
+        description: "Number of sequential scans initiated on this table"
+    - seq_tup_read:
+        usage: "COUNTER"
+        description: "Number of live rows fetched by sequential scans"
+    - idx_scan:
+        usage: "COUNTER"
+        description: "Number of index scans initiated on this table"
+    - idx_tup_fetch:
+        usage: "COUNTER"
+        description: "Number of live rows fetched by index scans"
+    - n_tup_ins:
+        usage: "COUNTER"
+        description: "Number of rows inserted"
+    - n_tup_upd:
+        usage: "COUNTER"
+        description: "Number of rows updated"
+    - n_tup_del:
+        usage: "COUNTER"
+        description: "Number of rows deleted"
+    - n_tup_hot_upd:
+        usage: "COUNTER"
+        description: "Number of rows HOT updated (i.e., with no separate index update required)"
+    - n_live_tup:
+        usage: "GAUGE"
+        description: "Estimated number of live rows"
+    - n_dead_tup:
+        usage: "GAUGE"
+        description: "Estimated number of dead rows"
+    - n_mod_since_analyze:
+        usage: "GAUGE"
+        description: "Estimated number of rows changed since last analyze"
+    - last_vacuum:
+        usage: "GAUGE"
+        description: "Last time at which this table was manually vacuumed (not counting VACUUM FULL)"
+    - last_autovacuum:
+        usage: "GAUGE"
+        description: "Last time at which this table was vacuumed by the autovacuum daemon"
+    - last_analyze:
+        usage: "GAUGE"
+        description: "Last time at which this table was manually analyzed"
+    - last_autoanalyze:
+        usage: "GAUGE"
+        description: "Last time at which this table was analyzed by the autovacuum daemon"
+    - vacuum_count:
+        usage: "COUNTER"
+        description: "Number of times this table has been manually vacuumed (not counting VACUUM FULL)"
+    - autovacuum_count:
+        usage: "COUNTER"
+        description: "Number of times this table has been vacuumed by the autovacuum daemon"
+    - analyze_count:
+        usage: "COUNTER"
+        description: "Number of times this table has been manually analyzed"
+    - autoanalyze_count:
+        usage: "COUNTER"
+        description: "Number of times this table has been analyzed by the autovacuum daemon"
+
+pg_statio_user_tables:
+  query: "SELECT current_database() datname, schemaname, relname, heap_blks_read, heap_blks_hit, idx_blks_read, idx_blks_hit, toast_blks_read, toast_blks_hit, tidx_blks_read, tidx_blks_hit FROM pg_statio_user_tables"
+  metrics:
+    - datname:
+        usage: "LABEL"
+        description: "Name of current database"
+    - schemaname:
+        usage: "LABEL"
+        description: "Name of the schema that this table is in"
+    - relname:
+        usage: "LABEL"
+        description: "Name of this table"
+    - heap_blks_read:
+        usage: "COUNTER"
+        description: "Number of disk blocks read from this table"
+    - heap_blks_hit:
+        usage: "COUNTER"
+        description: "Number of buffer hits in this table"
+    - idx_blks_read:
+        usage: "COUNTER"
+        description: "Number of disk blocks read from all indexes on this table"
+    - idx_blks_hit:
+        usage: "COUNTER"
+        description: "Number of buffer hits in all indexes on this table"
+    - toast_blks_read:
+        usage: "COUNTER"
+        description: "Number of disk blocks read from this table's TOAST table"
+    - toast_blks_hit:
+        usage: "COUNTER"
+        description: "Number of buffer hits in this table's TOAST table"
+    - tidx_blks_read:
+        usage: "COUNTER"
+        description: "Number of disk blocks read from this table's TOAST table indexes"
+    - tidx_blks_hit:
+        usage: "COUNTER"
+        description: "Number of buffer hits in this table's TOAST table indexes"
+
+# Métricas específicas do LegisInc
+legisinc_proposicoes:
+  query: |
+    SELECT
+      COUNT(*) as total_proposicoes,
+      COUNT(*) FILTER (WHERE created_at >= CURRENT_DATE) as proposicoes_hoje,
+      COUNT(*) FILTER (WHERE created_at >= CURRENT_DATE - INTERVAL '7 days') as proposicoes_semana,
+      COUNT(*) FILTER (WHERE status = 'ativo') as proposicoes_ativas
+    FROM proposicoes
+  metrics:
+    - total_proposicoes:
+        usage: "GAUGE"
+        description: "Total de proposições no sistema"
+    - proposicoes_hoje:
+        usage: "GAUGE"
+        description: "Proposições criadas hoje"
+    - proposicoes_semana:
+        usage: "GAUGE"
+        description: "Proposições criadas na última semana"
+    - proposicoes_ativas:
+        usage: "GAUGE"
+        description: "Proposições com status ativo"
+
+legisinc_usuarios:
+  query: |
+    SELECT
+      COUNT(*) as total_usuarios,
+      COUNT(*) FILTER (WHERE ativo = true) as usuarios_ativos,
+      COUNT(*) FILTER (WHERE last_login_at >= CURRENT_DATE - INTERVAL '7 days') as usuarios_ativos_semana,
+      COUNT(*) FILTER (WHERE created_at >= CURRENT_DATE - INTERVAL '30 days') as usuarios_novos_mes
+    FROM users
+  metrics:
+    - total_usuarios:
+        usage: "GAUGE"
+        description: "Total de usuários no sistema"
+    - usuarios_ativos:
+        usage: "GAUGE"
+        description: "Usuários com status ativo"
+    - usuarios_ativos_semana:
+        usage: "GAUGE"
+        description: "Usuários que fizeram login na última semana"
+    - usuarios_novos_mes:
+        usage: "GAUGE"
+        description: "Usuários criados no último mês"
+
+legisinc_documentos:
+  query: |
+    SELECT
+      COUNT(*) as total_documentos,
+      COUNT(*) FILTER (WHERE created_at >= CURRENT_DATE) as documentos_hoje,
+      AVG(EXTRACT(EPOCH FROM (updated_at - created_at))) as tempo_medio_processamento
+    FROM documentos
+    WHERE created_at IS NOT NULL
+  metrics:
+    - total_documentos:
+        usage: "GAUGE"
+        description: "Total de documentos no sistema"
+    - documentos_hoje:
+        usage: "GAUGE"
+        description: "Documentos criados hoje"
+    - tempo_medio_processamento:
+        usage: "GAUGE"
+        description: "Tempo médio de processamento de documentos em segundos"

@@ -125,6 +125,88 @@ class MonitoringController extends Controller
     }
 
     /**
+     * Limpar todos os logs
+     */
+    public function clearLogs(Request $request)
+    {
+        try {
+            // Verificar se o usuário tem permissão de administrador
+            if (!auth()->user()->hasRole('ADMIN')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Acesso negado. Apenas administradores podem limpar logs.'
+                ], 403);
+            }
+
+            // Contar logs antes da limpeza
+            $totalLogs = \DB::table('monitoring_logs')->count();
+
+            // Opção de limpeza seletiva por nível (opcional)
+            $level = $request->input('level');
+            $olderThan = $request->input('older_than'); // em dias
+
+            $query = \DB::table('monitoring_logs');
+
+            if ($level) {
+                $query->where('level', $level);
+            }
+
+            if ($olderThan) {
+                $query->where('created_at', '<', now()->subDays($olderThan));
+            }
+
+            $deletedCount = $query->delete();
+
+            // Log da ação de limpeza
+            \Log::info('🧹 ADMIN: Logs limpos pelo administrador', [
+                'admin_user_id' => auth()->id(),
+                'admin_email' => auth()->user()->email,
+                'total_logs_before' => $totalLogs,
+                'deleted_count' => $deletedCount,
+                'filter_level' => $level,
+                'filter_older_than_days' => $olderThan,
+                'ip_address' => $request->ip(),
+                'timestamp' => now()->toISOString()
+            ]);
+
+            $message = $deletedCount > 0
+                ? "✅ {$deletedCount} logs foram removidos com sucesso."
+                : "ℹ️ Nenhum log encontrado para remoção com os filtros aplicados.";
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => $message,
+                    'deleted_count' => $deletedCount,
+                    'total_before' => $totalLogs
+                ]);
+            }
+
+            return redirect()->route('admin.monitoring.logs')
+                ->with('success', $message);
+
+        } catch (\Exception $e) {
+            \Log::error('❌ ADMIN: Erro ao limpar logs', [
+                'admin_user_id' => auth()->id(),
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            $errorMessage = 'Erro ao limpar logs: ' . $e->getMessage();
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $errorMessage
+                ], 500);
+            }
+
+            return redirect()->route('admin.monitoring.logs')
+                ->with('error', $errorMessage);
+        }
+    }
+
+    /**
      * Configurações de alertas
      */
     public function alerts()

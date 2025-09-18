@@ -1,0 +1,106 @@
+# Configuração de Canary Deployment para Traefik
+# Controla % de tráfego para Nova API vs Laravel
+
+http:
+  routers:
+    # ====================================
+    # CANARY: /api/parlamentares/buscar
+    # ====================================
+    api-parlamentares-buscar:
+      rule: "PathPrefix(`/api/parlamentares/buscar`)"
+      entryPoints: ["web"]
+      priority: 100  # Alta prioridade para rota específica
+      middlewares:
+        - "canary-headers"
+        - "request-metrics"
+      service: "parlamentares-weighted"
+
+    # ====================================
+    # FALLBACK: Outras rotas para Laravel
+    # ====================================
+    api-fallback:
+      rule: "PathPrefix(`/api`)"
+      entryPoints: ["web"]
+      priority: 50   # Menor prioridade
+      middlewares:
+        - "canary-headers"
+        - "request-metrics"
+      service: "laravel-svc@docker"
+
+    # ====================================
+    # CATCH ALL: Tudo mais para Laravel
+    # ====================================
+    web-fallback:
+      rule: "HostRegexp(`{host:.+}`)"
+      entryPoints: ["web"]
+      priority: 1    # Menor prioridade
+      middlewares:
+        - "canary-headers"
+      service: "laravel-svc@docker"
+
+  services:
+    # ====================================
+    # WEIGHTED SERVICE - CANARY
+    # ====================================
+    parlamentares-weighted:
+      weighted:
+        services:
+          # CANARY: Nova API - começar com 1%
+          - name: "nova-api-svc@docker"
+            weight: 1
+
+          # STABLE: Laravel - 99% do tráfego
+          - name: "laravel-svc@docker"
+            weight: 99
+
+    # ====================================
+    # CIRCUIT BREAKER para Nova API
+    # ====================================
+    nova-api-circuit:
+      loadBalancer:
+        servers:
+          - url: "http://legisinc-nova-api:3001"
+        healthCheck:
+          path: "/health"
+          interval: "10s"
+          timeout: "3s"
+
+  middlewares:
+    # ====================================
+    # CANARY HEADERS
+    # ====================================
+    canary-headers:
+      headers:
+        customRequestHeaders:
+          X-Canary-Enabled: "true"
+          X-Request-ID: "{{.RequestID}}"
+        customResponseHeaders:
+          X-Canary-Version: "v2.0"
+          X-Backend: "mixed"
+
+    # ====================================
+    # REQUEST METRICS
+    # ====================================
+    request-metrics:
+      headers:
+        customRequestHeaders:
+          X-Trace-ID: "trace-{{.StartUTC}}"
+
+    # ====================================
+    # RATE LIMITING para Nova API
+    # ====================================
+    nova-api-rate-limit:
+      rateLimit:
+        average: 50   # Menor limite para canary
+        burst: 20
+        period: "1m"
+
+    # ====================================
+    # ERROR PAGES
+    # ====================================
+    error-pages:
+      errors:
+        status:
+          - "500-599"
+        service: "laravel-svc@docker"  # Fallback em caso de erro
+        query: "/error/{status}"

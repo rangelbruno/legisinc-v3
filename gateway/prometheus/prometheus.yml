@@ -1,0 +1,60 @@
+# Configuração do Prometheus para monitoramento do LegisInc
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  # ====================================
+  # TRAEFIK METRICS
+  # ====================================
+  - job_name: 'traefik'
+    static_configs:
+      - targets: ['legisinc-gateway-simple:8080']
+    metrics_path: /metrics
+    scrape_interval: 10s
+
+  # ====================================
+  # PROMETHEUS SELF-MONITORING
+  # ====================================
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # ====================================
+  # POSTGRESQL METRICS
+  # ====================================
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+    scrape_interval: 30s
+
+  # ====================================
+  # LARAVEL METRICS (futuro)
+  # ====================================
+  # - job_name: 'laravel'
+  #   static_configs:
+  #     - targets: ['app:80']
+  #   metrics_path: /metrics
+  #   scrape_interval: 30s
+
+  # ====================================
+  # ONLYOFFICE METRICS (futuro)
+  # ====================================
+  # - job_name: 'onlyoffice'
+  #   static_configs:
+  #     - targets: ['onlyoffice-documentserver:80']
+  #   metrics_path: /healthcheck
+  #   scrape_interval: 30s
+
+# ====================================
+# ALERTING RULES (futuro)
+# ====================================
+# rule_files:
+#   - "alert_rules.yml"
+
+# alerting:
+#   alertmanagers:
+#     - static_configs:
+#         - targets:
+#           - alertmanager:9093

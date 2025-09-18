@@ -31,16 +31,113 @@
             
             <!--begin::Alert-->
             <div class="alert alert-primary d-flex align-items-center p-5 mb-10">
-                <i class="ki-duotone ki-shield-tick fs-2hx text-primary me-4">
+                <i class="ki-duotone ki-code fs-2hx text-primary me-4">
                     <span class="path1"></span>
                     <span class="path2"></span>
+                    <span class="path3"></span>
+                    <span class="path4"></span>
                 </i>
                 <div class="d-flex flex-column">
-                    <h4 class="mb-1 text-primary">Bem-vindo ao Guia de Desenvolvimento!</h4>
-                    <span>Este guia interativo ajudará você a criar novos módulos seguindo as melhores práticas do sistema Legisinc.</span>
+                    <h4 class="mb-1 text-primary">Guia de Desenvolvimento - Sistema Legisinc</h4>
+                    <span>Documentação completa para criar features, correções e módulos seguindo os padrões estabelecidos. <strong>Laravel + Vue.js + PostgreSQL + OnlyOffice.</strong></span>
                 </div>
             </div>
             <!--end::Alert-->
+
+            <!--begin::Quick Reference Cards-->
+            <div class="row g-5 mb-10">
+                <!--begin::Col-->
+                <div class="col-xl-3 col-lg-6">
+                    <div class="card card-flush h-100">
+                        <div class="card-body text-center pt-8">
+                            <div class="symbol symbol-60px mx-auto mb-4">
+                                <span class="symbol-label bg-light-primary">
+                                    <i class="ki-duotone ki-abstract-26 fs-2x text-primary">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                    </i>
+                                </span>
+                            </div>
+                            <h5 class="fw-bolder text-gray-800 mb-2">Layout Padrão</h5>
+                            <div class="text-muted fs-7 mb-3">Use sempre</div>
+                            <code class="bg-light p-2 rounded d-block">
+                                @@extends('components.layouts.app')
+                            </code>
+                        </div>
+                    </div>
+                </div>
+                <!--end::Col-->
+
+                <!--begin::Col-->
+                <div class="col-xl-3 col-lg-6">
+                    <div class="card card-flush h-100">
+                        <div class="card-body text-center pt-8">
+                            <div class="symbol symbol-60px mx-auto mb-4">
+                                <span class="symbol-label bg-light-success">
+                                    <i class="ki-duotone ki-folder fs-2x text-success">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                    </i>
+                                </span>
+                            </div>
+                            <h5 class="fw-bolder text-gray-800 mb-2">Controllers</h5>
+                            <div class="text-muted fs-7 mb-3">Organização por módulo</div>
+                            <code class="bg-light p-2 rounded d-block fs-7">
+                                app/Http/Controllers/Admin/<br>
+                                NomeController.php
+                            </code>
+                        </div>
+                    </div>
+                </div>
+                <!--end::Col-->
+
+                <!--begin::Col-->
+                <div class="col-xl-3 col-lg-6">
+                    <div class="card card-flush h-100">
+                        <div class="card-body text-center pt-8">
+                            <div class="symbol symbol-60px mx-auto mb-4">
+                                <span class="symbol-label bg-light-warning">
+                                    <i class="ki-duotone ki-route fs-2x text-warning">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                    </i>
+                                </span>
+                            </div>
+                            <h5 class="fw-bolder text-gray-800 mb-2">Rotas</h5>
+                            <div class="text-muted fs-7 mb-3">Agrupamento middleware</div>
+                            <code class="bg-light p-2 rounded d-block fs-7">
+                                Route::middleware(['auth'])<br>
+                                ->prefix('admin')
+                            </code>
+                        </div>
+                    </div>
+                </div>
+                <!--end::Col-->
+
+                <!--begin::Col-->
+                <div class="col-xl-3 col-lg-6">
+                    <div class="card card-flush h-100">
+                        <div class="card-body text-center pt-8">
+                            <div class="symbol symbol-60px mx-auto mb-4">
+                                <span class="symbol-label bg-light-info">
+                                    <i class="ki-duotone ki-security-user fs-2x text-info">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                    </i>
+                                </span>
+                            </div>
+                            <h5 class="fw-bolder text-gray-800 mb-2">Permissões</h5>
+                            <div class="text-muted fs-7 mb-3">Sistema integrado</div>
+                            <code class="bg-light p-2 rounded d-block fs-7">
+                                @@can('modulo.acao')<br>
+                                ScreenPermission::userCanAccess
+                            </code>
+                        </div>
+                    </div>
+                </div>
+                <!--end::Col-->
+            </div>
+            <!--end::Quick Reference Cards-->
 
             <!--begin::Row-->
             <div class="row g-5 g-xl-10">
@@ -254,12 +351,55 @@
             </div>
             <!--end::Generated Code Section-->
 
+            <!--begin::Commands Section-->
+            <div class="mt-10">
+                <!--begin::Card-->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">⚡ Comandos Essenciais do Projeto</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-5">
+                            <div class="col-md-6">
+                                <h5>🗄️ Banco de Dados</h5>
+                                <div class="bg-light p-4 rounded mb-3">
+                                    <code class="text-dark">docker exec -it legisinc-app php artisan migrate:safe --fresh --seed</code>
+                                    <div class="text-muted fs-7 mt-2">Migração segura com auto-correção v2.3</div>
+                                </div>
+
+                                <h5>🧹 Cache</h5>
+                                <div class="bg-light p-4 rounded mb-3">
+                                    <code class="text-dark">docker exec legisinc-app php artisan view:clear</code><br>
+                                    <code class="text-dark">docker exec legisinc-app php artisan config:clear</code>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <h5>🔧 Desenvolvimento</h5>
+                                <div class="bg-light p-4 rounded mb-3">
+                                    <code class="text-dark">php artisan make:controller Admin/NomeController</code><br>
+                                    <code class="text-dark">php artisan make:model Nome -m</code><br>
+                                    <code class="text-dark">php artisan make:seeder NomeSeeder</code>
+                                </div>
+
+                                <h5>🐳 Docker</h5>
+                                <div class="bg-light p-4 rounded">
+                                    <code class="text-dark">docker-compose up -d</code><br>
+                                    <code class="text-dark">docker exec -it legisinc-app bash</code>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!--end::Card-->
+            </div>
+            <!--end::Commands Section-->
+
             <!--begin::Steps Guide-->
             <div class="mt-10">
                 <!--begin::Card-->
                 <div class="card">
                     <div class="card-header">
-                        <h3 class="card-title">📚 Guia Passo a Passo</h3>
+                        <h3 class="card-title">📚 Passo a Passo para Criar Nova Feature</h3>
                     </div>
                     <div class="card-body">
                         <div class="accordion" id="accordionSteps">
@@ -277,18 +417,28 @@
                                 </h2>
                                 <div id="collapse1" class="accordion-collapse collapse show" data-bs-parent="#accordionSteps">
                                     <div class="accordion-body">
-                                        <p>Controllers processam requisições e retornam respostas. Localize em <code>app/Http/Controllers/</code></p>
-                                        
-                                        <div class="alert alert-info">
-                                            <strong>Dica:</strong> Use Resource Controllers para CRUDs: <code>php artisan make:controller NomeController --resource</code>
-                                        </div>
+                                        <p>No sistema Legisinc, organize controllers por módulo funcional:</p>
 
-                                        <h5>Organização:</h5>
-                                        <ul>
-                                            <li><code>Admin/</code> - Controllers administrativos</li>
-                                            <li><code>Api/</code> - Controllers para API REST</li>
-                                            <li><code>Parlamentar/</code> - Área dos parlamentares</li>
-                                        </ul>
+                                        <div class="row g-4">
+                                            <div class="col-md-6">
+                                                <h6>🏛️ Estrutura Padrão:</h6>
+                                                <ul>
+                                                    <li><code>Admin/</code> - Administração</li>
+                                                    <li><code>Parlamentar/</code> - Área parlamentar</li>
+                                                    <li><code>Protocolo/</code> - Protocolo</li>
+                                                    <li><code>Legislativo/</code> - Área legislativa</li>
+                                                    <li><code>OnlyOffice/</code> - Integração OnlyOffice</li>
+                                                </ul>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <h6>💡 Comando:</h6>
+                                                <div class="bg-light p-2 rounded">
+                                                    <code>php artisan make:controller Admin/NovoModuloController --resource</code>
+                                                </div>
+                                                <h6 class="mt-3">🔒 Middleware obrigatório:</h6>
+                                                <code>['auth', 'check.screen.permission']</code>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -308,15 +458,43 @@
                                 </h2>
                                 <div id="collapse2" class="accordion-collapse collapse" data-bs-parent="#accordionSteps">
                                     <div class="accordion-body">
-                                        <p>Models representam tabelas do banco. Crie em <code>app/Models/</code></p>
-                                        
-                                        <h5>Convenções:</h5>
-                                        <ul>
-                                            <li>Nome no singular (User, Proposicao)</li>
-                                            <li>Use <code>$fillable</code> para campos</li>
-                                            <li>Defina <code>$casts</code> para tipos</li>
-                                            <li>Implemente relacionamentos</li>
-                                        </ul>
+                                        <p>Models do Legisinc conectam com PostgreSQL. Siga as convenções:</p>
+
+                                        <div class="row g-4">
+                                            <div class="col-md-6">
+                                                <h6>📋 Convenções Obrigatórias:</h6>
+                                                <ul>
+                                                    <li>Nome singular: <code>Proposicao</code>, <code>User</code></li>
+                                                    <li>Use <code>$fillable</code> sempre</li>
+                                                    <li>Defina <code>$casts</code> para JSON/dates</li>
+                                                    <li>Implemente <code>$table</code> se necessário</li>
+                                                </ul>
+
+                                                <h6>🔗 Relacionamentos Comuns:</h6>
+                                                <ul>
+                                                    <li><code>belongsTo(User::class)</code> - autor_id</li>
+                                                    <li><code>hasMany()</code> - relacionamentos 1:N</li>
+                                                    <li><code>belongsToMany()</code> - pivot tables</li>
+                                                </ul>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <h6>💾 Database:</h6>
+                                                <div class="alert alert-info p-3">
+                                                    <strong>PostgreSQL 15.13</strong><br>
+                                                    Database: <code>legisinc</code><br>
+                                                    Host: <code>db</code> (Docker)<br>
+                                                    53 tabelas principais
+                                                </div>
+
+                                                <h6>⚙️ Exemplo Model:</h6>
+                                                <div class="bg-light p-2 rounded">
+                                                    <code class="fs-8">
+                                                        protected $fillable = ['nome', 'ativo'];<br>
+                                                        protected $casts = ['ativo' => 'boolean'];
+                                                    </code>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -418,10 +596,49 @@
                                 </h2>
                                 <div id="collapse6" class="accordion-collapse collapse" data-bs-parent="#accordionSteps">
                                     <div class="accordion-body">
-                                        <p>Adicione em <code>resources/views/components/layouts/aside.blade.php</code></p>
-                                        
-                                        <h5>Permissões:</h5>
-                                        <code>@@can('modulo.visualizar') ... @@endcan</code>
+                                        <div class="alert alert-danger p-3 mb-4">
+                                            <strong>⚠️ ATENÇÃO:</strong> Use o arquivo correto!<br>
+                                            <code>resources/views/components/layouts/aside/aside.blade.php</code><br>
+                                            <small>Não confunda com o aside.blade.php da raiz que é legado!</small>
+                                        </div>
+
+                                        <div class="row g-4">
+                                            <div class="col-md-6">
+                                                <h6>📍 Localização Correta:</h6>
+                                                <div class="bg-light p-3 rounded">
+                                                    <code class="text-success">✅ aside/aside.blade.php</code> - ATUAL<br>
+                                                    <code class="text-danger">❌ aside.blade.php</code> - LEGADO
+                                                </div>
+
+                                                <h6 class="mt-3">🔒 Verificação de Permissão:</h6>
+                                                <div class="bg-light p-2 rounded">
+                                                    <code class="fs-8">
+                                                        @@if(auth()->user()->isAdmin())<br>
+                                                        <!-- ou --><br>
+                                                        @@if(ScreenPermission::userCanAccessModule('nome'))
+                                                    </code>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <h6>🎯 Template Menu Item:</h6>
+                                                <div class="bg-light p-2 rounded">
+                                                    <code class="fs-8">
+                                                        &lt;div class="menu-item"&gt;<br>
+                                                        &nbsp;&nbsp;&lt;a class="menu-link &#123;&#123; request()-&gt;routeIs('admin.modulo.*') ? 'active' : '' &#125;&#125;"<br>
+                                                        &nbsp;&nbsp;&nbsp;&nbsp;href="&#123;&#123; route('admin.modulo.index') &#125;&#125;"&gt;<br>
+                                                        &nbsp;&nbsp;&nbsp;&nbsp;&lt;span class="menu-bullet"&gt;<br>
+                                                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;span class="bullet bullet-dot"&gt;&lt;/span&gt;<br>
+                                                        &nbsp;&nbsp;&nbsp;&nbsp;&lt;/span&gt;<br>
+                                                        &nbsp;&nbsp;&nbsp;&nbsp;&lt;span class="menu-title"&gt;Nome do Módulo&lt;/span&gt;<br>
+                                                        &nbsp;&nbsp;&lt;/a&gt;<br>
+                                                        &lt;/div&gt;
+                                                    </code>
+                                                </div>
+
+                                                <h6 class="mt-3">🧹 Após Editar:</h6>
+                                                <code>docker exec legisinc-app php artisan view:clear</code>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -740,10 +957,177 @@
             </div>
             <!--end::Case Study-->
 
+            <!--begin::Quick References-->
+            <div class="mt-10">
+                <!--begin::Card-->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">📖 Referências Rápidas e Links Úteis</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-5">
+                            <div class="col-md-4">
+                                <h5>📋 Documentação Interna</h5>
+                                <div class="d-flex flex-column gap-3">
+                                    <a href="{{ asset('docs/GUIA-ESTRUTURA-PROJETO.md') }}" target="_blank" class="btn btn-sm btn-light-primary">
+                                        📁 Estrutura do Projeto
+                                    </a>
+                                    <a href="{{ asset('docs/SOLUCAO-MENU-ASIDE-NAO-APARECE.md') }}" target="_blank" class="btn btn-sm btn-light-warning">
+                                        🚨 Solução Menu Aside
+                                    </a>
+                                    <a href="{{ route('admin.system-diagram.index') }}" class="btn btn-sm btn-light-info">
+                                        🏗️ Arquitetura do Sistema
+                                    </a>
+                                </div>
+
+                                <h5 class="mt-4">📖 Laravel Docs (MCP)</h5>
+                                <div class="alert alert-light-info p-2 mb-3">
+                                    <small class="text-info">
+                                        <strong>💡 MCP Laravel Boost:</strong> Consulta em tempo real a documentação oficial do Laravel.
+                                        Clique nos botões para ver exemplos práticos e referências atualizadas.
+                                    </small>
+                                </div>
+                                <div class="d-flex flex-column gap-2">
+                                    <button onclick="consultarLaravelDocs('routing')" class="btn btn-sm btn-light-success">
+                                        🛣️ Routing
+                                    </button>
+                                    <button onclick="consultarLaravelDocs('controllers')" class="btn btn-sm btn-light-success">
+                                        🎮 Controllers
+                                    </button>
+                                    <button onclick="consultarLaravelDocs('eloquent')" class="btn btn-sm btn-light-success">
+                                        🗄️ Eloquent ORM
+                                    </button>
+                                    <button onclick="consultarLaravelDocs('blade')" class="btn btn-sm btn-light-success">
+                                        🔧 Blade Templates
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <h5>⚙️ Ferramentas Admin</h5>
+                                <div class="d-flex flex-column gap-3">
+                                    <a href="{{ route('admin.database.index') }}" class="btn btn-sm btn-light-success">
+                                        🗄️ Banco de Dados
+                                    </a>
+                                    <a href="{{ route('admin.system-diagnostic.index') }}" class="btn btn-sm btn-light-info">
+                                        🔍 Diagnóstico Sistema
+                                    </a>
+                                    <a href="{{ route('admin.monitoring.index') }}" class="btn btn-sm btn-light-primary">
+                                        📊 Observabilidade
+                                    </a>
+                                </div>
+
+                                <h5 class="mt-4">📚 Docs Avançadas (MCP)</h5>
+                                <div class="d-flex flex-column gap-2">
+                                    <button onclick="consultarLaravelDocs('middleware')" class="btn btn-sm btn-light-info">
+                                        🛡️ Middleware
+                                    </button>
+                                    <button onclick="consultarLaravelDocs('validation')" class="btn btn-sm btn-light-info">
+                                        ✅ Validation
+                                    </button>
+                                    <button onclick="consultarLaravelDocs('migrations')" class="btn btn-sm btn-light-info">
+                                        🗃️ Migrations
+                                    </button>
+                                    <button onclick="consultarLaravelDocs('artisan')" class="btn btn-sm btn-light-info">
+                                        ⚡ Artisan Commands
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <h5>🛠️ Tecnologias Principais</h5>
+                                <div class="d-flex flex-column gap-2">
+                                    <div class="d-flex align-items-center">
+                                        <span class="badge badge-light-danger me-2">Laravel</span>
+                                        <span class="text-muted fs-7">Framework PHP v10+</span>
+                                    </div>
+                                    <div class="d-flex align-items-center">
+                                        <span class="badge badge-light-success me-2">Vue.js</span>
+                                        <span class="text-muted fs-7">Framework JavaScript v3</span>
+                                    </div>
+                                    <div class="d-flex align-items-center">
+                                        <span class="badge badge-light-primary me-2">PostgreSQL</span>
+                                        <span class="text-muted fs-7">Banco de dados v15.13</span>
+                                    </div>
+                                    <div class="d-flex align-items-center">
+                                        <span class="badge badge-light-warning me-2">OnlyOffice</span>
+                                        <span class="text-muted fs-7">Editor colaborativo</span>
+                                    </div>
+                                    <div class="d-flex align-items-center">
+                                        <span class="badge badge-light-info me-2">Docker</span>
+                                        <span class="text-muted fs-7">Containerização</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="separator my-6"></div>
+
+                        <div class="text-center">
+                            <h4 class="mb-3">🎯 Próximos Passos</h4>
+                            <p class="text-muted mb-4">
+                                Agora que você conhece a estrutura, use o gerador de código acima para criar seu primeiro módulo
+                                ou explore a documentação detalhada de cada componente.
+                            </p>
+                            <div class="d-flex justify-content-center gap-3">
+                                <a href="#module-generator-form" class="btn btn-primary">
+                                    🚀 Usar Gerador de Código
+                                </a>
+                                <a href="{{ route('admin.guia-desenvolvimento.biblioteca-digital') }}" class="btn btn-light-primary">
+                                    📚 Ver Exemplo Completo
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!--end::Card-->
+            </div>
+            <!--end::Quick References-->
+
         </div>
     </div>
     <!--end::Content-->
 </div>
+
+<!--begin::Laravel Docs Modal-->
+<div class="modal fade" id="laravelDocsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">
+                    <i class="ki-duotone ki-book fs-2 text-primary me-2">
+                        <span class="path1"></span>
+                        <span class="path2"></span>
+                        <span class="path3"></span>
+                        <span class="path4"></span>
+                    </i>
+                    Documentação Laravel
+                </h3>
+                <div class="btn btn-icon btn-sm btn-active-light-primary ms-2" data-bs-dismiss="modal">
+                    <i class="ki-duotone ki-cross fs-1">
+                        <span class="path1"></span>
+                        <span class="path2"></span>
+                    </i>
+                </div>
+            </div>
+            <div class="modal-body">
+                <div id="docsContent">
+                    <div class="d-flex justify-content-center align-items-center" style="min-height: 200px;">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Consultando documentação...</span>
+                        </div>
+                        <span class="ms-3">Consultando documentação oficial via MCP Laravel Boost...</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Fechar</button>
+                <a href="#" target="_blank" id="laravelDocsLink" class="btn btn-primary">
+                    📖 Ver na Documentação Oficial
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+<!--end::Laravel Docs Modal-->
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -840,6 +1224,130 @@ function copyToClipboard(elementId) {
     }).catch(err => {
         console.error('Erro ao copiar:', err);
     });
+}
+
+// Função para consultar documentação Laravel via MCP
+async function consultarLaravelDocs(topico) {
+    const modal = new bootstrap.Modal(document.getElementById('laravelDocsModal'));
+    const docsContent = document.getElementById('docsContent');
+    const docsLink = document.getElementById('laravelDocsLink');
+
+    // Resetar conteúdo e mostrar loading
+    docsContent.innerHTML = `
+        <div class="d-flex justify-content-center align-items-center" style="min-height: 200px;">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Consultando documentação...</span>
+            </div>
+            <span class="ms-3">Consultando documentação oficial via MCP Laravel Boost...</span>
+        </div>
+    `;
+
+    modal.show();
+
+    try {
+        // Consultar documentação via API
+        const response = await fetch('/admin/guia-desenvolvimento/consultar-docs', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            },
+            body: JSON.stringify({ topico: topico })
+        });
+
+        if (!response.ok) {
+            throw new Error('Erro ao consultar documentação');
+        }
+
+        const data = await response.json();
+
+        // Mapear URLs da documentação oficial
+        const docsUrls = {
+            'routing': 'https://laravel.com/docs/11.x/routing',
+            'controllers': 'https://laravel.com/docs/11.x/controllers',
+            'eloquent': 'https://laravel.com/docs/11.x/eloquent',
+            'blade': 'https://laravel.com/docs/11.x/blade',
+            'middleware': 'https://laravel.com/docs/11.x/middleware',
+            'validation': 'https://laravel.com/docs/11.x/validation',
+            'migrations': 'https://laravel.com/docs/11.x/migrations',
+            'artisan': 'https://laravel.com/docs/11.x/artisan'
+        };
+
+        // Atualizar link da documentação oficial
+        docsLink.href = docsUrls[topico] || 'https://laravel.com/docs';
+
+        // Exibir conteúdo formatado
+        docsContent.innerHTML = `
+            <div class="alert alert-primary d-flex align-items-center mb-4">
+                <i class="ki-duotone ki-information-5 fs-2x text-primary me-3">
+                    <span class="path1"></span>
+                    <span class="path2"></span>
+                    <span class="path3"></span>
+                </i>
+                <div>
+                    <h5 class="mb-1">📚 ${topico.charAt(0).toUpperCase() + topico.slice(1)}</h5>
+                    <span>Documentação oficial Laravel via MCP Laravel Boost</span>
+                </div>
+            </div>
+
+            <div class="bg-light p-4 rounded">
+                <pre class="mb-0" style="white-space: pre-wrap; font-family: 'Inter', sans-serif; font-size: 14px; line-height: 1.6;">
+${data.content || 'Documentação não disponível no momento.'}
+                </pre>
+            </div>
+
+            <div class="mt-4">
+                <div class="alert alert-light-success d-flex align-items-center">
+                    <i class="ki-duotone ki-check-circle fs-2x text-success me-3">
+                        <span class="path1"></span>
+                        <span class="path2"></span>
+                    </i>
+                    <div>
+                        <strong>Dica:</strong> Este conteúdo foi obtido em tempo real da documentação oficial do Laravel.
+                        Use o botão "Ver na Documentação Oficial" para acessar a versão completa.
+                    </div>
+                </div>
+            </div>
+        `;
+
+    } catch (error) {
+        console.error('Erro ao consultar documentação:', error);
+
+        // Mapear URLs da documentação oficial para fallback
+        const docsUrls = {
+            'routing': 'https://laravel.com/docs/11.x/routing',
+            'controllers': 'https://laravel.com/docs/11.x/controllers',
+            'eloquent': 'https://laravel.com/docs/11.x/eloquent',
+            'blade': 'https://laravel.com/docs/11.x/blade',
+            'middleware': 'https://laravel.com/docs/11.x/middleware',
+            'validation': 'https://laravel.com/docs/11.x/validation',
+            'migrations': 'https://laravel.com/docs/11.x/migrations',
+            'artisan': 'https://laravel.com/docs/11.x/artisan'
+        };
+
+        docsLink.href = docsUrls[topico] || 'https://laravel.com/docs';
+
+        docsContent.innerHTML = `
+            <div class="alert alert-warning d-flex align-items-center">
+                <i class="ki-duotone ki-information-5 fs-2x text-warning me-3">
+                    <span class="path1"></span>
+                    <span class="path2"></span>
+                    <span class="path3"></span>
+                </i>
+                <div>
+                    <h5 class="mb-1">⚠️ Serviço temporariamente indisponível</h5>
+                    <p class="mb-2">Não foi possível consultar a documentação via MCP Laravel Boost no momento.</p>
+                    <p class="mb-0">Use o botão "Ver na Documentação Oficial" para acessar diretamente a documentação do Laravel sobre <strong>${topico}</strong>.</p>
+                </div>
+            </div>
+
+            <div class="text-center mt-4">
+                <a href="${docsUrls[topico] || 'https://laravel.com/docs'}" target="_blank" class="btn btn-primary">
+                    📖 Acessar Documentação Oficial
+                </a>
+            </div>
+        `;
+    }
 }
 </script>
 @endsection

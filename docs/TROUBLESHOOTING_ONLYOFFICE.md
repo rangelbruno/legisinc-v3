@@ -1,4 +1,4 @@
-# Guia de Solução de Problemas - OnlyOffice Integration
+# Guia de Solução de Problemas - OnlyOffice Integration 
 
 Este documento descreve como diagnosticar e corrigir erros de comunicação com o OnlyOffice Document Server no sistema Legisinc.
 

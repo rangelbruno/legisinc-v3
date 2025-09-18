@@ -698,6 +698,33 @@
                             </a>
                         </div>
                         <div class="menu-item">
+                            <a class="menu-link {{ request()->routeIs('admin.arquitetura.*') ? 'active' : '' }}" href="{{ route('admin.arquitetura.index') }}">
+                                <span class="menu-bullet">
+                                    <span class="bullet bullet-dot"></span>
+                                </span>
+                                <span class="menu-title">Arquitetura Gateway</span>
+                                <span class="badge badge-light-warning badge-sm ms-auto">NOVO</span>
+                            </a>
+                        </div>
+                        <div class="menu-item">
+                            <a class="menu-link {{ request()->routeIs('admin.monitoramento.*') ? 'active' : '' }}" href="{{ route('admin.monitoramento.index') }}">
+                                <span class="menu-bullet">
+                                    <span class="bullet bullet-dot"></span>
+                                </span>
+                                <span class="menu-title">Monitoramento</span>
+                                <span class="badge badge-light-success badge-sm ms-auto">NOVO</span>
+                            </a>
+                        </div>
+                        <div class="menu-item">
+                            <a class="menu-link {{ request()->routeIs('admin.technical-doc.*') ? 'active' : '' }}" href="{{ route('admin.technical-doc.index') }}">
+                                <span class="menu-bullet">
+                                    <span class="bullet bullet-dot"></span>
+                                </span>
+                                <span class="menu-title">Documentação Técnica</span>
+                                <span class="badge badge-light-primary badge-sm ms-auto">NOVO</span>
+                            </a>
+                        </div>
+                        <div class="menu-item">
                             <a class="menu-link {{ request()->routeIs('admin.system-diagram.*') ? 'active' : '' }}" href="{{ route('admin.system-diagram.index') }}">
                                 <span class="menu-bullet">
                                     <span class="bullet bullet-dot"></span>
@@ -847,6 +874,15 @@
                                 </span>
                                 <span class="menu-title">Gerador de Módulos</span>
                                 <span class="badge badge-light-primary badge-sm ms-auto">NOVO</span>
+                            </a>
+                        </div>
+                        <div class="menu-item">
+                            <a class="menu-link {{ request()->routeIs('admin.guia-desenvolvimento.*') ? 'active' : '' }}" href="{{ route('admin.guia-desenvolvimento.index') }}">
+                                <span class="menu-bullet">
+                                    <span class="bullet bullet-dot"></span>
+                                </span>
+                                <span class="menu-title">🚀 Guia de Desenvolvimento</span>
+                                <span class="badge badge-light-warning badge-sm ms-auto">GUIA</span>
                             </a>
                         </div>
                         @endif

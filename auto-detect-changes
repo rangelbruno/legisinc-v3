@@ -1,4 +1,0 @@
-#!/bin/bash
-# Script para detectar alterações automaticamente
-echo "🔍 Detectando alterações automaticamente..."
-docker exec -it legisinc-app php artisan melhorias:generate --detect --create-seeder

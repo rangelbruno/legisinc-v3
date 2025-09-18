@@ -632,6 +632,14 @@ class ProposicaoAssinaturaController extends Controller
     public function regenerarPDFAtualizado(Proposicao $proposicao): void
     {
         try {
+            Log::info("🔄 REGENERAR PDF: Iniciando regeneração PDF preservando formatação OnlyOffice", [
+                'proposicao_id' => $proposicao->id,
+                'status' => $proposicao->status,
+                'arquivo_path' => $proposicao->arquivo_path,
+                'arquivo_pdf_path' => $proposicao->arquivo_pdf_path,
+                'timestamp' => now()
+            ]);
+
             error_log("PDF Assinatura: Regenerando PDF preservando formatação OnlyOffice para proposição {$proposicao->id}");
 
             // Gerar novo nome de arquivo com timestamp
@@ -656,6 +664,12 @@ class ProposicaoAssinaturaController extends Controller
                 // DETECTAR TIPO DE ARQUIVO E PROCESSAR ADEQUADAMENTE
                 if (strtolower($arquivoExtensao) === 'rtf') {
                     // ARQUIVO RTF (editado pelo Legislativo via OnlyOffice)
+                    Log::info('📄 REGENERAR PDF: Processando arquivo RTF editado pelo Legislativo', [
+                        'proposicao_id' => $proposicao->id,
+                        'arquivo_rtf' => $arquivoMaisRecente['path'],
+                        'origem' => 'OnlyOffice/Legislativo'
+                    ]);
+
                     error_log('PDF Assinatura: Processando arquivo RTF editado pelo Legislativo');
 
                     try {
@@ -667,11 +681,26 @@ class ProposicaoAssinaturaController extends Controller
                         if (! empty($conteudoExtraido) && strlen($conteudoExtraido) > 100) {
                             // Processar placeholders no conteúdo extraído
                             $conteudoProcessado = $this->processarPlaceholdersDocumento($conteudoExtraido, $proposicao);
+
+                            Log::info('✅ REGENERAR PDF: Conteúdo RTF processado com sucesso', [
+                                'proposicao_id' => $proposicao->id,
+                                'chars_extraidos' => strlen($conteudoExtraido),
+                                'chars_processados' => strlen($conteudoProcessado),
+                                'metodo_usado' => 'criarPDFComConteudoRTFProcessado',
+                                'fonte' => 'RTF do OnlyOffice/Legislativo'
+                            ]);
+
                             error_log('PDF Assinatura: Conteúdo com placeholders processados: '.strlen($conteudoProcessado).' caracteres');
 
                             // Criar PDF usando HTML com formatação do conteúdo RTF
                             $this->criarPDFComConteudoRTFProcessado($caminhoPdfAbsoluto, $proposicao, $conteudoProcessado);
                         } else {
+                            Log::warning('⚠️ REGENERAR PDF: RTF vazio ou muito pequeno - usando fallback', [
+                                'proposicao_id' => $proposicao->id,
+                                'chars_extraidos' => strlen($conteudoExtraido),
+                                'metodo_fallback' => 'criarPDFComMetodoHTML'
+                            ]);
+
                             error_log('PDF Assinatura: RTF vazio ou muito pequeno, usando método HTML genérico');
                             $this->criarPDFComMetodoHTML($caminhoPdfAbsoluto, $proposicao);
                         }
@@ -4370,12 +4399,43 @@ class ProposicaoAssinaturaController extends Controller
 
         // Conteúdo
         $html .= '<div class="content">';
-        if ($proposicao->conteudo) {
-            $conteudo = nl2br($proposicao->conteudo);
-            $html .= $conteudo;
+
+        // INTELIGENTE: Tentar usar conteúdo RTF se disponível, senão fallback para banco
+        $conteudo = null;
+
+        // 1. Tentar extrair de arquivo RTF mais recente (prioridade)
+        $arquivoMaisRecente = $this->encontrarArquivoMaisRecente($proposicao);
+        Log::info("📄 PDF gerarHTMLParaPDFComProtocolo: Arquivo mais recente = " . ($arquivoMaisRecente ? $arquivoMaisRecente['path'] : 'NULL'));
+
+        if ($arquivoMaisRecente && strtolower(pathinfo($arquivoMaisRecente['path'], PATHINFO_EXTENSION)) === 'rtf') {
+            Log::info("📄 PDF gerarHTMLParaPDFComProtocolo: Arquivo RTF encontrado - processando");
+            try {
+                $rtfContent = file_get_contents($arquivoMaisRecente['path']);
+                error_log("PDF gerarHTMLParaPDFComProtocolo: RTF lido - " . strlen($rtfContent) . " bytes");
+
+                $conteudoRTF = \App\Services\RTFTextExtractor::extract($rtfContent);
+                error_log("PDF gerarHTMLParaPDFComProtocolo: RTF extraído - " . strlen($conteudoRTF) . " chars");
+
+                if (!empty($conteudoRTF) && strlen($conteudoRTF) > 100) {
+                    $conteudo = $this->processarPlaceholdersDocumento($conteudoRTF, $proposicao);
+                    Log::info("📄 PDF gerarHTMLParaPDFComProtocolo: ✅ USANDO CONTEÚDO RTF EDITADO PELO LEGISLATIVO (" . strlen($conteudo) . " chars)");
+                } else {
+                    error_log("PDF gerarHTMLParaPDFComProtocolo: RTF muito pequeno ou vazio - usando fallback");
+                }
+            } catch (\Exception $e) {
+                error_log("PDF gerarHTMLParaPDFComProtocolo: ❌ ERRO ao processar RTF: " . $e->getMessage());
+            }
         } else {
-            $html .= 'Conteúdo da proposição será definido durante a edição.';
+            Log::info("📄 PDF gerarHTMLParaPDFComProtocolo: Nenhum arquivo RTF encontrado - usando fallback");
         }
+
+        // 2. Fallback para conteúdo do banco
+        if (empty($conteudo)) {
+            $conteudo = $proposicao->conteudo ?: 'Conteúdo da proposição será definido durante a edição.';
+            error_log("PDF: Usando conteúdo do banco de dados (fallback)");
+        }
+
+        $html .= nl2br($conteudo);
         $html .= '</div>';
 
         // Assinatura digital (se existir)

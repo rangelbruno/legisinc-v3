@@ -1,0 +1,199 @@
+# LegisInc v2 - Docker Compose com API Gateway
+# Este compose ESTENDE o docker-compose.yml existente
+# Uso: docker-compose -f docker-compose.yml -f docker-compose.gateway.yml up -d
+
+version: '3.8'
+
+services:
+  # =========================
+  # API GATEWAY (TRAEFIK)
+  # =========================
+  traefik:
+    image: traefik:v3.0
+    container_name: legisinc-gateway
+    restart: unless-stopped
+    command:
+      # Providers
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --providers.file.directory=/etc/traefik/dynamic
+      - --providers.file.watch=true
+
+      # API & Dashboard
+      - --api.dashboard=true
+      - --api.debug=true
+      - --api.insecure=true
+
+      # Entrypoints
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+
+      # Métricas
+      - --metrics.prometheus=true
+      - --metrics.prometheus.buckets=0.1,0.3,1.2,5.0
+
+      # Logs estruturados
+      - --accesslog=true
+      - --accesslog.format=json
+      - --accesslog.fields.defaultmode=keep
+      - --accesslog.fields.headers.defaultmode=keep
+
+      # Log level
+      - --log.level=INFO
+
+    ports:
+      - "8000:80"    # HTTP principal (evitar conflito com Apache)
+      - "8443:443"   # HTTPS (futuro)
+      - "8090:8080"  # Dashboard Traefik
+
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./gateway/traefik/dynamic:/etc/traefik/dynamic:ro
+
+    networks:
+      - legisinc_network
+
+    depends_on:
+      - app
+
+    labels:
+      # Dashboard do Traefik
+      - "traefik.enable=true"
+      - "traefik.http.routers.dashboard.rule=Host(`gateway.localhost`)"
+      - "traefik.http.routers.dashboard.service=api@internal"
+      - "traefik.http.routers.dashboard.entrypoints=web"
+
+      # Middlewares globais de segurança
+      - "traefik.http.middlewares.security-headers.headers.stsSeconds=31536000"
+      - "traefik.http.middlewares.security-headers.headers.contentTypeNosniff=true"
+      - "traefik.http.middlewares.security-headers.headers.frameDeny=true"
+      - "traefik.http.middlewares.security-headers.headers.customRequestHeaders.X-Forwarded-Proto=http"
+
+      # Rate limiting global
+      - "traefik.http.middlewares.rate-limit.ratelimit.average=100"
+      - "traefik.http.middlewares.rate-limit.ratelimit.burst=50"
+      - "traefik.http.middlewares.rate-limit.ratelimit.period=1m"
+
+  # =========================
+  # MODIFICAR APP LARAVEL
+  # =========================
+  app:
+    labels:
+      # Habilitar Traefik
+      - "traefik.enable=true"
+
+      # Rota principal (fallback para tudo)
+      - "traefik.http.routers.laravel.rule=HostRegexp(`{host:.+}`)"
+      - "traefik.http.routers.laravel.entrypoints=web"
+      - "traefik.http.routers.laravel.priority=1"
+      - "traefik.http.routers.laravel.service=laravel-svc"
+
+      # Configuração do service
+      - "traefik.http.services.laravel-svc.loadbalancer.server.port=80"
+      - "traefik.http.services.laravel-svc.loadbalancer.healthcheck.path=/health"
+      - "traefik.http.services.laravel-svc.loadbalancer.healthcheck.interval=10s"
+      - "traefik.http.services.laravel-svc.loadbalancer.healthcheck.timeout=3s"
+
+      # Middlewares
+      - "traefik.http.routers.laravel.middlewares=security-headers,rate-limit"
+
+    # Remover exposição de portas (agora vai pelo Traefik)
+    ports: []
+
+    # Adicionar endpoint de health check
+    environment:
+      - APP_ENV=local
+      - APP_DEBUG=true
+      - APP_URL=http://localhost  # Mudar para porta 80
+      - DB_CONNECTION=pgsql
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_DATABASE=legisinc
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=123456
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=null
+      - CACHE_DRIVER=redis
+      - SESSION_DRIVER=redis
+      - QUEUE_CONNECTION=redis
+
+  # =========================
+  # MODIFICAR ONLYOFFICE
+  # =========================
+  onlyoffice-documentserver:
+    labels:
+      # Rota específica para OnlyOffice
+      - "traefik.enable=true"
+      - "traefik.http.routers.onlyoffice.rule=PathPrefix(`/onlyoffice`) || PathPrefix(`/ds-vpath`)"
+      - "traefik.http.routers.onlyoffice.entrypoints=web"
+      - "traefik.http.routers.onlyoffice.priority=10"
+      - "traefik.http.routers.onlyoffice.service=onlyoffice-svc"
+      - "traefik.http.services.onlyoffice-svc.loadbalancer.server.port=80"
+
+      # Remover prefix /onlyoffice quando enviar para o container
+      - "traefik.http.routers.onlyoffice.middlewares=onlyoffice-stripprefix"
+      - "traefik.http.middlewares.onlyoffice-stripprefix.stripprefix.prefixes=/onlyoffice"
+
+    # Manter porta 8080 para acesso direto se necessário
+    ports:
+      - "8080:80"
+
+  # =========================
+  # PROMETHEUS (MÉTRICAS)
+  # =========================
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: legisinc-prometheus
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    volumes:
+      - ./gateway/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    networks:
+      - legisinc_network
+    depends_on:
+      - traefik
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.prometheus.rule=Host(`metrics.localhost`)"
+      - "traefik.http.routers.prometheus.entrypoints=web"
+      - "traefik.http.routers.prometheus.service=prometheus-svc"
+      - "traefik.http.services.prometheus-svc.loadbalancer.server.port=9090"
+
+  # =========================
+  # GRAFANA (DASHBOARDS)
+  # =========================
+  grafana:
+    image: grafana/grafana:latest
+    container_name: legisinc-grafana
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_INSTALL_PLUGINS=redis-datasource
+    volumes:
+      - ./gateway/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./gateway/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+      - grafana_data:/var/lib/grafana
+    networks:
+      - legisinc_network
+    depends_on:
+      - prometheus
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.grafana.rule=Host(`dashboard.localhost`)"
+      - "traefik.http.routers.grafana.entrypoints=web"
+      - "traefik.http.routers.grafana.service=grafana-svc"
+      - "traefik.http.services.grafana-svc.loadbalancer.server.port=3000"
+
+# Adicionar novos volumes
+volumes:
+  prometheus_data:
+  grafana_data:

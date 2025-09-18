@@ -34,7 +34,7 @@ O método `encontrarPDFMaisRecenteRobusta()` estava procurando PDFs em múltipla
 ### **Lógica Problemática Original**
 ```php
 // ❌ Buscava em múltiplos locais, incluindo dados antigos
-private function encontrarPDFMaisRecenteRobusta(Proposicao $proposicao): ?string
+private function encontrarPDFMaisRecenteRobusta(Proposicao $proposicao): ?string 
 {
     // 1. Diretório principal
     // 2. PDFs protocolados (ANTIGOS!)

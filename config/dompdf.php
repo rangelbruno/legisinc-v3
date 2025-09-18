@@ -135,7 +135,7 @@ return [
          *
          * @var bool
          */
-        'enable_font_subsetting' => true,
+        'enable_font_subsetting' => false,  // CRÍTICO: false para evitar fontes corrompidas "CCCCC"
 
         /**
          * The PDF rendering backend to use

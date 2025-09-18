@@ -241,6 +241,34 @@ class ProposicaoLegislativoController extends Controller
      */
     public function aprovar(Request $request, Proposicao $proposicao)
     {
+        // 🏛️ LOG: Início da aprovação pelo Legislativo
+        $user = Auth::user();
+        \App\Helpers\ComprehensiveLogger::legislativeApproval('Usuário legislativo iniciou processo de aprovação', [
+            'timestamp' => now()->toISOString(),
+            'user_id' => $user->id,
+            'user_email' => $user->email,
+            'user_roles' => $user->roles->pluck('name')->toArray(),
+            'proposicao_id' => $proposicao->id,
+            'proposicao_tipo' => $proposicao->tipo,
+            'proposicao_status_atual' => $proposicao->status,
+            'proposicao_autor' => $proposicao->autor->name ?? 'N/A',
+            'request_data' => $request->all(),
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->header('User-Agent'),
+            'session_id' => $request->session()->getId(),
+            'arquivo_atual' => $proposicao->arquivo_path,
+            'pdf_atual' => $proposicao->arquivo_pdf_path,
+            'pdf_gerado_em' => $proposicao->pdf_gerado_em,
+            'onlyoffice_info' => [
+                'document_key' => $proposicao->onlyoffice_document_key ?? 'N/A',
+                'rtf_exists' => !empty($proposicao->arquivo_path) && Storage::exists($proposicao->arquivo_path),
+                'rtf_size' => !empty($proposicao->arquivo_path) && Storage::exists($proposicao->arquivo_path)
+                    ? Storage::size($proposicao->arquivo_path) : 0,
+                'rtf_last_modified' => !empty($proposicao->arquivo_path) && Storage::exists($proposicao->arquivo_path)
+                    ? Storage::lastModified($proposicao->arquivo_path) : null
+            ]
+        ]);
+
         $request->validate([
             'parecer_tecnico' => 'required|string',
             'analise_constitucionalidade' => 'required|boolean',
@@ -250,18 +278,49 @@ class ProposicaoLegislativoController extends Controller
         ]);
 
         // Verificar se todas as análises foram aprovadas
-        if (!$request->analise_constitucionalidade || 
-            !$request->analise_juridicidade || 
-            !$request->analise_regimentalidade || 
+        if (!$request->analise_constitucionalidade ||
+            !$request->analise_juridicidade ||
+            !$request->analise_regimentalidade ||
             !$request->analise_tecnica_legislativa) {
-            
+
+            Log::warning('🚫 LEGISLATIVO APPROVAL: Aprovação rejeitada - análises técnicas incompletas', [
+                'proposicao_id' => $proposicao->id,
+                'user_id' => $user->id,
+                'analises_status' => [
+                    'constitucionalidade' => $request->analise_constitucionalidade,
+                    'juridicidade' => $request->analise_juridicidade,
+                    'regimentalidade' => $request->analise_regimentalidade,
+                    'tecnica_legislativa' => $request->analise_tecnica_legislativa
+                ]
+            ]);
+
             return response()->json([
                 'success' => false,
                 'message' => 'Todas as análises técnicas devem ser aprovadas para prosseguir.'
             ], 400);
         }
 
-        DB::transaction(function () use ($request, $proposicao) {
+        \App\Helpers\ComprehensiveLogger::legislativeApproval('Iniciando transação de aprovação', [
+            'proposicao_id' => $proposicao->id,
+            'pdf_sera_invalidado' => true,
+            'status_change' => $proposicao->status . ' -> aprovado',
+            'workflow_stage' => 'iniciando_transacao'
+        ]);
+
+        DB::transaction(function () use ($request, $proposicao, $user) {
+            Log::info('💾 LEGISLATIVO APPROVAL: Atualizando proposição com dados da aprovação', [
+                'proposicao_id' => $proposicao->id,
+                'user_id' => $user->id,
+                'old_status' => $proposicao->status,
+                'new_status' => 'aprovado',
+                'pdf_invalidation' => [
+                    'old_pdf_path' => $proposicao->arquivo_pdf_path,
+                    'old_pdf_generated' => $proposicao->pdf_gerado_em,
+                    'will_be_nullified' => true,
+                    'reason' => 'Forçar regeneração com conteúdo editado pelo Legislativo'
+                ]
+            ]);
+
             // 1. Atualizar status e dados da proposição
             $proposicao->update([
                 'status' => 'aprovado',
@@ -273,10 +332,28 @@ class ProposicaoLegislativoController extends Controller
                 'parecer_tecnico' => $request->parecer_tecnico,
                 'observacoes_internas' => $request->observacoes_internas,
                 'data_revisao' => now(),
+                // CRÍTICO: Invalidar PDF antigo para forçar regeneração com conteúdo editado pelo Legislativo
+                'arquivo_pdf_path' => null,
+                'pdf_gerado_em' => null,
+                'pdf_conversor_usado' => null,
+            ]);
+
+            Log::info('📄 LEGISLATIVO APPROVAL: Iniciando geração automática de PDF', [
+                'proposicao_id' => $proposicao->id,
+                'user_id' => $user->id,
+                'rtf_file_for_pdf' => $proposicao->arquivo_path,
+                'rtf_size' => !empty($proposicao->arquivo_path) && Storage::exists($proposicao->arquivo_path)
+                    ? Storage::size($proposicao->arquivo_path) : 0
             ]);
 
             // 2. GERAR PDF AUTOMATICAMENTE
             $this->gerarPDFAposAprovacao($proposicao);
+
+            Log::info('📝 LEGISLATIVO APPROVAL: Adicionando tramitação da aprovação', [
+                'proposicao_id' => $proposicao->id,
+                'user_id' => $user->id,
+                'tramitacao_tipo' => 'aprovacao_legislativo'
+            ]);
 
             // 3. Adicionar tramitação
             $proposicao->adicionarTramitacao(
@@ -286,6 +363,15 @@ class ProposicaoLegislativoController extends Controller
                 $request->parecer_tecnico
             );
         });
+
+        \App\Helpers\ComprehensiveLogger::legislativeApproval('Aprovação concluída com sucesso', [
+            'proposicao_id' => $proposicao->id,
+            'final_status' => 'aprovado',
+            'pdf_invalidated' => true,
+            'tramitacao_added' => true,
+            'next_step' => 'awaiting_signature',
+            'workflow_stage' => 'aprovacao_concluida'
+        ]);
 
         return response()->json([
             'success' => true,
@@ -298,8 +384,44 @@ class ProposicaoLegislativoController extends Controller
      */
     public function devolver(Request $request, Proposicao $proposicao)
     {
+        // 🏛️ LOG: Início da devolução pelo Legislativo
+        $user = Auth::user();
+        Log::info('🔄 LEGISLATIVO RETURN: Usuário legislativo iniciou devolução para correção', [
+            'timestamp' => now()->toISOString(),
+            'user_id' => $user->id,
+            'user_email' => $user->email,
+            'user_roles' => $user->roles->pluck('name')->toArray(),
+            'proposicao_id' => $proposicao->id,
+            'proposicao_tipo' => $proposicao->tipo,
+            'proposicao_status_atual' => $proposicao->status,
+            'proposicao_autor' => $proposicao->autor->name ?? 'N/A',
+            'request_data' => $request->all(),
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->header('User-Agent'),
+            'session_id' => $request->session()->getId(),
+            'motivo_devolucao' => $request->parecer_tecnico,
+            'observacoes_internas' => $request->observacoes_internas ?? 'N/A',
+            'arquivo_atual' => $proposicao->arquivo_path,
+            'pdf_atual' => $proposicao->arquivo_pdf_path,
+            'onlyoffice_info' => [
+                'document_key' => $proposicao->onlyoffice_document_key ?? 'N/A',
+                'rtf_exists' => !empty($proposicao->arquivo_path) && Storage::exists($proposicao->arquivo_path),
+                'rtf_size' => !empty($proposicao->arquivo_path) && Storage::exists($proposicao->arquivo_path)
+                    ? Storage::size($proposicao->arquivo_path) : 0
+            ]
+        ]);
+
         $request->validate([
             'parecer_tecnico' => 'required|string',
+        ]);
+
+        Log::info('💾 LEGISLATIVO RETURN: Atualizando status para devolução', [
+            'proposicao_id' => $proposicao->id,
+            'user_id' => $user->id,
+            'old_status' => $proposicao->status,
+            'new_status' => 'devolvido_correcao',
+            'parecer_tecnico_length' => strlen($request->parecer_tecnico),
+            'has_observacoes_internas' => !empty($request->observacoes_internas)
         ]);
 
         $proposicao->update([
@@ -310,12 +432,28 @@ class ProposicaoLegislativoController extends Controller
             'data_revisao' => now(),
         ]);
 
+        Log::info('📝 LEGISLATIVO RETURN: Adicionando tramitação da devolução', [
+            'proposicao_id' => $proposicao->id,
+            'user_id' => $user->id,
+            'tramitacao_tipo' => 'devolucao_correcao',
+            'status_transition' => 'em_revisao -> devolvido_correcao'
+        ]);
+
         $proposicao->adicionarTramitacao(
             'Proposição devolvida para correção',
             'em_revisao',
             'devolvido_correcao',
             $request->parecer_tecnico
         );
+
+        Log::info('✅ LEGISLATIVO RETURN: Devolução concluída com sucesso', [
+            'proposicao_id' => $proposicao->id,
+            'user_id' => $user->id,
+            'user_email' => $user->email,
+            'final_status' => 'devolvido_correcao',
+            'tramitacao_added' => true,
+            'next_step' => 'awaiting_author_correction'
+        ]);
 
         return response()->json([
             'success' => true,
