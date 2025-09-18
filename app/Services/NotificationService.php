@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\User;
 use App\Models\Proposicao;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 
 class NotificationService
 {
@@ -21,37 +22,42 @@ class NotificationService
             return [];
         }
 
-        $notifications = [];
+        // Cache de notificações por 30 segundos para evitar múltiplas queries em requisições próximas
+        $cacheKey = 'user_notifications_' . $user->id;
 
-        // Notificações para Parlamentar
-        if ($user->isParlamentar()) {
-            $notifications = array_merge($notifications, $this->getParlamentarNotifications($user));
-        }
+        return Cache::remember($cacheKey, 30, function () use ($user) {
+            $notifications = [];
 
-        // Notificações para Legislativo
-        if ($user->isLegislativo()) {
-            $notifications = array_merge($notifications, $this->getLegislativoNotifications($user));
-        }
-
-        // Notificações para Protocolo
-        if ($user->isProtocolo()) {
-            $notifications = array_merge($notifications, $this->getProtocoloNotifications($user));
-        }
-
-        // Notificações para Admin
-        if ($user->isAdmin()) {
-            $notifications = array_merge($notifications, $this->getAdminNotifications($user));
-        }
-
-        // Ordenar por prioridade e data
-        usort($notifications, function ($a, $b) {
-            if ($a['priority'] === $b['priority']) {
-                return strtotime($b['created_at']) - strtotime($a['created_at']);
+            // Notificações para Parlamentar
+            if ($user->isParlamentar()) {
+                $notifications = array_merge($notifications, $this->getParlamentarNotifications($user));
             }
-            return $this->getPriorityWeight($b['priority']) - $this->getPriorityWeight($a['priority']);
-        });
 
-        return $notifications;
+            // Notificações para Legislativo
+            if ($user->isLegislativo()) {
+                $notifications = array_merge($notifications, $this->getLegislativoNotifications($user));
+            }
+
+            // Notificações para Protocolo
+            if ($user->isProtocolo()) {
+                $notifications = array_merge($notifications, $this->getProtocoloNotifications($user));
+            }
+
+            // Notificações para Admin
+            if ($user->isAdmin()) {
+                $notifications = array_merge($notifications, $this->getAdminNotifications($user));
+            }
+
+            // Ordenar por prioridade e data
+            usort($notifications, function ($a, $b) {
+                if ($a['priority'] === $b['priority']) {
+                    return strtotime($b['created_at']) - strtotime($a['created_at']);
+                }
+                return $this->getPriorityWeight($b['priority']) - $this->getPriorityWeight($a['priority']);
+            });
+
+            return $notifications;
+        });
     }
 
     /**
@@ -68,28 +74,34 @@ class NotificationService
     public function hasUrgentNotifications(?User $user = null): bool
     {
         $notifications = $this->getNotificationsForUser($user);
-        
+
         foreach ($notifications as $notification) {
             if ($notification['priority'] === 'urgent') {
                 return true;
             }
         }
-        
+
         return false;
     }
 
     /**
      * Notificações específicas para Parlamentar
+     * OTIMIZADO: Reduz queries usando uma única query com múltiplos filtros
      */
     private function getParlamentarNotifications(User $user): array
     {
         $notifications = [];
 
-        // Proposições retornadas do legislativo (equivale a "para correção")
-        $proposicoesRetornadas = Proposicao::where('autor_id', $user->id)
-            ->where('status', 'retornado_legislativo')
-            ->count();
+        // OTIMIZAÇÃO: Fazer uma única query com group by para contar múltiplos status
+        $statusCounts = Proposicao::where('autor_id', $user->id)
+            ->selectRaw('status, COUNT(*) as count')
+            ->whereIn('status', ['retornado_legislativo', 'salvando'])
+            ->groupBy('status')
+            ->pluck('count', 'status')
+            ->toArray();
 
+        // Proposições retornadas do legislativo
+        $proposicoesRetornadas = $statusCounts['retornado_legislativo'] ?? 0;
         if ($proposicoesRetornadas > 0) {
             $notifications[] = [
                 'id' => 'proposicoes_retornadas',
@@ -105,11 +117,14 @@ class NotificationService
             ];
         }
 
-        // Proposições em processo de salvamento há mais de 1 dia
-        $proposicoesSalvando = Proposicao::where('autor_id', $user->id)
-            ->where('status', 'salvando')
-            ->where('updated_at', '<', now()->subDays(1))
-            ->count();
+        // Proposições em salvando há mais de 1 dia (use cache adicional para query complexa)
+        $cacheKeySalvando = 'proposicoes_salvando_antigas_' . $user->id;
+        $proposicoesSalvando = Cache::remember($cacheKeySalvando, 60, function () use ($user) {
+            return Proposicao::where('autor_id', $user->id)
+                ->where('status', 'salvando')
+                ->where('updated_at', '<', now()->subDays(1))
+                ->count();
+        });
 
         if ($proposicoesSalvando > 0) {
             $notifications[] = [
@@ -131,47 +146,54 @@ class NotificationService
 
     /**
      * Notificações específicas para Legislativo
+     * OTIMIZADO: Usando cache e queries agrupadas
      */
     private function getLegislativoNotifications(User $user): array
     {
         $notifications = [];
 
-        // Proposições enviadas ao legislativo (aguardando revisão)
-        $proposicoesParaRevisar = Proposicao::where('status', 'enviado_legislativo')
-            ->count();
+        // Cache para queries do legislativo (60 segundos)
+        $cacheLegislativo = 'legislativo_notifications_data';
 
-        if ($proposicoesParaRevisar > 0) {
+        $data = Cache::remember($cacheLegislativo, 60, function () {
+            // Uma única query para obter dados agregados
+            return [
+                'para_revisar' => Proposicao::where('status', 'enviado_legislativo')->count(),
+                'atrasadas' => Proposicao::where('status', 'enviado_legislativo')
+                    ->where('updated_at', '<', now()->subDays(3))
+                    ->count()
+            ];
+        });
+
+        // Proposições para revisão
+        if ($data['para_revisar'] > 0) {
             $notifications[] = [
                 'id' => 'proposicoes_revisar',
                 'type' => 'proposicao',
                 'title' => 'Proposições para Revisão',
-                'message' => "Existem {$proposicoesParaRevisar} proposição(ões) aguardando revisão legislativa",
+                'message' => "Existem {$data['para_revisar']} proposição(ões) aguardando revisão legislativa",
                 'icon' => 'ki-document',
                 'color' => 'primary',
                 'priority' => 'high',
                 'url' => route('proposicoes.legislativo.index'),
                 'created_at' => now()->toDateTimeString(),
-                'count' => $proposicoesParaRevisar
+                'count' => $data['para_revisar']
             ];
         }
 
-        // Proposições enviadas há mais de 3 dias (atrasadas)
-        $proposicoesAtrasadas = Proposicao::where('status', 'enviado_legislativo')
-            ->where('updated_at', '<', now()->subDays(3))
-            ->count();
-
-        if ($proposicoesAtrasadas > 0) {
+        // Proposições atrasadas
+        if ($data['atrasadas'] > 0) {
             $notifications[] = [
                 'id' => 'proposicoes_atrasadas',
                 'type' => 'proposicao',
                 'title' => 'Revisões Atrasadas',
-                'message' => "Existem {$proposicoesAtrasadas} proposição(ões) aguardando revisão há mais de 3 dias",
+                'message' => "Existem {$data['atrasadas']} proposição(ões) aguardando revisão há mais de 3 dias",
                 'icon' => 'ki-time',
                 'color' => 'warning',
                 'priority' => 'medium',
                 'url' => route('proposicoes.legislativo.index'),
                 'created_at' => now()->toDateTimeString(),
-                'count' => $proposicoesAtrasadas
+                'count' => $data['atrasadas']
             ];
         }
 
@@ -180,13 +202,16 @@ class NotificationService
 
     /**
      * Notificações específicas para Protocolo
+     * OTIMIZADO: Cache global para estatísticas
      */
     private function getProtocoloNotifications(User $user): array
     {
         $notifications = [];
 
-        // Para protocolo, vamos mostrar estatísticas gerais
-        $totalProposicoes = Proposicao::count();
+        // Cache global de estatísticas (5 minutos)
+        $totalProposicoes = Cache::remember('total_proposicoes_sistema', 300, function () {
+            return Proposicao::count();
+        });
 
         if ($totalProposicoes > 0) {
             $notifications[] = [
@@ -208,27 +233,38 @@ class NotificationService
 
     /**
      * Notificações específicas para Admin
+     * OTIMIZADO: Uma única query com cache
      */
     private function getAdminNotifications(User $user): array
     {
         $notifications = [];
 
-        // Estatísticas gerais do sistema
-        $totalProposicoes = Proposicao::count();
-        $proposicoesPendentes = Proposicao::whereIn('status', ['salvando', 'enviado_legislativo', 'retornado_legislativo'])->count();
+        // Cache de estatísticas do admin (2 minutos)
+        $cacheAdminStats = 'admin_system_stats';
 
-        if ($proposicoesPendentes > 0) {
+        $stats = Cache::remember($cacheAdminStats, 120, function () {
+            // Uma única query para obter estatísticas
+            $total = Proposicao::count();
+            $pendentes = Proposicao::whereIn('status', ['salvando', 'enviado_legislativo', 'retornado_legislativo'])->count();
+
+            return [
+                'total' => $total,
+                'pendentes' => $pendentes
+            ];
+        });
+
+        if ($stats['pendentes'] > 0) {
             $notifications[] = [
                 'id' => 'sistema_estatisticas',
                 'type' => 'system',
                 'title' => 'Visão Geral do Sistema',
-                'message' => "Sistema com {$totalProposicoes} proposições, sendo {$proposicoesPendentes} pendentes",
+                'message' => "Sistema com {$stats['total']} proposições, sendo {$stats['pendentes']} pendentes",
                 'icon' => 'ki-chart-line',
                 'color' => 'primary',
                 'priority' => 'low',
                 'url' => route('dashboard'),
                 'created_at' => now()->toDateTimeString(),
-                'count' => $proposicoesPendentes
+                'count' => $stats['pendentes']
             ];
         }
 
