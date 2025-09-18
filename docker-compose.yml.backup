@@ -1,0 +1,214 @@
+services:
+  # 1. Banco de Dados PostgreSQL (base da hierarquia)
+  db:
+    image: postgres:15-alpine
+    container_name: legisinc-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: legisinc
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 123456
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - legisinc_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # 2. Cache Redis (depende do banco)
+  redis:
+    image: redis:7-alpine
+    container_name: legisinc-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - legisinc_network
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # 3. OnlyOffice Document Server (depende do banco e redis)
+  onlyoffice-documentserver:
+    image: onlyoffice/documentserver:8.0
+    container_name: legisinc-onlyoffice
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      - JWT_ENABLED=false
+      - JWT_SECRET=${ONLYOFFICE_JWT_SECRET:-MySecretKey123}
+      - JWT_HEADER=Authorization
+      - JWT_IN_BODY=true
+      - WOPI_ENABLED=false
+      - USE_UNAUTHORIZED_STORAGE=true
+      - ALLOW_PRIVATE_IP_ADDRESS=true
+      - ALLOW_META_IP_ADDRESS=true
+      - ALLOW_PRIVATE_IP=true
+      - REQUEST_FILTERING_AGENT_SECRET_ENABLED=false
+      - DB_TYPE=postgres
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=legisinc
+      - DB_USER=postgres
+      - DB_PWD=123456
+      - REDIS_SERVER_HOST=redis
+      - REDIS_SERVER_PORT=6379
+      - DOCUMENT_SERVER_REGION=pt-BR
+      - DOCUMENT_SERVER_LOCALE=pt_BR.UTF-8
+      - LC_ALL=pt_BR.UTF-8
+      - LANG=pt_BR.UTF-8
+      - LANGUAGE=pt_BR:pt
+      - ONLYOFFICE_DOCSERV_LANG=pt-BR
+      - ONLYOFFICE_DOCSERV_LOCALE=pt_BR.UTF-8
+    ports:
+      - "8080:80"
+    volumes:
+      - onlyoffice_data:/var/www/onlyoffice/Data
+      - onlyoffice_logs:/var/log/onlyoffice
+      - onlyoffice_cache:/var/lib/onlyoffice/documentserver/App_Data/cache/files
+      - onlyoffice_forgotten:/var/lib/onlyoffice/documentserver/App_Data/cache/forgotten
+      - ./storage/app/public:/var/www/onlyoffice/Data/public
+      # Configurações de idioma em português (temporariamente desabilitadas)
+      # - ./docker/onlyoffice/local.json:/etc/onlyoffice/documentserver/local.json
+    networks:
+      - legisinc_network
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/healthcheck"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # 4. Aplicação Laravel (depende de todos os anteriores)
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        USER_ID: ${USER_ID:-1000}
+        GROUP_ID: ${GROUP_ID:-1000}
+    container_name: legisinc-app
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - ./:/var/www/html
+      - ./docker/php/php.ini:/usr/local/etc/php/php.ini
+    ports:
+      - "8001:80"
+      - "8444:443"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      onlyoffice-documentserver:
+        condition: service_healthy
+    environment:
+      - APP_ENV=local
+      - APP_DEBUG=true
+      - APP_URL=http://localhost:8001
+      - DB_CONNECTION=pgsql
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_DATABASE=legisinc
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=123456
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=null
+      - CACHE_DRIVER=redis
+      - SESSION_DRIVER=redis
+      - QUEUE_CONNECTION=redis
+    networks:
+      - legisinc_network
+
+  # 5. PyHanko - Assinatura Digital (efêmero, não sobe no up -d)
+  pyhanko:
+    build:
+      context: ./docker/pyhanko
+      dockerfile: Dockerfile
+    image: legisinc-pyhanko:latest
+    container_name: legisinc-pyhanko-tool
+    profiles: ["tools", "signing"]  # Não aparece no docker-compose up -d
+    entrypoint: ["pyhanko"]
+    environment:
+      - PFX_PASS                    # Injete em runtime
+      - TZ=America/Sao_Paulo
+    volumes:
+      - ./storage:/work             # Documentos para assinatura
+      - ./docker/pyhanko/certs:/certs:ro  # Certificados read-only
+    networks:
+      - legisinc_network
+    # Sem depends_on - usado apenas sob demanda
+
+  # 6. Swagger UI - Documentação Interativa da API
+  swagger-ui:
+    image: swaggerapi/swagger-ui:latest
+    container_name: legisinc-swagger-ui
+    restart: unless-stopped
+    environment:
+      - SWAGGER_JSON=/app/openapi.json
+      - DEEP_LINKING=true
+      - DISPLAY_OPERATION_ID=true
+      - DEFAULT_MODELS_EXPAND_DEPTH=1
+      - DEFAULT_MODEL_EXPAND_DEPTH=1
+      - DISPLAY_REQUEST_DURATION=true
+      - DOC_EXPANSION=list
+      - FILTER=true
+      - MAX_DISPLAYED_TAGS=10
+      - SHOW_EXTENSIONS=true
+      - SHOW_COMMON_EXTENSIONS=true
+      - TRY_IT_OUT_ENABLED=true
+    ports:
+      - "8082:8080"
+    volumes:
+      - ./docs/api:/app:ro
+    networks:
+      - legisinc_network
+    depends_on:
+      - app
+
+  # 7. Mermaid Live Editor - Editor de Diagramas
+  mermaid-live-editor:
+    image: ghcr.io/mermaid-js/mermaid-live-editor:latest
+    container_name: legisinc-mermaid
+    restart: unless-stopped
+    platform: linux/amd64
+    ports:
+      - "8083:8080"
+    volumes:
+      - ./mermaid-diagrams:/usr/share/nginx/html/legacy-diagrams:ro
+      - ./docs:/usr/share/nginx/html/docs:ro
+      - ./docs/mermaid:/usr/share/nginx/html/diagrams:ro
+    networks:
+      - legisinc_network
+
+volumes:
+  postgres_data:
+  redis_data:
+  onlyoffice_data:
+  onlyoffice_logs:
+  onlyoffice_cache:
+  onlyoffice_forgotten:
+
+networks:
+  legisinc_network:
+    driver: bridge

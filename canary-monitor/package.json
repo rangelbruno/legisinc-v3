@@ -1,0 +1,14 @@
+{
+  "name": "legisinc-canary-monitor",
+  "version": "1.0.0",
+  "description": "Canary deployment monitor",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "axios": "^1.5.0"
+  }
+}

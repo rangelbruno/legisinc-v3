@@ -173,6 +173,16 @@
                         <span class="text-muted mt-1 fw-semibold fs-7">Arquitetura completa e fluxos operacionais</span>
                     </h3>
                     <div class="card-toolbar">
+                        {{-- Mermaid Live Editor Access --}}
+                        <button type="button" class="btn btn-sm btn-info me-3" onclick="openMermaidLiveEditor()">
+                            <i class="ki-duotone ki-graph-2 fs-2">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                                <span class="path3"></span>
+                            </i>
+                            Mermaid Live Editor
+                        </button>
+
                         <div class="btn-group me-2" role="group">
                             <button type="button" class="btn btn-sm btn-light-info" onclick="downloadAllDiagrams('png')">
                                 <i class="ki-duotone ki-cloud-download fs-2">
@@ -283,6 +293,19 @@
                                                         </button>
                                                     </div>
 
+                                                    {{-- Mermaid Live Editor Button --}}
+                                                    <button type="button"
+                                                            class="btn btn-sm btn-light-info me-2"
+                                                            onclick="openInMermaidEditor('{{ $diagram['id'] }}')"
+                                                            title="Abrir no Mermaid Live Editor">
+                                                        <i class="ki-duotone ki-graph-2 fs-3">
+                                                            <span class="path1"></span>
+                                                            <span class="path2"></span>
+                                                            <span class="path3"></span>
+                                                        </i>
+                                                        Mermaid
+                                                    </button>
+
                                                     <button type="button"
                                                             class="btn btn-sm btn-icon btn-light-primary"
                                                             onclick="toggleFullscreen('{{ $diagram['id'] }}')"
@@ -298,7 +321,7 @@
                                             </div>
                                             <div class="card-body">
                                                 <div class="mermaid-container" style="background: #f5f8fa; padding: 20px; border-radius: 10px; overflow: auto;">
-                                                    <div class="mermaid" id="{{ $diagram['id'] }}">{{ $diagram['content'] }}</div>
+                                                    <div class="mermaid" id="{{ $diagram['id'] }}" data-original-code="{{ base64_encode($diagram['content']) }}">{{ $diagram['content'] }}</div>
                                                 </div>
                                             </div>
                                         </div>
@@ -337,11 +360,90 @@
                                 <div class="fs-6 text-gray-700">
                                     Esta página centraliza todos os diagramas e fluxos do sistema LegisInc, incluindo:
                                     <ul class="mt-3 mb-0">
-                                        <li><strong>Arquitetura Geral:</strong> <code>docs/project-overview.md</code></li>
-                                        <li><strong>Fluxo de Proposições:</strong> <code>docs/FLUXO-PROPOSICOES-MERMAID.md</code></li>
-                                        <li><strong>Fluxo de Documentos:</strong> <code>docs/FLUXO-DOCUMENTO-COMPLETO.md</code></li>
-                                        <li><strong>Assinatura Digital:</strong> <code>docs/FLUXO-ASSINATURA-DIGITAL-PYHANKO.md</code></li>
-                                        <li><strong>Fluxo Completo:</strong> <code>docs/FLUXO-COMPLETO-PROPOSICAO.md</code></li>
+                                        <li>
+                                            <strong>Arquitetura Geral:</strong>
+                                            <code>docs/project-overview.md</code>
+                                            <a href="#" onclick="openMermaidWithFile('01-arquitetura-geral')"
+                                               class="btn btn-sm btn-light-info ms-2" title="Abrir no Mermaid Live Editor">
+                                                <i class="ki-duotone ki-graph-2 fs-6">
+                                                    <span class="path1"></span>
+                                                    <span class="path2"></span>
+                                                    <span class="path3"></span>
+                                                </i>
+                                                Mermaid
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <strong>Fluxo de Proposições:</strong>
+                                            <code>docs/FLUXO-PROPOSICOES-MERMAID.md</code>
+                                            <a href="#" onclick="openMermaidWithFile('02-fluxo-proposicoes-estados')"
+                                               class="btn btn-sm btn-light-info ms-2" title="Estados - Abrir no Mermaid">
+                                                <i class="ki-duotone ki-graph-2 fs-6">
+                                                    <span class="path1"></span>
+                                                    <span class="path2"></span>
+                                                    <span class="path3"></span>
+                                                </i>
+                                                Estados
+                                            </a>
+                                            <a href="#" onclick="openMermaidWithFile('03-fluxo-proposicoes-completo')"
+                                               class="btn btn-sm btn-light-success ms-1" title="Fluxo Completo - Abrir no Mermaid">
+                                                <i class="ki-duotone ki-graph-2 fs-6">
+                                                    <span class="path1"></span>
+                                                    <span class="path2"></span>
+                                                    <span class="path3"></span>
+                                                </i>
+                                                Completo
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <strong>Fluxo de Documentos:</strong>
+                                            <code>docs/FLUXO-DOCUMENTO-COMPLETO.md</code>
+                                            <a href="#" onclick="openMermaidWithFile('05-fluxo-documento-completo')"
+                                               class="btn btn-sm btn-light-info ms-2" title="Abrir no Mermaid Live Editor">
+                                                <i class="ki-duotone ki-graph-2 fs-6">
+                                                    <span class="path1"></span>
+                                                    <span class="path2"></span>
+                                                    <span class="path3"></span>
+                                                </i>
+                                                Mermaid
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <strong>Assinatura Digital:</strong>
+                                            <code>docs/FLUXO-ASSINATURA-DIGITAL-PYHANKO.md</code>
+                                            <a href="#" onclick="openMermaidWithFile('04-assinatura-digital-pyhanko')"
+                                               class="btn btn-sm btn-light-info ms-2" title="Abrir no Mermaid Live Editor">
+                                                <i class="ki-duotone ki-graph-2 fs-6">
+                                                    <span class="path1"></span>
+                                                    <span class="path2"></span>
+                                                    <span class="path3"></span>
+                                                </i>
+                                                Mermaid
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <strong>Todos os Fluxos:</strong>
+                                            <span class="text-muted">Acesso direto aos arquivos Mermaid</span>
+                                            <div class="mt-2">
+                                                <a href="#" onclick="openAllMermaidFiles()"
+                                                   class="btn btn-sm btn-primary" title="Abrir todos os diagramas no Mermaid">
+                                                    <i class="ki-duotone ki-graph-2 fs-6">
+                                                        <span class="path1"></span>
+                                                        <span class="path2"></span>
+                                                        <span class="path3"></span>
+                                                    </i>
+                                                    Abrir Todos no Mermaid
+                                                </a>
+                                                <a href="http://localhost:8083" target="_blank"
+                                                   class="btn btn-sm btn-light-primary ms-2" title="Mermaid Live Editor">
+                                                    <i class="ki-duotone ki-external-link fs-6">
+                                                        <span class="path1"></span>
+                                                        <span class="path2"></span>
+                                                    </i>
+                                                    Editor Vazio
+                                                </a>
+                                            </div>
+                                        </li>
                                     </ul>
 
                                     <div class="mt-4">
@@ -364,6 +466,19 @@
                                                 <strong>Dica:</strong> Use os botões <span class="badge badge-light-success">PNG</span> e
                                                 <span class="badge badge-light-warning">PDF</span> para baixar diagramas individuais,
                                                 ou <span class="badge badge-light-info">Baixar Todos</span> para download em lote.
+                                            </div>
+                                        </div>
+
+                                        <div class="alert alert-light-info d-flex align-items-center mt-3">
+                                            <i class="ki-duotone ki-graph-2 fs-2 text-info me-3">
+                                                <span class="path1"></span>
+                                                <span class="path2"></span>
+                                                <span class="path3"></span>
+                                            </i>
+                                            <div>
+                                                <strong>Mermaid Live Editor:</strong> Clique no botão <span class="badge badge-info">Mermaid</span>
+                                                em qualquer diagrama para editá-lo diretamente no <strong>Mermaid Live Editor local</strong>
+                                                (<code>localhost:8083</code>). Isso permite edição interativa e exportação avançada.
                                             </div>
                                         </div>
                                     </div>
@@ -783,6 +898,549 @@ function generateCategoriesHtml(categories) {
     html += '</div>';
     html += `<div class="mt-4 text-center"><small class="text-muted"><strong>Total:</strong> ${categories.length} categorias organizadas</small></div>`;
     return html;
+}
+
+// Global object to store original Mermaid code
+window.mermaidOriginalCode = window.mermaidOriginalCode || {};
+
+// Open diagram in Mermaid Live Editor
+function openInMermaidEditor(diagramId) {
+    try {
+        const diagramElement = document.getElementById(diagramId);
+        if (!diagramElement) {
+            throw new Error('Diagrama não encontrado');
+        }
+
+        // Try to get original code from our global store first
+        let mermaidCode = window.mermaidOriginalCode[diagramId];
+
+        // If not found in store, try to get from data attribute (Base64 encoded)
+        if (!mermaidCode) {
+            const encodedCode = diagramElement.getAttribute('data-original-code');
+            if (encodedCode) {
+                try {
+                    mermaidCode = atob(encodedCode);
+                } catch (decodeError) {
+                    console.warn('Failed to decode original code:', decodeError);
+                }
+            }
+        }
+
+        // If still not found, try textContent (may be corrupted after rendering)
+        if (!mermaidCode) {
+            mermaidCode = diagramElement.textContent || diagramElement.innerText || '';
+            mermaidCode = mermaidCode.trim();
+        }
+
+        // Clean up the code - basic cleanup only
+        if (mermaidCode) {
+            mermaidCode = mermaidCode.trim();
+
+            // Basic validation - check if it looks like Mermaid code
+            const hasMermaidKeywords = mermaidCode.includes('graph') ||
+                                     mermaidCode.includes('stateDiagram') ||
+                                     mermaidCode.includes('sequenceDiagram') ||
+                                     mermaidCode.includes('flowchart') ||
+                                     mermaidCode.includes('TB') ||
+                                     mermaidCode.includes('LR');
+
+            if (!hasMermaidKeywords) {
+                console.warn('Code does not appear to be valid Mermaid:', mermaidCode.substring(0, 100));
+                mermaidCode = null;
+            }
+        }
+
+        // If no valid code found, show a helpful error with fallback option
+        if (!mermaidCode || mermaidCode.length < 10) {
+            const cardHeader = diagramElement.closest('.card')?.querySelector('.card-title');
+            const diagramTitle = cardHeader ? cardHeader.textContent.trim() : diagramId;
+
+            Swal.fire({
+                title: 'Código Mermaid não disponível',
+                html: `
+                    <p class="mb-3">Não foi possível encontrar o código fonte do diagrama <strong>"${diagramTitle}"</strong>.</p>
+                    <p class="mb-3">Isso pode acontecer após a renderização do Mermaid.js.</p>
+                    <p class="mb-3">Você pode:</p>
+                    <ul class="list-unstyled">
+                        <li>• Recarregar a página e tentar novamente</li>
+                        <li>• Abrir o Mermaid Editor e criar o diagrama manualmente</li>
+                        <li>• Copiar o código dos arquivos de documentação</li>
+                    </ul>
+                `,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Abrir Editor Vazio',
+                cancelButtonText: 'Cancelar',
+                confirmButtonColor: '#17a2b8'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    openMermaidLiveEditor();
+                }
+            });
+            return;
+        }
+
+        // Use the code as-is (it should be clean from data-original-code)
+        let cleanCode = mermaidCode;
+
+        // Base64 encode the Mermaid code for URL parameter
+        let encodedCode;
+        try {
+            encodedCode = btoa(unescape(encodeURIComponent(cleanCode)));
+        } catch (encodingError) {
+            console.warn('Encoding error, trying alternative encoding:', encodingError);
+            // Alternative encoding for problematic characters
+            encodedCode = btoa(cleanCode);
+        }
+
+        // Test if the encoding worked
+        try {
+            const testDecode = decodeURIComponent(escape(atob(encodedCode)));
+            if (testDecode.length < 5) {
+                throw new Error('Decoded code too short');
+            }
+        } catch (testError) {
+            console.warn('Encoded code validation failed:', testError);
+
+            Swal.fire({
+                title: 'Problema com codificação',
+                html: `
+                    <p class="mb-3">Houve um problema ao preparar o código para o Mermaid Editor.</p>
+                    <p class="mb-3">Vamos abrir o editor em branco para você colar o código manualmente.</p>
+                `,
+                icon: 'warning',
+                confirmButtonText: 'Abrir Editor',
+                confirmButtonColor: '#17a2b8'
+            }).then(() => {
+                openMermaidLiveEditor();
+            });
+            return;
+        }
+
+        // Open in our local Mermaid Live Editor with the code
+        const mermaidUrl = `http://localhost:8083/edit#base64:${encodedCode}`;
+
+        // Show success notification with code preview
+        const toast = document.createElement('div');
+        toast.className = 'toast align-items-center text-white bg-success border-0 position-fixed';
+        toast.style.top = '20px';
+        toast.style.right = '20px';
+        toast.style.zIndex = '9999';
+        toast.style.minWidth = '350px';
+        toast.setAttribute('role', 'alert');
+
+        const codePreview = cleanCode.length > 50 ? cleanCode.substring(0, 50) + '...' : cleanCode;
+        toast.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="ki-duotone ki-graph-2 fs-2 me-2">
+                        <span class="path1"></span>
+                        <span class="path2"></span>
+                        <span class="path3"></span>
+                    </i>
+                    <div>
+                        <div class="fw-bold">Mermaid Live Editor</div>
+                        <small>Código carregado: ${codePreview}</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" onclick="this.parentElement.parentElement.remove()"></button>
+            </div>
+        `;
+
+        document.body.appendChild(toast);
+
+        // Auto remove after 4 seconds
+        setTimeout(() => {
+            if (toast.parentElement) {
+                toast.remove();
+            }
+        }, 4000);
+
+        // Debug log
+        console.log('🎨 Opening Mermaid Editor with code:', {
+            diagramId,
+            codeLength: cleanCode.length,
+            preview: codePreview,
+            url: mermaidUrl
+        });
+
+        // Open in new tab/window
+        window.open(mermaidUrl, '_blank');
+
+    } catch (error) {
+        console.error('Erro ao abrir no Mermaid Editor:', error);
+        Swal.fire({
+            title: 'Erro!',
+            text: `Erro inesperado: ${error.message}. Verifique se o container Mermaid está rodando em http://localhost:8083`,
+            icon: 'error',
+            confirmButtonText: 'OK'
+        });
+    }
+}
+
+// Open specific Mermaid file from docs/mermaid directory
+async function openMermaidWithFile(fileName) {
+    try {
+        // Show loading notification
+        const loadingToast = document.createElement('div');
+        loadingToast.className = 'toast align-items-center text-white bg-primary border-0 position-fixed';
+        loadingToast.style.top = '20px';
+        loadingToast.style.right = '20px';
+        loadingToast.style.zIndex = '9999';
+        loadingToast.setAttribute('role', 'alert');
+
+        loadingToast.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">
+                    <div class="spinner-border spinner-border-sm me-2" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    Carregando diagrama: ${fileName}...
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" onclick="this.parentElement.parentElement.remove()"></button>
+            </div>
+        `;
+
+        document.body.appendChild(loadingToast);
+
+        // File mapping
+        const mermaidFiles = {
+            '01-arquitetura-geral': {
+                name: '01-arquitetura-geral.mmd',
+                title: 'Arquitetura Geral'
+            },
+            '02-fluxo-proposicoes-estados': {
+                name: '02-fluxo-proposicoes-estados.mmd',
+                title: 'Fluxo de Proposições - Estados'
+            },
+            '03-fluxo-proposicoes-completo': {
+                name: '03-fluxo-proposicoes-completo.mmd',
+                title: 'Fluxo de Proposições - Completo'
+            },
+            '04-assinatura-digital-pyhanko': {
+                name: '04-assinatura-digital-pyhanko.mmd',
+                title: 'Assinatura Digital - PyHanko'
+            },
+            '05-fluxo-documento-completo': {
+                name: '05-fluxo-documento-completo.mmd',
+                title: 'Fluxo de Documento - Completo'
+            }
+        };
+
+        const fileInfo = mermaidFiles[fileName];
+        if (!fileInfo) {
+            throw new Error(`Arquivo ${fileName} não encontrado na lista de arquivos mermaid`);
+        }
+
+        // Try to fetch the file content from local server (simulated)
+        // In real implementation, you would fetch from a proper endpoint
+        // For now, we'll use pre-encoded Base64 strings for each file
+
+        const base64Content = await getMermaidFileContent(fileName);
+
+        if (!base64Content) {
+            throw new Error('Não foi possível carregar o conteúdo do arquivo');
+        }
+
+        // Remove loading toast
+        if (loadingToast.parentElement) {
+            loadingToast.remove();
+        }
+
+        // Decode the Mermaid code
+        const decodedCode = atob(base64Content);
+
+        // Create state object for Mermaid Live Editor
+        const mermaidState = {
+            code: decodedCode,
+            mermaid: {
+                theme: 'default'
+            }
+        };
+
+        // Encode state as JSON and then base64
+        const stateJson = JSON.stringify(mermaidState);
+        const encodedState = btoa(unescape(encodeURIComponent(stateJson)));
+
+        // Use the correct format that Mermaid Live Editor expects
+        const mermaidUrl = `http://localhost:8083/edit#pako:${encodedState}`;
+
+        console.log('🎨 Opening Mermaid Live Editor with encoded state');
+        console.log('📝 Code preview:', decodedCode.substring(0, 100) + '...');
+
+        // Open in new tab
+        window.open(mermaidUrl, '_blank');
+
+
+        if (tempWindow) {
+            // Write HTML that will set the code and redirect
+            tempWindow.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Loading Mermaid...</title>
+                    <style>
+                        body {
+                            font-family: Arial, sans-serif;
+                            text-align: center;
+                            padding: 50px;
+                            background-color: #f5f5f5;
+                        }
+                        .loading {
+                            border: 4px solid #f3f3f3;
+                            border-top: 4px solid #3498db;
+                            border-radius: 50%;
+                            width: 40px;
+                            height: 40px;
+                            animation: spin 1s linear infinite;
+                            margin: 20px auto;
+                        }
+                        @keyframes spin {
+                            0% { transform: rotate(0deg); }
+                            100% { transform: rotate(360deg); }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <h2>Carregando Mermaid Live Editor...</h2>
+                    <div class="loading"></div>
+                    <p>Transferindo código do diagrama...</p>
+                    <div style="max-width: 600px; margin: 20px auto; background: #fff; padding: 15px; border-radius: 5px;">
+                        <h4>Código Preview:</h4>
+                        <pre style="text-align: left; font-size: 12px; overflow: auto; max-height: 200px;">${decodedCode}</pre>
+                    </div>
+
+                    <script>
+                        // Store the code in localStorage for the Mermaid editor
+                        try {
+                            localStorage.setItem('mermaid-code', ${JSON.stringify(decodedCode)});
+
+                            // Try different redirect approaches
+                            setTimeout(function() {
+                                // Method 1: Try with code in URL fragment
+                                const encoded = btoa(unescape(encodeURIComponent(${JSON.stringify(decodedCode)})));
+                                let targetUrl = 'http://localhost:8083/edit#base64:' + encoded;
+
+                                // Method 2: Try with JSON format
+                                try {
+                                    const mermaidData = {
+                                        code: ${JSON.stringify(decodedCode)},
+                                        mermaid: { theme: "default" }
+                                    };
+                                    const jsonEncoded = btoa(unescape(encodeURIComponent(JSON.stringify(mermaidData))));
+                                    const alternateUrl = 'http://localhost:8083/edit#pako:' + jsonEncoded;
+
+                                    // Try the JSON format first
+                                    console.log('🎨 Trying JSON format URL:', alternateUrl);
+                                    window.location.href = alternateUrl;
+                                } catch (e) {
+                                    console.warn('JSON format failed, trying base64:', e);
+                                    console.log('🎨 Trying base64 format URL:', targetUrl);
+                                    window.location.href = targetUrl;
+                                }
+                            }, 2000);
+                        } catch (error) {
+                            console.error('Error preparing Mermaid code:', error);
+                            document.body.innerHTML = '<h2>Erro ao carregar</h2><p>Redirecionando para editor vazio...</p>';
+                            setTimeout(() => {
+                                window.location.href = 'http://localhost:8083';
+                            }, 2000);
+                        }
+                    </script>
+                </body>
+                </html>
+            `);
+            tempWindow.document.close();
+
+            // Set URL for debugging
+            const debugUrl = `http://localhost:8083/edit#base64:${base64Content}`;
+            console.log('🔍 Debug - Base64 URL that would be used:', debugUrl);
+        } else {
+            // Fallback: open editor directly
+            window.open('http://localhost:8083', '_blank');
+        }
+
+        // Show success notification
+        const successToast = document.createElement('div');
+        successToast.className = 'toast align-items-center text-white bg-success border-0 position-fixed';
+        successToast.style.top = '20px';
+        successToast.style.right = '20px';
+        successToast.style.zIndex = '9999';
+        successToast.style.minWidth = '350px';
+        successToast.setAttribute('role', 'alert');
+
+        successToast.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="ki-duotone ki-graph-2 fs-2 me-2">
+                        <span class="path1"></span>
+                        <span class="path2"></span>
+                        <span class="path3"></span>
+                    </i>
+                    <div>
+                        <div class="fw-bold">${fileInfo.title}</div>
+                        <small>Abrindo no Mermaid Live Editor...</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" onclick="this.parentElement.parentElement.remove()"></button>
+            </div>
+        `;
+
+        document.body.appendChild(successToast);
+
+        // Auto remove after 4 seconds
+        setTimeout(() => {
+            if (successToast.parentElement) {
+                successToast.remove();
+            }
+        }, 4000);
+
+        console.log('🎨 Opening Mermaid file:', {
+            fileName,
+            fileInfo,
+            codeLength: decodedCode.length
+        });
+
+    } catch (error) {
+        console.error('Erro ao abrir arquivo Mermaid:', error);
+
+        // Remove loading toast if exists
+        const loadingToasts = document.querySelectorAll('.toast .spinner-border');
+        loadingToasts.forEach(toast => {
+            const toastElement = toast.closest('.toast');
+            if (toastElement && toastElement.parentElement) {
+                toastElement.remove();
+            }
+        });
+
+        Swal.fire({
+            title: 'Erro ao carregar arquivo',
+            text: `Não foi possível carregar o arquivo ${fileName}. ${error.message}`,
+            icon: 'error',
+            showCancelButton: true,
+            confirmButtonText: 'Abrir Editor Vazio',
+            cancelButtonText: 'OK',
+            confirmButtonColor: '#3085d6'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                openMermaidLiveEditor();
+            }
+        });
+    }
+}
+
+// Get Mermaid file content (Base64 encoded)
+async function getMermaidFileContent(fileName) {
+    // Pre-encoded Base64 content for each Mermaid file
+    const fileContents = {
+        '01-arquitetura-geral': 'Z3JhcGggVEIKICAgICUlIEZyb250ZW5kIExheWVyCiAgICBGUk9OVEVORFsi8J+MkCBGcm9udGVuZDxici8+VnVlLmpzICsgTGFyYXZlbCBCbGFkZTxici8+UmVhY3QvQW5ndWxhciBTdXBwb3J0Il0KCiAgICAlJSBHYXRld2F5IExheWVyCiAgICBHQVRFV0FZWyLwn5qqIEFQSSBHYXRld2F5PGJyLz5UcmFlZmlrICsgTG9hZCBCYWxhbmNlcjxici8+Um90ZWFtZW50byBJbnRlbGlnZW50ZSJdCgogICAgJSUgQmFja2VuZCBPcHRpb25zIChDdXJyZW50ICsgTmV3KQogICAgc3ViZ3JhcGggIkJhY2tlbmQgU2VydmljZXMiCiAgICAgICAgTEFSQVZFTFsi8J+QmCBMYXJhdmVsIEFQSTxici8+Q3VycmVudCBCYWNrZW5kPGJyLz5QSFAgOC4yICsgRWxvcXVlbnQiXQogICAgICAgIEpBVkFbIuKYlSBKYXZhIFNwcmluZyBCb290PGJyLz5OZXcgQmFja2VuZCBPcHRpb248YnIvPkpQQSArIFBvc3RncmVTUUwiXQogICAgICAgIE5PREVbIvCfn6IgTm9kZS5qcyBBUEk8YnIvPkFsdGVybmF0aXZlIEJhY2tlbmQ8YnIvPkV4cHJlc3MgKyBQcmlzbWEiXQogICAgICAgIFBZVEhPTlsi8J+QjSBQeXRob24gRmFzdEFQSTxici8+QWx0ZXJuYXRpdmUgQmFja2VuZDxici8+U1FMQWxjaGVteSArIEFzeW5jIl0KICAgICAgICBET1RORVRbIvCflLcgLk5FVCBDb3JlIEFQSTxici8+QWx0ZXJuYXRpdmUgQmFja2VuZDxici8+RW50aXR5IEZyYW1ld29yayJdCiAgICBlbmQKCiAgICAlJSBNaWdyYXRpb24gVG9vbHMKICAgIE1JR1JBVElPTlsi8J+UhCBNaWdyYXRpb24gVG9vbHM8YnIvPkJhY2tlbmQgQW5hbHlzaXM8YnIvPkVuZHBvaW50IE1hcHBpbmc8YnIvPkRhdGFiYXNlIFNjaGVtYSBFeHBvcnQiXQoKICAgICUlIE1haW4gQ29udHJvbGxlcnMgKExhcmF2ZWwgTGVnYWN5KQogICAgUENbIvCfk4QgUHJvcG9zaWNhb0NvbnRyb2xsZXIiXQogICAgUExDWyLwn5GkIFBhcmxhbWVudGFyQ29udHJvbGxlciJdCiAgICBBQ1si4pqZ77iPIEFkbWluQ29udHJvbGxlcnMiXQogICAgTVBDWyLwn5SEIE1pZ3JhdGlvblByZXBhcmF0aW9uQ29udHJvbGxlciJdCgogICAgJSUgU2VydmljZXMgTGF5ZXIKICAgIHN1YmdyYXBoICJTZXJ2aWNlIExheWVyIgogICAgICAgIE9PU1si8J+TnSBPbmx5T2ZmaWNlU2VydmljZSJdCiAgICAgICAgVFBTWyLwn5OLIFRlbXBsYXRlUHJvY2Vzc29yU2VydmljZSJdCiAgICAgICAgQURTWyLwn5SPIEFzc2luYXR1cmFEaWdpdGFsU2VydmljZSJdCiAgICAgICAgV0ZTWyLwn5SEIFdvcmtmbG93U2VydmljZSJdCiAgICBlbmQKCiAgICAlJSBEYXRhICYgU3RvcmFnZQogICAgREJbKCLwn5eE77iPIFBvc3RncmVTUUw8YnIvPlNoYXJlZCBEYXRhYmFzZTxici8+QWxsIEJhY2tlbmRzIildCiAgICBTVE9SQUdFWyLwn5OBIFN0b3JhZ2UgRmlsZXM8YnIvPkRvY2tlciBWb2x1bWVzIl0KICAgIENBQ0hFWyLimqEgUmVkaXMgQ2FjaGU8YnIvPlNlc3Npb24gJiBQZXJmb3JtYW5jZSJdCgogICAgJSUgRXh0ZXJuYWwgU2VydmljZXMKICAgIE9OTFlbIvCfk50gT25seU9mZmljZSBTZXJ2ZXI8YnIvPkRvY3VtZW50IEVkaXRvciJdCiAgICBQWUhBTktPWyLwn5SPIFB5SGFua28gQ29udGFpbmVyPGJyLz5EaWdpdGFsIFNpZ25hdHVyZSJdCgogICAgJSUgTmV0d29yayBGbG93CiAgICBGUk9OVEVORCAtLT4gR0FURVdBWQogICAgR0FURVdBWSAtLT4gTEFSQVZFTAogICAgR0FURVdBWSAtLi0+IEpBVkEKICAgIEdBVEVXQVkgLS4tPiBOT0RFCiAgICBHQVRFV0FZIC0uLT4gUFlUSE9OCiAgICBHQVRFV0FZIC0uLT4gRE9UTkVUCgogICAgJSUgTWlncmF0aW9uIEZsb3cKICAgIE1JR1JBVElPTiAtLT4gTEFSQVZFTAogICAgTUlHUkFUSU9OIC0tPiBKQVZBCiAgICBNSUdSQVRJT04gLS0+IE5PREUKICAgIE1JR1JBVElPTiAtLT4gUFlUSE9OCiAgICBNSUdSQVRJT04gLS0+IERPVE5FVAoKICAgICUlIExhcmF2ZWwgSW50ZXJuYWwgKEN1cnJlbnQpCiAgICBMQVJBVkVMIC0tPiBQQwogICAgTEFSQVZFTCAtLT4gUExDCiAgICBMQVJBVkVMIC0tPiBBQwogICAgTEFSQVZFTCAtLT4gTVBDCgogICAgUEMgLS0+IE9PUwogICAgUEMgLS0+IFRQUwogICAgUEMgLS0+IEFEUwogICAgUEMgLS0+IFdGUwoKICAgICUlIFNoYXJlZCBSZXNvdXJjZXMKICAgIExBUkFWRUwgLS0+IERCCiAgICBKQVZBIC0uLT4gREIKICAgIE5PREUgLS4tPiBEQgogICAgUFlUSE9OIC0uLT4gREIKICAgIERPVE5FVCAtLi0+IERCCgogICAgT09TIC0tPiBPTkxZCiAgICBBRFMgLS0+IFBZSEFOS08KCiAgICBPT1MgLS0+IFNUT1JBR0UKICAgIFRQUyAtLT4gU1RPUkFHRQogICAgQURTIC0tPiBTVE9SQUdFCgogICAgUEMgLS0+IENBQ0hFCiAgICBPT1MgLS0+IENBQ0hF',
+        '02-fluxo-proposicoes-estados': 'c3RhdGVEaWFncmFtLXYyCiAgICBbKl0gLS0+IFJhc2N1bmhvOiBQYXJsYW1lbnRhciBjcmlhIHByb3Bvc2nDp8OjbwoKICAgIFJhc2N1bmhvIC0tPiBFbUVkaWNhbzogUGFybGFtZW50YXIgZWRpdGEKICAgIEVtRWRpY2FvIC0tPiBBZ3VhcmRhbmRvUHJvdG9jb2xvOiBQYXJsYW1lbnRhciBmaW5hbGl6YQoKICAgIEFndWFyZGFuZG9Qcm90b2NvbG8gLS0+IFByb3RvY29sYWRhOiBQcm90b2NvbG8gYXRyaWJ1aSBuw7ptZXJvCgogICAgUHJvdG9jb2xhZGEgLS0+IEVtQW5hbGlzZTogTGVnaXNsYXRpdm8gcmVjZWJlCiAgICBFbUFuYWxpc2UgLS0+IEVtUmV2aXNhbzogTGVnaXNsYXRpdm8gcmV2aXNhCiAgICBFbVJldmlzYW8gLS0+IEFwcm92YWRvTGVnaXNsYXRpdm86IExlZ2lzbGF0aXZvIGFwcm92YQogICAgRW1SZXZpc2FvIC0tPiBSZXRvcm5hZG9QYXJsYW1lbnRhcjogTmVjZXNzaXRhIGFqdXN0ZXMKCiAgICBSZXRvcm5hZG9QYXJsYW1lbnRhciAtLT4gRW1FZGljYW86IFBhcmxhbWVudGFyIGFqdXN0YQoKICAgIEFwcm92YWRvTGVnaXNsYXRpdm8gLS0+IEFndWFyZGFuZG9Bc3NpbmF0dXJhOiBQcm9udG8gcGFyYSBhc3NpbmFyCiAgICBBZ3VhcmRhbmRvQXNzaW5hdHVyYSAtLT4gQXNzaW5hZG86IENlcnRpZmljYWRvIGRpZ2l0YWwgYXBsaWNhZG8KCiAgICBBc3NpbmFkbyAtLT4gUHVibGljYWRvOiBEb2N1bWVudG8gZmluYWwKICAgIFB1YmxpY2FkbyAtLT4gWypdCgogICAgbm90ZSByaWdodCBvZiBFbUVkaWNhbwogICAgICAgIE9ubHlPZmZpY2UgRWRpdG9yCiAgICAgICAgLSBFZGnDp8OjbyBjb2xhYm9yYXRpdmEKICAgICAgICAtIEF1dG8tc2F2ZQogICAgICAgIC0gUG9sbGluZyAxNXMKICAgIGVuZCBub3RlCgogICAgbm90ZSByaWdodCBvZiBBZ3VhcmRhbmRvQXNzaW5hdHVyYQogICAgICAgIFB5SGFua28KICAgICAgICAtIEFzc2luYXR1cmEgUEFkRVMKICAgICAgICAtIENlcnRpZmljYWRvIC5wZngKICAgICAgICAtIFZhbGlkYcOnw6NvIHNlbmhhCiAgICBlbmQgbm90ZQ==',
+        '03-fluxo-proposicoes-completo': 'Z3JhcGggVEIKICAgIFN0YXJ0KFtJbsOtY2lvXSkgLS0+IENyZWF0ZVByb3Bvc2FsW1BhcmxhbWVudGFyIGNyaWEgcHJvcG9zacOnw6NvXQoKICAgIENyZWF0ZVByb3Bvc2FsIC0tPiBDaG9vc2VUeXBle0VzY29saGUgdGlwbyBkZTxici8+cHJlZW5jaGltZW50b30KICAgIENob29zZVR5cGUgLS0+fFRlbXBsYXRlfCBVc2VUZW1wbGF0ZVtBcGxpY2EgdGVtcGxhdGU8YnIvPmNvbSB2YXJpw6F2ZWlzXQogICAgQ2hvb3NlVHlwZSAtLT58TWFudWFsfCBNYW51YWxUZXh0W0RpZ2l0YSB0ZXh0bzxici8+bWFudWFsbWVudGVdCiAgICBDaG9vc2VUeXBlIC0tPnxJQXwgQUlHZW5lcmF0ZVtHZXJhIGNvbnRlw7pkbzxici8+Y29tIElBXQoKICAgIFVzZVRlbXBsYXRlIC0tPiBTYXZlRHJhZnQKICAgIE1hbnVhbFRleHQgLS0+IFNhdmVEcmFmdAogICAgQUlHZW5lcmF0ZSAtLT4gU2F2ZURyYWZ0CgogICAgU2F2ZURyYWZ0W1NhbHZhIGNvbW8gcmFzY3VuaG88YnIvPlN0YXR1czogJ3Jhc2N1bmhvJ10gLS0+IEVkaXRPbmx5T2ZmaWNlW0VkaXRhIG5vIE9ubHlPZmZpY2U8YnIvPlN0YXR1czogJ2VtX2VkaWNhbyddCgogICAgRWRpdE9ubHlPZmZpY2UgLS0+IFZhbGlkYXRlQ29udGVudFtWYWxpZGHDp8OjbyBkZTxici8+Y29udGXDumRvIFJURl0KICAgIFZhbGlkYXRlQ29udGVudCAtLT4gQWRkQXR0YWNobWVudHN7QWRpY2lvbmFyPGJyLz5hbmV4b3M/fQogICAgQWRkQXR0YWNobWVudHMgLS0+fFNpbXwgVXBsb2FkRmlsZXNbVXBsb2FkIGRlIGFycXVpdm9zPGJyLz5QREYsIERPQywgaW1hZ2Vuc10KICAgIEFkZEF0dGFjaG1lbnRzIC0tPnxOw6NvfCBTZW5kVG9MZWdpc2xhdGl2ZQogICAgVXBsb2FkRmlsZXMgLS0+IFNlbmRUb0xlZ2lzbGF0aXZlCgogICAgU2VuZFRvTGVnaXNsYXRpdmVbRW52aWEgcGFyYSBMZWdpc2xhdGl2bzxici8+U3RhdHVzOiAnZW52aWFkb19sZWdpc2xhdGl2byddIC0tPiBMZWdpc2xhdGl2ZVJlY2VpdmVzW0xlZ2lzbGF0aXZvIHJlY2ViZTxici8+cHJvcG9zacOnw6NvXQoKICAgIExlZ2lzbGF0aXZlUmVjZWl2ZXMgLS0+IFN0YXJ0UmV2aWV3W0luaWNpYSByZXZpc8Ojbzxici8+U3RhdHVzOiAnZW1fcmV2aXNhbyddCgogICAgU3RhcnRSZXZpZXcgLS0+IFRlY2huaWNhbEFuYWx5c2lzWyJBbsOhbGlzZSB0w6ljbmljYTo8YnIvPi0gQ29uc3RpdHVjaW9uYWxpZGFkZTxici8+LSBKdXJpZGljaWRhZGU8YnIvPi0gUmVnaW1lbnRhbGlkYWRlPGJyLz4tIFTDqWNuaWNhIGxlZ2lzbGF0aXZhIl0KCiAgICBUZWNobmljYWxBbmFseXNpcyAtLT4gRWRpdENvbnRlbnR7UHJlY2lzYTxici8+ZWRpdGFyP30KICAgIEVkaXRDb250ZW50IC0tPnxTaW18IExlZ2lzbGF0aXZlRWRpdFtMZWdpc2xhdGl2byBlZGl0YTxici8+bm8gT25seU9mZmljZV0KICAgIEVkaXRDb250ZW50IC0tPnxOw6NvfCBNYWtlRGVjaXNpb24KICAgIExlZ2lzbGF0aXZlRWRpdCAtLT4gTWFrZURlY2lzaW9uCgogICAgTWFrZURlY2lzaW9ue0RlY2lzw6NvIGRvPGJyLz5MZWdpc2xhdGl2b30KICAgIE1ha2VEZWNpc2lvbiAtLT58QXByb3ZhcnwgQXBwcm92ZUZvclNpZ25hdHVyZVtBcHJvdmEgcGFyYSBhc3NpbmF0dXJhPGJyLz5TdGF0dXM6ICdhcHJvdmFkb19hc3NpbmF0dXJhJ10KICAgIE1ha2VEZWNpc2lvbiAtLT58RGV2b2x2ZXJ8IFJldHVybkZvckNvcnJlY3Rpb25bRGV2b2x2ZSBwYXJhIGNvcnJlw6fDo288YnIvPlN0YXR1czogJ2Rldm9sdmlkb19jb3JyZWNhbyddCgogICAgUmV0dXJuRm9yQ29ycmVjdGlvbiAtLT4gUGFybGlhbWVudGFyeUNvcnJlY3RzW1BhcmxhbWVudGFyIGZhejxici8+Y29ycmXDp8O1ZXMgc29saWNpdGFkYXNdCiAgICBQYXJsaWFtZW50YXJ5Q29ycmVjdHMgLS0+IFNlbmRUb0xlZ2lzbGF0aXZlCgogICAgQXBwcm92ZUZvclNpZ25hdHVyZSAtLT4gUGFybGlhbWVudGFyeVZpZXdzW1BhcmxhbWVudGFyIHZpc3VhbGl6YTxici8+dmVyc8OjbyBmaW5hbF0KICAgIFBhcmxpYW1lbnRhcnlWaWV3cyAtLT4gQ29uZmlybVJlYWRpbmdbQ29uZmlybWEgbGVpdHVyYTxici8+Y29uZmlybWFjYW9fbGVpdHVyYSA9IHRydWVdCgogICAgQ29uZmlybVJlYWRpbmcgLS0+IERpZ2l0YWxTaWduYXR1cmVbQXNzaW5hIGRpZ2l0YWxtZW50ZTxici8+U3RhdHVzOiAnYXNzaW5hZG8nXQoKICAgIERpZ2l0YWxTaWduYXR1cmUgLS0+IEdlbmVyYXRlUERGU2lnbmVkW0dlcmEgUERGIG90aW1pemFkbzxici8+Y29tIGFzc2luYXR1cmEgUVJdCgogICAgR2VuZXJhdGVQREZTaWduZWQgLS0+IENsZWFuT2xkUERGc1tMaW1wYSBQREZzIGFudGlnb3M8YnIvPm1hbnTDqW0gMyDDumx0aW1vc10KICAgIENsZWFuT2xkUERGcyAtLT4gU2VuZFRvUHJvdG9jb2xbRW52aWEgcGFyYSBwcm90b2NvbG88YnIvPlN0YXR1czogJ2VudmlhZG9fcHJvdG9jb2xvJ10KCiAgICBTZW5kVG9Qcm90b2NvbCAtLT4gUHJvdG9jb2xRdWV1ZVtGaWxhIGRvIHByb3RvY29sb10KCiAgICBQcm90b2NvbFF1ZXVlIC0tPiBQcm90b2NvbFZlcmlmaWNhdGlvbnNbIlZlcmlmaWNhw6fDtWVzIGRvIHByb3RvY29sbzo8YnIvPi0gRG9jdW1lbnRvIGFzc2luYWRvPGJyLz4tIENvbnRlw7pkbyBjb21wbGV0bzxici8+LSBBbmV4b3MgcHJlc2VudGVzIl0KCiAgICBQcm90b2NvbFZlcmlmaWNhdGlvbnMgLS0+IEFzc2lnbk51bWJlcltBdHJpYnVpIG7Dum1lcm8gZGUgcHJvdG9jb2xvPGJyLz5FeDogMjAyNS8wMDAxXQoKICAgIEFzc2lnbk51bWJlciAtLT4gRGVmaW5lQ29tbWlzc2lvbnNbRGVmaW5lIGNvbWlzc8O1ZXM8YnIvPmRlIGRlc3Rpbm9dCgogICAgRGVmaW5lQ29tbWlzc2lvbnMgLS0+IFByb3RvY29saXplW1Byb3RvY29saXphIG9maWNpYWxtZW50ZTxici8+U3RhdHVzOiAncHJvdG9jb2xhZG8nXQoKICAgIFByb3RvY29saXplIC0tPiBHZW5lcmF0ZUZpbmFsUERGW0dlcmEgUERGIGZpbmFsIG90aW1pemFkbzxici8+Y29tIG7Dum1lcm8gZGUgcHJvdG9jb2xvPGJyLz5lIFFSIENvZGVdCgogICAgR2VuZXJhdGVGaW5hbFBERiAtLT4gRW5kKFtGaW0gLSBQcm9wb3Npw6fDo288YnIvPlByb3RvY29sYWRhXSkKCiAgICBzdHlsZSBTdGFydCBmaWxsOiNlMWY1ZmUKICAgIHN0eWxlIEVuZCBmaWxsOiNjOGU2YzkKICAgIHN0eWxlIENyZWF0ZVByb3Bvc2FsIGZpbGw6I2ZmZjNlMAogICAgc3R5bGUgU2F2ZURyYWZ0IGZpbGw6I2ZjZTRlYwogICAgc3R5bGUgU2VuZFRvTGVnaXNsYXRpdmUgZmlsbDojZjNlNWY1CiAgICBzdHlsZSBBcHByb3ZlRm9yU2lnbmF0dXJlIGZpbGw6I2U4ZjVlOQogICAgc3R5bGUgUmV0dXJuRm9yQ29ycmVjdGlvbiBmaWxsOiNmZmViZWUKICAgIHN0eWxlIERpZ2l0YWxTaWduYXR1cmUgZmlsbDojZTBmMmYxCiAgICBzdHlsZSBQcm90b2NvbGl6ZSBmaWxsOiNmMWY4ZTk=',
+        '04-assinatura-digital-pyhanko': 'Z3JhcGggVEQKICAgIEFb8J+RpCBVc3XDoXJpbyBTb2xpY2l0YSBBc3NpbmF0dXJhXSAtLT4gQlvwn5OBIFVwbG9hZCBDZXJ0aWZpY2FkbyBQRlhdCiAgICBCIC0tPiBDW/CflJEgSW5mb3JtYSBTZW5oYSBQRlhdCiAgICBDIC0tPiBEe/CflJIgVmFsaWRhw6fDo28gT3BlblNTTH0KICAgIEQgLS0+fOKchSBWw6FsaWRvfCBFW/Cfk4QgUHJlcGFyYXIgUERGIEJhc2VdCiAgICBEIC0tPnzinYwgSW52w6FsaWRvfCBGW+KaoO+4jyBFcnJvOiBDZXJ0aWZpY2FkbyBJbnbDoWxpZG9dCgogICAgRSAtLT4gR3vwn5OLIFBERiB0ZW0gQ2FtcG8gQXNzaW5hdHVyYT99CiAgICBHIC0tPnzinYwgTsOjb3wgSFvinpUgQ3JpYXIgQ2FtcG8gQXNzaW5hdHVyYURpZ2l0YWxdCiAgICBHIC0tPnzinIUgU2ltfCBJW/CfkLMgRG9ja2VyIFJ1biAtLXJtIFB5SGFua29dCiAgICBIIC0tPiBJCgogICAgSSAtLT4gSlvwn5uh77iPIFB5SGFua28gQ29udGFpbmVyIEVmw6ptZXJvXQogICAgSiAtLT4gS1vwn5OdIFByb2Nlc3NhciBQQWRFUyBCLUxUXQogICAgSyAtLT4gTFvij7AgQWRpY2lvbmFyIFRpbWVzdGFtcCBUU0FdCiAgICBMIC0tPiBNW/Cfk6YgRW1iYXJjYXIgQ1JML09DU1BdCiAgICBNIC0tPiBOW+KchSBQREYgQXNzaW5hZG8gR2VyYWRvXQoKICAgIE4gLS0+IE578J+UjSBWYWxpZGHDp8OjbyBBdXRvbcOhdGljYX0KICAgIE8gLS0+fOKchSBWw6FsaWRvfCBQW/Cfkr4gU2FsdmFyIFBERiBGaW5hbF0KICAgIE8gLS0+fOKdjCBJbnbDoWxpZG98IFFb4pqg77iPIEVycm8gbmEgQXNzaW5hdHVyYV0KCiAgICBQIC0tPiBSW/CfjokgQXNzaW5hdHVyYSBDb25jbHXDrWRhXQoKICAgIHN0eWxlIEEgZmlsbDojZTFmNWZlLHN0cm9rZTojMDE1NzliCiAgICBzdHlsZSBKIGZpbGw6I2ZmZjNlMCxzdHJva2U6I2Y1N2MwMAogICAgc3R5bGUgTiBmaWxsOiNlOGY1ZTgsc3Ryb2tlOiMyZTdkMzIKICAgIHN0eWxlIFIgZmlsbDojZjNlNWY1LHN0cm9rZTojN2IxZmEy',
+        '05-fluxo-documento-completo': 'Z3JhcGggVEIKICAgIFN0YXJ0KFtJbsOtY2lvXSkgLS0+IEFkbWluW0FkbWluaXN0cmFkb3JdCgogICAgJSUgRmFzZSAxOiBDcmlhw6fDo28gZG8gVGVtcGxhdGUgVW5pdmVyc2FsCiAgICBBZG1pbiAtLT58Q3JpYSBUZW1wbGF0ZXwgQ3JlYXRlVGVtcGxhdGVbQ3JpYXIgVGVtcGxhdGUgVW5pdmVyc2FsXQogICAgQ3JlYXRlVGVtcGxhdGUgLS0+IERCMVsoREI6IHRpcG9fcHJvcG9zaWNhb190ZW1wbGF0ZXMpXQogICAgREIxIC0tPnxJTlNFUlR8IFQxWyJub21lOiBUZW1wbGF0ZSBVbml2ZXJzYWw8YnIvPnRpcG9fcHJvcG9zaWNhb19pZDogTlVMTDxici8+dGVtcGxhdGVfY29udGV1ZG86IFJURjxici8+YXRpdm86IHRydWU8YnIvPmNyZWF0ZWRfYXQ6IE5PVyJdCgogICAgVDEgLS0+IFBhcmFtQ29uZmlnW0NvbmZpZ3VyYXIgUGFyw6JtZXRyb3NdCiAgICBQYXJhbUNvbmZpZyAtLT4gREIyWyhEQjogcGFyYW1ldHJvc190ZW1wbGF0ZXMpXQogICAgREIyIC0tPnxJTlNFUlQgbcO6bHRpcGxvc3wgUDFbInRpcG9fcHJvcG9zaWNhb190ZW1wbGF0ZV9pZDxici8+Y29kaWdvOiB2YXJpYXZlbDxici8+ZGVzY3JpY2FvPGJyLz52YWxvcl9wYWRyYW88YnIvPm9icmlnYXRvcmlvIl0KCiAgICAlJSBGYXNlIDI6IENyaWHDp8OjbyBkYSBQcm9wb3Npw6fDo28KICAgIFAxIC0tPiBQYXJsYW1lbnRhcltQYXJsYW1lbnRhcl0KICAgIFBhcmxhbWVudGFyIC0tPnxMb2dpbnwgQXV0aDF7QXV0ZW50aWNhw6fDo299CiAgICBBdXRoMSAtLT4gREIzWyhEQjogdXNlcnMpXQogICAgREIzIC0tPnxTRUxFQ1R8IFZhbGlkVXNlcltWZXJpZmljYXIgUm9sZTogcGFybGFtZW50YXJdCgogICAgVmFsaWRVc2VyIC0tPiBDcmVhdGVQcm9wW0NyaWFyIE5vdmEgUHJvcG9zacOnw6NvXQogICAgQ3JlYXRlUHJvcCAtLT58U2VsZWNpb25hIFRlbXBsYXRlIFVuaXZlcnNhbHwgREI0WyhEQjogcHJvcG9zaWNvZXMpXQogICAgREI0IC0tPnxJTlNFUlR8IFByb3AxWyJ0aXBvX3Byb3Bvc2ljYW9faWQ8YnIvPnVzZXJfaWQ6IGF1dG9yPGJyLz5udW1lcm86IE5VTEw8YnIvPmFubzogMjAyNTxici8+ZW1lbnRhPGJyLz50ZXh0bzxici8+c3RhdHVzOiByYXNjdW5obzxici8+YXJxdWl2b19wYXRoOiBOVUxMPGJyLz5hcnF1aXZvX3BkZl9wYXRoOiBOVUxMPGJyLz5jcmVhdGVkX2F0OiBOT1ciXQoKICAgIFByb3AxIC0tPiBBcHBseVRlbXBsYXRlW0FwbGljYXIgVGVtcGxhdGVdCiAgICBBcHBseVRlbXBsYXRlIC0tPiBUZW1wbGF0ZVNlcnZpY2VbVGVtcGxhdGVQcm9jZXNzb3JTZXJ2aWNlXQogICAgVGVtcGxhdGVTZXJ2aWNlIC0tPnxQcm9jZXNzYSB2YXJpw6F2ZWlzfCBSVEYxW0dlcmFyIFJURl0KICAgIFJURjEgLS0+IERCNVsoREI6IHByb3Bvc2ljb2VzKV0KICAgIERCNSAtLT58VVBEQVRFfCBQcm9wMlthcnF1aXZvX3BhdGg6IHByb3Bvc2ljb2VzLzIwMjUvcnRmPGJyLz51cGRhdGVkX2F0OiBOT1ddCgogICAgJSUgRmFzZSAzOiBFZGnDp8OjbyBubyBPbmx5T2ZmaWNlCiAgICBQcm9wMiAtLT4gRWRpdE9ubHlPZmZpY2VbRWRpdGFyIG5vIE9ubHlPZmZpY2VdCiAgICBFZGl0T25seU9mZmljZSAtLT4gT25seU9mZmljZVNlcnZpY2VbT25seU9mZmljZVNlcnZpY2VdCiAgICBPbmx5T2ZmaWNlU2VydmljZSAtLT58Q2FsbGJhY2t8IERCNlsoREI6IHByb3Bvc2ljb2VzKV0KICAgIERCNiAtLT58VVBEQVRFfCBQcm9wM1siYXJxdWl2b19wYXRoOiBhcnF1aXZvIHNhbHZvPGJyLz52ZXJzYW86IHZlcnNhbyArIDE8YnIvPmVkaXRhZG9fcG9yOiB1c2VyX2lkPGJyLz51cGRhdGVkX2F0OiBOT1ciXQoKICAgIFByb3AzIC0tPiBTZW5kTGVnaXNsYXRpdm9bRW52aWFyIHBhcmEgTGVnaXNsYXRpdm9dCiAgICBTZW5kTGVnaXNsYXRpdm8gLS0+IERCN1soREI6IHByb3Bvc2ljb2VzKV0KICAgIERCNyAtLT58VVBEQVRFfCBQcm9wNFtzdGF0dXM6IGVtX2FuYWxpc2VfbGVnaXNsYXRpdm88YnIvPmVudmlhZG9fbGVnaXNsYXRpdm9fZW06IE5PVzxici8+dXBkYXRlZF9hdDogTk9XXQoKICAgICUlIEZhc2UgNDogQW7DoWxpc2UgTGVnaXNsYXRpdmEKICAgIFByb3A0IC0tPiBMZWdpc2xhdGl2b1tTZXRvciBMZWdpc2xhdGl2b10KICAgIExlZ2lzbGF0aXZvIC0tPnxMb2dpbnwgQXV0aDJ7QXV0ZW50aWNhw6fDo299CiAgICBBdXRoMiAtLT4gREI4WyhEQjogdXNlcnMpXQogICAgREI4IC0tPnxTRUxFQ1R8IFZhbGlkTGVnW1ZlcmlmaWNhciBSb2xlOiBsZWdpc2xhdGl2b10KCiAgICBWYWxpZExlZyAtLT4gUmV2aWV3UHJvcFtSZXZpc2FyIFByb3Bvc2nDp8Ojb10KICAgIFJldmlld1Byb3AgLS0+IEVkaXRMZWdbRWRpdGFyIG5vIE9ubHlPZmZpY2VdCiAgICBFZGl0TGVnIC0tPiBEQjlbKERCOiBwcm9wb3NpY29lcyldCiAgICBEQjkgLS0+fFVQREFURXwgUHJvcDVbImFycXVpdm9fcGF0aDogdmVyc8OjbyBlZGl0YWRhPGJyLz52ZXJzYW86IHZlcnNhbyArIDE8YnIvPnJldmlzYWRvX3BvcjogdXNlcl9pZDxici8+dXBkYXRlZF9hdDogTk9XIl0KCiAgICBQcm9wNSAtLT4gQXBwcm92ZUxlZ1tBcHJvdmFyIEVkacOnw7Vlc10KICAgIEFwcHJvdmVMZWcgLS0+IERCMTBbKERCOiBwcm9wb3NpY29lcyldCiAgICBEQjEwIC0tPnxVUERBVEV8IFByb3A2WyJzdGF0dXM6IGFwcm92YWRvX2Fzc2luYXR1cmE8YnIvPmRhdGFfYXByb3ZhY2FvX2F1dG9yOiBOT1c8YnIvPmFycXVpdm9fcGRmX3BhdGg6IE5VTEw8YnIvPnBkZl9nZXJhZG9fZW06IE5VTEw8YnIvPnBkZl9jb252ZXJzb3JfdXNhZG86IE5VTEw8YnIvPnVwZGF0ZWRfYXQ6IE5PVyJdCgogICAgJSUgRmFzZSA1OiBHZXJhw6fDo28gZGUgUERGCiAgICBQcm9wNiAtLT4gR2VuZXJhdGVQREZbR2VyYXIgUERGIHBhcmEgQXNzaW5hdHVyYV0KICAgIEdlbmVyYXRlUERGIC0tPiBQREZTZXJ2aWNlW1BERkNvbnZlcnNpb25TZXJ2aWNlXQogICAgUERGU2VydmljZSAtLT58Q29udmVydGUgUlRGfCBQREYxW0NyaWFyIFBERl0KICAgIFBERjEgLS0+IERCMTFbKERCOiBwcm9wb3NpY29lcyldCiAgICBEQjExIC0tPnxVUERBVEV8IFByb3A3WyJhcnF1aXZvX3BkZl9wYXRoOiBwcm9wb3NpY29lcy8yMDI1L3BkZjxici8+cGRmX2dlcmFkb19lbTogTk9XPGJyLz5wZGZfY29udmVyc29yX3VzYWRvOiB1bm9jb252PGJyLz51cGRhdGVkX2F0OiBOT1ciXQoKICAgICUlIEZhc2UgNjogQXNzaW5hdHVyYSBEaWdpdGFsCiAgICBQcm9wNyAtLT4gU2lnblBERltQYXJsYW1lbnRhciBBc3NpbmEgUERGXQogICAgU2lnblBERiAtLT4gQXNzaW5hdHVyYVNlcnZpY2VbQXNzaW5hdHVyYURpZ2l0YWxTZXJ2aWNlXQogICAgQXNzaW5hdHVyYVNlcnZpY2UgLS0+IERCMTJbKERCOiBhc3NpbmF0dXJhc19kaWdpdGFpcyldCiAgICBEQjEyIC0tPnxJTlNFUlR8IFNpZ24xWyJwcm9wb3NpY2FvX2lkPGJyLz51c2VyX2lkOiBhc3NpbmFudGU8YnIvPnRpcG9fYXNzaW5hdHVyYTogYXV0b3I8YnIvPmhhc2hfZG9jdW1lbnRvPGJyLz5jZXJ0aWZpY2Fkb19pbmZvPGJyLz5hc3NpbmFkb19lbTogTk9XIl0KCiAgICBTaWduMSAtLT4gREIxM1soREI6IHByb3Bvc2ljb2VzKV0KICAgIERCMTMgLS0+fFVQREFURXwgUHJvcDhbInN0YXR1czogYXNzaW5hZG88YnIvPmFycXVpdm9fcGRmX2Fzc2luYWRvOiBwYXRoPGJyLz5kYXRhX2Fzc2luYXR1cmE6IE5PVzxici8+dXBkYXRlZF9hdDogTk9XIl0KCiAgICAlJSBGYXNlIDc6IFByb3RvY29sbwogICAgUHJvcDggLS0+IFByb3RvY29sb1tTZXRvciBkZSBQcm90b2NvbG9dCiAgICBQcm90b2NvbG8gLS0+fExvZ2lufCBBdXRoM3tBdXRlbnRpY2HDp8Ojb30KICAgIEF1dGgzIC0tPiBEQjE0WyhEQjogdXNlcnMpXQogICAgREIxNCAtLT58U0VMRUNUfCBWYWxpZFByb3RbVmVyaWZpY2FyIFJvbGU6IHByb3RvY29sb10KCiAgICBWYWxpZFByb3QgLS0+IFByb3RvY29sUHJvcFtQcm90b2NvbGFyIERvY3VtZW50b10KICAgIFByb3RvY29sUHJvcCAtLT4gREIxNVsoREI6IHByb3Bvc2ljb2VzKV0KICAgIERCMTUgLS0+fFVQREFURXwgUHJvcDlbIm51bWVybzogMDAwMTxici8+c3RhdHVzOiBwcm90b2NvbGFkbzxici8+cHJvdG9jb2xhZG9fZW06IE5PVzxici8+cHJvdG9jb2xhZG9fcG9yOiB1c2VyX2lkPGJyLz51cGRhdGVkX2F0OiBOT1ciXQoKICAgIFByb3A5IC0tPiBEQjE2WyhEQjogcHJvdG9jb2xvX3JlZ2lzdHJvKV0KICAgIERCMTYgLS0+fElOU0VSVHwgUHJvdG9jb2wxWyJwcm9wb3NpY2FvX2lkPGJyLz5udW1lcm9fcHJvdG9jb2xvOiAwMDAxLzIwMjU8YnIvPmRhdGFfcHJvdG9jb2xvOiBOT1c8YnIvPnJlc3BvbnNhdmVsX2lkOiB1c2VyX2lkIl0KCiAgICBQcm90b2NvbDEgLS0+IEVuZChbRG9jdW1lbnRvIFByb3RvY29sYWRvXSkKCiAgICAlJSBTdHlsaW5nCiAgICBjbGFzc0RlZiBkYlN0eWxlIGZpbGw6I2UxZjVmZSxzdHJva2U6IzAxNTc5YixzdHJva2Utd2lkdGg6MnB4CiAgICBjbGFzc0RlZiBzZXJ2aWNlU3R5bGUgZmlsbDojZmZmM2UwLHN0cm9rZTojZTY1MTAwLHN0cm9rZS13aWR0aDoycHgKICAgIGNsYXNzRGVmIHVzZXJTdHlsZSBmaWxsOiNmM2U1ZjUsc3Ryb2tlOiM0YTE0OGMsc3Ryb2tlLXdpZHRoOjJweAogICAgY2xhc3NEZWYgcHJvY2Vzc1N0eWxlIGZpbGw6I2U4ZjVlOSxzdHJva2U6IzFiNWUyMCxzdHJva2Utd2lkdGg6MnB4CgogICAgY2xhc3MgREIxLERCMixEQjMsREI0LERCNSxEQjYsREI3LERCOCxEQjksREIxMCxEQjExLERCMTIsREIxMyxEQjE0LERCMTUsREIxNiBkYlN0eWxlCiAgICBjbGFzcyBUZW1wbGF0ZVNlcnZpY2UsT25seU9mZmljZVNlcnZpY2UsUERGU2VydmljZSxBc3NpbmF0dXJhU2VydmljZSBzZXJ2aWNlU3R5bGUKICAgIGNsYXNzIEFkbWluLFBhcmxhbWVudGFyLExlZ2lzbGF0aXZvLFByb3RvY29sbyB1c2VyU3R5bGUKICAgIGNsYXNzIENyZWF0ZVRlbXBsYXRlLENyZWF0ZVByb3AsQXBwbHlUZW1wbGF0ZSxFZGl0T25seU9mZmljZSxSZXZpZXdQcm9wLEdlbmVyYXRlUERGLFNpZ25QREYsUHJvdG9jb2xQcm9wIHByb2Nlc3NTdHlsZQ=='
+    };
+
+    return fileContents[fileName] || null;
+}
+
+// Open all Mermaid files in separate tabs
+function openAllMermaidFiles() {
+    const files = ['01-arquitetura-geral', '02-fluxo-proposicoes-estados', '03-fluxo-proposicoes-completo', '04-assinatura-digital-pyhanko', '05-fluxo-documento-completo'];
+
+    Swal.fire({
+        title: 'Abrir todos os diagramas?',
+        text: `Isso abrirá ${files.length} abas do Mermaid Live Editor. Tem certeza?`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Sim, abrir todos',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#3085d6'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            let delay = 0;
+            files.forEach((fileName, index) => {
+                setTimeout(() => {
+                    openMermaidWithFile(fileName);
+                }, delay);
+                delay += 500; // 500ms delay between each tab
+            });
+        }
+    });
+}
+
+// Open Mermaid Live Editor in general
+function openMermaidLiveEditor() {
+    // Open the local Mermaid Live Editor in a new tab
+    const mermaidUrl = 'http://localhost:8083';
+
+    // Show notification
+    const toast = document.createElement('div');
+    toast.className = 'toast align-items-center text-white bg-info border-0 position-fixed';
+    toast.style.top = '20px';
+    toast.style.right = '20px';
+    toast.style.zIndex = '9999';
+    toast.setAttribute('role', 'alert');
+
+    toast.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body">
+                <i class="ki-duotone ki-graph-2 fs-2 me-2">
+                    <span class="path1"></span>
+                    <span class="path2"></span>
+                    <span class="path3"></span>
+                </i>
+                <div>
+                    <div class="fw-bold">Mermaid Live Editor</div>
+                    <small>Abrindo editor em nova aba...</small>
+                </div>
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" onclick="this.parentElement.parentElement.remove()"></button>
+        </div>
+    `;
+
+    document.body.appendChild(toast);
+
+    // Auto remove after 4 seconds
+    setTimeout(() => {
+        if (toast.parentElement) {
+            toast.remove();
+        }
+    }, 4000);
+
+    // Check if local Mermaid is accessible
+    fetch(mermaidUrl)
+        .then(response => {
+            if (response.ok) {
+                window.open(mermaidUrl, '_blank');
+            } else {
+                throw new Error('Container não acessível');
+            }
+        })
+        .catch(() => {
+            // Remove success toast and show error
+            if (toast.parentElement) {
+                toast.remove();
+            }
+
+            Swal.fire({
+                title: 'Container Mermaid não acessível',
+                html: `
+                    <p class="mb-3">O Mermaid Live Editor local não está acessível em <strong>${mermaidUrl}</strong></p>
+                    <p class="mb-3">Para iniciar o container, execute:</p>
+                    <code class="d-block bg-light p-3 rounded text-start">docker-compose up -d mermaid-live-editor</code>
+                    <p class="mt-3 text-muted">Ou use o editor online como alternativa.</p>
+                `,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Abrir Editor Online',
+                cancelButtonText: 'OK',
+                confirmButtonColor: '#3085d6'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.open('https://mermaid.live', '_blank');
+                }
+            });
+        });
 }
 
 // Toggle fullscreen for diagram
@@ -1898,6 +2556,28 @@ function showBatchDownloadResult(successCount, errorCount, format) {
     background-color: #b45309 !important;
     border-color: #b45309 !important;
     color: #fff !important;
+}
+
+.btn-light-info:hover {
+    background-color: #055160 !important;
+    border-color: #055160 !important;
+    color: #fff !important;
+}
+
+/* Mermaid Live Editor button styles */
+.btn-info {
+    background: linear-gradient(135deg, #17a2b8, #138496) !important;
+    border-color: #17a2b8 !important;
+    color: #fff !important;
+    font-weight: 500 !important;
+}
+
+.btn-info:hover {
+    background: linear-gradient(135deg, #138496, #105a6b) !important;
+    border-color: #138496 !important;
+    color: #fff !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 8px rgba(23, 162, 184, 0.3) !important;
 }
 
 /* Clickable cards styles */

@@ -1,0 +1,84 @@
+graph TB
+    %% Frontend Layer
+    FRONTEND["🌐 Frontend<br/>Vue.js + Laravel Blade<br/>React/Angular Support"]
+
+    %% Gateway Layer
+    GATEWAY["🚪 API Gateway<br/>Traefik + Load Balancer<br/>Roteamento Inteligente"]
+
+    %% Backend Options (Current + New)
+    subgraph "Backend Services"
+        LARAVEL["🐘 Laravel API<br/>Current Backend<br/>PHP 8.2 + Eloquent"]
+        JAVA["☕ Java Spring Boot<br/>New Backend Option<br/>JPA + PostgreSQL"]
+        NODE["🟢 Node.js API<br/>Alternative Backend<br/>Express + Prisma"]
+        PYTHON["🐍 Python FastAPI<br/>Alternative Backend<br/>SQLAlchemy + Async"]
+        DOTNET["🔷 .NET Core API<br/>Alternative Backend<br/>Entity Framework"]
+    end
+
+    %% Migration Tools
+    MIGRATION["🔄 Migration Tools<br/>Backend Analysis<br/>Endpoint Mapping<br/>Database Schema Export"]
+
+    %% Main Controllers (Laravel Legacy)
+    PC["📄 ProposicaoController"]
+    PLC["👤 ParlamentarController"]
+    AC["⚙️ AdminControllers"]
+    MPC["🔄 MigrationPreparationController"]
+
+    %% Services Layer
+    subgraph "Service Layer"
+        OOS["📝 OnlyOfficeService"]
+        TPS["📋 TemplateProcessorService"]
+        ADS["🔏 AssinaturaDigitalService"]
+        WFS["🔄 WorkflowService"]
+    end
+
+    %% Data & Storage
+    DB[("🗄️ PostgreSQL<br/>Shared Database<br/>All Backends")]
+    STORAGE["📁 Storage Files<br/>Docker Volumes"]
+    CACHE["⚡ Redis Cache<br/>Session & Performance"]
+
+    %% External Services
+    ONLY["📝 OnlyOffice Server<br/>Document Editor"]
+    PYHANKO["🔏 PyHanko Container<br/>Digital Signature"]
+
+    %% Network Flow
+    FRONTEND --> GATEWAY
+    GATEWAY --> LARAVEL
+    GATEWAY -.-> JAVA
+    GATEWAY -.-> NODE
+    GATEWAY -.-> PYTHON
+    GATEWAY -.-> DOTNET
+
+    %% Migration Flow
+    MIGRATION --> LARAVEL
+    MIGRATION --> JAVA
+    MIGRATION --> NODE
+    MIGRATION --> PYTHON
+    MIGRATION --> DOTNET
+
+    %% Laravel Internal (Current)
+    LARAVEL --> PC
+    LARAVEL --> PLC
+    LARAVEL --> AC
+    LARAVEL --> MPC
+
+    PC --> OOS
+    PC --> TPS
+    PC --> ADS
+    PC --> WFS
+
+    %% Shared Resources
+    LARAVEL --> DB
+    JAVA -.-> DB
+    NODE -.-> DB
+    PYTHON -.-> DB
+    DOTNET -.-> DB
+
+    OOS --> ONLY
+    ADS --> PYHANKO
+
+    OOS --> STORAGE
+    TPS --> STORAGE
+    ADS --> STORAGE
+
+    PC --> CACHE
+    OOS --> CACHE

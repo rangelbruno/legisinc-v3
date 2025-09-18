@@ -1,4 +1,8 @@
 services:
+  # ====================================
+  # 🗄️ BANCO DE DADOS E CACHE
+  # ====================================
+
   # 1. Banco de Dados PostgreSQL (base da hierarquia)
   db:
     image: postgres:15-alpine
@@ -20,7 +24,7 @@ services:
       timeout: 5s
       retries: 5
 
-  # 2. Cache Redis (depende do banco)
+  # 2. Cache Redis
   redis:
     image: redis:7-alpine
     container_name: legisinc-redis
@@ -41,7 +45,90 @@ services:
       timeout: 5s
       retries: 5
 
-  # 3. OnlyOffice Document Server (depende do banco e redis)
+  # ====================================
+  # 🏛️ CORE DO SISTEMA
+  # ====================================
+
+  # 3. Aplicação Laravel
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        USER_ID: ${USER_ID:-1000}
+        GROUP_ID: ${GROUP_ID:-1000}
+    container_name: legisinc-app
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - ./:/var/www/html
+      - ./docker/php/php.ini:/usr/local/etc/php/php.ini
+    ports:
+      - "8001:80"
+      - "8444:443"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      - APP_ENV=local
+      - APP_DEBUG=true
+      - APP_URL=http://localhost:8001
+      - DB_CONNECTION=pgsql
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_DATABASE=legisinc
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=123456
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=null
+      - CACHE_DRIVER=redis
+      - SESSION_DRIVER=redis
+      - QUEUE_CONNECTION=redis
+    networks:
+      - legisinc_network
+
+  # 4. Nova API (Java/Node backend adicional)
+  nova-api:
+    image: node:18-alpine
+    container_name: legisinc-nova-api
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - ./nova-api:/app
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_DATABASE=legisinc
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=123456
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    command: sh -c "npm install && npm run dev || node server.js || sleep infinity"
+    networks:
+      - legisinc_network
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ====================================
+  # 📝 EDIÇÃO E DOCUMENTOS
+  # ====================================
+
+  # 5. OnlyOffice Document Server
   onlyoffice-documentserver:
     image: onlyoffice/documentserver:8.0
     container_name: legisinc-onlyoffice
@@ -82,8 +169,6 @@ services:
       - onlyoffice_cache:/var/lib/onlyoffice/documentserver/App_Data/cache/files
       - onlyoffice_forgotten:/var/lib/onlyoffice/documentserver/App_Data/cache/forgotten
       - ./storage/app/public:/var/www/onlyoffice/Data/public
-      # Configurações de idioma em português (temporariamente desabilitadas)
-      # - ./docker/onlyoffice/local.json:/etc/onlyoffice/documentserver/local.json
     networks:
       - legisinc_network
     depends_on:
@@ -97,69 +182,156 @@ services:
       timeout: 10s
       retries: 5
 
-  # 4. Aplicação Laravel (depende de todos os anteriores)
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        USER_ID: ${USER_ID:-1000}
-        GROUP_ID: ${GROUP_ID:-1000}
-    container_name: legisinc-app
+  # ====================================
+  # 🚪 GATEWAY, PROXY E TRÁFEGO
+  # ====================================
+
+  # 6. Traefik API Gateway
+  traefik:
+    image: traefik:v3.0
+    container_name: legisinc-gateway-simple
     restart: unless-stopped
-    working_dir: /var/www/html
-    volumes:
-      - ./:/var/www/html
-      - ./docker/php/php.ini:/usr/local/etc/php/php.ini
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--log.level=INFO"
     ports:
-      - "8001:80"
-      - "8444:443"
+      - "8000:80"
+      - "8090:8080"  # Traefik Dashboard
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - legisinc_network
+    depends_on:
+      - app
+      - nova-api
+
+  # 7. Nginx para Shadow Testing
+  nginx-shadow:
+    image: nginx:alpine
+    container_name: legisinc-nginx-shadow
+    restart: unless-stopped
+    ports:
+      - "8002:80"
+    volumes:
+      - ./public:/usr/share/nginx/html:ro
+    environment:
+      - NGINX_HOST=localhost
+      - NGINX_PORT=80
+    networks:
+      - legisinc_network
+    depends_on:
+      - app
+
+  # 8. Shadow Comparator
+  shadow-comparator:
+    image: node:18-alpine
+    container_name: legisinc-shadow-comparator
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - ./shadow-comparator:/app
+    ports:
+      - "3002:3002"
+    environment:
+      - NODE_ENV=development
+      - PORT=3002
+      - PRIMARY_URL=http://app:80
+      - SHADOW_URL=http://nginx-shadow:80
+    command: sh -c "npm install && npm run dev || node server.js || sleep infinity"
+    networks:
+      - legisinc_network
+    depends_on:
+      - app
+      - nginx-shadow
+
+  # 9. Canary Monitor
+  canary-monitor:
+    image: node:18-alpine
+    container_name: legisinc-canary-monitor
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - ./canary-monitor:/app
+    ports:
+      - "3003:3003"
+    environment:
+      - NODE_ENV=development
+      - PORT=3003
+      - CANARY_URL=http://app:80
+      - STABLE_URL=http://nginx-shadow:80
+      - METRICS_INTERVAL=30000
+    command: sh -c "npm install && npm run dev || node server.js || sleep infinity"
+    networks:
+      - legisinc_network
+    depends_on:
+      - app
+
+  # ====================================
+  # 📊 MONITORAMENTO E OBSERVABILIDADE
+  # ====================================
+
+  # 10. Prometheus
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: legisinc-prometheus-simple
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    networks:
+      - legisinc_network
+    depends_on:
+      - postgres-exporter
+
+  # 11. Grafana
+  grafana:
+    image: grafana/grafana:latest
+    container_name: legisinc-grafana-simple
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_INSTALL_PLUGINS=
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro
+    networks:
+      - legisinc_network
+    depends_on:
+      - prometheus
+
+  # 12. PostgreSQL Exporter
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:latest
+    container_name: legisinc-postgres-exporter
+    restart: unless-stopped
+    ports:
+      - "9187:9187"
+    environment:
+      DATA_SOURCE_NAME: "postgresql://postgres:123456@db:5432/legisinc?sslmode=disable"
+    networks:
+      - legisinc_network
     depends_on:
       db:
         condition: service_healthy
-      redis:
-        condition: service_healthy
-      onlyoffice-documentserver:
-        condition: service_healthy
-    environment:
-      - APP_ENV=local
-      - APP_DEBUG=true
-      - APP_URL=http://localhost:8001
-      - DB_CONNECTION=pgsql
-      - DB_HOST=db
-      - DB_PORT=5432
-      - DB_DATABASE=legisinc
-      - DB_USERNAME=postgres
-      - DB_PASSWORD=123456
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - REDIS_PASSWORD=null
-      - CACHE_DRIVER=redis
-      - SESSION_DRIVER=redis
-      - QUEUE_CONNECTION=redis
-    networks:
-      - legisinc_network
 
-  # 5. PyHanko - Assinatura Digital (efêmero, não sobe no up -d)
-  pyhanko:
-    build:
-      context: ./docker/pyhanko
-      dockerfile: Dockerfile
-    image: legisinc-pyhanko:latest
-    container_name: legisinc-pyhanko-tool
-    profiles: ["tools", "signing"]  # Não aparece no docker-compose up -d
-    entrypoint: ["pyhanko"]
-    environment:
-      - PFX_PASS                    # Injete em runtime
-      - TZ=America/Sao_Paulo
-    volumes:
-      - ./storage:/work             # Documentos para assinatura
-      - ./docker/pyhanko/certs:/certs:ro  # Certificados read-only
-    networks:
-      - legisinc_network
-    # Sem depends_on - usado apenas sob demanda
+  # ====================================
+  # 💡 FERRAMENTAS E DOCUMENTAÇÃO
+  # ====================================
 
-  # 6. Swagger UI - Documentação Interativa da API
+  # 13. Swagger UI
   swagger-ui:
     image: swaggerapi/swagger-ui:latest
     container_name: legisinc-swagger-ui
@@ -186,6 +358,43 @@ services:
     depends_on:
       - app
 
+  # 14. Mermaid Live Editor
+  mermaid-live-editor:
+    image: ghcr.io/mermaid-js/mermaid-live-editor:latest
+    container_name: legisinc-mermaid
+    restart: unless-stopped
+    platform: linux/amd64
+    ports:
+      - "8083:8080"
+    volumes:
+      - ./mermaid-diagrams:/usr/share/nginx/html/legacy-diagrams:ro
+      - ./docs:/usr/share/nginx/html/docs:ro
+      - ./docs/mermaid:/usr/share/nginx/html/diagrams:ro
+    networks:
+      - legisinc_network
+
+  # ====================================
+  # 🔐 ASSINATURA DIGITAL (Perfil tools)
+  # ====================================
+
+  # 15. PyHanko - Assinatura Digital
+  pyhanko:
+    build:
+      context: ./docker/pyhanko
+      dockerfile: Dockerfile
+    image: legisinc-pyhanko:latest
+    container_name: legisinc-pyhanko-tool
+    profiles: ["tools", "signing"]
+    entrypoint: ["pyhanko"]
+    environment:
+      - PFX_PASS
+      - TZ=America/Sao_Paulo
+    volumes:
+      - ./storage:/work
+      - ./docker/pyhanko/certs:/certs:ro
+    networks:
+      - legisinc_network
+
 volumes:
   postgres_data:
   redis_data:
@@ -193,6 +402,8 @@ volumes:
   onlyoffice_logs:
   onlyoffice_cache:
   onlyoffice_forgotten:
+  prometheus_data:
+  grafana_data:
 
 networks:
   legisinc_network:

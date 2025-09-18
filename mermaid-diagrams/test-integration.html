@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Mermaid Integration</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .code { background: #f5f5f5; padding: 10px; border-radius: 5px; margin: 10px 0; }
+        button { padding: 10px 20px; margin: 10px 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test de Integração Mermaid Live Editor</h1>
+
+    <h2>📊 Diagrama de Teste:</h2>
+    <div class="code">
+graph TB<br>
+&nbsp;&nbsp;&nbsp;&nbsp;A[Start] --> B{Decision}<br>
+&nbsp;&nbsp;&nbsp;&nbsp;B -->|Yes| C[Action 1]<br>
+&nbsp;&nbsp;&nbsp;&nbsp;B -->|No| D[Action 2]<br>
+&nbsp;&nbsp;&nbsp;&nbsp;C --> E[End]<br>
+&nbsp;&nbsp;&nbsp;&nbsp;D --> E
+    </div>
+
+    <h2>🚀 Testes:</h2>
+    <button onclick="testSimple()">Teste Simples</button>
+    <button onclick="testComplex()">Teste Complexo (project-overview)</button>
+    <button onclick="testBroken()">Teste Código Corrompido</button>
+    <button onclick="openEditor()">Abrir Editor Vazio</button>
+
+    <div id="results" style="margin-top: 20px;"></div>
+
+    <script>
+    function showResult(message, isSuccess = true) {
+        const results = document.getElementById('results');
+        const color = isSuccess ? 'green' : 'red';
+        results.innerHTML = `<p style="color: ${color}; font-weight: bold;">${message}</p>`;
+    }
+
+    function testSimple() {
+        const code = `graph TD
+    A[Start] --> B{Decision}
+    B -->|Yes| C[Action 1]
+    B -->|No| D[Action 2]
+    C --> E[End]
+    D --> E`;
+
+        try {
+            const encoded = btoa(unescape(encodeURIComponent(code)));
+            const url = `http://localhost:8083/edit#base64:${encoded}`;
+
+            window.open(url, '_blank');
+            showResult('✅ Teste simples executado! Verificar nova aba.');
+        } catch (error) {
+            showResult('❌ Erro no teste simples: ' + error.message, false);
+        }
+    }
+
+    function testComplex() {
+        const code = `graph TB
+    %% Frontend Layer
+    FRONTEND["🌐 Frontend<br/>Vue.js + Laravel Blade<br/>React/Angular Support"]
+
+    %% Gateway Layer
+    GATEWAY["🚪 API Gateway<br/>Traefik + Load Balancer<br/>Roteamento Inteligente"]
+
+    %% Backend Options (Current + New)
+    subgraph "Backend Services"
+        LARAVEL["🐘 Laravel API<br/>Current Backend<br/>PHP 8.2 + Eloquent"]
+        JAVA["☕ Java Spring Boot<br/>New Backend Option<br/>JPA + PostgreSQL"]
+    end
+
+    %% Network Flow
+    FRONTEND --> GATEWAY
+    GATEWAY --> LARAVEL
+    GATEWAY -.-> JAVA`;
+
+        try {
+            const encoded = btoa(unescape(encodeURIComponent(code)));
+            const url = `http://localhost:8083/edit#base64:${encoded}`;
+
+            console.log('🔍 Teste complexo:', {
+                originalLength: code.length,
+                encodedLength: encoded.length,
+                url: url
+            });
+
+            window.open(url, '_blank');
+            showResult('✅ Teste complexo executado! Verificar nova aba com diagrama do project-overview.');
+        } catch (error) {
+            showResult('❌ Erro no teste complexo: ' + error.message, false);
+        }
+    }
+
+    function testBroken() {
+        const code = `invalid mermaid code that should fail gracefully`;
+
+        try {
+            const encoded = btoa(unescape(encodeURIComponent(code)));
+            const url = `http://localhost:8083/edit#base64:${encoded}`;
+
+            window.open(url, '_blank');
+            showResult('⚠️ Teste de código inválido executado! Mermaid deve mostrar erro.');
+        } catch (error) {
+            showResult('❌ Erro no teste de código inválido: ' + error.message, false);
+        }
+    }
+
+    function openEditor() {
+        const url = `http://localhost:8083`;
+        window.open(url, '_blank');
+        showResult('📝 Editor vazio aberto!');
+    }
+
+    // Test container connectivity on load
+    fetch('http://localhost:8083')
+        .then(response => {
+            if (response.ok) {
+                showResult('✅ Container Mermaid Live Editor está acessível em localhost:8083');
+            } else {
+                showResult('⚠️ Container responde mas pode ter problemas', false);
+            }
+        })
+        .catch(error => {
+            showResult('❌ Container Mermaid não acessível. Execute: docker-compose up -d mermaid-live-editor', false);
+        });
+    </script>
+</body>
+</html>

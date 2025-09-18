@@ -1,0 +1,34 @@
+stateDiagram-v2
+    [*] --> Rascunho: Parlamentar cria proposição
+
+    Rascunho --> EmEdicao: Parlamentar edita
+    EmEdicao --> AguardandoProtocolo: Parlamentar finaliza
+
+    AguardandoProtocolo --> Protocolada: Protocolo atribui número
+
+    Protocolada --> EmAnalise: Legislativo recebe
+    EmAnalise --> EmRevisao: Legislativo revisa
+    EmRevisao --> AprovadoLegislativo: Legislativo aprova
+    EmRevisao --> RetornadoParlamentar: Necessita ajustes
+
+    RetornadoParlamentar --> EmEdicao: Parlamentar ajusta
+
+    AprovadoLegislativo --> AguardandoAssinatura: Pronto para assinar
+    AguardandoAssinatura --> Assinado: Certificado digital aplicado
+
+    Assinado --> Publicado: Documento final
+    Publicado --> [*]
+
+    note right of EmEdicao
+        OnlyOffice Editor
+        - Edição colaborativa
+        - Auto-save
+        - Polling 15s
+    end note
+
+    note right of AguardandoAssinatura
+        PyHanko
+        - Assinatura PAdES
+        - Certificado .pfx
+        - Validação senha
+    end note

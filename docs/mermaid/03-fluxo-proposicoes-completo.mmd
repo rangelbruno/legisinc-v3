@@ -1,0 +1,71 @@
+graph TB
+    Start([Início]) --> CreateProposal[Parlamentar cria proposição]
+
+    CreateProposal --> ChooseType{Escolhe tipo de<br/>preenchimento}
+    ChooseType -->|Template| UseTemplate[Aplica template<br/>com variáveis]
+    ChooseType -->|Manual| ManualText[Digita texto<br/>manualmente]
+    ChooseType -->|IA| AIGenerate[Gera conteúdo<br/>com IA]
+
+    UseTemplate --> SaveDraft
+    ManualText --> SaveDraft
+    AIGenerate --> SaveDraft
+
+    SaveDraft[Salva como rascunho<br/>Status: 'rascunho'] --> EditOnlyOffice[Edita no OnlyOffice<br/>Status: 'em_edicao']
+
+    EditOnlyOffice --> ValidateContent[Validação de<br/>conteúdo RTF]
+    ValidateContent --> AddAttachments{Adicionar<br/>anexos?}
+    AddAttachments -->|Sim| UploadFiles[Upload de arquivos<br/>PDF, DOC, imagens]
+    AddAttachments -->|Não| SendToLegislative
+    UploadFiles --> SendToLegislative
+
+    SendToLegislative[Envia para Legislativo<br/>Status: 'enviado_legislativo'] --> LegislativeReceives[Legislativo recebe<br/>proposição]
+
+    LegislativeReceives --> StartReview[Inicia revisão<br/>Status: 'em_revisao']
+
+    StartReview --> TechnicalAnalysis["Análise técnica:<br/>- Constitucionalidade<br/>- Juridicidade<br/>- Regimentalidade<br/>- Técnica legislativa"]
+
+    TechnicalAnalysis --> EditContent{Precisa<br/>editar?}
+    EditContent -->|Sim| LegislativeEdit[Legislativo edita<br/>no OnlyOffice]
+    EditContent -->|Não| MakeDecision
+    LegislativeEdit --> MakeDecision
+
+    MakeDecision{Decisão do<br/>Legislativo}
+    MakeDecision -->|Aprovar| ApproveForSignature[Aprova para assinatura<br/>Status: 'aprovado_assinatura']
+    MakeDecision -->|Devolver| ReturnForCorrection[Devolve para correção<br/>Status: 'devolvido_correcao']
+
+    ReturnForCorrection --> ParliamentaryCorrects[Parlamentar faz<br/>correções solicitadas]
+    ParliamentaryCorrects --> SendToLegislative
+
+    ApproveForSignature --> ParliamentaryViews[Parlamentar visualiza<br/>versão final]
+    ParliamentaryViews --> ConfirmReading[Confirma leitura<br/>confirmacao_leitura = true]
+
+    ConfirmReading --> DigitalSignature[Assina digitalmente<br/>Status: 'assinado']
+
+    DigitalSignature --> GeneratePDFSigned[Gera PDF otimizado<br/>com assinatura QR]
+
+    GeneratePDFSigned --> CleanOldPDFs[Limpa PDFs antigos<br/>mantém 3 últimos]
+    CleanOldPDFs --> SendToProtocol[Envia para protocolo<br/>Status: 'enviado_protocolo']
+
+    SendToProtocol --> ProtocolQueue[Fila do protocolo]
+
+    ProtocolQueue --> ProtocolVerifications["Verificações do protocolo:<br/>- Documento assinado<br/>- Conteúdo completo<br/>- Anexos presentes"]
+
+    ProtocolVerifications --> AssignNumber[Atribui número de protocolo<br/>Ex: 2025/0001]
+
+    AssignNumber --> DefineCommissions[Define comissões<br/>de destino]
+
+    DefineCommissions --> Protocolize[Protocoliza oficialmente<br/>Status: 'protocolado']
+
+    Protocolize --> GenerateFinalPDF[Gera PDF final otimizado<br/>com número de protocolo<br/>e QR Code]
+
+    GenerateFinalPDF --> End([Fim - Proposição<br/>Protocolada])
+
+    style Start fill:#e1f5fe
+    style End fill:#c8e6c9
+    style CreateProposal fill:#fff3e0
+    style SaveDraft fill:#fce4ec
+    style SendToLegislative fill:#f3e5f5
+    style ApproveForSignature fill:#e8f5e9
+    style ReturnForCorrection fill:#ffebee
+    style DigitalSignature fill:#e0f2f1
+    style Protocolize fill:#f1f8e9

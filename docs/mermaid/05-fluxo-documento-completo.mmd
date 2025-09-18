@@ -1,0 +1,94 @@
+graph TB
+    Start([Início]) --> Admin[Administrador]
+
+    %% Fase 1: Criação do Template Universal
+    Admin -->|Cria Template| CreateTemplate[Criar Template Universal]
+    CreateTemplate --> DB1[(DB: tipo_proposicao_templates)]
+    DB1 -->|INSERT| T1["nome: Template Universal<br/>tipo_proposicao_id: NULL<br/>template_conteudo: RTF<br/>ativo: true<br/>created_at: NOW"]
+
+    T1 --> ParamConfig[Configurar Parâmetros]
+    ParamConfig --> DB2[(DB: parametros_templates)]
+    DB2 -->|INSERT múltiplos| P1["tipo_proposicao_template_id<br/>codigo: variavel<br/>descricao<br/>valor_padrao<br/>obrigatorio"]
+
+    %% Fase 2: Criação da Proposição
+    P1 --> Parlamentar[Parlamentar]
+    Parlamentar -->|Login| Auth1{Autenticação}
+    Auth1 --> DB3[(DB: users)]
+    DB3 -->|SELECT| ValidUser[Verificar Role: parlamentar]
+
+    ValidUser --> CreateProp[Criar Nova Proposição]
+    CreateProp -->|Seleciona Template Universal| DB4[(DB: proposicoes)]
+    DB4 -->|INSERT| Prop1["tipo_proposicao_id<br/>user_id: autor<br/>numero: NULL<br/>ano: 2025<br/>ementa<br/>texto<br/>status: rascunho<br/>arquivo_path: NULL<br/>arquivo_pdf_path: NULL<br/>created_at: NOW"]
+
+    Prop1 --> ApplyTemplate[Aplicar Template]
+    ApplyTemplate --> TemplateService[TemplateProcessorService]
+    TemplateService -->|Processa variáveis| RTF1[Gerar RTF]
+    RTF1 --> DB5[(DB: proposicoes)]
+    DB5 -->|UPDATE| Prop2[arquivo_path: proposicoes/2025/rtf<br/>updated_at: NOW]
+
+    %% Fase 3: Edição no OnlyOffice
+    Prop2 --> EditOnlyOffice[Editar no OnlyOffice]
+    EditOnlyOffice --> OnlyOfficeService[OnlyOfficeService]
+    OnlyOfficeService -->|Callback| DB6[(DB: proposicoes)]
+    DB6 -->|UPDATE| Prop3["arquivo_path: arquivo salvo<br/>versao: versao + 1<br/>editado_por: user_id<br/>updated_at: NOW"]
+
+    Prop3 --> SendLegislativo[Enviar para Legislativo]
+    SendLegislativo --> DB7[(DB: proposicoes)]
+    DB7 -->|UPDATE| Prop4[status: em_analise_legislativo<br/>enviado_legislativo_em: NOW<br/>updated_at: NOW]
+
+    %% Fase 4: Análise Legislativa
+    Prop4 --> Legislativo[Setor Legislativo]
+    Legislativo -->|Login| Auth2{Autenticação}
+    Auth2 --> DB8[(DB: users)]
+    DB8 -->|SELECT| ValidLeg[Verificar Role: legislativo]
+
+    ValidLeg --> ReviewProp[Revisar Proposição]
+    ReviewProp --> EditLeg[Editar no OnlyOffice]
+    EditLeg --> DB9[(DB: proposicoes)]
+    DB9 -->|UPDATE| Prop5["arquivo_path: versão editada<br/>versao: versao + 1<br/>revisado_por: user_id<br/>updated_at: NOW"]
+
+    Prop5 --> ApproveLeg[Aprovar Edições]
+    ApproveLeg --> DB10[(DB: proposicoes)]
+    DB10 -->|UPDATE| Prop6["status: aprovado_assinatura<br/>data_aprovacao_autor: NOW<br/>arquivo_pdf_path: NULL<br/>pdf_gerado_em: NULL<br/>pdf_conversor_usado: NULL<br/>updated_at: NOW"]
+
+    %% Fase 5: Geração de PDF
+    Prop6 --> GeneratePDF[Gerar PDF para Assinatura]
+    GeneratePDF --> PDFService[PDFConversionService]
+    PDFService -->|Converte RTF| PDF1[Criar PDF]
+    PDF1 --> DB11[(DB: proposicoes)]
+    DB11 -->|UPDATE| Prop7["arquivo_pdf_path: proposicoes/2025/pdf<br/>pdf_gerado_em: NOW<br/>pdf_conversor_usado: unoconv<br/>updated_at: NOW"]
+
+    %% Fase 6: Assinatura Digital
+    Prop7 --> SignPDF[Parlamentar Assina PDF]
+    SignPDF --> AssinaturaService[AssinaturaDigitalService]
+    AssinaturaService --> DB12[(DB: assinaturas_digitais)]
+    DB12 -->|INSERT| Sign1["proposicao_id<br/>user_id: assinante<br/>tipo_assinatura: autor<br/>hash_documento<br/>certificado_info<br/>assinado_em: NOW"]
+
+    Sign1 --> DB13[(DB: proposicoes)]
+    DB13 -->|UPDATE| Prop8["status: assinado<br/>arquivo_pdf_assinado: path<br/>data_assinatura: NOW<br/>updated_at: NOW"]
+
+    %% Fase 7: Protocolo
+    Prop8 --> Protocolo[Setor de Protocolo]
+    Protocolo -->|Login| Auth3{Autenticação}
+    Auth3 --> DB14[(DB: users)]
+    DB14 -->|SELECT| ValidProt[Verificar Role: protocolo]
+
+    ValidProt --> ProtocolProp[Protocolar Documento]
+    ProtocolProp --> DB15[(DB: proposicoes)]
+    DB15 -->|UPDATE| Prop9["numero: 0001<br/>status: protocolado<br/>protocolado_em: NOW<br/>protocolado_por: user_id<br/>updated_at: NOW"]
+
+    Prop9 --> DB16[(DB: protocolo_registro)]
+    DB16 -->|INSERT| Protocol1["proposicao_id<br/>numero_protocolo: 0001/2025<br/>data_protocolo: NOW<br/>responsavel_id: user_id"]
+
+    Protocol1 --> End([Documento Protocolado])
+
+    %% Styling
+    classDef dbStyle fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    classDef serviceStyle fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    classDef userStyle fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    classDef processStyle fill:#e8f5e9,stroke:#1b5e20,stroke-width:2px
+
+    class DB1,DB2,DB3,DB4,DB5,DB6,DB7,DB8,DB9,DB10,DB11,DB12,DB13,DB14,DB15,DB16 dbStyle
+    class TemplateService,OnlyOfficeService,PDFService,AssinaturaService serviceStyle
+    class Admin,Parlamentar,Legislativo,Protocolo userStyle
+    class CreateTemplate,CreateProp,ApplyTemplate,EditOnlyOffice,ReviewProp,GeneratePDF,SignPDF,ProtocolProp processStyle

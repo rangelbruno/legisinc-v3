@@ -1,0 +1,28 @@
+graph TD
+    A[👤 Usuário Solicita Assinatura] --> B[📁 Upload Certificado PFX]
+    B --> C[🔑 Informa Senha PFX]
+    C --> D{🔒 Validação OpenSSL}
+    D -->|✅ Válido| E[📄 Preparar PDF Base]
+    D -->|❌ Inválido| F[⚠️ Erro: Certificado Inválido]
+
+    E --> G{📋 PDF tem Campo Assinatura?}
+    G -->|❌ Não| H[➕ Criar Campo AssinaturaDigital]
+    G -->|✅ Sim| I[🐳 Docker Run --rm PyHanko]
+    H --> I
+
+    I --> J[🛡️ PyHanko Container Efêmero]
+    J --> K[📝 Processar PAdES B-LT]
+    K --> L[⏰ Adicionar Timestamp TSA]
+    L --> M[📦 Embarcar CRL/OCSP]
+    M --> N[✅ PDF Assinado Gerado]
+
+    N --> O{🔍 Validação Automática}
+    O -->|✅ Válido| P[💾 Salvar PDF Final]
+    O -->|❌ Inválido| Q[⚠️ Erro na Assinatura]
+
+    P --> R[🎉 Assinatura Concluída]
+
+    style A fill:#e1f5fe,stroke:#01579b
+    style J fill:#fff3e0,stroke:#f57c00
+    style N fill:#e8f5e8,stroke:#2e7d32
+    style R fill:#f3e5f5,stroke:#7b1fa2

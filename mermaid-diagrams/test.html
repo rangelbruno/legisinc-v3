@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Mermaid Integration</title>
+</head>
+<body>
+    <h1>Test de Integração Mermaid</h1>
+    <p><a href="http://localhost:8083" target="_blank">Abrir Mermaid Live Editor</a></p>
+
+    <h2>Exemplo de diagrama:</h2>
+    <pre id="diagram1">
+graph TD
+    A[Start] --> B{Decision}
+    B -->|Yes| C[Action 1]
+    B -->|No| D[Action 2]
+    C --> E[End]
+    D --> E
+    </pre>
+
+    <script>
+    function openWithCode() {
+        const code = document.getElementById('diagram1').textContent.trim();
+        const encoded = btoa(unescape(encodeURIComponent(code)));
+        window.open(`http://localhost:8083/edit#base64:${encoded}`, '_blank');
+    }
+    </script>
+
+    <button onclick="openWithCode()">Abrir este diagrama no Mermaid</button>
+</body>
+</html>
