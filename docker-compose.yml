@@ -159,6 +159,33 @@ services:
       - legisinc_network
     # Sem depends_on - usado apenas sob demanda
 
+  # 6. Swagger UI - Documentação Interativa da API
+  swagger-ui:
+    image: swaggerapi/swagger-ui:latest
+    container_name: legisinc-swagger-ui
+    restart: unless-stopped
+    environment:
+      - SWAGGER_JSON=/app/openapi.json
+      - DEEP_LINKING=true
+      - DISPLAY_OPERATION_ID=true
+      - DEFAULT_MODELS_EXPAND_DEPTH=1
+      - DEFAULT_MODEL_EXPAND_DEPTH=1
+      - DISPLAY_REQUEST_DURATION=true
+      - DOC_EXPANSION=list
+      - FILTER=true
+      - MAX_DISPLAYED_TAGS=10
+      - SHOW_EXTENSIONS=true
+      - SHOW_COMMON_EXTENSIONS=true
+      - TRY_IT_OUT_ENABLED=true
+    ports:
+      - "8082:8080"
+    volumes:
+      - ./docs/api:/app:ro
+    networks:
+      - legisinc_network
+    depends_on:
+      - app
+
 volumes:
   postgres_data:
   redis_data:

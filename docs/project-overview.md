@@ -449,6 +449,7 @@ graph TB
         %% External Services
         ONLYOFFICE["📝 OnlyOffice<br/>onlyoffice-server<br/>Port: 9980"]
         PYHANKO["🔏 PyHanko<br/>pyhanko-container<br/>Port: 5000"]
+        SWAGGER["📋 Swagger UI<br/>legisinc-swagger-ui<br/>Port: 8082"]
     end
 
     %% Volume Mounts
@@ -783,6 +784,7 @@ O sistema foi projetado para suportar múltiplos backends mantendo **compatibili
 - ✅ **Container Orchestration** - Docker Compose otimizado
 - ✅ **Database Schema Export** - Migração automática de estruturas
 - ✅ **API Compatibility** - Manutenção da compatibilidade frontend
+- ✅ **Swagger UI Integration** - Documentação interativa da API com OpenAPI 3.0
 
 ### Migration Tools Available
 - 🔧 **Endpoint Analysis:** Mapeamento completo de rotas e métodos
@@ -805,6 +807,7 @@ O sistema foi projetado para suportar múltiplos backends mantendo **compatibili
 - **Laravel API:** `http://localhost:8001/api/*` → Port 8000
 - **Java API:** `http://localhost:8001/api/v2/*` → Port 3001
 - **Traefik Dashboard:** `http://localhost:8080`
+- **Swagger API Docs:** `http://localhost:8082` (Interactive API Documentation)
 
 **Última atualização:** 18/09/2025
 **Nova Arquitetura:** Multi-Backend Gateway System v2.2 

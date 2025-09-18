@@ -109,6 +109,13 @@ class ArquiteturaController extends Controller
                     'porta' => '3000',
                     'status' => 'running',
                     'descricao' => 'Dashboard de métricas'
+                ],
+                [
+                    'nome' => 'Swagger UI',
+                    'container' => 'legisinc-swagger-ui',
+                    'porta' => '8082',
+                    'status' => 'running',
+                    'descricao' => 'Documentação interativa da API'
                 ]
             ];
 
@@ -148,6 +155,12 @@ class ArquiteturaController extends Controller
                     'url' => 'http://localhost:3000',
                     'status' => $this->checkUrl('http://localhost:3000'),
                     'tipo' => 'dashboard'
+                ],
+                [
+                    'nome' => 'Swagger UI',
+                    'url' => 'http://localhost:8082',
+                    'status' => $this->checkUrl('http://localhost:8082'),
+                    'tipo' => 'documentation'
                 ]
             ];
 

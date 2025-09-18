@@ -268,6 +268,15 @@
                     </a>
                 </li>
                 <li class="nav-item">
+                    <a class="nav-link" data-bs-toggle="tab" href="#swagger-config">
+                        <i class="ki-duotone ki-code fs-4 me-1">
+                            <span class="path1"></span>
+                            <span class="path2"></span>
+                        </i>
+                        Configuração Swagger
+                    </a>
+                </li>
+                <li class="nav-item">
                     <a class="nav-link" data-bs-toggle="tab" href="#migrar-backend">
                         <i class="ki-duotone ki-switch fs-4 me-1">
                             <span class="path1"></span>
@@ -319,6 +328,7 @@ graph TB
 
     subgraph "📄 Documentos"
         L --> OO[📝 OnlyOffice :8080]
+        L --> SW[📋 Swagger UI :8082]
     end
 
     style TK fill:#e1f5fe
@@ -1161,6 +1171,13 @@ sequenceDiagram
                                                             <td>Edita/converte documentos</td>
                                                             <td><span class="badge badge-warning">Edição para</span></td>
                                                             <td><span id="health-onlyoffice" class="badge badge-secondary">Verificando...</span></td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td><strong>📋 Swagger UI</strong></td>
+                                                            <td><span class="badge badge-light">8082</span></td>
+                                                            <td>Documentação interativa da API</td>
+                                                            <td><span class="badge badge-info">API docs param</span></td>
+                                                            <td><span id="health-swagger" class="badge badge-secondary">Verificando...</span></td>
                                                         </tr>
                                                         <tr>
                                                             <td><strong>📮 Redis</strong></td>
@@ -2283,6 +2300,35 @@ docker-compose down && docker-compose up -d</pre>
                                                         <small class="text-info">Ou ficam na fila</small>
                                                     </td>
                                                 </tr>
+
+                                                <tr class="table-light">
+                                                    <td>
+                                                        <div class="d-flex align-items-center">
+                                                            <i class="ki-duotone ki-code fs-2 text-info me-3">
+                                                                <span class="path1"></span>
+                                                                <span class="path2"></span>
+                                                            </i>
+                                                            <div>
+                                                                <strong class="text-info">legisinc-swagger-ui</strong><br>
+                                                                <small class="text-muted">(swaggerapi/swagger-ui)</small>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <strong>Documentação API</strong><br>
+                                                        <small class="text-muted">(manual interativo)</small>
+                                                    </td>
+                                                    <td>
+                                                        <small>Interface web para testar/documentar todos os endpoints da API</small>
+                                                    </td>
+                                                    <td>
+                                                        <span class="badge badge-info">8082</span>
+                                                    </td>
+                                                    <td>
+                                                        <span class="text-success">✅ Sem impacto no sistema</span><br>
+                                                        <small class="text-muted">Apenas documentação fica indisponível</small>
+                                                    </td>
+                                                </tr>
                                             </tbody>
                                         </table>
                                     </div>
@@ -2336,6 +2382,11 @@ docker-compose down && docker-compose up -d</pre>
                                             <div class="mb-4">
                                                 <h6 class="fw-bold text-primary">🖨️ OnlyOffice</h6>
                                                 <p class="text-gray-600 fs-7 mb-2">Gráfica dos documentos oficiais</p>
+                                            </div>
+
+                                            <div class="mb-4">
+                                                <h6 class="fw-bold text-info">📋 Swagger UI</h6>
+                                                <p class="text-gray-600 fs-7 mb-2">Manual interativo da API com botão de teste</p>
                                             </div>
                                         </div>
                                     </div>
@@ -2401,6 +2452,393 @@ curl http://localhost:9187/metrics | head -n 5
                     </div>
                 </div>
                 <!--end::Containers Completo tab-->
+
+                <!--begin::Swagger Configuration tab-->
+                <div class="tab-pane fade" id="swagger-config" role="tabpanel">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <h3 class="fw-bold">📋 Configuração do Swagger UI</h3>
+                            </div>
+                            <div class="card-toolbar">
+                                <a href="http://localhost:8082" target="_blank" class="btn btn-sm btn-primary me-2">
+                                    <i class="ki-duotone ki-external-link fs-4">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                    </i>
+                                    Abrir Swagger UI
+                                </a>
+                                <button class="btn btn-sm btn-light-info" onclick="testSwaggerHealth()">
+                                    <i class="ki-duotone ki-shield-tick fs-4">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                    </i>
+                                    Testar Status
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+
+                            <!-- Status do Container -->
+                            <div class="alert alert-primary d-flex align-items-center mb-8" role="alert">
+                                <i class="ki-duotone ki-information fs-2x text-primary me-4">
+                                    <span class="path1"></span>
+                                    <span class="path2"></span>
+                                    <span class="path3"></span>
+                                </i>
+                                <div>
+                                    <h5 class="mb-1">🚀 Swagger UI - Documentação Interativa da API</h5>
+                                    <p class="mb-0">Interface web para testar e documentar todos os endpoints da API LegisInc. Acesse em <strong>http://localhost:8082</strong></p>
+                                </div>
+                            </div>
+
+                            <!-- Informações do Container -->
+                            <div class="row mb-8">
+                                <div class="col-md-4">
+                                    <div class="card bg-light-primary h-100">
+                                        <div class="card-body">
+                                            <div class="d-flex align-items-center">
+                                                <i class="ki-duotone ki-docker fs-2x text-primary me-3">
+                                                    <span class="path1"></span>
+                                                    <span class="path2"></span>
+                                                </i>
+                                                <div>
+                                                    <h6 class="fw-bold mb-1">Container Info</h6>
+                                                    <p class="mb-0 text-muted fs-7">
+                                                        <strong>Nome:</strong> legisinc-swagger-ui<br>
+                                                        <strong>Imagem:</strong> swaggerapi/swagger-ui:latest<br>
+                                                        <strong>Porta:</strong> 8082 → 8080
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="card bg-light-success h-100">
+                                        <div class="card-body">
+                                            <div class="d-flex align-items-center">
+                                                <i class="ki-duotone ki-file fs-2x text-success me-3">
+                                                    <span class="path1"></span>
+                                                    <span class="path2"></span>
+                                                </i>
+                                                <div>
+                                                    <h6 class="fw-bold mb-1">OpenAPI Spec</h6>
+                                                    <p class="mb-0 text-muted fs-7">
+                                                        <strong>Arquivo:</strong> docs/api/openapi.json<br>
+                                                        <strong>Versão:</strong> OpenAPI 3.0.3<br>
+                                                        <strong>API:</strong> LegisInc v1.0.0
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="card bg-light-warning h-100">
+                                        <div class="card-body">
+                                            <div class="d-flex align-items-center">
+                                                <i class="ki-duotone ki-shield-check fs-2x text-warning me-3">
+                                                    <span class="path1"></span>
+                                                    <span class="path2"></span>
+                                                </i>
+                                                <div>
+                                                    <h6 class="fw-bold mb-1">Status</h6>
+                                                    <p class="mb-0">
+                                                        <span id="swagger-status-badge" class="badge badge-secondary">Verificando...</span><br>
+                                                        <small id="swagger-status-text" class="text-muted">Aguardando verificação</small>
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Configuração Docker Compose -->
+                            <div class="card mb-8">
+                                <div class="card-header">
+                                    <div class="card-title">
+                                        <h4 class="fw-bold">📄 Configuração Docker Compose</h4>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <p class="text-muted mb-4">Esta é a configuração atual do container Swagger UI no arquivo <code>docker-compose.yml</code>:</p>
+
+                                    <pre class="bg-dark text-light p-4 rounded"><code># 6. Swagger UI - Documentação Interativa da API
+swagger-ui:
+  image: swaggerapi/swagger-ui:latest
+  container_name: legisinc-swagger-ui
+  restart: unless-stopped
+  environment:
+    - SWAGGER_JSON=/app/openapi.json
+    - DEEP_LINKING=true
+    - DISPLAY_OPERATION_ID=true
+    - DEFAULT_MODELS_EXPAND_DEPTH=1
+    - DEFAULT_MODEL_EXPAND_DEPTH=1
+    - DISPLAY_REQUEST_DURATION=true
+    - DOC_EXPANSION=list
+    - FILTER=true
+    - MAX_DISPLAYED_TAGS=10
+    - SHOW_EXTENSIONS=true
+    - SHOW_COMMON_EXTENSIONS=true
+    - TRY_IT_OUT_ENABLED=true
+  ports:
+    - "8082:8080"
+  volumes:
+    - ./docs/api:/app:ro
+  networks:
+    - legisinc_network
+  depends_on:
+    - app</code></pre>
+                                </div>
+                            </div>
+
+                            <!-- OpenAPI Specification -->
+                            <div class="card mb-8">
+                                <div class="card-header">
+                                    <div class="card-title">
+                                        <h4 class="fw-bold">🔧 Especificação OpenAPI</h4>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <p class="text-muted mb-4">O arquivo <code>docs/api/openapi.json</code> contém toda a documentação da API:</p>
+
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <h6 class="fw-bold text-primary">📋 Endpoints Documentados</h6>
+                                            <ul class="list-unstyled">
+                                                <li class="mb-2">
+                                                    <i class="ki-duotone ki-check fs-6 text-success me-2">
+                                                        <span class="path1"></span>
+                                                        <span class="path2"></span>
+                                                    </i>
+                                                    <strong>Autenticação:</strong> login, logout, refresh
+                                                </li>
+                                                <li class="mb-2">
+                                                    <i class="ki-duotone ki-check fs-6 text-success me-2">
+                                                        <span class="path1"></span>
+                                                        <span class="path2"></span>
+                                                    </i>
+                                                    <strong>Usuários:</strong> CRUD completo com filtros
+                                                </li>
+                                                <li class="mb-2">
+                                                    <i class="ki-duotone ki-check fs-6 text-success me-2">
+                                                        <span class="path1"></span>
+                                                        <span class="path2"></span>
+                                                    </i>
+                                                    <strong>Projetos:</strong> Gestão completa de proposições
+                                                </li>
+                                                <li class="mb-2">
+                                                    <i class="ki-duotone ki-check fs-6 text-success me-2">
+                                                        <span class="path1"></span>
+                                                        <span class="path2"></span>
+                                                    </i>
+                                                    <strong>Schemas:</strong> Modelos de dados detalhados
+                                                </li>
+                                            </ul>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <h6 class="fw-bold text-info">⚙️ Configurações Swagger</h6>
+                                            <ul class="list-unstyled">
+                                                <li class="mb-2">
+                                                    <i class="ki-duotone ki-setting-2 fs-6 text-info me-2">
+                                                        <span class="path1"></span>
+                                                        <span class="path2"></span>
+                                                    </i>
+                                                    <strong>Try It Out:</strong> Habilitado para testar endpoints
+                                                </li>
+                                                <li class="mb-2">
+                                                    <i class="ki-duotone ki-setting-2 fs-6 text-info me-2">
+                                                        <span class="path1"></span>
+                                                        <span class="path2"></span>
+                                                    </i>
+                                                    <strong>Deep Linking:</strong> URLs diretas para operações
+                                                </li>
+                                                <li class="mb-2">
+                                                    <i class="ki-duotone ki-setting-2 fs-6 text-info me-2">
+                                                        <span class="path1"></span>
+                                                        <span class="path2"></span>
+                                                    </i>
+                                                    <strong>Request Duration:</strong> Tempo de resposta exibido
+                                                </li>
+                                                <li class="mb-2">
+                                                    <i class="ki-duotone ki-setting-2 fs-6 text-info me-2">
+                                                        <span class="path1"></span>
+                                                        <span class="path2"></span>
+                                                    </i>
+                                                    <strong>Filter:</strong> Busca por operações
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Como Usar -->
+                            <div class="card mb-8">
+                                <div class="card-header">
+                                    <div class="card-title">
+                                        <h4 class="fw-bold">🚀 Como Usar o Swagger UI</h4>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <h6 class="fw-bold text-primary">1️⃣ Acessar a Interface</h6>
+                                            <p class="text-muted mb-4">
+                                                Abra <a href="http://localhost:8082" target="_blank" class="fw-bold">http://localhost:8082</a> no navegador para ver toda a documentação interativa da API.
+                                            </p>
+
+                                            <h6 class="fw-bold text-success">2️⃣ Testar Endpoints</h6>
+                                            <p class="text-muted mb-4">
+                                                Clique em "Try it out" em qualquer endpoint, preencha os parâmetros e execute para ver a resposta em tempo real.
+                                            </p>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <h6 class="fw-bold text-warning">3️⃣ Autenticação</h6>
+                                            <p class="text-muted mb-4">
+                                                Use o endpoint <code>/auth/login</code> para obter um token, depois clique no cadeado 🔒 para autorizar outras requisições.
+                                            </p>
+
+                                            <h6 class="fw-bold text-info">4️⃣ Explorar Schemas</h6>
+                                            <p class="text-muted mb-4">
+                                                Na seção "Schemas" você encontra todos os modelos de dados com exemplos e validações.
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div class="alert alert-light-info">
+                                        <div class="d-flex">
+                                            <i class="ki-duotone ki-information fs-2x text-info me-4">
+                                                <span class="path1"></span>
+                                                <span class="path2"></span>
+                                                <span class="path3"></span>
+                                            </i>
+                                            <div>
+                                                <h6 class="fw-bold mb-1">💡 Dica Importante</h6>
+                                                <p class="mb-0">O Swagger UI sempre mostra a documentação mais atualizada da API. Qualquer mudança nos endpoints será automaticamente refletida na interface.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Comandos Úteis -->
+                            <div class="card mb-8">
+                                <div class="card-header">
+                                    <div class="card-title">
+                                        <h4 class="fw-bold">⚡ Comandos Úteis</h4>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <h6 class="fw-bold text-primary">🔄 Gerenciar Container</h6>
+                                            <pre class="bg-dark text-light p-3 rounded mb-4"><code># Verificar status
+docker ps --filter "name=swagger"
+
+# Ver logs
+docker logs legisinc-swagger-ui
+
+# Reiniciar container
+docker restart legisinc-swagger-ui</code></pre>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <h6 class="fw-bold text-success">📝 Atualizar Documentação</h6>
+                                            <pre class="bg-dark text-light p-3 rounded mb-4"><code># Editar spec OpenAPI
+nano docs/api/openapi.json
+
+# Recrear container para recarregar
+docker-compose up swagger-ui -d --force-recreate</code></pre>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Troubleshooting -->
+                            <div class="card">
+                                <div class="card-header">
+                                    <div class="card-title">
+                                        <h4 class="fw-bold">🔧 Resolução de Problemas</h4>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <div class="accordion" id="troubleshootingAccordion">
+                                        <!-- Problema 1 -->
+                                        <div class="accordion-item mb-3">
+                                            <h2 class="accordion-header">
+                                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#trouble1">
+                                                    ❌ Swagger UI não carrega (Erro 404)
+                                                </button>
+                                            </h2>
+                                            <div id="trouble1" class="accordion-collapse collapse" data-bs-parent="#troubleshootingAccordion">
+                                                <div class="accordion-body">
+                                                    <p><strong>Causa:</strong> Container não está rodando ou porta não está acessível.</p>
+                                                    <p><strong>Solução:</strong></p>
+                                                    <pre class="bg-dark text-light p-3 rounded"><code># Verificar se container está rodando
+docker ps --filter "name=swagger"
+
+# Se não estiver, iniciar
+docker-compose up swagger-ui -d
+
+# Verificar logs
+docker logs legisinc-swagger-ui</code></pre>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Problema 2 -->
+                                        <div class="accordion-item mb-3">
+                                            <h2 class="accordion-header">
+                                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#trouble2">
+                                                    ⚠️ API specification não carrega
+                                                </button>
+                                            </h2>
+                                            <div id="trouble2" class="accordion-collapse collapse" data-bs-parent="#troubleshootingAccordion">
+                                                <div class="accordion-body">
+                                                    <p><strong>Causa:</strong> Arquivo openapi.json não existe ou tem erro de sintaxe.</p>
+                                                    <p><strong>Solução:</strong></p>
+                                                    <pre class="bg-dark text-light p-3 rounded"><code># Verificar se arquivo existe
+ls -la docs/api/openapi.json
+
+# Validar JSON
+cat docs/api/openapi.json | jq .
+
+# Recriar container
+docker-compose up swagger-ui -d --force-recreate</code></pre>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Problema 3 -->
+                                        <div class="accordion-item">
+                                            <h2 class="accordion-header">
+                                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#trouble3">
+                                                    🔒 Endpoints retornam erro 401
+                                                </button>
+                                            </h2>
+                                            <div id="trouble3" class="accordion-collapse collapse" data-bs-parent="#troubleshootingAccordion">
+                                                <div class="accordion-body">
+                                                    <p><strong>Causa:</strong> Token de autenticação não configurado ou expirado.</p>
+                                                    <p><strong>Solução:</strong></p>
+                                                    <ol>
+                                                        <li>Use o endpoint <code>/auth/login</code> para obter um token</li>
+                                                        <li>Clique no botão "Authorize" 🔒 no topo da página</li>
+                                                        <li>Cole o token no formato: <code>Bearer SEU_TOKEN_AQUI</code></li>
+                                                        <li>Clique em "Authorize" para confirmar</li>
+                                                    </ol>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+                <!--end::Swagger Configuration tab-->
 
                 <!--begin::Migrar Backend tab-->
                 <div class="tab-pane fade" id="migrar-backend" role="tabpanel">
@@ -3584,6 +4022,7 @@ function checkAllHealth() {
         { id: 'health-pg-exporter', url: 'http://localhost:9187/metrics' },
         { id: 'health-grafana', url: 'http://localhost:3000' },
         { id: 'health-onlyoffice', url: 'http://localhost:8080/healthcheck' },
+        { id: 'health-swagger', url: 'http://localhost:8082' },
         { id: 'health-redis', container: 'legisinc-redis' },
         { id: 'health-postgres', container: 'legisinc-postgres' }
     ];
@@ -3609,6 +4048,37 @@ function checkAllHealth() {
     });
 }
 
+// Função específica para testar status do Swagger UI
+function testSwaggerHealth() {
+    const statusBadge = document.getElementById('swagger-status-badge');
+    const statusText = document.getElementById('swagger-status-text');
+
+    if (statusBadge && statusText) {
+        statusBadge.className = 'badge badge-secondary';
+        statusBadge.textContent = 'Verificando...';
+        statusText.textContent = 'Testando conectividade';
+
+        fetch('http://localhost:8082')
+            .then(response => {
+                if (response.ok) {
+                    statusBadge.className = 'badge badge-success';
+                    statusBadge.textContent = '🟢 Online';
+                    statusText.textContent = 'Swagger UI funcionando normalmente';
+                } else {
+                    statusBadge.className = 'badge badge-warning';
+                    statusBadge.textContent = '⚠️ Parcial';
+                    statusText.textContent = `HTTP ${response.status} - Verificar configuração`;
+                }
+            })
+            .catch(error => {
+                statusBadge.className = 'badge badge-danger';
+                statusBadge.textContent = '❌ Offline';
+                statusText.textContent = 'Não foi possível conectar ao Swagger UI';
+                console.error('Swagger Health Check Error:', error);
+            });
+    }
+}
+
 // Função para verificar saúde de todos os containers (tab Completo)
 function checkAllContainerHealth() {
     const containerNames = [
@@ -3623,7 +4093,8 @@ function checkAllContainerHealth() {
         'legisinc-postgres-exporter',
         'legisinc-postgres',
         'legisinc-redis',
-        'legisinc-onlyoffice'
+        'legisinc-onlyoffice',
+        'legisinc-swagger-ui'
     ];
 
     // Simular verificação de todos os containers
