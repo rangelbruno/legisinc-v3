@@ -317,6 +317,16 @@ Route::prefix('admin/arquitetura')->name('admin.arquitetura.')->middleware(['aut
     Route::get('/api/servicos', [App\Http\Controllers\Admin\ArquiteturaController::class, 'statusServicos'])->name('api.servicos');
 });
 
+// Migration Preparation routes (protected with auth - Admin only)
+Route::prefix('admin/migration-preparation')->name('admin.migration-preparation.')->middleware(['auth'])->group(function () {
+    Route::get('/', [App\Http\Controllers\Admin\MigrationPreparationController::class, 'index'])->name('index');
+    Route::get('/api/endpoints', [App\Http\Controllers\Admin\MigrationPreparationController::class, 'generateEndpointsJson'])->name('api.endpoints');
+    Route::get('/api/database', [App\Http\Controllers\Admin\MigrationPreparationController::class, 'generateDatabaseStructureJson'])->name('api.database');
+    Route::get('/api/models', [App\Http\Controllers\Admin\MigrationPreparationController::class, 'generateModelsJson'])->name('api.models');
+    Route::get('/api/integrations', [App\Http\Controllers\Admin\MigrationPreparationController::class, 'generateIntegrationsJson'])->name('api.integrations');
+    Route::get('/api/complete', [App\Http\Controllers\Admin\MigrationPreparationController::class, 'generateCompleteJson'])->name('api.complete');
+});
+
 // Admin Monitoring routes (protected with auth - Admin only)
 Route::prefix('admin/monitoramento')->name('admin.monitoramento.')->middleware(['auth'])->group(function () {
     Route::get('/', [App\Http\Controllers\Admin\MonitoramentoController::class, 'index'])->name('index');

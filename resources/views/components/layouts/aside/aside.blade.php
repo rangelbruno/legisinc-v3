@@ -707,6 +707,15 @@
                             </a>
                         </div>
                         <div class="menu-item">
+                            <a class="menu-link {{ request()->routeIs('admin.migration-preparation.*') ? 'active' : '' }}" href="{{ route('admin.migration-preparation.index') }}">
+                                <span class="menu-bullet">
+                                    <span class="bullet bullet-dot"></span>
+                                </span>
+                                <span class="menu-title">Preparação para Migração</span>
+                                <span class="badge badge-light-primary badge-sm ms-auto">NOVO</span>
+                            </a>
+                        </div>
+                        <div class="menu-item">
                             <a class="menu-link {{ request()->routeIs('admin.monitoramento.*') ? 'active' : '' }}" href="{{ route('admin.monitoramento.index') }}">
                                 <span class="menu-bullet">
                                     <span class="bullet bullet-dot"></span>

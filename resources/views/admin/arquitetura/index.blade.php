@@ -267,6 +267,15 @@
                         Containers — Completo
                     </a>
                 </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-bs-toggle="tab" href="#migrar-backend">
+                        <i class="ki-duotone ki-switch fs-4 me-1">
+                            <span class="path1"></span>
+                            <span class="path2"></span>
+                        </i>
+                        Migrar Backend
+                    </a>
+                </li>
             </ul>
             <!--end::Navigation-->
 
@@ -2392,6 +2401,943 @@ curl http://localhost:9187/metrics | head -n 5
                     </div>
                 </div>
                 <!--end::Containers Completo tab-->
+
+                <!--begin::Migrar Backend tab-->
+                <div class="tab-pane fade" id="migrar-backend" role="tabpanel">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <h3 class="fw-bold">🔄 Como Migrar para um Novo Backend</h3>
+                            </div>
+                            <div class="card-toolbar">
+                                <span class="badge badge-light-primary">Guia Completo</span>
+                            </div>
+                        </div>
+                        <div class="card-body">
+
+                            <!-- Introdução -->
+                            <div class="alert alert-info d-flex align-items-center mb-8" role="alert">
+                                <i class="ki-duotone ki-information fs-2x text-info me-4">
+                                    <span class="path1"></span>
+                                    <span class="path2"></span>
+                                    <span class="path3"></span>
+                                </i>
+                                <div class="d-flex flex-column">
+                                    <h4 class="mb-1 text-info">🎯 Objetivo da Migração</h4>
+                                    <div class="fs-6">
+                                        Substituir o <strong>Laravel (Legacy)</strong> por um novo backend (ex: Java, Node.js, Python, Go) mantendo o <strong>frontend inalterado</strong> e todas as <strong>regras de negócio funcionais</strong>. O Gateway gerencia a transição de forma gradual e segura.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Cenário Exemplo -->
+                            <div class="card bg-light-warning mb-8">
+                                <div class="card-header border-0">
+                                    <h4 class="card-title text-warning">📝 Exemplo Prático: Laravel → Java Spring Boot</h4>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <h6 class="fw-bold text-dark">🔴 Situação Atual</h6>
+                                            <ul class="list-unstyled">
+                                                <li class="d-flex align-items-center mb-2">
+                                                    <i class="ki-duotone ki-check fs-6 text-muted me-2"><span class="path1"></span><span class="path2"></span></i>
+                                                    <span>Frontend React/Vue chamando Laravel</span>
+                                                </li>
+                                                <li class="d-flex align-items-center mb-2">
+                                                    <i class="ki-duotone ki-check fs-6 text-muted me-2"><span class="path1"></span><span class="path2"></span></i>
+                                                    <span>Regras de negócio em PHP</span>
+                                                </li>
+                                                <li class="d-flex align-items-center mb-2">
+                                                    <i class="ki-duotone ki-check fs-6 text-muted me-2"><span class="path1"></span><span class="path2"></span></i>
+                                                    <span>Banco PostgreSQL compartilhado</span>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <h6 class="fw-bold text-dark">🟢 Situação Desejada</h6>
+                                            <ul class="list-unstyled">
+                                                <li class="d-flex align-items-center mb-2">
+                                                    <i class="ki-duotone ki-check fs-6 text-success me-2"><span class="path1"></span><span class="path2"></span></i>
+                                                    <span>Mesmo Frontend (sem alterações)</span>
+                                                </li>
+                                                <li class="d-flex align-items-center mb-2">
+                                                    <i class="ki-duotone ki-check fs-6 text-success me-2"><span class="path1"></span><span class="path2"></span></i>
+                                                    <span>Regras de negócio em Java</span>
+                                                </li>
+                                                <li class="d-flex align-items-center mb-2">
+                                                    <i class="ki-duotone ki-check fs-6 text-success me-2"><span class="path1"></span><span class="path2"></span></i>
+                                                    <span>Mesmo banco, mesmos dados</span>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Processo de Migração -->
+                            <div class="accordion" id="migrationAccordion">
+
+                                <!-- Fase 1: Preparação -->
+                                <div class="accordion-item mb-3">
+                                    <h2 class="accordion-header" id="headingPhase1">
+                                        <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapsePhase1">
+                                            <i class="ki-duotone ki-notepad-edit fs-2 text-primary me-3">
+                                                <span class="path1"></span>
+                                                <span class="path2"></span>
+                                            </i>
+                                            <div>
+                                                <h5 class="mb-0">1️⃣ Preparação: Analisar e Mapear</h5>
+                                                <small class="text-muted">Entender o sistema atual antes de começar</small>
+                                            </div>
+                                        </button>
+                                    </h2>
+                                    <div id="collapsePhase1" class="accordion-collapse collapse show" data-bs-parent="#migrationAccordion">
+                                        <div class="accordion-body">
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <h6 class="fw-bold text-primary">🕵️ Inventário do Sistema Atual</h6>
+                                                    <div class="table-responsive mb-4">
+                                                        <table class="table table-sm table-bordered">
+                                                            <thead class="table-dark">
+                                                                <tr>
+                                                                    <th>Componente</th>
+                                                                    <th>Como Mapear</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                <tr>
+                                                                    <td><strong>APIs/Endpoints</strong></td>
+                                                                    <td><code>php artisan route:list</code></td>
+                                                                </tr>
+                                                                <tr>
+                                                                    <td><strong>Models/Entidades</strong></td>
+                                                                    <td><code>app/Models/</code></td>
+                                                                </tr>
+                                                                <tr>
+                                                                    <td><strong>Regras de Negócio</strong></td>
+                                                                    <td><code>app/Services/</code>, Controllers</td>
+                                                                </tr>
+                                                                <tr>
+                                                                    <td><strong>Banco de Dados</strong></td>
+                                                                    <td><code>database/migrations/</code></td>
+                                                                </tr>
+                                                                <tr>
+                                                                    <td><strong>Integrações</strong></td>
+                                                                    <td>APIs externas, filas, cache</td>
+                                                                </tr>
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <h6 class="fw-bold text-success">📋 Checklist de Preparação</h6>
+                                                    <div class="form-check form-check-sm mb-2">
+                                                        <input class="form-check-input" type="checkbox" id="prep1">
+                                                        <label class="form-check-label fs-7" for="prep1">Documentar todos os endpoints atuais</label>
+                                                    </div>
+                                                    <div class="form-check form-check-sm mb-2">
+                                                        <input class="form-check-input" type="checkbox" id="prep2">
+                                                        <label class="form-check-label fs-7" for="prep2">Mapear estruturas de banco (tabelas, campos)</label>
+                                                    </div>
+                                                    <div class="form-check form-check-sm mb-2">
+                                                        <input class="form-check-input" type="checkbox" id="prep3">
+                                                        <label class="form-check-label fs-7" for="prep3">Listar regras de negócio críticas</label>
+                                                    </div>
+                                                    <div class="form-check form-check-sm mb-2">
+                                                        <input class="form-check-input" type="checkbox" id="prep4">
+                                                        <label class="form-check-label fs-7" for="prep4">Identificar integrações externas</label>
+                                                    </div>
+                                                    <div class="form-check form-check-sm mb-2">
+                                                        <input class="form-check-input" type="checkbox" id="prep5">
+                                                        <label class="form-check-label fs-7" for="prep5">Definir ordem de migração (por prioridade)</label>
+                                                    </div>
+                                                    <div class="form-check form-check-sm mb-2">
+                                                        <input class="form-check-input" type="checkbox" id="prep6">
+                                                        <label class="form-check-label fs-7" for="prep6">Configurar ambiente de desenvolvimento</label>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="alert alert-light-primary mt-4">
+                                                <i class="ki-duotone ki-information fs-2 text-primary me-2"><span class="path1"></span><span class="path2"></span><span class="path3"></span></i>
+                                                <strong>💡 Dica:</strong> Comece pelos endpoints <strong>GET</strong> mais simples (sem side-effects) e depois avance para POST/PUT/DELETE.
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Fase 2: Desenvolvimento -->
+                                <div class="accordion-item mb-3">
+                                    <h2 class="accordion-header" id="headingPhase2">
+                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapsePhase2">
+                                            <i class="ki-duotone ki-code fs-2 text-success me-3">
+                                                <span class="path1"></span>
+                                                <span class="path2"></span>
+                                            </i>
+                                            <div>
+                                                <h5 class="mb-0">2️⃣ Desenvolvimento: Criar Novo Backend</h5>
+                                                <small class="text-muted">Implementar em paralelo com o sistema atual</small>
+                                            </div>
+                                        </button>
+                                    </h2>
+                                    <div id="collapsePhase2" class="accordion-collapse collapse" data-bs-parent="#migrationAccordion">
+                                        <div class="accordion-body">
+
+                                            <!-- Exemplo Java Spring Boot -->
+                                            <div class="card bg-light-success mb-6">
+                                                <div class="card-header border-0">
+                                                    <h5 class="card-title text-success">☕ Exemplo: Criar Backend Java Spring Boot</h5>
+                                                </div>
+                                                <div class="card-body">
+                                                    <div class="row">
+                                                        <div class="col-md-6">
+                                                            <h6 class="fw-bold text-dark">📦 Setup Inicial</h6>
+                                                            <pre class="bg-dark text-light p-3 rounded fs-8">
+# 1. Criar projeto Spring Boot
+curl https://start.spring.io/starter.tgz \
+  -d dependencies=web,jpa,postgresql \
+  -d name=legisinc-java-api \
+  -d packageName=com.legisinc.api \
+  -d javaVersion=17 | tar -xzvf -
+
+# 2. Estrutura de projeto
+legisinc-java-api/
+├── src/main/java/com/legisinc/api/
+│   ├── controller/     # Endpoints REST
+│   ├── service/        # Regras de negócio
+│   ├── repository/     # Acesso a dados
+│   ├── model/          # Entidades JPA
+│   └── config/         # Configurações
+└── src/main/resources/
+    └── application.yml # Config DB, etc.</pre>
+                                                        </div>
+                                                        <div class="col-md-6">
+                                                            <h6 class="fw-bold text-dark">⚙️ Configuração application.yml</h6>
+                                                            <pre class="bg-dark text-light p-3 rounded fs-8">
+spring:
+  application:
+    name: legisinc-java-api
+
+  datasource:
+    url: jdbc:postgresql://legisinc-postgres:5432/legisinc
+    username: postgres
+    password: 123456
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate  # Não alterar schema
+    show-sql: false
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+
+server:
+  port: 3001  # Mesma porta da Nova API atual
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics</pre>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Implementação por Camadas -->
+                                            <div class="row">
+                                                <div class="col-md-4">
+                                                    <div class="card bg-light-primary h-100">
+                                                        <div class="card-body">
+                                                            <h6 class="fw-bold text-primary">1. Entidades/Models</h6>
+                                                            <pre class="bg-dark text-light p-2 rounded fs-8">
+@Entity
+@Table(name = "proposicoes")
+public class Proposicao {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "numero")
+    private String numero;
+
+    @Column(name = "titulo")
+    private String titulo;
+
+    @Column(name = "status")
+    private String status;
+
+    // getters/setters
+}</pre>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <div class="card bg-light-warning h-100">
+                                                        <div class="card-body">
+                                                            <h6 class="fw-bold text-warning">2. Repository/DAO</h6>
+                                                            <pre class="bg-dark text-light p-2 rounded fs-8">
+@Repository
+public interface ProposicaoRepository
+    extends JpaRepository&lt;Proposicao, Long&gt; {
+
+    List&lt;Proposicao&gt; findByStatus(String status);
+
+    @Query("SELECT p FROM Proposicao p WHERE p.titulo LIKE %?1%")
+    List&lt;Proposicao&gt; findByTituloContaining(String titulo);
+
+    Page&lt;Proposicao&gt; findAll(Pageable pageable);
+}</pre>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <div class="card bg-light-success h-100">
+                                                        <div class="card-body">
+                                                            <h6 class="fw-bold text-success">3. Service/Regras</h6>
+                                                            <pre class="bg-dark text-light p-2 rounded fs-8">
+@Service
+public class ProposicaoService {
+
+    @Autowired
+    private ProposicaoRepository repository;
+
+    public List&lt;ProposicaoDTO&gt; buscarProposicoes() {
+        return repository.findAll()
+            .stream()
+            .map(this::toDTO)
+            .collect(toList());
+    }
+
+    public ProposicaoDTO criarProposicao(CreateProposicaoRequest request) {
+        // Regras de negócio aqui
+        Proposicao proposicao = new Proposicao();
+        proposicao.setTitulo(request.getTitulo());
+        // ... validações e lógica
+        return toDTO(repository.save(proposicao));
+    }
+}</pre>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="mt-4">
+                                                <div class="card bg-light-info">
+                                                    <div class="card-body">
+                                                        <h6 class="fw-bold text-info">4. Controller/Endpoints</h6>
+                                                        <pre class="bg-dark text-light p-3 rounded fs-8">
+@RestController
+@RequestMapping("/api")
+public class ProposicaoController {
+
+    @Autowired
+    private ProposicaoService service;
+
+    @GetMapping("/proposicoes")
+    public ResponseEntity&lt;List&lt;ProposicaoDTO&gt;&gt; listarProposicoes() {
+        List&lt;ProposicaoDTO&gt; proposicoes = service.buscarProposicoes();
+        return ResponseEntity.ok(proposicoes);
+    }
+
+    @PostMapping("/proposicoes")
+    public ResponseEntity&lt;ProposicaoDTO&gt; criarProposicao(@RequestBody CreateProposicaoRequest request) {
+        ProposicaoDTO created = service.criarProposicao(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    }
+
+    @GetMapping("/health")
+    public ResponseEntity&lt;Map&lt;String, String&gt;&gt; health() {
+        return ResponseEntity.ok(Map.of("status", "healthy", "service", "java-api"));
+    }
+}</pre>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="alert alert-light-warning mt-4">
+                                                <i class="ki-duotone ki-warning fs-2 text-warning me-2"><span class="path1"></span><span class="path2"></span></i>
+                                                <strong>⚠️ Importante:</strong> Mantenha o <strong>mesmo formato de resposta JSON</strong> que o Laravel para compatibilidade total com o frontend.
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Fase 3: Containerização -->
+                                <div class="accordion-item mb-3">
+                                    <h2 class="accordion-header" id="headingPhase3">
+                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapsePhase3">
+                                            <i class="ki-duotone ki-package fs-2 text-info me-3">
+                                                <span class="path1"></span>
+                                                <span class="path2"></span>
+                                                <span class="path3"></span>
+                                            </i>
+                                            <div>
+                                                <h5 class="mb-0">3️⃣ Containerização: Preparar para Deploy</h5>
+                                                <small class="text-muted">Dockerizar o novo backend</small>
+                                            </div>
+                                        </button>
+                                    </h2>
+                                    <div id="collapsePhase3" class="accordion-collapse collapse" data-bs-parent="#migrationAccordion">
+                                        <div class="accordion-body">
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <h6 class="fw-bold text-info">🐳 Dockerfile</h6>
+                                                    <pre class="bg-dark text-light p-3 rounded fs-8">
+# Dockerfile para Java Spring Boot
+FROM openjdk:17-jdk-slim
+
+WORKDIR /app
+
+# Copiar arquivos de dependências
+COPY pom.xml .
+COPY mvnw .
+COPY .mvn .mvn
+
+# Baixar dependências (cache Docker)
+RUN ./mvnw dependency:go-offline -B
+
+# Copiar código fonte
+COPY src src
+
+# Build da aplicação
+RUN ./mvnw clean package -DskipTests
+
+# Expor porta
+EXPOSE 3001
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:3001/api/health || exit 1
+
+# Executar aplicação
+CMD ["java", "-jar", "target/legisinc-java-api-1.0.jar"]</pre>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <h6 class="fw-bold text-success">⚙️ Atualizar Docker Compose</h6>
+                                                    <pre class="bg-dark text-light p-3 rounded fs-8">
+# Adicionar ao docker-compose.gateway-simple.yml
+
+  java-api:
+    build:
+      context: ./java-backend
+      dockerfile: Dockerfile
+    container_name: legisinc-java-api
+    restart: unless-stopped
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://legisinc-postgres:5432/legisinc
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=123456
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.java-api.rule=Host(`localhost`)"
+      - "traefik.http.routers.java-api.entrypoints=web"
+      - "traefik.http.services.java-api.loadbalancer.server.port=3001"
+    ports:
+      - "3001:3001"  # Para debug direto
+    depends_on:
+      - legisinc-postgres
+      - legisinc-redis
+    networks:
+      - legisinc_network</pre>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Fase 3: Arquivos do Projeto que Precisam ser Alterados -->
+                                <div class="accordion-item mb-3">
+                                    <h2 class="accordion-header" id="headingPhase3">
+                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapsePhase3">
+                                            <i class="ki-duotone ki-file-up fs-2 text-info me-3">
+                                                <span class="path1"></span>
+                                                <span class="path2"></span>
+                                            </i>
+                                            <div>
+                                                <h5 class="mb-0">3️⃣ Arquivos do Projeto: O que Deve ser Alterado</h5>
+                                                <small class="text-muted">Lista completa dos arquivos que precisam ser modificados</small>
+                                            </div>
+                                        </button>
+                                    </h2>
+                                    <div id="collapsePhase3" class="accordion-collapse collapse" data-bs-parent="#migrationAccordion">
+                                        <div class="accordion-body">
+
+                                            <!-- Tabela de Arquivos Críticos -->
+                                            <div class="card bg-light-danger mb-6">
+                                                <div class="card-header border-0">
+                                                    <h5 class="card-title text-danger">📋 Arquivos Obrigatórios para Migração</h5>
+                                                    <div class="card-toolbar">
+                                                        <span class="badge badge-light-danger">Alteração Necessária</span>
+                                                    </div>
+                                                </div>
+                                                <div class="card-body">
+                                                    <div class="table-responsive">
+                                                        <table class="table table-bordered table-striped">
+                                                            <thead class="table-dark">
+                                                                <tr>
+                                                                    <th width="35%">📁 Arquivo</th>
+                                                                    <th width="25%">🎯 Propósito</th>
+                                                                    <th width="40%">🔧 O que Alterar</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                <tr class="table-warning">
+                                                                    <td><code><strong>docker-compose.gateway-simple.yml</strong></code></td>
+                                                                    <td>Configuração principal dos containers</td>
+                                                                    <td>
+                                                                        • Adicionar serviço do novo backend<br>
+                                                                        • Configurar labels do Traefik<br>
+                                                                        • Definir variáveis de ambiente
+                                                                    </td>
+                                                                </tr>
+                                                                <tr class="table-info">
+                                                                    <td><code><strong>gateway/traefik/dynamic/routes.yml</strong></code></td>
+                                                                    <td>Roteamento e balanceamento de carga</td>
+                                                                    <td>
+                                                                        • Configurar roteamento weighted<br>
+                                                                        • Definir middlewares de migração<br>
+                                                                        • Ajustar regras de CORS
+                                                                    </td>
+                                                                </tr>
+                                                                <tr class="table-success">
+                                                                    <td><code><strong>.env</strong></code></td>
+                                                                    <td>Variáveis de ambiente</td>
+                                                                    <td>
+                                                                        • Configurar conexão do novo backend<br>
+                                                                        • Adicionar URLs dos serviços<br>
+                                                                        • Definir configurações específicas
+                                                                    </td>
+                                                                </tr>
+                                                                <tr class="table-primary">
+                                                                    <td><code><strong>gateway/shadow-comparator/</strong></code></td>
+                                                                    <td>Comparação de respostas</td>
+                                                                    <td>
+                                                                        • Configurar endpoints para comparar<br>
+                                                                        • Definir tolerâncias de diferença<br>
+                                                                        • Ajustar relatórios de divergência
+                                                                    </td>
+                                                                </tr>
+                                                                <tr class="table-light">
+                                                                    <td><code><strong>gateway/canary-monitor/</strong></code></td>
+                                                                    <td>Controle da migração gradual</td>
+                                                                    <td>
+                                                                        • Configurar percentuais de migração<br>
+                                                                        • Definir métricas de rollback<br>
+                                                                        • Configurar alertas automáticos
+                                                                    </td>
+                                                                </tr>
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Arquivos Opcionais -->
+                                            <div class="card bg-light-warning mb-6">
+                                                <div class="card-header border-0">
+                                                    <h5 class="card-title text-warning">⚙️ Arquivos Opcionais (Recomendados)</h5>
+                                                    <div class="card-toolbar">
+                                                        <span class="badge badge-light-warning">Melhoria</span>
+                                                    </div>
+                                                </div>
+                                                <div class="card-body">
+                                                    <div class="row">
+                                                        <div class="col-md-6">
+                                                            <h6 class="fw-bold text-dark">📊 Monitoramento</h6>
+                                                            <ul class="list-unstyled">
+                                                                <li class="d-flex align-items-center mb-2">
+                                                                    <i class="ki-duotone ki-document fs-5 text-info me-2"><span class="path1"></span><span class="path2"></span></i>
+                                                                    <code>gateway/prometheus/prometheus.yml</code>
+                                                                </li>
+                                                                <li class="d-flex align-items-center mb-2">
+                                                                    <i class="ki-duotone ki-document fs-5 text-info me-2"><span class="path1"></span><span class="path2"></span></i>
+                                                                    <code>gateway/grafana/dashboards/</code>
+                                                                </li>
+                                                                <li class="d-flex align-items-center mb-2">
+                                                                    <i class="ki-duotone ki-document fs-5 text-info me-2"><span class="path1"></span><span class="path2"></span></i>
+                                                                    <code>gateway/postgres-exporter/queries.yaml</code>
+                                                                </li>
+                                                            </ul>
+                                                        </div>
+                                                        <div class="col-md-6">
+                                                            <h6 class="fw-bold text-dark">🔧 Configurações Específicas</h6>
+                                                            <ul class="list-unstyled">
+                                                                <li class="d-flex align-items-center mb-2">
+                                                                    <i class="ki-duotone ki-document fs-5 text-success me-2"><span class="path1"></span><span class="path2"></span></i>
+                                                                    <code>gateway/nginx/nginx.conf</code>
+                                                                </li>
+                                                                <li class="d-flex align-items-center mb-2">
+                                                                    <i class="ki-duotone ki-document fs-5 text-success me-2"><span class="path1"></span><span class="path2"></span></i>
+                                                                    <code>Dockerfile</code> (do novo backend)
+                                                                </li>
+                                                                <li class="d-flex align-items-center mb-2">
+                                                                    <i class="ki-duotone ki-document fs-5 text-success me-2"><span class="path1"></span><span class="path2"></span></i>
+                                                                    <code>database/migrations/</code> (se necessário)
+                                                                </li>
+                                                            </ul>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Comandos de Verificação -->
+                                            <div class="card bg-light-success">
+                                                <div class="card-header border-0">
+                                                    <h5 class="card-title text-success">✅ Comandos para Verificar Alterações</h5>
+                                                </div>
+                                                <div class="card-body">
+                                                    <pre class="bg-dark text-light p-3 rounded fs-8">
+# Verificar se todos os arquivos existem
+ls -la docker-compose.gateway-simple.yml
+ls -la gateway/traefik/dynamic/routes.yml
+ls -la .env
+ls -la gateway/shadow-comparator/
+ls -la gateway/canary-monitor/
+
+# Validar sintaxe dos arquivos YAML
+docker-compose -f docker-compose.gateway-simple.yml config
+
+# Verificar se as variáveis de ambiente estão corretas
+grep -E "^[A-Z_]+" .env | head -10
+
+# Testar conectividade dos serviços
+docker-compose ps
+docker-compose logs gateway</pre>
+                                                </div>
+                                            </div>
+
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Fase 4: Configuração do Gateway -->
+                                <div class="accordion-item mb-3">
+                                    <h2 class="accordion-header" id="headingPhase4">
+                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapsePhase4">
+                                            <i class="ki-duotone ki-router fs-2 text-warning me-3">
+                                                <span class="path1"></span>
+                                                <span class="path2"></span>
+                                            </i>
+                                            <div>
+                                                <h5 class="mb-0">4️⃣ Gateway: Configurar Roteamento</h5>
+                                                <small class="text-muted">Direcionar tráfego para o novo backend</small>
+                                            </div>
+                                        </button>
+                                    </h2>
+                                    <div id="collapsePhase4" class="accordion-collapse collapse" data-bs-parent="#migrationAccordion">
+                                        <div class="accordion-body">
+                                            <div class="alert alert-light-info mb-6">
+                                                <i class="ki-duotone ki-information fs-2 text-info me-2"><span class="path1"></span><span class="path2"></span><span class="path3"></span></i>
+                                                <strong>Estratégia:</strong> O Traefik direcionará gradualmente o tráfego do Laravel para o novo backend Java, mantendo o frontend intacto.
+                                            </div>
+
+                                            <h6 class="fw-bold text-warning">📝 Atualizar gateway/traefik/dynamic/routes.yml</h6>
+                                            <pre class="bg-dark text-light p-4 rounded fs-8">
+http:
+  routers:
+    # ====================================
+    # MIGRAÇÃO: /api/proposicoes (5% Java)
+    # ====================================
+    api-proposicoes-migration:
+      rule: "PathPrefix(`/api/proposicoes`)"
+      entryPoints: ["web"]
+      priority: 100
+      middlewares:
+        - "migration-headers"
+        - "request-metrics"
+      service: "proposicoes-migration-weighted"
+
+    # ====================================
+    # FALLBACK: Outras rotas ainda no Laravel
+    # ====================================
+    api-fallback:
+      rule: "PathPrefix(`/api`)"
+      entryPoints: ["web"]
+      priority: 50
+      middlewares:
+        - "legacy-headers"
+        - "request-metrics"
+      service: "laravel-svc@docker"
+
+  services:
+    # ====================================
+    # WEIGHTED SERVICE - MIGRAÇÃO GRADUAL
+    # ====================================
+    proposicoes-migration-weighted:
+      weighted:
+        services:
+          # NOVO: Java API - Começar com 5%
+          - name: "java-api-svc@docker"
+            weight: 5
+
+          # LEGACY: Laravel - 95% do tráfego
+          - name: "laravel-svc@docker"
+            weight: 95
+
+  middlewares:
+    # ====================================
+    # MIGRATION HEADERS
+    # ====================================
+    migration-headers:
+      headers:
+        customRequestHeaders:
+          X-Migration-Phase: "java-backend"
+          X-Backend-Version: "v2.0"
+        customResponseHeaders:
+          X-Powered-By: "Java-Spring-Boot"
+          X-Migration-Status: "in-progress"</pre>
+
+                                            <div class="card bg-light-success mt-4">
+                                                <div class="card-header border-0">
+                                                    <h6 class="card-title text-success">📊 Plano de Migração Gradual</h6>
+                                                </div>
+                                                <div class="card-body">
+                                                    <div class="table-responsive">
+                                                        <table class="table table-sm">
+                                                            <thead>
+                                                                <tr>
+                                                                    <th>Semana</th>
+                                                                    <th>Java %</th>
+                                                                    <th>Laravel %</th>
+                                                                    <th>Ação</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                <tr>
+                                                                    <td>1-2</td>
+                                                                    <td><span class="badge badge-warning">5%</span></td>
+                                                                    <td><span class="badge badge-primary">95%</span></td>
+                                                                    <td>Shadow + observar métricas</td>
+                                                                </tr>
+                                                                <tr>
+                                                                    <td>3</td>
+                                                                    <td><span class="badge badge-warning">20%</span></td>
+                                                                    <td><span class="badge badge-primary">80%</span></td>
+                                                                    <td>Se erro < 0.5%</td>
+                                                                </tr>
+                                                                <tr>
+                                                                    <td>4</td>
+                                                                    <td><span class="badge badge-info">50%</span></td>
+                                                                    <td><span class="badge badge-primary">50%</span></td>
+                                                                    <td>Monitorar performance</td>
+                                                                </tr>
+                                                                <tr>
+                                                                    <td>5</td>
+                                                                    <td><span class="badge badge-success">100%</span></td>
+                                                                    <td><span class="badge badge-light">0%</span></td>
+                                                                    <td>Migração completa!</td>
+                                                                </tr>
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Fase 5: Testes e Validação -->
+                                <div class="accordion-item mb-3">
+                                    <h2 class="accordion-header" id="headingPhase5">
+                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapsePhase5">
+                                            <i class="ki-duotone ki-verify fs-2 text-success me-3">
+                                                <span class="path1"></span>
+                                                <span class="path2"></span>
+                                                <span class="path3"></span>
+                                                <span class="path4"></span>
+                                                <span class="path5"></span>
+                                                <span class="path6"></span>
+                                            </i>
+                                            <div>
+                                                <h5 class="mb-0">5️⃣ Testes: Validar Compatibilidade</h5>
+                                                <small class="text-muted">Garantir que tudo funciona igual</small>
+                                            </div>
+                                        </button>
+                                    </h2>
+                                    <div id="collapsePhase5" class="accordion-collapse collapse" data-bs-parent="#migrationAccordion">
+                                        <div class="accordion-body">
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <h6 class="fw-bold text-success">🧪 Testes Automatizados</h6>
+                                                    <pre class="bg-dark text-light p-3 rounded fs-8">
+# Criar testes de comparação
+# tests/compare-backends.js
+
+const compareEndpoints = async () => {
+  const endpoints = [
+    '/api/proposicoes',
+    '/api/users/profile',
+    '/api/documents'
+  ];
+
+  for (const endpoint of endpoints) {
+    // Chamar Laravel
+    const laravelResponse = await fetch(`http://localhost:8001${endpoint}`);
+    const laravelData = await laravelResponse.json();
+
+    // Chamar Java
+    const javaResponse = await fetch(`http://localhost:3001${endpoint}`);
+    const javaData = await javaResponse.json();
+
+    // Comparar estruturas (ignorar timestamps)
+    const differences = compareJSON(laravelData, javaData, ['created_at', 'updated_at']);
+
+    if (differences.length > 0) {
+      console.error(`❌ Diferenças em ${endpoint}:`, differences);
+    } else {
+      console.log(`✅ ${endpoint} compatível`);
+    }
+  }
+};</pre>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <h6 class="fw-bold text-warning">📋 Checklist de Validação</h6>
+                                                    <div class="form-check form-check-sm mb-2">
+                                                        <input class="form-check-input" type="checkbox" id="test1">
+                                                        <label class="form-check-label fs-7" for="test1">Estrutura JSON idêntica</label>
+                                                    </div>
+                                                    <div class="form-check form-check-sm mb-2">
+                                                        <input class="form-check-input" type="checkbox" id="test2">
+                                                        <label class="form-check-label fs-7" for="test2">Códigos de status HTTP iguais</label>
+                                                    </div>
+                                                    <div class="form-check form-check-sm mb-2">
+                                                        <input class="form-check-input" type="checkbox" id="test3">
+                                                        <label class="form-check-label fs-7" for="test3">Headers de resposta compatíveis</label>
+                                                    </div>
+                                                    <div class="form-check form-check-sm mb-2">
+                                                        <input class="form-check-input" type="checkbox" id="test4">
+                                                        <label class="form-check-label fs-7" for="test4">Validações de negócio funcionando</label>
+                                                    </div>
+                                                    <div class="form-check form-check-sm mb-2">
+                                                        <input class="form-check-input" type="checkbox" id="test5">
+                                                        <label class="form-check-label fs-7" for="test5">Performance igual ou melhor</label>
+                                                    </div>
+                                                    <div class="form-check form-check-sm mb-2">
+                                                        <input class="form-check-input" type="checkbox" id="test6">
+                                                        <label class="form-check-label fs-7" for="test6">Logs estruturados funcionando</label>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="alert alert-light-success mt-4">
+                                                <i class="ki-duotone ki-shield-tick fs-2 text-success me-2"><span class="path1"></span><span class="path2"></span></i>
+                                                <strong>✅ Shadow Testing:</strong> O sistema de Shadow Traffic já configurado permitirá testar o backend Java com tráfego real sem afetar os usuários.
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+
+                            <!-- Comandos Úteis -->
+                            <div class="card bg-light-primary mt-8">
+                                <div class="card-header border-0">
+                                    <h4 class="card-title text-primary">🛠️ Comandos Úteis para Migração</h4>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <h6 class="fw-bold text-dark">🚀 Deploy e Build</h6>
+                                            <pre class="bg-dark text-light p-3 rounded fs-8">
+# Build e subir novo backend
+docker-compose build java-api
+docker-compose up -d java-api
+
+# Verificar saúde
+curl http://localhost:3001/api/health
+
+# Ver logs em tempo real
+docker logs -f legisinc-java-api</pre>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <h6 class="fw-bold text-dark">📊 Monitoramento</h6>
+                                            <pre class="bg-dark text-light p-3 rounded fs-8">
+# Comparar respostas
+curl http://localhost:8001/api/proposicoes > laravel.json
+curl http://localhost:3001/api/proposicoes > java.json
+diff laravel.json java.json
+
+# Métricas do Prometheus
+curl http://localhost:9090/api/v1/query?query=http_requests_total
+
+# Dashboard do Canary
+open http://localhost:3003</pre>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Troubleshooting -->
+                            <div class="card bg-light-danger mt-6">
+                                <div class="card-header border-0">
+                                    <h4 class="card-title text-danger">🚨 Problemas Comuns e Soluções</h4>
+                                </div>
+                                <div class="card-body">
+                                    <div class="accordion" id="troubleshootingAccordion">
+                                        <div class="accordion-item mb-2">
+                                            <h2 class="accordion-header" id="headingTrouble1">
+                                                <button class="accordion-button collapsed py-2" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTrouble1">
+                                                    ❌ Backend Java não conecta no banco
+                                                </button>
+                                            </h2>
+                                            <div id="collapseTrouble1" class="accordion-collapse collapse" data-bs-parent="#troubleshootingAccordion">
+                                                <div class="accordion-body py-2">
+                                                    <strong>Soluções:</strong>
+                                                    <ul class="mb-0">
+                                                        <li>Verificar se PostgreSQL está rodando: <code>docker ps | grep postgres</code></li>
+                                                        <li>Validar credenciais no application.yml</li>
+                                                        <li>Testar conexão manual: <code>psql -h localhost -p 5432 -U postgres -d legisinc</code></li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="accordion-item mb-2">
+                                            <h2 class="accordion-header" id="headingTrouble2">
+                                                <button class="accordion-button collapsed py-2" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTrouble2">
+                                                    ⚠️ JSON diferentes entre Laravel e Java
+                                                </button>
+                                            </h2>
+                                            <div id="collapseTrouble2" class="accordion-collapse collapse" data-bs-parent="#troubleshootingAccordion">
+                                                <div class="accordion-body py-2">
+                                                    <strong>Soluções:</strong>
+                                                    <ul class="mb-0">
+                                                        <li>Usar DTOs no Java que espelhem exatamente a estrutura do Laravel</li>
+                                                        <li>Configurar Jackson para formato de data igual: <code>@JsonFormat(pattern="yyyy-MM-dd HH:mm:ss")</code></li>
+                                                        <li>Implementar conversores customizados se necessário</li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="accordion-item mb-2">
+                                            <h2 class="accordion-header" id="headingTrouble3">
+                                                <button class="accordion-button collapsed py-2" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTrouble3">
+                                                    🐌 Performance pior que Laravel
+                                                </button>
+                                            </h2>
+                                            <div id="collapseTrouble3" class="accordion-collapse collapse" data-bs-parent="#troubleshootingAccordion">
+                                                <div class="accordion-body py-2">
+                                                    <strong>Soluções:</strong>
+                                                    <ul class="mb-0">
+                                                        <li>Otimizar queries JPA com <code>@Query</code> personalizadas</li>
+                                                        <li>Implementar cache com Redis: <code>@Cacheable("proposicoes")</code></li>
+                                                        <li>Configurar connection pool do banco adequadamente</li>
+                                                        <li>Usar paginação para listas grandes</li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+                <!--end::Migrar Backend tab-->
 
             </div>
             <!--end::Tab content-->

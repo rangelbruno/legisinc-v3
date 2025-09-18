@@ -1041,6 +1041,29 @@
                     </div>
                 </div>
 
+                <!-- Preparação para Migração -->
+                <div class="col-xl-4 col-lg-6 col-md-6">
+                    <div class="card card-xl-stretch mb-xl-8 card-hover cursor-pointer" onclick="window.location.href='{{ route('admin.migration-preparation.index') }}'">
+                        <div class="card-body d-flex align-items-center pt-3 pb-0">
+                            <div class="d-flex flex-column flex-grow-1 py-2 py-lg-13 me-2">
+                                <a href="{{ route('admin.migration-preparation.index') }}" class="fw-bold text-gray-900 fs-4 mb-2 text-hover-primary d-flex align-items-center">
+                                    🔄 Preparação para Migração
+                                    <span class="badge badge-light-primary ms-2">NOVO</span>
+                                    <i class="ki-duotone ki-arrow-right fs-5 ms-2">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                    </i>
+                                </a>
+                                <span class="fw-semibold text-muted fs-5">Gerar JSON para migrar backend</span>
+                            </div>
+                            <i class="ki-duotone ki-switch text-primary fs-4x align-self-end h-100px">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                            </i>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Monitoramento Grafana & Prometheus -->
                 <div class="col-xl-4 col-lg-6 col-md-6">
                     <div class="card card-xl-stretch mb-xl-8 card-hover cursor-pointer" onclick="window.location.href='{{ route('admin.monitoramento.index') }}'">
