@@ -311,6 +311,16 @@
             </div>
             
             <div class="d-flex align-items-center gap-3">
+                @if($proposicaoId)
+                <button id="btnExportarPDF" class="btn btn-warning btn-sm" onclick="exportarPDF(this)" data-proposicao-id="{{ $proposicaoId }}">
+                    <i class="ki-duotone ki-file-down fs-6 me-1">
+                        <span class="path1"></span>
+                        <span class="path2"></span>
+                    </i>
+                    Exportar PDF
+                </button>
+                @endif
+
                 <button class="btn btn-success btn-sm" onclick="onlyofficeEditor.forceSave()">
                     <i class="ki-duotone ki-check fs-6 me-1">
                         <span class="path1"></span>
@@ -318,7 +328,7 @@
                     </i>
                     Salvar
                 </button>
-                
+
                 <span id="statusSalvamento" class="badge badge-warning px-3 py-2">
                     <i class="ki-duotone ki-information fs-7 me-1">
                         <span class="path1"></span>
@@ -898,7 +908,50 @@
                 return realtimePoller;
             }
         };
-        
+
+        // Função para exportar PDF
+        async function exportarPDF(btn) {
+            const id = btn.getAttribute('data-proposicao-id');
+            btn.disabled = true;
+            const original = btn.innerHTML;
+            btn.innerHTML = 'Exportando...';
+
+            try {
+                // opcional: se houver acesso ao objeto do editor, forçar save:
+                if (window.onlyofficeEditor && window.onlyofficeEditor.docEditor && typeof window.onlyofficeEditor.forceSave === 'function') {
+                    await window.onlyofficeEditor.forceSave();
+                    // Aguardar um pouco para garantir que o salvamento foi processado
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                }
+
+                const res = await fetch(`/proposicoes/${id}/onlyoffice/exportar-pdf`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                        'Accept': 'application/json'
+                    }
+                });
+
+                const data = await res.json();
+                if (!res.ok) throw new Error(data?.message || 'Erro durante exportação');
+
+                Swal.fire({
+                    icon: 'success',
+                    title: 'PDF exportado!',
+                    text: `Arquivo salvo em: ${data.path}`
+                });
+            } catch (err) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Falha na exportação',
+                    text: err.message
+                });
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = original;
+            }
+        }
+
         // Inicializar quando o DOM estiver pronto
         document.addEventListener('DOMContentLoaded', function() {
             // Verificar se o DocsAPI foi carregado

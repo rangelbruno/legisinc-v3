@@ -72,7 +72,9 @@ class Proposicao extends Model
 
         // 📄 Campos do PDF OnlyOffice Conversion API
         'pdf_gerado_em',
-        'pdf_conversor_usado'
+        'pdf_conversor_usado',
+        'pdf_exportado_path',
+        'pdf_exportado_em'
     ];
 
     protected $casts = [
@@ -96,6 +98,7 @@ class Proposicao extends Model
         'pdf_gerado_em' => 'datetime',
         'data_aplicacao_protocolo' => 'datetime',
         'fluxo_personalizado' => 'boolean',
+        'pdf_exportado_em' => 'datetime',
     ];
 
     /**
@@ -163,6 +166,14 @@ class Proposicao extends Model
         return $this->hasMany(TramitacaoLog::class)->orderBy('created_at', 'desc');
     }
 
+    /**
+     * Alias para logstramitacao (compatibilidade)
+     */
+    public function tramitacaoLogs()
+    {
+        return $this->hasMany(TramitacaoLog::class)->orderBy('created_at', 'desc');
+    }
+
     // ==========================================
     // 🔄 RELACIONAMENTOS DO SISTEMA DE WORKFLOW
     // ==========================================
@@ -173,6 +184,14 @@ class Proposicao extends Model
     public function workflow()
     {
         return $this->belongsTo(Workflow::class);
+    }
+
+    /**
+     * Alias para workflow (compatibilidade)
+     */
+    public function workflows()
+    {
+        return $this->workflow();
     }
 
     /**
@@ -481,6 +500,29 @@ class Proposicao extends Model
     public function temParecer(): bool
     {
         return $this->tem_parecer && ! empty($this->parecer_id);
+    }
+
+    /**
+     * Verificar se foi exportado para PDF
+     */
+    public function foiExportadoPDF(): bool
+    {
+        return ! empty($this->pdf_exportado_path) &&
+               ! empty($this->pdf_exportado_em);
+    }
+
+    /**
+     * Obter o PDF para assinatura (prioriza o exportado, fallback para gerado)
+     */
+    public function getPDFParaAssinatura(): ?string
+    {
+        // Priorizar PDF exportado do OnlyOffice se existir
+        if ($this->foiExportadoPDF()) {
+            return $this->pdf_exportado_path;
+        }
+
+        // Fallback para PDF gerado no momento da aprovação
+        return $this->arquivo_pdf_path ?? null;
     }
 
     /**

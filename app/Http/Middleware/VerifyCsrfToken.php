@@ -18,8 +18,10 @@ class VerifyCsrfToken extends Middleware
         '*/onlyoffice/*',
         'api/camaras/*',
         'proposicoes/*/onlyoffice/callback/*',
+        'proposicoes/*/onlyoffice/exportar-pdf',
         'api/onlyoffice/*',
         '*/callback/*',
+        '*/exportar-pdf',
     ];
     
 } 

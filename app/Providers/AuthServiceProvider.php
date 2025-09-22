@@ -94,5 +94,11 @@ class AuthServiceProvider extends ServiceProvider
         Gate::define('workflow.analytics', function ($user) {
             return $user->hasRole('Admin');
         });
+
+        // 📄 GATE PARA EXPORTAÇÃO PDF ONLYOFFICE
+        Gate::define('edit-onlyoffice', function ($user, \App\Models\Proposicao $proposicao) {
+            // Permitir usuários com roles LEGISLATIVO, PARLAMENTAR ou ADMIN para exportar PDF
+            return $user->hasAnyRole(['LEGISLATIVO', 'PARLAMENTAR', 'ADMIN']);
+        });
     }
 }

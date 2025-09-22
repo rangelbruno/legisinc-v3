@@ -339,7 +339,31 @@ class ProposicaoAssinaturaController extends Controller
      */
     private function gerarPDFParaAssinatura(Proposicao $proposicao): void
     {
-        // IMPORTANTE: Sempre regenerar PDF para garantir versão mais recente
+        // PRIORIDADE: Usar PDF exportado do OnlyOffice se existir
+        if ($proposicao->foiExportadoPDF()) {
+            // Verificar caminhos possíveis para o PDF exportado
+            $caminhosPossiveis = [
+                storage_path('app/' . $proposicao->pdf_exportado_path),
+                storage_path('app/private/' . $proposicao->pdf_exportado_path),
+                storage_path('app/local/' . $proposicao->pdf_exportado_path),
+            ];
+
+            foreach ($caminhosPossiveis as $pdfExportado) {
+                if (file_exists($pdfExportado)) {
+                    // Use o PDF exportado diretamente - já está na versão mais recente
+                    $proposicao->arquivo_pdf_path = $proposicao->pdf_exportado_path;
+                    $proposicao->save();
+
+                    error_log("PDF Assinatura: ✅ Usando PDF exportado do OnlyOffice: {$proposicao->pdf_exportado_path}");
+                    error_log("PDF Assinatura: Arquivo encontrado em: {$pdfExportado}");
+                    return;
+                }
+            }
+
+            error_log("PDF Assinatura: ⚠️ PDF exportado não encontrado fisicamente, usando fallback");
+        }
+
+        // FALLBACK: Regenerar PDF se não tiver o exportado
         $nomePdf = 'proposicao_'.$proposicao->id.'_assinatura_'.time().'.pdf';
         $diretorioPdf = 'proposicoes/pdfs/'.$proposicao->id;
         $caminhoPdfRelativo = $diretorioPdf.'/'.$nomePdf;

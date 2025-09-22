@@ -887,6 +887,96 @@ class DatabaseSeeder extends Seeder
 
         // CORREÇÃO CRÍTICA AUTO-REGISTRADA: OnlyOffice Content Protection
         $this->call([
+            CorrecaoOnlyOfficeConteudoSeeder::class,
+        ]);
+
+                // LIMPEZA CRÍTICA AUTO-REGISTRADA: Content Corruption Cleanup
+        $this->call([
+            LimpezaConteudoCorrempidoSeeder::class,
+        ]);
+
+                // PRESERVAÇÃO AUTOMÁTICA: Melhorias detectadas automaticamente
+        $this->call([
+            PreservarMelhorias25Seeder::class,
+        ]);
+
+        // CORREÇÃO CRÍTICA AUTO-REGISTRADA: OnlyOffice Content Protection
+        $this->call([
+            CorrecaoOnlyOfficeConteudoSeeder::class,
+        ]);
+
+                // LIMPEZA CRÍTICA AUTO-REGISTRADA: Content Corruption Cleanup
+        $this->call([
+            LimpezaConteudoCorrempidoSeeder::class,
+        ]);
+
+                // PRESERVAÇÃO AUTOMÁTICA: Melhorias detectadas automaticamente
+        $this->call([
+            PreservarMelhorias27Seeder::class,
+        ]);
+
+        // CORREÇÃO CRÍTICA AUTO-REGISTRADA: OnlyOffice Content Protection
+        $this->call([
+            CorrecaoOnlyOfficeConteudoSeeder::class,
+        ]);
+
+                // LIMPEZA CRÍTICA AUTO-REGISTRADA: Content Corruption Cleanup
+        $this->call([
+            LimpezaConteudoCorrempidoSeeder::class,
+        ]);
+
+                // PRESERVAÇÃO AUTOMÁTICA: Melhorias detectadas automaticamente
+        $this->call([
+            PreservarMelhorias29Seeder::class,
+        ]);
+
+        // CORREÇÃO CRÍTICA AUTO-REGISTRADA: OnlyOffice Content Protection
+        $this->call([
+            CorrecaoOnlyOfficeConteudoSeeder::class,
+        ]);
+
+                // LIMPEZA CRÍTICA AUTO-REGISTRADA: Content Corruption Cleanup
+        $this->call([
+            LimpezaConteudoCorrempidoSeeder::class,
+        ]);
+
+                // PRESERVAÇÃO AUTOMÁTICA: Melhorias detectadas automaticamente
+        $this->call([
+            PreservarMelhorias31Seeder::class,
+        ]);
+
+        // CORREÇÃO CRÍTICA AUTO-REGISTRADA: OnlyOffice Content Protection
+        $this->call([
+            CorrecaoOnlyOfficeConteudoSeeder::class,
+        ]);
+
+                // LIMPEZA CRÍTICA AUTO-REGISTRADA: Content Corruption Cleanup
+        $this->call([
+            LimpezaConteudoCorrempidoSeeder::class,
+        ]);
+
+                // PRESERVAÇÃO AUTOMÁTICA: Melhorias detectadas automaticamente
+        $this->call([
+            PreservarMelhorias33Seeder::class,
+        ]);
+
+        // CORREÇÃO CRÍTICA AUTO-REGISTRADA: OnlyOffice Content Protection
+        $this->call([
+            CorrecaoOnlyOfficeConteudoSeeder::class,
+        ]);
+
+                // LIMPEZA CRÍTICA AUTO-REGISTRADA: Content Corruption Cleanup
+        $this->call([
+            LimpezaConteudoCorrempidoSeeder::class,
+        ]);
+
+                // PRESERVAÇÃO AUTOMÁTICA: Melhorias detectadas automaticamente
+        $this->call([
+            PreservarMelhorias35Seeder::class,
+        ]);
+
+        // CORREÇÃO CRÍTICA AUTO-REGISTRADA: OnlyOffice Content Protection
+        $this->call([
             Database\Seeders\CorrecaoOnlyOfficeConteudoSeeder::class,
         ]);
 

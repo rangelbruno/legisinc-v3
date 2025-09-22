@@ -36,7 +36,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'database.activity' => \App\Http\Middleware\DatabaseActivityLogger::class,
             'request.tracing' => \App\Http\Middleware\RequestTracing::class,
         ]);
-        
+
         // Aplica middleware para prevenir navegação com botão voltar em todas as rotas autenticadas
         $middleware->web([
             \App\Http\Middleware\PreventBackHistory::class,
@@ -45,6 +45,9 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\DatabaseActivityLogger::class,
             \App\Http\Middleware\RequestTracing::class,
         ]);
+
+        // Remover middleware de sessão das rotas API (especialmente callbacks OnlyOffice)
+        $middleware->api([]);  // Usar só throttle padrão sem session middleware
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

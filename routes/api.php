@@ -5,11 +5,12 @@ use Illuminate\Support\Facades\Route;
 // Arquivo de rotas API - aplicação migrada para PostgreSQL
 
 // OnlyOffice callback routes (no CSRF protection needed)
-Route::post('/onlyoffice/callback/proposicao/{proposicao}', [App\Http\Controllers\ProposicaoController::class, 'onlyOfficeCallback'])->name('api.onlyoffice.callback.proposicao');
-Route::post('/onlyoffice/callback/instance/{instance}', [App\Http\Controllers\ProposicaoController::class, 'onlyOfficeCallbackInstance'])->name('api.onlyoffice.callback.instance');
-
-// OnlyOffice callback for Legislativo editor
-Route::post('/onlyoffice/callback/legislativo/{proposicao}/{documentKey}', [App\Http\Controllers\OnlyOfficeController::class, 'callback'])->name('api.onlyoffice.callback.legislativo');
+// Excluir callbacks dos middlewares que podem interferir
+Route::middleware(['throttle:api'])->group(function () {
+    Route::post('/onlyoffice/callback/proposicao/{proposicao}', [App\Http\Controllers\ProposicaoController::class, 'onlyOfficeCallback'])->name('api.onlyoffice.callback.proposicao');
+    Route::post('/onlyoffice/callback/instance/{instance}', [App\Http\Controllers\ProposicaoController::class, 'onlyOfficeCallbackInstance'])->name('api.onlyoffice.callback.instance');
+    Route::post('/onlyoffice/callback/legislativo/{proposicao}/{documentKey}', [App\Http\Controllers\OnlyOfficeController::class, 'callback'])->name('api.onlyoffice.callback.legislativo');
+});
 
 // OnlyOffice force save
 Route::post('/onlyoffice/force-save/proposicao/{proposicao}', [App\Http\Controllers\OnlyOfficeController::class, 'forceSave'])->name('api.onlyoffice.force-save');

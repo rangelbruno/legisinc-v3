@@ -1063,6 +1063,11 @@ Route::prefix('proposicoes')->name('proposicoes.')->middleware(['auth', 'check.s
 
     Route::get('/{proposicao}', [App\Http\Controllers\ProposicaoController::class, 'show'])->name('show');
     Route::delete('/{proposicao}', [App\Http\Controllers\ProposicaoController::class, 'destroy'])->name('destroy');
+
+    // Rota para exportar PDF do OnlyOffice
+    Route::post('/{proposicao}/onlyoffice/exportar-pdf', [App\Http\Controllers\OnlyOfficeController::class, 'exportarPDF'])
+        ->name('onlyoffice.exportar-pdf')
+        ->middleware(['auth']);
 });
 
 // ONLYOFFICE ROUTES FOR PROPOSIÇÕES (sem autenticação)
@@ -1609,6 +1614,15 @@ Route::get('/debug/exports/{filename}', function ($filename) {
 Route::middleware(['web', 'auth'])->get('/test-debug', function () {
     return view('test-debug');
 })->name('test.debug.logger');
+
+// Rotas de Logs do Fluxo de Documentos - Admin apenas
+Route::middleware(['web', 'auth'])->prefix('admin/document-workflow-logs')->name('admin.document-workflow-logs.')->group(function () {
+    Route::get('/', [App\Http\Controllers\Admin\DocumentWorkflowLogController::class, 'index'])->name('index');
+    Route::get('/export', [App\Http\Controllers\Admin\DocumentWorkflowLogController::class, 'export'])->name('export');
+    Route::get('/export-json', [App\Http\Controllers\Admin\DocumentWorkflowLogController::class, 'exportJson'])->name('export-json');
+    Route::delete('/delete', [App\Http\Controllers\Admin\DocumentWorkflowLogController::class, 'deleteLogs'])->name('delete');
+    Route::get('/{proposicao}', [App\Http\Controllers\Admin\DocumentWorkflowLogController::class, 'show'])->name('show');
+});
 
 // Rotas de Monitoramento - Admin apenas
 Route::middleware(['web', 'auth'])->prefix('admin/monitoring')->name('admin.monitoring.')->group(function () {

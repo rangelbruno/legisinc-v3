@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\DocumentWorkflowLog;
 use App\Models\Proposicao;
 use App\Models\TipoProposicao;
 use App\Services\OnlyOffice\OnlyOfficeConversionService;
@@ -1191,5 +1192,264 @@ Sistema funcionando!\par
 
         // Log removido para evitar problemas de permissão
         // Log::info('Proposição atualizada após salvamento', ...);
+    }
+
+    /**
+     * Exportar PDF do documento OnlyOffice
+     */
+    public function exportarPDF(Request $request, Proposicao $proposicao, \App\Services\OnlyOfficeConversionService $converter)
+    {
+        $startTime = microtime(true);
+
+        // 1) Autorização
+        if (\Illuminate\Support\Facades\Gate::denies('edit-onlyoffice', $proposicao)) {
+            DocumentWorkflowLog::logPdfExport(
+                proposicaoId: $proposicao->id,
+                status: 'error',
+                description: 'Tentativa de exportação PDF negada - usuário sem permissão',
+                errorMessage: 'Gate edit-onlyoffice negou acesso',
+                metadata: [
+                    'user_id' => auth()->id(),
+                    'user_name' => auth()->user()->name ?? 'Desconhecido',
+                    'user_roles' => auth()->user()->getRoleNames()->toArray() ?? [],
+                    'ip_address' => request()->ip(),
+                ]
+            );
+            return response()->json(['message' => 'Forbidden'], \Symfony\Component\HttpFoundation\Response::HTTP_FORBIDDEN);
+        }
+
+        // 2) Verifica se há arquivo base (rtf) associado
+        $arquivoFonteRel = $proposicao->arquivo_path;
+
+        // Se não há arquivo_path definido, tentar encontrar automaticamente
+        if (!$arquivoFonteRel) {
+            $arquivoEncontrado = $this->buscarArquivoProposicaoAutomaticamente($proposicao);
+            if ($arquivoEncontrado) {
+                // Atualizar proposição com o arquivo encontrado
+                $proposicao->update(['arquivo_path' => $arquivoEncontrado]);
+                $arquivoFonteRel = $arquivoEncontrado;
+
+                Log::info('Arquivo RTF encontrado automaticamente e atualizado no banco', [
+                    'proposicao_id' => $proposicao->id,
+                    'arquivo_path' => $arquivoEncontrado
+                ]);
+            } else {
+                DocumentWorkflowLog::logPdfExport(
+                    proposicaoId: $proposicao->id,
+                    status: 'error',
+                    description: 'Falha na exportação PDF - arquivo fonte não encontrado',
+                    errorMessage: 'Proposição não possui arquivo_path definido e nenhum arquivo RTF foi encontrado automaticamente',
+                    metadata: [
+                        'proposicao_numero' => $proposicao->numero,
+                        'proposicao_ano' => $proposicao->ano,
+                        'arquivo_path' => $arquivoFonteRel,
+                    ]
+                );
+                return response()->json(['message' => 'Arquivo de origem não disponível para exportação'], 422);
+            }
+        }
+
+        // Verificar caminhos possíveis para o arquivo RTF
+        $caminhosPossiveis = [
+            storage_path('app/' . $arquivoFonteRel),
+            storage_path('app/private/' . $arquivoFonteRel),
+            storage_path('app/local/' . $arquivoFonteRel),
+        ];
+
+        $arquivoFonteAbs = null;
+        foreach ($caminhosPossiveis as $caminho) {
+            if (file_exists($caminho)) {
+                $arquivoFonteAbs = $caminho;
+                break;
+            }
+        }
+
+        if (!$arquivoFonteAbs) {
+            DocumentWorkflowLog::logPdfExport(
+                proposicaoId: $proposicao->id,
+                status: 'error',
+                description: 'Falha na exportação PDF - arquivo físico não encontrado',
+                errorMessage: 'Arquivo RTF não encontrado nos caminhos de storage',
+                metadata: [
+                    'proposicao_numero' => $proposicao->numero,
+                    'proposicao_ano' => $proposicao->ano,
+                    'arquivo_path' => $arquivoFonteRel,
+                    'caminhos_testados' => $caminhosPossiveis,
+                ]
+            );
+            return response()->json(['message' => 'Arquivo de origem não disponível para exportação'], 422);
+        }
+
+        // Log início da exportação
+        DocumentWorkflowLog::logPdfExport(
+            proposicaoId: $proposicao->id,
+            status: 'pending',
+            description: 'Iniciando processo de exportação de PDF via OnlyOffice',
+            metadata: [
+                'source_file_path' => $arquivoFonteRel,
+                'source_file_absolute' => $arquivoFonteAbs,
+                'source_file_exists' => file_exists($arquivoFonteAbs),
+                'source_file_size' => file_exists($arquivoFonteAbs) ? filesize($arquivoFonteAbs) : null,
+                'proposicao_numero' => $proposicao->numero,
+                'proposicao_ano' => $proposicao->ano,
+                'converter_service' => get_class($converter),
+            ]
+        );
+
+        try {
+            // 3) Converte para PDF (em tmp)
+            $tmpPdfAbs = $converter->convertToPdf($arquivoFonteAbs);
+
+            // 4) Persiste no storage definitivo
+            $dir = "proposicoes/pdfs/{$proposicao->id}";
+            $fileName = sprintf('proposicao_%d_exported_%d.pdf', $proposicao->id, time());
+            $destRel = $dir . '/' . $fileName;
+
+            Storage::disk('local')->makeDirectory($dir);
+            copy($tmpPdfAbs, Storage::disk('local')->path($destRel));
+
+            // 5) Calcula informações do arquivo final
+            $destAbs = Storage::disk('local')->path($destRel);
+            $fileSizeBytes = file_exists($destAbs) ? filesize($destAbs) : null;
+            $fileHash = file_exists($destAbs) ? md5_file($destAbs) : null;
+            $executionTimeMs = round((microtime(true) - $startTime) * 1000);
+
+            // 6) Atualiza BD
+            $proposicao->pdf_exportado_path = $destRel;
+            $proposicao->pdf_exportado_em = \Carbon\Carbon::now();
+            $proposicao->save();
+
+            // 7) Log de sucesso detalhado
+            DocumentWorkflowLog::logPdfExport(
+                proposicaoId: $proposicao->id,
+                status: 'success',
+                description: "PDF exportado com sucesso: {$fileName}",
+                filePath: $destRel,
+                fileSizeBytes: $fileSizeBytes,
+                fileHash: $fileHash,
+                executionTimeMs: $executionTimeMs,
+                metadata: [
+                    'source_file' => $arquivoFonteRel,
+                    'destination_file' => $destRel,
+                    'destination_absolute' => $destAbs,
+                    'temp_file_used' => $tmpPdfAbs,
+                    'file_size_formatted' => $fileSizeBytes ? $this->formatBytes($fileSizeBytes) : null,
+                    'storage_disk' => 'local',
+                    'storage_directory_created' => true,
+                    'database_updated' => true,
+                    'proposicao_numero' => $proposicao->numero,
+                    'proposicao_ano' => $proposicao->ano,
+                    'export_timestamp' => $proposicao->pdf_exportado_em->toISOString(),
+                ]
+            );
+
+            Log::info('Exportação PDF concluída', [
+                'proposicao_id' => $proposicao->id,
+                'user_id' => Auth::id(),
+                'path' => $destRel,
+                'execution_time_ms' => $executionTimeMs,
+                'file_size_bytes' => $fileSizeBytes,
+            ]);
+
+            return response()->json([
+                'message' => 'PDF exportado com sucesso',
+                'path'    => $destRel,
+                'exported_at' => $proposicao->pdf_exportado_em->toIso8601String(),
+                'file_size' => $fileSizeBytes,
+                'execution_time_ms' => $executionTimeMs,
+            ]);
+        } catch (\Throwable $e) {
+            $executionTimeMs = round((microtime(true) - $startTime) * 1000);
+
+            // Log de erro detalhado
+            DocumentWorkflowLog::logPdfExport(
+                proposicaoId: $proposicao->id,
+                status: 'error',
+                description: 'Falha durante a exportação de PDF',
+                executionTimeMs: $executionTimeMs,
+                errorMessage: $e->getMessage(),
+                metadata: [
+                    'source_file' => $arquivoFonteRel,
+                    'source_file_absolute' => $arquivoFonteAbs,
+                    'source_file_exists' => file_exists($arquivoFonteAbs),
+                    'error_class' => get_class($e),
+                    'error_line' => $e->getLine(),
+                    'error_file' => $e->getFile(),
+                    'stack_trace_preview' => substr($e->getTraceAsString(), 0, 500),
+                    'proposicao_numero' => $proposicao->numero,
+                    'proposicao_ano' => $proposicao->ano,
+                ]
+            );
+
+            Log::error('Falha ao exportar PDF', [
+                'proposicao_id' => $proposicao->id,
+                'user_id' => Auth::id(),
+                'error' => $e->getMessage(),
+                'execution_time_ms' => $executionTimeMs,
+            ]);
+            return response()->json(['message' => 'Falha na exportação do PDF'], 500);
+        }
+    }
+
+    /**
+     * Helper para formatar bytes
+     */
+    private function formatBytes($bytes, $precision = 2)
+    {
+        $units = array('B', 'KB', 'MB', 'GB', 'TB');
+
+        for ($i = 0; $bytes > 1024 && $i < count($units) - 1; $i++) {
+            $bytes /= 1024;
+        }
+
+        return round($bytes, $precision) . ' ' . $units[$i];
+    }
+
+    /**
+     * Buscar arquivo RTF da proposição automaticamente quando arquivo_path é NULL
+     */
+    private function buscarArquivoProposicaoAutomaticamente($proposicao): ?string
+    {
+        // Diretórios onde buscar arquivos RTF
+        $diretorios = [
+            'proposicoes',         // Novo padrão do callback OnlyOffice
+            'private/proposicoes', // Padrão antigo
+            'public/proposicoes',  // Outras variações
+            'local/proposicoes'    // Outras variações
+        ];
+
+        $arquivosEncontrados = [];
+
+        foreach ($diretorios as $diretorio) {
+            $pattern = storage_path("app/{$diretorio}/proposicao_{$proposicao->id}_*.rtf");
+            $arquivos = glob($pattern);
+
+            if (!empty($arquivos)) {
+                foreach ($arquivos as $arquivo) {
+                    // Extrair timestamp do nome do arquivo para ordenar por mais recente
+                    if (preg_match('/proposicao_\d+_(\d+)\.rtf$/', $arquivo, $matches)) {
+                        $timestamp = (int)$matches[1];
+                        $caminhoRelativo = str_replace(storage_path('app/'), '', $arquivo);
+                        $arquivosEncontrados[$timestamp] = $caminhoRelativo;
+                    }
+                }
+            }
+        }
+
+        if (!empty($arquivosEncontrados)) {
+            // Retornar o arquivo mais recente (maior timestamp)
+            ksort($arquivosEncontrados);
+            $arquivoMaisRecente = end($arquivosEncontrados);
+
+            Log::info('Arquivo RTF encontrado automaticamente', [
+                'proposicao_id' => $proposicao->id,
+                'arquivo_mais_recente' => $arquivoMaisRecente,
+                'total_arquivos_encontrados' => count($arquivosEncontrados)
+            ]);
+
+            return $arquivoMaisRecente;
+        }
+
+        return null;
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\DocumentoTemplate;
+use App\Models\DocumentWorkflowLog;
 use App\Models\Proposicao;
 use App\Models\TipoProposicao;
 use App\Models\TipoProposicaoTemplate;
@@ -27,7 +28,7 @@ class ProposicaoController extends Controller
         private TemplateUniversalService $templateUniversalService,
         private OnlyOfficeConversionService $conversionService
     ) {
-        $this->middleware('auth');
+        $this->middleware('auth')->except(['onlyOfficeCallback', 'onlyOfficeCallbackInstance']);
         $this->middleware('can:create,App\Models\Proposicao')->only(['create', 'store', 'createModern']);
         $this->middleware('can:update,proposicao')->only(['update', 'edit']);
         $this->middleware('can:delete,proposicao')->only(['destroy']);
@@ -285,6 +286,30 @@ class ProposicaoController extends Controller
 
         // Criar proposição no banco de dados
         $proposicao = Proposicao::create($dadosProposicao);
+
+        // 📊 WORKFLOW LOG: Documento criado
+        DocumentWorkflowLog::logWorkflowEvent(
+            proposicaoId: $proposicao->id,
+            eventType: 'document_created',
+            stage: 'creation',
+            action: 'create_document',
+            status: 'success',
+            description: "Documento criado como rascunho: {$proposicao->tipo} - {$proposicao->ementa}",
+            metadata: [
+                'proposicao_numero' => $proposicao->numero,
+                'proposicao_ano' => $proposicao->ano,
+                'proposicao_tipo' => $proposicao->tipo,
+                'proposicao_ementa' => $proposicao->ementa,
+                'status_inicial' => $proposicao->status,
+                'opcao_preenchimento' => $opcaoPreenchimento,
+                'tem_conteudo_inicial' => !empty($proposicao->conteudo),
+                'tamanho_conteudo' => strlen($proposicao->conteudo ?? ''),
+                'autor_id' => $proposicao->autor_id,
+                'creation_method' => $opcaoPreenchimento,
+                'has_ai_content' => $opcaoPreenchimento === 'ia' && !empty($request->texto_ia),
+                'has_manual_content' => $opcaoPreenchimento === 'manual' && !empty($request->texto_manual),
+            ]
+        );
 
         // 📝 LOG: Proposição criada com sucesso
         \App\Helpers\ComprehensiveLogger::userClick('Proposição criada com sucesso pelo Parlamentar', [
@@ -5039,15 +5064,61 @@ class ProposicaoController extends Controller
             }
         }
 
-        // NOVA ESTRATÉGIA: 1) PDF OnlyOffice Conversion API 2) PDF oficial 3) DomPDF fallback
-        Log::info('🔴 PDF REQUEST: Verificando PDF gerado via OnlyOffice Conversion API', [
+        // NOVA ESTRATÉGIA: 1) PDF Exportado OnlyOffice 2) PDF OnlyOffice Conversion API 3) PDF oficial 4) DomPDF fallback
+        Log::info('🔴 PDF REQUEST: Verificando PDF exportado via OnlyOffice', [
             'proposicao_id' => $proposicao->id,
+            'pdf_exportado_path' => $proposicao->pdf_exportado_path,
+            'pdf_exportado_em' => $proposicao->pdf_exportado_em,
             'arquivo_pdf_path' => $proposicao->arquivo_pdf_path,
             'pdf_conversor_usado' => $proposicao->pdf_conversor_usado,
             'pdf_gerado_em' => $proposicao->pdf_gerado_em
         ]);
 
-        // 1) MÁXIMA PRIORIDADE: PDF gerado via OnlyOffice Conversion API
+        // 1) MÁXIMA PRIORIDADE: PDF exportado diretamente via OnlyOffice (botão Exportar PDF)
+        if ($proposicao->pdf_exportado_path && $proposicao->pdf_exportado_em) {
+            // Verificar caminhos possíveis para o PDF exportado
+            $caminhosPossiveis = [
+                storage_path('app/' . $proposicao->pdf_exportado_path),
+                storage_path('app/private/' . $proposicao->pdf_exportado_path),
+                storage_path('app/local/' . $proposicao->pdf_exportado_path),
+            ];
+
+            foreach ($caminhosPossiveis as $caminho) {
+                if (file_exists($caminho)) {
+                    Log::info('✅ PDF REQUEST: Servindo PDF Exportado OnlyOffice', [
+                        'proposicao_id' => $proposicao->id,
+                        'pdf_path' => $proposicao->pdf_exportado_path,
+                        'caminho_absoluto' => $caminho,
+                        'tamanho' => filesize($caminho),
+                        'exportado_em' => $proposicao->pdf_exportado_em
+                    ]);
+
+                    return response()->file($caminho, [
+                        'Content-Type' => 'application/pdf',
+                        'Content-Disposition' => 'inline; filename="proposicao_' . $proposicao->id . '_exportado.pdf"',
+                        'Cache-Control' => 'no-cache, no-store, must-revalidate, max-age=0, private',
+                        'Pragma' => 'no-cache',
+                        'Expires' => 'Thu, 01 Jan 1970 00:00:00 GMT',
+                        'Last-Modified' => gmdate('D, d M Y H:i:s') . ' GMT',
+                        'ETag' => '"' . md5($caminho . filemtime($caminho)) . '"',
+                        'X-Content-Type-Options' => 'nosniff',
+                        'X-Frame-Options' => 'SAMEORIGIN',
+                        'X-PDF-Source' => 'onlyoffice-exportado',
+                        'X-PDF-Generated' => $proposicao->pdf_exportado_em->toISOString(),
+                        'X-PDF-Font-Fixed' => 'true',
+                        'Vary' => 'Accept-Encoding'
+                    ]);
+                }
+            }
+
+            Log::warning('🔴 PDF REQUEST: PDF exportado não encontrado fisicamente', [
+                'proposicao_id' => $proposicao->id,
+                'pdf_exportado_path' => $proposicao->pdf_exportado_path,
+                'caminhos_testados' => $caminhosPossiveis
+            ]);
+        }
+
+        // 2) SEGUNDA PRIORIDADE: PDF gerado via OnlyOffice Conversion API
         if ($proposicao->arquivo_pdf_path &&
             $proposicao->pdf_conversor_usado === 'onlyoffice_conversion_api' &&
             Storage::exists($proposicao->arquivo_pdf_path)) {

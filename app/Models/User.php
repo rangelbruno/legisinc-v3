@@ -534,6 +534,14 @@ class User extends Authenticatable
     }
 
     /**
+     * Relação com logs de tramitação
+     */
+    public function tramitacaoLogs()
+    {
+        return $this->hasMany(TramitacaoLog::class, 'user_id');
+    }
+
+    /**
      * Scope para parlamentares
      */
     public function scopeParlamentares($query)

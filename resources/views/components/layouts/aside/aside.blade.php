@@ -742,6 +742,15 @@
                                 <span class="badge badge-light-info badge-sm ms-auto">NOVO</span>
                             </a>
                         </div>
+                        <div class="menu-item">
+                            <a class="menu-link {{ request()->routeIs('admin.document-workflow-logs.*') ? 'active' : '' }}" href="{{ route('admin.document-workflow-logs.index') }}">
+                                <span class="menu-bullet">
+                                    <span class="bullet bullet-dot"></span>
+                                </span>
+                                <span class="menu-title">Logs do Fluxo</span>
+                                <span class="badge badge-light-success badge-sm ms-auto">NOVO</span>
+                            </a>
+                        </div>
                         @endif
                         @if(\App\Models\ScreenPermission::userCanAccessRoute('usuarios.index'))
                         <div class="menu-item">

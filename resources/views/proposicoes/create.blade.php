@@ -2074,5 +2074,151 @@ $(document).ready(function() {
     }
     
 }
+
+/* Estilos para alerta de formatação de parágrafos */
+.alerta-paragrafos {
+    border-left: 4px solid #ffc107 !important;
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
 </style>
+
+<script>
+// 🔧 SOLUÇÃO PREVENTIVA PARA PRESERVAR QUEBRAS DE LINHA EM PARÁGRAFOS
+// Detecta texto com artigos/parágrafos mas sem quebras de linha e oferece correção automática
+
+// Função para detectar e corrigir texto sem quebras de linha
+function corrigirParagrafosAutomaticamente(texto) {
+    // Se não tem quebras de linha mas tem padrões de artigos/parágrafos
+    if (texto.indexOf('\n') === -1) {
+        console.log('🔧 Corrigindo texto sem quebras de linha...');
+
+        let textoCorrigido = texto;
+
+        // Adicionar quebras antes de artigos
+        textoCorrigido = textoCorrigido.replace(/(Art\.\s*\d+º)/g, '\n\n$1');
+
+        // Adicionar quebras antes de parágrafos
+        textoCorrigido = textoCorrigido.replace(/(\s)(§\s*\d+º)/g, '$1\n\n$2');
+
+        // Limpar quebras duplas no início
+        textoCorrigido = textoCorrigido.replace(/^\n+/, '');
+
+        // Normalizar quebras múltiplas
+        textoCorrigido = textoCorrigido.replace(/\n{3,}/g, '\n\n');
+
+        const quebrasAntes = (texto.match(/\n/g) || []).length;
+        const quebrasDepois = (textoCorrigido.match(/\n/g) || []).length;
+
+        console.log(`✅ Correção aplicada: ${quebrasAntes} → ${quebrasDepois} quebras`);
+
+        return textoCorrigido;
+    }
+
+    return texto;
+}
+
+// Função para validar e alertar sobre problemas de formatação
+function validarFormatacaoTexto(elemento) {
+    const texto = elemento.value;
+    const container = elemento.closest('.mb-4') || elemento.parentElement;
+
+    // Remover alertas anteriores
+    const alertaAnterior = container.querySelector('.alerta-paragrafos');
+    if (alertaAnterior) {
+        alertaAnterior.remove();
+    }
+
+    // Verificar se tem padrões de artigos/parágrafos mas sem quebras
+    const temArtigos = /Art\.\s*\d+º/.test(texto);
+    const temParagrafos = /§\s*\d+º/.test(texto);
+    const temQuebras = texto.indexOf('\n') !== -1;
+
+    if ((temArtigos || temParagrafos) && !temQuebras && texto.length > 100) {
+        // Criar alerta
+        const alerta = document.createElement('div');
+        alerta.className = 'alert alert-warning alerta-paragrafos mt-2';
+        alerta.innerHTML = `
+            <div class="d-flex align-items-center">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <div class="flex-grow-1">
+                    <strong>Atenção:</strong> Detectamos artigos e parágrafos, mas o texto parece estar em uma única linha.
+                    Isso pode causar problemas de formatação no OnlyOffice.
+                </div>
+                <button type="button" class="btn btn-sm btn-warning ms-2" onclick="corrigirFormatacaoTexto(this)">
+                    Corrigir Automaticamente
+                </button>
+            </div>
+        `;
+
+        container.appendChild(alerta);
+
+        // Adicionar função de correção ao botão
+        window.corrigirFormatacaoTexto = function(botao) {
+            const textoCorrigido = corrigirParagrafosAutomaticamente(elemento.value);
+            elemento.value = textoCorrigido;
+            elemento.dispatchEvent(new Event('input'));
+
+            // Remover alerta
+            botao.closest('.alerta-paragrafos').remove();
+
+            // Mostrar confirmação
+            const confirmacao = document.createElement('div');
+            confirmacao.className = 'alert alert-success mt-2';
+            confirmacao.innerHTML = `
+                <i class="fas fa-check me-2"></i>
+                <strong>Formatação corrigida!</strong> As quebras de linha foram adicionadas automaticamente.
+            `;
+            container.appendChild(confirmacao);
+
+            // Remover confirmação após 3 segundos
+            setTimeout(() => {
+                if (confirmacao.parentElement) {
+                    confirmacao.remove();
+                }
+            }, 3000);
+        };
+    }
+}
+
+// Aplicar a solução ao campo de texto principal
+$(document).ready(function() {
+    const campoTexto = document.getElementById('texto_principal');
+
+    if (campoTexto) {
+        console.log('🔧 Solução preventiva de parágrafos ativada');
+
+        // Validar quando o usuário cola texto
+        campoTexto.addEventListener('paste', function(e) {
+            setTimeout(() => {
+                validarFormatacaoTexto(this);
+            }, 100);
+        });
+
+        // Validar quando o usuário para de digitar (debounce)
+        let timeoutValidacao;
+        campoTexto.addEventListener('input', function() {
+            clearTimeout(timeoutValidacao);
+            timeoutValidacao = setTimeout(() => {
+                validarFormatacaoTexto(this);
+            }, 1000);
+        });
+
+        // Validar quando o campo perde o foco
+        campoTexto.addEventListener('blur', function() {
+            validarFormatacaoTexto(this);
+        });
+    }
+});
+</script>
 @endpush

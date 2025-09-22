@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Support\Facades\RateLimiter;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -41,6 +43,11 @@ class AppServiceProvider extends ServiceProvider
             'components.layouts.app',
             'layouts.app',
         ], \App\Http\View\Composers\NotificationComposer::class);
+
+        // Configurar rate limiters
+        RateLimiter::for('api', function ($request) {
+            return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
+        });
 
         // Registrar comandos Artisan do sistema de parâmetros
         if ($this->app->runningInConsole()) {
