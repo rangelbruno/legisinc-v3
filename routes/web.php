@@ -1064,10 +1064,24 @@ Route::prefix('proposicoes')->name('proposicoes.')->middleware(['auth', 'check.s
     Route::get('/{proposicao}', [App\Http\Controllers\ProposicaoController::class, 'show'])->name('show');
     Route::delete('/{proposicao}', [App\Http\Controllers\ProposicaoController::class, 'destroy'])->name('destroy');
 
-    // Rota para exportar PDF do OnlyOffice
+    // Rota para exportar PDF do OnlyOffice (método tradicional)
     Route::post('/{proposicao}/onlyoffice/exportar-pdf', [App\Http\Controllers\OnlyOfficeController::class, 'exportarPDF'])
         ->name('onlyoffice.exportar-pdf')
         ->middleware(['auth']);
+
+    // Rota para exportar PDF diretamente para S3 (método eficiente)
+    Route::post('/{proposicao}/onlyoffice/exportar-pdf-s3', [App\Http\Controllers\OnlyOfficeController::class, 'exportarPDFParaS3'])
+        ->name('onlyoffice.exportar-pdf-s3')
+        ->middleware(['auth']);
+
+    // Rota para exportação automática S3 durante aprovação (server-side only)
+    Route::post('/{proposicao}/onlyoffice/exportar-pdf-s3-automatico', [App\Http\Controllers\OnlyOfficeController::class, 'exportarPDFParaS3Automatico'])
+        ->name('onlyoffice.exportar-pdf-s3-automatico')
+        ->middleware(['auth']);
+
+    // Rota para interceptar PDF do evento onDownloadAs
+    Route::post('/onlyoffice/interceptar-pdf-download', [App\Http\Controllers\OnlyOfficeController::class, 'interceptarPDFOnDownloadAs'])
+        ->name('onlyoffice.interceptar-pdf-download');
 });
 
 // ONLYOFFICE ROUTES FOR PROPOSIÇÕES (sem autenticação)

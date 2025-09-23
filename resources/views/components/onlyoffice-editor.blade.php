@@ -312,13 +312,43 @@
             
             <div class="d-flex align-items-center gap-3">
                 @if($proposicaoId)
-                <button id="btnExportarPDF" class="btn btn-warning btn-sm" onclick="exportarPDF(this)" data-proposicao-id="{{ $proposicaoId }}">
-                    <i class="ki-duotone ki-file-down fs-6 me-1">
-                        <span class="path1"></span>
-                        <span class="path2"></span>
-                    </i>
-                    Exportar PDF
-                </button>
+                <!-- Dropdown para opções de exportação PDF -->
+                <div class="btn-group">
+                    <button id="btnExportarPDF" class="btn btn-warning btn-sm" onclick="exportarPDFParaS3WithUI(this)" data-proposicao-id="{{ $proposicaoId }}">
+                        <i class="ki-duotone ki-file-down fs-6 me-1">
+                            <span class="path1"></span>
+                            <span class="path2"></span>
+                        </i>
+                        Exportar PDF para S3
+                    </button>
+                    <button type="button" class="btn btn-warning btn-sm dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
+                        <span class="visually-hidden">Toggle Dropdown</span>
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="#" onclick="exportarPDFParaS3WithUI(document.getElementById('btnExportarPDF'))">
+                            <i class="ki-duotone ki-cloud fs-6 me-2">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                            </i>
+                            Exportar para S3 (Recomendado)
+                        </a></li>
+                        <li><a class="dropdown-item" href="#" onclick="exportarPDFDownloadAs(document.getElementById('btnExportarPDF'))">
+                            <i class="ki-duotone ki-download fs-6 me-2">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                            </i>
+                            Baixar no Navegador
+                        </a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="#" onclick="exportarPDFTradicional(document.getElementById('btnExportarPDF'))">
+                            <i class="ki-duotone ki-file-down fs-6 me-2">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                            </i>
+                            Método Tradicional (Servidor)
+                        </a></li>
+                    </ul>
+                </div>
                 @endif
 
                 <button class="btn btn-success btn-sm" onclick="onlyofficeEditor.forceSave()">
@@ -1012,8 +1042,150 @@
             }
         };
 
-        // Função para exportar PDF - usa API oficial downloadAs('pdf')
-        async function exportarPDF(btn) {
+        // Função PRINCIPAL - Exportar PDF para AWS S3 (Recomendado)
+        async function exportarPDFParaS3(btn) {
+            const id = btn.getAttribute('data-proposicao-id');
+            btn.disabled = true;
+            const original = btn.innerHTML;
+            btn.innerHTML = '<i class="spinner-border spinner-border-sm me-2"></i>Gerando PDF...';
+
+            try {
+                console.log('🚀 OnlyOffice S3: Iniciando exportação para AWS S3');
+
+                if (!window.onlyofficeEditor?.docEditor) {
+                    throw new Error('Editor OnlyOffice não está disponível');
+                }
+
+                // 1. Forçar salvamento antes da exportação
+                console.log('💾 OnlyOffice: Forçando salvamento antes da exportação S3...');
+                window.onlyofficeEditor.docEditor.serviceCommand("forcesave", null);
+                await new Promise(resolve => setTimeout(resolve, 2000));
+
+                // 2. Configurar interceptação do PDF
+                btn.innerHTML = '<i class="spinner-border spinner-border-sm me-2"></i>Capturando PDF...';
+
+                return new Promise((resolve, reject) => {
+                    // Função para interceptar o evento onDownloadAs
+                    const originalOnDownloadAs = window.onlyofficeEditor.config.events.onDownloadAs;
+
+                    window.onlyofficeEditor.config.events.onDownloadAs = async function(event) {
+                        console.log('🎯 OnlyOffice S3: PDF capturado do editor!', event);
+
+                        try {
+                            if (event && event.data && event.data.url) {
+                                btn.innerHTML = '<i class="spinner-border spinner-border-sm me-2"></i>Enviando para S3...';
+
+                                console.log('📄 OnlyOffice S3: URL do PDF:', event.data.url);
+
+                                // 3. Enviar URL do PDF para o backend processar
+                                const uploadResponse = await fetch(`/proposicoes/${id}/onlyoffice/exportar-pdf-s3`, {
+                                    method: 'POST',
+                                    headers: {
+                                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                                        'Accept': 'application/json',
+                                        'Content-Type': 'application/json'
+                                    },
+                                    body: JSON.stringify({
+                                        pdf_url: event.data.url
+                                    })
+                                });
+
+                                const uploadData = await uploadResponse.json();
+
+                                if (!uploadResponse.ok) {
+                                    throw new Error(uploadData.message || 'Erro durante upload para S3');
+                                }
+
+                                resolve(uploadData);
+                            } else {
+                                reject(new Error('URL do PDF não foi gerada pelo OnlyOffice'));
+                            }
+                        } catch (error) {
+                            reject(error);
+                        } finally {
+                            // Restaurar handler original
+                            window.onlyofficeEditor.config.events.onDownloadAs = originalOnDownloadAs;
+                        }
+                    };
+
+                    // 5. Executar downloadAs para gerar o PDF atual
+                    console.log('📄 OnlyOffice S3: Executando downloadAs("pdf") para capturar estado atual...');
+                    window.onlyofficeEditor.docEditor.downloadAs("pdf");
+
+                    // Timeout de segurança
+                    setTimeout(() => {
+                        window.onlyofficeEditor.config.events.onDownloadAs = originalOnDownloadAs;
+                        reject(new Error('Timeout: PDF não foi gerado em 30 segundos'));
+                    }, 30000);
+                });
+
+            } catch (error) {
+                console.error('❌ OnlyOffice S3: Erro na preparação:', error);
+                throw error;
+            }
+        }
+
+        // Wrapper para a função principal com handling de UI
+        async function exportarPDFParaS3WithUI(btn) {
+            const original = btn.innerHTML;
+
+            try {
+                const data = await exportarPDFParaS3(btn);
+
+                // Feedback de sucesso
+                if (typeof window.onlyofficeEditor.showToast === 'function') {
+                    window.onlyofficeEditor.showToast('PDF enviado para S3 com sucesso!', 'success', 4000);
+                }
+
+                Swal.fire({
+                    icon: 'success',
+                    title: '🎉 PDF Enviado para AWS S3!',
+                    html: `
+                        <p><strong>✅ Arquivo enviado com sucesso</strong></p>
+                        <p><strong>📁 Local:</strong> AWS S3 - ${data.s3_path.split('/').pop()}</p>
+                        <p><strong>📏 Tamanho:</strong> ${data.file_size}</p>
+                        <p><strong>⏱️ Tempo:</strong> ${data.execution_time_ms}ms</p>
+                        <hr>
+                        <p><strong>🔗 URL Temporária:</strong></p>
+                        <p class="text-muted small">A URL é válida até ${new Date(data.url_expires_at).toLocaleString()}</p>
+                        <div class="d-flex gap-2 justify-content-center mt-3">
+                            <button onclick="window.open('${data.s3_url}', '_blank')" class="btn btn-primary btn-sm">
+                                <i class="ki-duotone ki-eye fs-6 me-1"></i>Ver PDF
+                            </button>
+                            <button onclick="navigator.clipboard.writeText('${data.s3_url}')" class="btn btn-secondary btn-sm">
+                                <i class="ki-duotone ki-copy fs-6 me-1"></i>Copiar URL
+                            </button>
+                        </div>
+                    `,
+                    confirmButtonText: 'Perfeito!',
+                    confirmButtonColor: '#28a745',
+                    width: '600px'
+                });
+
+            } catch (error) {
+                console.error('❌ OnlyOffice S3: Erro na exportação:', error);
+
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Falha no Envio para S3',
+                    html: `
+                        <p><strong>❌ Não foi possível enviar o PDF para o AWS S3</strong></p>
+                        <p class="text-muted">Erro: ${error.message}</p>
+                        <hr>
+                        <p>Tente uma das opções alternativas no menu dropdown.</p>
+                    `,
+                    confirmButtonText: 'Entendi',
+                    confirmButtonColor: '#dc3545'
+                });
+
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = original;
+            }
+        }
+
+        // Função - Baixar PDF no navegador usando API oficial downloadAs('pdf')
+        async function exportarPDFDownloadAs(btn) {
             btn.disabled = true;
             const original = btn.innerHTML;
             btn.innerHTML = '<i class="spinner-border spinner-border-sm me-2"></i>Gerando PDF...';
@@ -1024,41 +1196,34 @@
                     throw new Error('Editor OnlyOffice não está carregado');
                 }
 
-                console.log('🔄 OnlyOffice: Iniciando exportação PDF via API oficial');
+                console.log('🔄 OnlyOffice: Iniciando download PDF via API oficial');
 
-                // 1. Forçar salvamento antes da exportação (recomendado)
-                console.log('💾 OnlyOffice: Forçando salvamento antes da exportação...');
+                // 1. Forçar salvamento antes da exportação
+                console.log('💾 OnlyOffice: Forçando salvamento antes do download...');
                 window.onlyofficeEditor.docEditor.serviceCommand("forcesave", null);
-
-                // Aguardar o salvamento ser processado
                 await new Promise(resolve => setTimeout(resolve, 2000));
 
-                // 2. Usar a API oficial para baixar como PDF (equivale ao menu Arquivo > Baixar como > PDF)
+                // 2. Usar a API oficial para baixar como PDF
                 console.log('📄 OnlyOffice: Executando downloadAs("pdf") - API oficial');
-
-                // Este método é exatamente equivalente ao clique no menu "Arquivo > Baixar como > PDF"
                 window.onlyofficeEditor.docEditor.downloadAs("pdf");
 
-                // 3. Feedback imediato (o evento onDownloadAs será disparado quando o PDF estiver pronto)
+                // 3. Feedback imediato
                 if (typeof window.onlyofficeEditor.showToast === 'function') {
                     window.onlyofficeEditor.showToast('Gerando PDF... aguarde', 'info', 3000);
                 }
 
-                // Aguardar um pouco para verificar se o download iniciou
                 await new Promise(resolve => setTimeout(resolve, 1000));
 
                 Swal.fire({
                     icon: 'success',
-                    title: 'PDF em Geração!',
+                    title: '📄 PDF em Geração!',
                     html: `
-                        <p><strong>📄 Exportação PDF iniciada</strong></p>
-                        <p>Utilizando a API oficial do OnlyOffice (downloadAs)</p>
-                        <p><strong>O download iniciará automaticamente quando pronto</strong></p>
+                        <p><strong>Download iniciado via API oficial do OnlyOffice</strong></p>
+                        <p>O arquivo será baixado automaticamente no seu navegador.</p>
                         <p class="text-muted">Este método mantém todas as fontes e formatação originais.</p>
                     `,
                     confirmButtonText: 'Entendi',
                     confirmButtonColor: '#28a745',
-                    showConfirmButton: true,
                     timer: 5000
                 });
 
@@ -1067,7 +1232,7 @@
 
                 Swal.fire({
                     icon: 'error',
-                    title: 'Erro na Exportação PDF',
+                    title: 'Erro no Download PDF',
                     html: `
                         <p><strong>Não foi possível gerar o PDF automaticamente</strong></p>
                         <p><strong>Solução manual:</strong></p>
@@ -1087,6 +1252,65 @@
                 btn.innerHTML = original;
             }
         }
+
+        // Função - Método tradicional via servidor (backup)
+        async function exportarPDFTradicional(btn) {
+            const id = btn.getAttribute('data-proposicao-id');
+            btn.disabled = true;
+            const original = btn.innerHTML;
+            btn.innerHTML = '<i class="spinner-border spinner-border-sm me-2"></i>Processando no servidor...';
+
+            try {
+                console.log('🔄 OnlyOffice: Iniciando exportação tradicional via servidor');
+
+                // Usar endpoint tradicional
+                const response = await fetch(`/proposicoes/${id}/onlyoffice/exportar-pdf`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                        'Accept': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.message || 'Erro durante exportação tradicional');
+                }
+
+                Swal.fire({
+                    icon: 'success',
+                    title: '✅ PDF Gerado no Servidor!',
+                    html: `
+                        <p><strong>Arquivo salvo no servidor:</strong></p>
+                        <p><code>${data.path.split('/').pop()}</code></p>
+                        <p><strong>Tamanho:</strong> ${data.file_size}</p>
+                        <p><strong>Tempo de execução:</strong> ${data.execution_time_ms}ms</p>
+                        <p class="text-muted">O PDF estará disponível para assinatura.</p>
+                    `,
+                    confirmButtonText: 'Perfeito!',
+                    confirmButtonColor: '#28a745'
+                });
+
+            } catch (error) {
+                console.error('❌ OnlyOffice: Erro na exportação tradicional:', error);
+
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Falha na Exportação Tradicional',
+                    text: error.message,
+                    confirmButtonText: 'Entendi',
+                    confirmButtonColor: '#dc3545'
+                });
+
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = original;
+            }
+        }
+
+        // Manter compatibilidade com função antiga
+        const exportarPDF = exportarPDFParaS3WithUI;
 
         // Inicializar quando o DOM estiver pronto
         document.addEventListener('DOMContentLoaded', function() {
@@ -1151,7 +1375,20 @@
         };
 
         console.log('🛠️ Debug: Execute window.testarDownloadPDF() no console para testar a API downloadAs');
-        
+
+        // Expor funções S3 globalmente para uso em outras páginas
+        window.exportarPDFParaS3 = exportarPDFParaS3;
+        window.exportarPDFParaS3WithUI = exportarPDFParaS3WithUI;
+        window.exportarPDFDownloadAs = exportarPDFDownloadAs;
+        window.exportarPDFTradicional = exportarPDFTradicional;
+
+        console.log('🌐 Global: Funções S3 expostas globalmente:', {
+            exportarPDFParaS3: typeof window.exportarPDFParaS3,
+            exportarPDFParaS3WithUI: typeof window.exportarPDFParaS3WithUI,
+            exportarPDFDownloadAs: typeof window.exportarPDFDownloadAs,
+            exportarPDFTradicional: typeof window.exportarPDFTradicional
+        });
+
         // Redimensionar quando a janela mudar de tamanho
         window.addEventListener('resize', function() {
             if (onlyofficeEditor && typeof onlyofficeEditor.forceResize === 'function') {

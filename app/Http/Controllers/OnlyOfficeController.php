@@ -323,7 +323,7 @@ class OnlyOfficeController extends Controller
                     storage_path('app/private/' . $proposicao->arquivo_path),
                     storage_path('app/local/' . $proposicao->arquivo_path),
                 ];
-                
+
                 foreach ($caminhosPossiveis as $caminho) {
                     if (file_exists($caminho)) {
                         // 🐳 LOG: Container encontrou arquivo salvo para download
@@ -1451,5 +1451,743 @@ Sistema funcionando!\par
         }
 
         return null;
+    }
+
+    /**
+     * Interceptar PDF gerado pelo OnlyOffice e enviar diretamente para S3
+     * Método mais eficiente que não baixa no navegador
+     */
+    public function exportarPDFParaS3(Request $request, Proposicao $proposicao)
+    {
+        $startTime = microtime(true);
+
+        try {
+            // 1. Verificar permissões
+            if (\Illuminate\Support\Facades\Gate::denies('edit-onlyoffice', $proposicao)) {
+                return response()->json(['message' => 'Forbidden'], 403);
+            }
+
+            Log::info('🚀 OnlyOffice S3: Iniciando exportação PDF para S3', [
+                'proposicao_id' => $proposicao->id,
+                'user_id' => auth()->id(),
+                'has_pdf_file' => $request->hasFile('pdf_file')
+            ]);
+
+            // 2. Verificar se foi enviado um arquivo PDF pelo frontend
+            if ($request->hasFile('pdf_file')) {
+                return $this->uploadPDFToS3FromFile($request, $proposicao, $startTime);
+            }
+
+            // 3. Verificar se foi enviada uma URL do PDF do OnlyOffice
+            if ($request->has('pdf_url')) {
+                return $this->downloadPDFFromOnlyOfficeAndUploadToS3($request, $proposicao, $startTime);
+            }
+
+            // 2. Gerar document key e URL do documento
+            $documentKey = $this->generateIntelligentDocumentKey($proposicao);
+
+            // Gerar URL do documento (mesmo padrão usado nos editores)
+            $lastModified = $proposicao->updated_at ? $proposicao->updated_at->timestamp : time();
+            $token = base64_encode($proposicao->id . '|' . $lastModified);
+            $documentUrl = route('proposicoes.onlyoffice.download', [
+                'id' => $proposicao->id,
+                'token' => $token,
+                'v' => $lastModified,
+                '_' => $lastModified
+            ]);
+
+            // Se estiver em ambiente local/docker, ajustar URL para comunicação entre containers
+            if (config('app.env') === 'local') {
+                $documentUrl = str_replace(['http://localhost:8001', 'http://127.0.0.1:8001'], 'http://legisinc-app', $documentUrl);
+            }
+
+            Log::info('✅ OnlyOffice S3: URLs geradas', [
+                'proposicao_id' => $proposicao->id,
+                'document_key' => $documentKey,
+                'document_url' => $documentUrl
+            ]);
+
+            // 3. Preparar dados para requisição de conversão ao OnlyOffice
+            $conversionData = [
+                'async' => false,
+                'filetype' => 'rtf',
+                'key' => $documentKey,
+                'outputtype' => 'pdf',
+                'title' => "proposicao_{$proposicao->id}.pdf",
+                'url' => $documentUrl
+            ];
+
+            // 4. Fazer requisição ao OnlyOffice Document Server para conversão
+            // Usar URL interna para comunicação Docker-to-Docker
+            $onlyofficeUrl = config('onlyoffice.internal_url') . '/ConvertService.ashx';
+
+            $response = \Illuminate\Support\Facades\Http::timeout(60)->post($onlyofficeUrl, $conversionData);
+
+            if (!$response->successful()) {
+                throw new \Exception('Falha na conversão OnlyOffice: ' . $response->body());
+            }
+
+            // Parse XML response from OnlyOffice
+            $responseBody = $response->body();
+
+            Log::info('🔍 OnlyOffice S3: Resposta da conversão', [
+                'proposicao_id' => $proposicao->id,
+                'status_code' => $response->status(),
+                'response_body' => $responseBody
+            ]);
+
+            $xml = simplexml_load_string($responseBody);
+            if (!$xml) {
+                throw new \Exception('Erro ao parsear resposta XML do OnlyOffice');
+            }
+
+            // Verificar se a conversão foi bem-sucedida
+            if ((string)$xml->EndConvert !== 'True') {
+                throw new \Exception('OnlyOffice: Conversão não finalizada');
+            }
+
+            $pdfUrl = (string)$xml->FileUrl;
+
+            Log::info('✅ OnlyOffice S3: PDF gerado com sucesso', [
+                'proposicao_id' => $proposicao->id,
+                'pdf_url' => $pdfUrl
+            ]);
+
+            // 5. Baixar PDF da URL temporária do OnlyOffice
+            $pdfResponse = \Illuminate\Support\Facades\Http::timeout(30)->get($pdfUrl);
+
+            if (!$pdfResponse->successful()) {
+                throw new \Exception('Falha ao baixar PDF do OnlyOffice');
+            }
+
+            $pdfContent = $pdfResponse->body();
+            $fileSizeBytes = strlen($pdfContent);
+
+            // 6. Gerar estrutura organizada para S3
+            $year = now()->year;
+            $month = now()->format('m');
+            $day = now()->format('d');
+            $timestamp = time();
+
+            // Estrutura: proposicoes/pdfs/YYYY/MM/DD/{proposicao_id}/manual/proposicao_{id}_manual_{timestamp}.pdf
+            $fileName = "proposicoes/pdfs/{$year}/{$month}/{$day}/{$proposicao->id}/manual/proposicao_{$proposicao->id}_manual_{$timestamp}.pdf";
+
+            Log::info('📤 OnlyOffice S3: Enviando PDF para S3', [
+                'proposicao_id' => $proposicao->id,
+                'file_name' => $fileName,
+                'file_size' => $this->formatBytes($fileSizeBytes)
+            ]);
+
+            // 7. Enviar para S3
+            $uploaded = \Illuminate\Support\Facades\Storage::disk('s3')->put($fileName, $pdfContent, [
+                'ContentType' => 'application/pdf',
+                'ACL' => 'private' // Arquivo privado no S3
+            ]);
+
+            if (!$uploaded) {
+                throw new \Exception('Falha ao enviar PDF para S3');
+            }
+
+            // 8. Gerar URL assinada do S3 (válida por 1 hora)
+            $s3Url = \Illuminate\Support\Facades\Storage::disk('s3')->temporaryUrl($fileName, now()->addHour());
+
+            // 9. Atualizar proposição com informações do PDF no S3
+            $proposicao->update([
+                'pdf_s3_path' => $fileName,
+                'pdf_s3_url' => $s3Url,
+                'pdf_exportado_em' => now(),
+                'pdf_size_bytes' => $fileSizeBytes
+            ]);
+
+            $executionTimeMs = round((microtime(true) - $startTime) * 1000);
+
+            // 10. Log de sucesso
+            DocumentWorkflowLog::logPdfExport(
+                proposicaoId: $proposicao->id,
+                status: 'success',
+                description: 'PDF exportado com sucesso para AWS S3',
+                executionTimeMs: $executionTimeMs,
+                metadata: [
+                    's3_path' => $fileName,
+                    's3_url_expires_at' => now()->addHour()->toIso8601String(),
+                    'file_size_bytes' => $fileSizeBytes,
+                    'file_size_formatted' => $this->formatBytes($fileSizeBytes),
+                    'onlyoffice_pdf_url' => $pdfUrl,
+                    'conversion_data' => $conversionData
+                ]
+            );
+
+            Log::info('🎉 OnlyOffice S3: Exportação concluída com sucesso', [
+                'proposicao_id' => $proposicao->id,
+                's3_path' => $fileName,
+                'execution_time_ms' => $executionTimeMs,
+                'file_size' => $this->formatBytes($fileSizeBytes)
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'PDF exportado com sucesso para AWS S3',
+                's3_path' => $fileName,
+                's3_url' => $s3Url,
+                'url_expires_at' => now()->addHour()->toIso8601String(),
+                'exported_at' => $proposicao->pdf_exportado_em->toIso8601String(),
+                'file_size' => $this->formatBytes($fileSizeBytes),
+                'file_size_bytes' => $fileSizeBytes,
+                'execution_time_ms' => $executionTimeMs
+            ]);
+
+        } catch (\Throwable $e) {
+            $executionTimeMs = round((microtime(true) - $startTime) * 1000);
+
+            Log::error('❌ OnlyOffice S3: Falha na exportação', [
+                'proposicao_id' => $proposicao->id,
+                'error' => $e->getMessage(),
+                'execution_time_ms' => $executionTimeMs,
+                'stack_trace' => $e->getTraceAsString()
+            ]);
+
+            DocumentWorkflowLog::logPdfExport(
+                proposicaoId: $proposicao->id,
+                status: 'error',
+                description: 'Falha na exportação PDF para S3',
+                executionTimeMs: $executionTimeMs,
+                errorMessage: $e->getMessage(),
+                metadata: [
+                    'error_class' => get_class($e),
+                    'error_line' => $e->getLine(),
+                    'error_file' => $e->getFile(),
+                ]
+            );
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Falha na exportação do PDF para S3',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Exportação automática para S3 durante aprovação (server-side only)
+     */
+    public function exportarPDFParaS3Automatico(Request $request, Proposicao $proposicao)
+    {
+        $startTime = microtime(true);
+
+        try {
+            // 1. Verificar permissões
+            if (\Illuminate\Support\Facades\Gate::denies('edit-onlyoffice', $proposicao)) {
+                return response()->json(['message' => 'Forbidden'], 403);
+            }
+
+            Log::info('🤖 OnlyOffice S3: Exportação automática durante aprovação', [
+                'proposicao_id' => $proposicao->id,
+                'user_id' => auth()->id(),
+                'status' => $proposicao->status
+            ]);
+
+            // 2. Buscar a versão mais recente do documento (com edições salvas)
+            $documentKey = $this->generateIntelligentDocumentKey($proposicao);
+
+            // Usar arquivo_path que contém a versão mais recente (incluindo edições do legislativo)
+            if ($proposicao->arquivo_path) {
+                // Verificar existência usando Storage e fallback para file_exists()
+                $arquivoExiste = Storage::exists($proposicao->arquivo_path);
+                $caminhoCompleto = storage_path('app/' . $proposicao->arquivo_path);
+
+                if (!$arquivoExiste && file_exists($caminhoCompleto)) {
+                    // Fallback: arquivo existe fisicamente mas Storage não o encontra
+                    $arquivoExiste = true;
+                    Log::warning('OnlyOffice S3 Auto: Storage::exists falhou, mas arquivo existe fisicamente', [
+                        'proposicao_id' => $proposicao->id,
+                        'arquivo_path' => $proposicao->arquivo_path,
+                        'caminho_completo' => $caminhoCompleto
+                    ]);
+                }
+
+                if ($arquivoExiste) {
+                    $fileSize = file_exists($caminhoCompleto) ? filesize($caminhoCompleto) : 0;
+                    $lastModified = file_exists($caminhoCompleto) ? filemtime($caminhoCompleto) : time();
+
+                    Log::info('📝 OnlyOffice S3 Auto: Usando versão mais recente salva', [
+                        'proposicao_id' => $proposicao->id,
+                        'arquivo_path' => $proposicao->arquivo_path,
+                        'file_size' => $fileSize,
+                        'modificado_em' => $proposicao->ultima_modificacao,
+                        'metodo_verificacao' => file_exists($caminhoCompleto) ? 'file_exists' : 'Storage'
+                    ]);
+
+                    $token = base64_encode($proposicao->id . '|' . $lastModified);
+                    $documentUrl = route('proposicoes.onlyoffice.download', [
+                        'id' => $proposicao->id,
+                        'token' => $token,
+                        'v' => $lastModified,
+                        '_' => $lastModified
+                    ]);
+                } else {
+                    throw new \Exception("Arquivo da proposição não encontrado: {$proposicao->arquivo_path}. Certifique-se de que o documento foi salvo antes da exportação.");
+                }
+            } else {
+                throw new \Exception('Proposição não possui arquivo definido. Certifique-se de que o documento foi salvo antes da exportação.');
+            }
+
+            // Se estiver em ambiente local/docker, ajustar URL para comunicação entre containers
+            if (config('app.env') === 'local') {
+                $documentUrl = str_replace(['http://localhost:8001', 'http://127.0.0.1:8001'], 'http://legisinc-app', $documentUrl);
+            }
+
+            Log::info('✅ OnlyOffice S3 Auto: URLs geradas', [
+                'proposicao_id' => $proposicao->id,
+                'document_key' => $documentKey,
+                'document_url' => $documentUrl
+            ]);
+
+            // 3. Preparar dados de conversão para PDF
+            $conversionData = [
+                'async' => false,
+                'key' => $documentKey,
+                'outputtype' => 'pdf',
+                'filetype' => 'docx',
+                'title' => "Proposição {$proposicao->id} - Exportação Automática",
+                'url' => $documentUrl
+            ];
+
+            // 4. Fazer requisição ao OnlyOffice Document Server para conversão
+            $onlyofficeUrl = config('onlyoffice.internal_url') . '/ConvertService.ashx';
+
+            $response = \Illuminate\Support\Facades\Http::timeout(60)->post($onlyofficeUrl, $conversionData);
+
+            if (!$response->successful()) {
+                throw new \Exception('Falha na conversão OnlyOffice: ' . $response->body());
+            }
+
+            // 5. Processar resposta do OnlyOffice
+            $responseBody = $response->body();
+
+            // Verificar se a resposta é XML (formato usual do OnlyOffice)
+            if (str_starts_with(trim($responseBody), '<?xml')) {
+                $xml = simplexml_load_string($responseBody);
+                if ($xml === false) {
+                    throw new \Exception('Falha ao processar resposta XML do OnlyOffice');
+                }
+
+                $pdfUrl = (string) $xml->FileUrl;
+                $percent = (int) $xml->Percent;
+
+                if (empty($pdfUrl) || $percent !== 100) {
+                    throw new \Exception('Conversão PDF falhou - URL vazia ou processo incompleto');
+                }
+            } else {
+                // Tentar como JSON
+                $result = json_decode($responseBody, true);
+                if (!$result || !isset($result['fileUrl'])) {
+                    throw new \Exception('Resposta inválida do OnlyOffice: ' . $responseBody);
+                }
+                $pdfUrl = $result['fileUrl'];
+            }
+
+            // 6. Converter URL externa para interna (para download do container)
+            $internalUrl = str_replace('http://localhost:8080', config('onlyoffice.internal_url'), $pdfUrl);
+
+            // 7. Baixar o PDF do OnlyOffice
+            $pdfResponse = \Illuminate\Support\Facades\Http::timeout(30)->get($internalUrl);
+            if (!$pdfResponse->successful()) {
+                throw new \Exception('Falha ao baixar PDF do OnlyOffice: ' . $pdfResponse->status());
+            }
+
+            $pdfContent = $pdfResponse->body();
+            $fileSizeBytes = strlen($pdfContent);
+
+            // 8. Gerar estrutura organizada para S3
+            $year = now()->year;
+            $month = now()->format('m');
+            $day = now()->format('d');
+            $timestamp = time();
+
+            // Estrutura: proposicoes/pdfs/YYYY/MM/DD/{proposicao_id}/automatic/proposicao_{id}_auto_{timestamp}.pdf
+            $fileName = "proposicoes/pdfs/{$year}/{$month}/{$day}/{$proposicao->id}/automatic/proposicao_{$proposicao->id}_auto_{$timestamp}.pdf";
+            $uploaded = \Illuminate\Support\Facades\Storage::disk('s3')->put($fileName, $pdfContent);
+
+            if (!$uploaded) {
+                throw new \Exception('Falha ao enviar PDF para S3');
+            }
+
+            // 9. Gerar URL assinada do S3 (válida por 1 hora)
+            $s3Url = \Illuminate\Support\Facades\Storage::disk('s3')->temporaryUrl($fileName, now()->addHour());
+
+            // 10. Atualizar proposição com informações do PDF no S3
+            $proposicao->update([
+                'pdf_s3_path' => $fileName,
+                'pdf_s3_url' => $s3Url,
+                'pdf_exportado_em' => now(),
+                'pdf_size_bytes' => $fileSizeBytes
+            ]);
+
+            $executionTimeMs = round((microtime(true) - $startTime) * 1000);
+
+            // 11. Log de sucesso
+            DocumentWorkflowLog::logPdfExport(
+                proposicaoId: $proposicao->id,
+                status: 'success',
+                description: 'PDF exportado automaticamente para AWS S3 durante aprovação',
+                executionTimeMs: $executionTimeMs,
+                metadata: [
+                    's3_path' => $fileName,
+                    's3_url_expires_at' => now()->addHour()->toIso8601String(),
+                    'file_size_bytes' => $fileSizeBytes,
+                    'file_size_formatted' => $this->formatBytes($fileSizeBytes),
+                    'export_type' => 'automatic_approval'
+                ]
+            );
+
+            Log::info('🎉 OnlyOffice S3 Auto: Exportação automática concluída', [
+                'proposicao_id' => $proposicao->id,
+                's3_path' => $fileName,
+                'execution_time_ms' => $executionTimeMs,
+                'file_size' => $this->formatBytes($fileSizeBytes)
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'PDF exportado automaticamente para AWS S3',
+                's3_path' => $fileName,
+                's3_url' => $s3Url,
+                'url_expires_at' => now()->addHour()->toIso8601String(),
+                'exported_at' => $proposicao->pdf_exportado_em->toIso8601String(),
+                'file_size' => $this->formatBytes($fileSizeBytes),
+                'file_size_bytes' => $fileSizeBytes,
+                'execution_time_ms' => $executionTimeMs,
+                'export_type' => 'automatic'
+            ]);
+
+        } catch (\Throwable $e) {
+            $executionTimeMs = round((microtime(true) - $startTime) * 1000);
+
+            Log::error('❌ OnlyOffice S3 Auto: Falha na exportação automática', [
+                'proposicao_id' => $proposicao->id,
+                'error' => $e->getMessage(),
+                'execution_time_ms' => $executionTimeMs,
+                'stack_trace' => $e->getTraceAsString()
+            ]);
+
+            DocumentWorkflowLog::logPdfExport(
+                proposicaoId: $proposicao->id,
+                status: 'error',
+                description: 'Falha na exportação automática PDF para S3',
+                executionTimeMs: $executionTimeMs,
+                errorMessage: $e->getMessage(),
+                metadata: [
+                    'error_class' => get_class($e),
+                    'error_line' => $e->getLine(),
+                    'error_file' => $e->getFile(),
+                    'export_type' => 'automatic_approval'
+                ]
+            );
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Falha na exportação automática do PDF para S3',
+                'error' => $e->getMessage(),
+                'export_type' => 'automatic'
+            ], 500);
+        }
+    }
+
+    /**
+     * Upload PDF recebido diretamente do frontend para S3
+     */
+    private function uploadPDFToS3FromFile(Request $request, Proposicao $proposicao, float $startTime)
+    {
+        try {
+            $pdfFile = $request->file('pdf_file');
+
+            // Validar arquivo
+            if (!$pdfFile->isValid()) {
+                throw new \Exception('Arquivo PDF inválido');
+            }
+
+            if ($pdfFile->getMimeType() !== 'application/pdf') {
+                throw new \Exception('Arquivo deve ser um PDF válido');
+            }
+
+            $fileSize = $pdfFile->getSize();
+
+            Log::info('📄 OnlyOffice S3: Arquivo PDF recebido do frontend', [
+                'proposicao_id' => $proposicao->id,
+                'file_size' => $fileSize,
+                'mime_type' => $pdfFile->getMimeType(),
+                'original_name' => $pdfFile->getClientOriginalName()
+            ]);
+
+            // 2. Gerar estrutura organizada para S3
+            $year = now()->year;
+            $month = now()->format('m');
+            $day = now()->format('d');
+            $timestamp = time();
+
+            // Estrutura: proposicoes/pdfs/YYYY/MM/DD/{proposicao_id}/upload/proposicao_{id}_upload_{timestamp}.pdf
+            $s3Path = "proposicoes/pdfs/{$year}/{$month}/{$day}/{$proposicao->id}/upload/proposicao_{$proposicao->id}_upload_{$timestamp}.pdf";
+
+            // 3. Upload para S3
+            $s3Disk = Storage::disk('s3');
+            $uploaded = $s3Disk->putFileAs(
+                dirname($s3Path),
+                $pdfFile,
+                basename($s3Path),
+                [
+                    'ContentType' => 'application/pdf',
+                    'ContentDisposition' => 'inline; filename="proposicao_' . $proposicao->id . '.pdf"'
+                ]
+            );
+
+            if (!$uploaded) {
+                throw new \Exception('Falha ao enviar arquivo para S3');
+            }
+
+            Log::info('✅ OnlyOffice S3: PDF enviado com sucesso', [
+                'proposicao_id' => $proposicao->id,
+                's3_path' => $s3Path,
+                'file_size' => $fileSize
+            ]);
+
+            // 4. Gerar URL temporária (válida por 1 hora)
+            $s3Url = $s3Disk->temporaryUrl($s3Path, now()->addHour());
+
+            // 5. Atualizar banco de dados
+            $proposicao->update([
+                'pdf_s3_path' => $s3Path,
+                'pdf_s3_url' => $s3Url,
+                'pdf_size_bytes' => $fileSize
+            ]);
+
+            // 6. Calcular tempo de execução
+            $executionTime = round((microtime(true) - $startTime) * 1000, 2);
+
+            Log::info('🎉 OnlyOffice S3: Exportação concluída com sucesso', [
+                'proposicao_id' => $proposicao->id,
+                'execution_time_ms' => $executionTime,
+                's3_url' => $s3Url
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'PDF exportado com sucesso para AWS S3',
+                's3_path' => $s3Path,
+                's3_url' => $s3Url,
+                'url_expires_at' => now()->addHour()->toISOString(),
+                'exported_at' => now()->toISOString(),
+                'file_size' => $this->formatBytes($fileSize),
+                'file_size_bytes' => $fileSize,
+                'execution_time_ms' => $executionTime
+            ]);
+
+        } catch (\Exception $e) {
+            $executionTime = round((microtime(true) - $startTime) * 1000, 2);
+
+            Log::error('❌ OnlyOffice S3: Falha no upload direto', [
+                'proposicao_id' => $proposicao->id,
+                'error' => $e->getMessage(),
+                'execution_time_ms' => $executionTime
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Falha na exportação do PDF para S3',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Baixar PDF do OnlyOffice usando URL interna e enviar para S3
+     */
+    private function downloadPDFFromOnlyOfficeAndUploadToS3(Request $request, Proposicao $proposicao, float $startTime)
+    {
+        try {
+            $pdfUrl = $request->input('pdf_url');
+
+            // Converter URL externa para URL interna se necessário
+            $internalUrl = str_replace('http://localhost:8080', config('onlyoffice.internal_url'), $pdfUrl);
+
+            Log::info('📄 OnlyOffice S3: Baixando PDF via URL interna', [
+                'proposicao_id' => $proposicao->id,
+                'original_url' => $pdfUrl,
+                'internal_url' => $internalUrl
+            ]);
+
+            // Baixar PDF do OnlyOffice usando URL interna
+            $response = \Illuminate\Support\Facades\Http::timeout(30)->get($internalUrl);
+
+            if (!$response->successful()) {
+                throw new \Exception('Falha ao baixar PDF do OnlyOffice: ' . $response->status());
+            }
+
+            $pdfContent = $response->body();
+            $fileSize = strlen($pdfContent);
+
+            // Validar se é um PDF válido
+            if (!str_starts_with($pdfContent, '%PDF-')) {
+                throw new \Exception('Conteúdo baixado não é um PDF válido');
+            }
+
+            Log::info('✅ OnlyOffice S3: PDF baixado com sucesso', [
+                'proposicao_id' => $proposicao->id,
+                'file_size' => $fileSize
+            ]);
+
+            // Definir path no S3
+            $timestamp = time();
+            $s3Path = "proposicoes/pdf/{$proposicao->id}/proposicao_{$proposicao->id}_exported_{$timestamp}.pdf";
+
+            // Upload para S3
+            $s3Disk = Storage::disk('s3');
+            $uploaded = $s3Disk->put($s3Path, $pdfContent, [
+                'ContentType' => 'application/pdf',
+                'ContentDisposition' => 'inline; filename="proposicao_' . $proposicao->id . '.pdf"'
+            ]);
+
+            if (!$uploaded) {
+                throw new \Exception('Falha ao enviar arquivo para S3');
+            }
+
+            Log::info('🎉 OnlyOffice S3: PDF enviado para S3 com sucesso', [
+                'proposicao_id' => $proposicao->id,
+                's3_path' => $s3Path,
+                'file_size' => $fileSize
+            ]);
+
+            // Gerar URL temporária (válida por 1 hora)
+            $s3Url = $s3Disk->temporaryUrl($s3Path, now()->addHour());
+
+            // Atualizar banco de dados
+            $proposicao->update([
+                'pdf_s3_path' => $s3Path,
+                'pdf_s3_url' => $s3Url,
+                'pdf_size_bytes' => $fileSize
+            ]);
+
+            // Calcular tempo de execução
+            $executionTime = round((microtime(true) - $startTime) * 1000, 2);
+
+            Log::info('🎉 OnlyOffice S3: Exportação concluída via URL', [
+                'proposicao_id' => $proposicao->id,
+                'execution_time_ms' => $executionTime,
+                's3_url' => $s3Url
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'PDF exportado com sucesso para AWS S3',
+                's3_path' => $s3Path,
+                's3_url' => $s3Url,
+                'url_expires_at' => now()->addHour()->toISOString(),
+                'exported_at' => now()->toISOString(),
+                'file_size' => $this->formatBytes($fileSize),
+                'file_size_bytes' => $fileSize,
+                'execution_time_ms' => $executionTime
+            ]);
+
+        } catch (\Exception $e) {
+            $executionTime = round((microtime(true) - $startTime) * 1000, 2);
+
+            Log::error('❌ OnlyOffice S3: Falha no download via URL', [
+                'proposicao_id' => $proposicao->id,
+                'error' => $e->getMessage(),
+                'execution_time_ms' => $executionTime
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Falha na exportação do PDF para S3',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Interceptar URL de PDF do evento onDownloadAs e enviar para S3
+     * Este método é chamado via webhook quando onDownloadAs é disparado
+     */
+    public function interceptarPDFOnDownloadAs(Request $request)
+    {
+        try {
+            $pdfUrl = $request->input('pdf_url');
+            $proposicaoId = $request->input('proposicao_id');
+
+            if (!$pdfUrl || !$proposicaoId) {
+                return response()->json(['error' => 'URL do PDF ou ID da proposição não fornecidos'], 400);
+            }
+
+            $proposicao = Proposicao::findOrFail($proposicaoId);
+
+            Log::info('🔗 OnlyOffice S3: Interceptando PDF do onDownloadAs', [
+                'proposicao_id' => $proposicaoId,
+                'pdf_url' => $pdfUrl
+            ]);
+
+            // Baixar PDF da URL fornecida pelo OnlyOffice
+            $pdfResponse = \Illuminate\Support\Facades\Http::timeout(30)->get($pdfUrl);
+
+            if (!$pdfResponse->successful()) {
+                throw new \Exception('Falha ao baixar PDF do OnlyOffice');
+            }
+
+            $pdfContent = $pdfResponse->body();
+            $fileSizeBytes = strlen($pdfContent);
+
+            // Gerar estrutura organizada para S3
+            $year = now()->year;
+            $month = now()->format('m');
+            $day = now()->format('d');
+            $timestamp = time();
+
+            // Estrutura: proposicoes/pdfs/YYYY/MM/DD/{proposicao_id}/download/proposicao_{id}_download_{timestamp}.pdf
+            $fileName = "proposicoes/pdfs/{$year}/{$month}/{$day}/{$proposicaoId}/download/proposicao_{$proposicaoId}_download_{$timestamp}.pdf";
+
+            // Enviar para S3
+            $uploaded = \Illuminate\Support\Facades\Storage::disk('s3')->put($fileName, $pdfContent, [
+                'ContentType' => 'application/pdf',
+                'ACL' => 'private'
+            ]);
+
+            if ($uploaded) {
+                // Gerar URL assinada
+                $s3Url = \Illuminate\Support\Facades\Storage::disk('s3')->temporaryUrl($fileName, now()->addHour());
+
+                // Atualizar proposição
+                $proposicao->update([
+                    'pdf_s3_path' => $fileName,
+                    'pdf_s3_url' => $s3Url,
+                    'pdf_exportado_em' => now(),
+                    'pdf_size_bytes' => $fileSizeBytes
+                ]);
+
+                Log::info('✅ OnlyOffice S3: PDF interceptado e enviado para S3', [
+                    'proposicao_id' => $proposicaoId,
+                    's3_path' => $fileName,
+                    'file_size' => $this->formatBytes($fileSizeBytes)
+                ]);
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'PDF enviado para S3 com sucesso',
+                    's3_path' => $fileName,
+                    's3_url' => $s3Url
+                ]);
+            }
+
+            throw new \Exception('Falha ao enviar PDF para S3');
+
+        } catch (\Throwable $e) {
+            Log::error('❌ OnlyOffice S3: Falha na interceptação', [
+                'error' => $e->getMessage(),
+                'request_data' => $request->all()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 }

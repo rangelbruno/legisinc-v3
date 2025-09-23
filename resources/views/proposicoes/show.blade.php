@@ -100,12 +100,6 @@
     margin-bottom: 0;
 }
 </style>
-<style>
-
-.d-grid .btn-assinatura:last-child {
-    margin-bottom: 0;
-}
-</style>
 
 <style>
 
@@ -1922,22 +1916,26 @@ createApp({
                 if (result.success) {
                     // Atualizar o status da proposição localmente
                     this.proposicao.status = result.novo_status;
-                    
-                    // Fechar o loading
-                    Swal.close();
-                    
-                    // Mostrar mensagem de sucesso
-                    await Swal.fire({
-                        title: 'Sucesso!',
-                        text: result.message,
-                        icon: 'success',
-                        confirmButtonText: 'OK',
-                        customClass: {
-                            confirmButton: 'btn btn-success'
-                        },
-                        buttonsStyling: false
-                    });
-                    
+
+                    // Se foi aprovada, exportar automaticamente para S3
+                    if (result.novo_status === 'aprovado') {
+                        await this.exportarPDFParaS3AposAprovacao();
+                    } else {
+                        // Para outros status, fechar loading e mostrar sucesso
+                        Swal.close();
+
+                        await Swal.fire({
+                            title: 'Sucesso!',
+                            text: result.message,
+                            icon: 'success',
+                            confirmButtonText: 'OK',
+                            customClass: {
+                                confirmButton: 'btn btn-success'
+                            },
+                            buttonsStyling: false
+                        });
+                    }
+
                 } else {
                     throw new Error(result.message || 'Erro ao atualizar status');
                 }
@@ -1947,7 +1945,126 @@ createApp({
                 this.showErrorAlert(error.message || 'Erro ao atualizar status da proposição');
             }
         },
-        
+
+        async exportarPDFParaS3AposAprovacao() {
+            try {
+                // Atualizar loading para indicar exportação S3
+                Swal.update({
+                    title: 'Proposição Aprovada!',
+                    html: `
+                        <div class="text-center">
+                            <i class="ki-duotone ki-check-circle fs-3x text-success mb-3">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                            </i>
+                            <p class="mb-3">Proposição aprovada com sucesso!</p>
+                            <div class="progress mb-3">
+                                <div class="progress-bar progress-bar-striped progress-bar-animated"
+                                     role="progressbar" style="width: 50%"></div>
+                            </div>
+                            <p class="text-muted">
+                                <i class="spinner-border spinner-border-sm me-2"></i>
+                                Exportando PDF para AWS S3...
+                            </p>
+                        </div>
+                    `,
+                    showConfirmButton: false,
+                    allowOutsideClick: false
+                });
+
+                // Usar rota de exportação automática (server-side only)
+                const response = await fetch(`/proposicoes/${this.proposicao.id}/onlyoffice/exportar-pdf-s3-automatico`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    }
+                });
+
+                const s3Result = await response.json();
+
+                if (!s3Result.success) {
+                    throw new Error(s3Result.message || 'Falha na exportação S3');
+                }
+
+                // Atualizar progresso
+                Swal.update({
+                    html: `
+                        <div class="text-center">
+                            <i class="ki-duotone ki-check-circle fs-3x text-success mb-3">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                            </i>
+                            <p class="mb-3">Proposição aprovada com sucesso!</p>
+                            <div class="progress mb-3">
+                                <div class="progress-bar bg-success" role="progressbar" style="width: 100%"></div>
+                            </div>
+                            <p class="text-success">
+                                <i class="ki-duotone ki-check fs-6 me-2">
+                                    <span class="path1"></span>
+                                    <span class="path2"></span>
+                                </i>
+                                PDF exportado para AWS S3!
+                            </p>
+                        </div>
+                    `
+                });
+
+                // Aguardar um momento para mostrar o sucesso
+                await new Promise(resolve => setTimeout(resolve, 1500));
+
+                // Mostrar resultado final
+                await Swal.fire({
+                    title: '🎉 Proposição Aprovada e Exportada!',
+                    html: `
+                        <div class="text-center">
+                            <p><strong>✅ Proposição aprovada com sucesso</strong></p>
+                            <p><strong>📤 PDF exportado automaticamente para AWS S3</strong></p>
+                            <p><strong>📁 Local:</strong> ${s3Result.s3_path.split('/').pop()}</p>
+                            <p><strong>📏 Tamanho:</strong> ${s3Result.file_size}</p>
+                            <p><strong>⏱️ Tempo:</strong> ${s3Result.execution_time_ms}ms</p>
+                            <hr>
+                            <p><strong>🔗 URL Temporária:</strong></p>
+                            <p class="text-muted small">A URL é válida até ${new Date(s3Result.url_expires_at).toLocaleString()}</p>
+                            <div class="d-flex gap-2 justify-content-center mt-3">
+                                <button onclick="window.open('${s3Result.s3_url}', '_blank')" class="btn btn-primary btn-sm">
+                                    <i class="ki-duotone ki-eye fs-6 me-1"></i>Ver PDF
+                                </button>
+                                <button onclick="navigator.clipboard.writeText('${s3Result.s3_url}')" class="btn btn-secondary btn-sm">
+                                    <i class="ki-duotone ki-copy fs-6 me-1"></i>Copiar URL
+                                </button>
+                            </div>
+                        </div>
+                    `,
+                    icon: 'success',
+                    confirmButtonText: 'Perfeito!',
+                    confirmButtonColor: '#28a745',
+                    width: '700px'
+                });
+
+            } catch (error) {
+                console.error('Erro na exportação S3 após aprovação:', error);
+
+                // Mostrar erro mas manter aprovação
+                await Swal.fire({
+                    title: 'Proposição Aprovada!',
+                    html: `
+                        <div class="text-center">
+                            <p><strong>✅ Proposição aprovada com sucesso</strong></p>
+                            <hr>
+                            <p><strong>⚠️ Aviso: Falha na exportação automática para S3</strong></p>
+                            <p class="text-muted">Erro: ${error.message}</p>
+                            <p class="text-muted">Você pode exportar manualmente usando o botão "Exportar PDF para S3".</p>
+                        </div>
+                    `,
+                    icon: 'warning',
+                    confirmButtonText: 'OK',
+                    confirmButtonColor: '#ffc107'
+                });
+            }
+        },
+
         getStatusActionConfig(status) {
             const configs = {
                 'aprovado': {
