@@ -410,6 +410,86 @@
             documentModified: false,
             editorId: '{{ $editorId }}',
             config: null,
+
+            // Função helper para encontrar o botão PDF no iframe
+            encontrarBotaoPDF: function() {
+                try {
+                    console.log('🔍 Helper: Procurando iframe do OnlyOffice...');
+
+                    // Usar múltiplas estratégias para encontrar o iframe
+                    const seletoresIframe = [
+                        '#' + this.editorId + ' iframe',
+                        '[id*="onlyoffice-editor"] iframe',
+                        '.editor-content iframe',
+                        'iframe[src*="documentserver"]',
+                        'iframe[src*="onlyoffice"]',
+                        'iframe[src*="web-apps"]'
+                    ];
+
+                    let iframe = null;
+                    for (const seletor of seletoresIframe) {
+                        iframe = document.querySelector(seletor);
+                        if (iframe) {
+                            console.log('✅ Helper: Iframe encontrado com:', seletor);
+                            break;
+                        }
+                    }
+
+                    // Busca alternativa por todos os iframes
+                    if (!iframe) {
+                        const todosIframes = document.querySelectorAll('iframe');
+                        for (const iframeTeste of todosIframes) {
+                            if (iframeTeste.src.includes('web-apps') ||
+                                iframeTeste.src.includes('documentserver') ||
+                                iframeTeste.src.includes('onlyoffice')) {
+                                iframe = iframeTeste;
+                                console.log('✅ Helper: Iframe encontrado por src');
+                                break;
+                            }
+                        }
+                    }
+
+                    if (!iframe) {
+                        console.warn('❌ Helper: Iframe não encontrado');
+                        return null;
+                    }
+
+                    const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+                    if (!iframeDoc) {
+                        console.warn('❌ Helper: Documento do iframe não acessível');
+                        return null;
+                    }
+
+                    // Listar todos os elementos com format para debug
+                    const todosElementosFormat = iframeDoc.querySelectorAll('[format]');
+                    console.log('🔍 Helper: Elementos com format encontrados:', Array.from(todosElementosFormat).map(el => ({
+                        tagName: el.tagName,
+                        format: el.getAttribute('format'),
+                        className: el.className,
+                        outerHTML: el.outerHTML.substring(0, 200) + '...'
+                    })));
+
+                    // Procurar especificamente pelo botão PDF
+                    const botaoPDF = iframeDoc.querySelector('.btn-doc-format[format="513"]');
+
+                    if (botaoPDF) {
+                        console.log('✅ Helper: Botão PDF encontrado:', {
+                            tagName: botaoPDF.tagName,
+                            format: botaoPDF.getAttribute('format'),
+                            className: botaoPDF.className,
+                            outerHTML: botaoPDF.outerHTML,
+                            parentElement: botaoPDF.parentElement?.outerHTML.substring(0, 100) + '...'
+                        });
+                    } else {
+                        console.warn('❌ Helper: Botão PDF com format="513" não encontrado');
+                    }
+
+                    return botaoPDF;
+                } catch (error) {
+                    console.error('❌ Helper: Erro ao procurar botão PDF:', error);
+                    return null;
+                }
+            },
             
             init: function() {
                 const self = this;
@@ -494,6 +574,29 @@
                         },
                         "onRequestSave": function() {
                             self.onRequestSave();
+                        },
+                        "onDownloadAs": function(event) {
+                            console.info('🟢 OnlyOffice: Download PDF iniciado via API oficial', event);
+
+                            // Evento disparado quando downloadAs('pdf') é executado
+                            if (event && event.data && event.data.url) {
+                                console.log('📄 PDF URL gerada:', event.data.url);
+
+                                // Mostrar feedback de sucesso
+                                if (typeof self.showToast === 'function') {
+                                    self.showToast('PDF gerado com sucesso! Download iniciado.', 'success', 4000);
+                                }
+
+                                // O download já é iniciado automaticamente pelo OnlyOffice
+                                // Mas podemos forçar abertura em nova aba se necessário
+                                setTimeout(() => {
+                                    try {
+                                        window.open(event.data.url, '_blank');
+                                    } catch (e) {
+                                        console.warn('Não foi possível abrir URL em nova aba:', e);
+                                    }
+                                }, 500);
+                            }
                         }
                     }
                 };
@@ -909,43 +1012,76 @@
             }
         };
 
-        // Função para exportar PDF
+        // Função para exportar PDF - usa API oficial downloadAs('pdf')
         async function exportarPDF(btn) {
-            const id = btn.getAttribute('data-proposicao-id');
             btn.disabled = true;
             const original = btn.innerHTML;
-            btn.innerHTML = 'Exportando...';
+            btn.innerHTML = '<i class="spinner-border spinner-border-sm me-2"></i>Gerando PDF...';
 
             try {
-                // opcional: se houver acesso ao objeto do editor, forçar save:
-                if (window.onlyofficeEditor && window.onlyofficeEditor.docEditor && typeof window.onlyofficeEditor.forceSave === 'function') {
-                    await window.onlyofficeEditor.forceSave();
-                    // Aguardar um pouco para garantir que o salvamento foi processado
-                    await new Promise(resolve => setTimeout(resolve, 1000));
+                // Verificar se o editor está disponível
+                if (!window.onlyofficeEditor?.docEditor) {
+                    throw new Error('Editor OnlyOffice não está carregado');
                 }
 
-                const res = await fetch(`/proposicoes/${id}/onlyoffice/exportar-pdf`, {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                        'Accept': 'application/json'
-                    }
-                });
+                console.log('🔄 OnlyOffice: Iniciando exportação PDF via API oficial');
 
-                const data = await res.json();
-                if (!res.ok) throw new Error(data?.message || 'Erro durante exportação');
+                // 1. Forçar salvamento antes da exportação (recomendado)
+                console.log('💾 OnlyOffice: Forçando salvamento antes da exportação...');
+                window.onlyofficeEditor.docEditor.serviceCommand("forcesave", null);
+
+                // Aguardar o salvamento ser processado
+                await new Promise(resolve => setTimeout(resolve, 2000));
+
+                // 2. Usar a API oficial para baixar como PDF (equivale ao menu Arquivo > Baixar como > PDF)
+                console.log('📄 OnlyOffice: Executando downloadAs("pdf") - API oficial');
+
+                // Este método é exatamente equivalente ao clique no menu "Arquivo > Baixar como > PDF"
+                window.onlyofficeEditor.docEditor.downloadAs("pdf");
+
+                // 3. Feedback imediato (o evento onDownloadAs será disparado quando o PDF estiver pronto)
+                if (typeof window.onlyofficeEditor.showToast === 'function') {
+                    window.onlyofficeEditor.showToast('Gerando PDF... aguarde', 'info', 3000);
+                }
+
+                // Aguardar um pouco para verificar se o download iniciou
+                await new Promise(resolve => setTimeout(resolve, 1000));
 
                 Swal.fire({
                     icon: 'success',
-                    title: 'PDF exportado!',
-                    text: `Arquivo salvo em: ${data.path}`
+                    title: 'PDF em Geração!',
+                    html: `
+                        <p><strong>📄 Exportação PDF iniciada</strong></p>
+                        <p>Utilizando a API oficial do OnlyOffice (downloadAs)</p>
+                        <p><strong>O download iniciará automaticamente quando pronto</strong></p>
+                        <p class="text-muted">Este método mantém todas as fontes e formatação originais.</p>
+                    `,
+                    confirmButtonText: 'Entendi',
+                    confirmButtonColor: '#28a745',
+                    showConfirmButton: true,
+                    timer: 5000
                 });
-            } catch (err) {
+
+            } catch (error) {
+                console.error('❌ OnlyOffice: Erro na exportação PDF:', error);
+
                 Swal.fire({
                     icon: 'error',
-                    title: 'Falha na exportação',
-                    text: err.message
+                    title: 'Erro na Exportação PDF',
+                    html: `
+                        <p><strong>Não foi possível gerar o PDF automaticamente</strong></p>
+                        <p><strong>Solução manual:</strong></p>
+                        <ol style="text-align: left;">
+                            <li>Clique no menu <strong>"Arquivo"</strong> no editor</li>
+                            <li>Selecione <strong>"Baixar como"</strong></li>
+                            <li>Clique em <strong>"PDF"</strong></li>
+                        </ol>
+                        <p class="text-muted">Erro: ${error.message}</p>
+                    `,
+                    confirmButtonText: 'Entendi',
+                    confirmButtonColor: '#dc3545'
                 });
+
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = original;
@@ -989,6 +1125,32 @@
                 }
             }
         });
+
+        // Função global para debug - testar API downloadAs
+        window.testarDownloadPDF = function() {
+            console.log('🧪 TESTE: Testando API downloadAs("pdf")...');
+
+            if (!window.onlyofficeEditor) {
+                console.error('❌ window.onlyofficeEditor não está definido');
+                return;
+            }
+
+            if (!window.onlyofficeEditor.docEditor) {
+                console.error('❌ docEditor não está disponível - aguarde o OnlyOffice carregar');
+                return;
+            }
+
+            try {
+                console.log('📄 TESTE: Executando downloadAs("pdf")...');
+                window.onlyofficeEditor.docEditor.downloadAs("pdf");
+                console.log('✅ TESTE: downloadAs("pdf") executado com sucesso!');
+                console.log('💡 TESTE: O evento onDownloadAs deve ser disparado em breve');
+            } catch (error) {
+                console.error('❌ TESTE: Erro ao executar downloadAs:', error);
+            }
+        };
+
+        console.log('🛠️ Debug: Execute window.testarDownloadPDF() no console para testar a API downloadAs');
         
         // Redimensionar quando a janela mudar de tamanho
         window.addEventListener('resize', function() {

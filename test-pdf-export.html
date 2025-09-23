@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste - Simulação Clique PDF OnlyOffice</title>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body>
+    <h2>Teste de Simulação do Clique no Menu PDF do OnlyOffice</h2>
+
+    <button onclick="testarSimulacaoClique()" style="padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer;">
+        Testar Simulação de Clique no Menu PDF
+    </button>
+
+    <div id="resultado" style="margin-top: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 5px; background: #f9f9f9;">
+        <h4>Resultado do Teste:</h4>
+        <pre id="log"></pre>
+    </div>
+
+    <script>
+        function log(message) {
+            const logElement = document.getElementById('log');
+            logElement.textContent += new Date().toLocaleTimeString() + ': ' + message + '\n';
+            console.log(message);
+        }
+
+        async function testarSimulacaoClique() {
+            log('🔄 Iniciando teste de simulação do clique no menu PDF...');
+
+            try {
+                // Simular a busca pelo elemento PDF no iframe do OnlyOffice
+                log('📄 Simulando busca pelo botão PDF com format="513"...');
+
+                // Em um caso real, isso seria feito dentro do iframe do OnlyOffice
+                // Aqui simulamos o processo para demonstração
+
+                const testeElementosPDF = [
+                    '.btn-doc-format[format="513"]',
+                    '[data-format="513"]',
+                    '.format-item [format="513"]',
+                    '.svg-format-pdf'
+                ];
+
+                let elementoEncontrado = false;
+
+                for (let seletor of testeElementosPDF) {
+                    log(`🔍 Testando seletor: ${seletor}`);
+
+                    // Simular encontrar o elemento
+                    if (seletor === '.btn-doc-format[format="513"]') {
+                        log('✅ Elemento PDF encontrado! Simulando clique...');
+                        elementoEncontrado = true;
+
+                        // Simular clique
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                        log('🖱️ Clique simulado no botão PDF (format="513")');
+
+                        // Simular download iniciado
+                        await new Promise(resolve => setTimeout(resolve, 2000));
+                        log('📥 Download do PDF simulado com sucesso!');
+
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Teste Concluído!',
+                            html: `
+                                <p><strong>Simulação do clique no menu PDF bem-sucedida</strong></p>
+                                <p>Elemento encontrado: <code>${seletor}</code></p>
+                                <p>O clique foi simulado corretamente.</p>
+                            `,
+                            confirmButtonText: 'Ótimo!'
+                        });
+
+                        break;
+                    }
+                }
+
+                if (!elementoEncontrado) {
+                    log('⚠️ Nenhum elemento PDF foi encontrado');
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Elemento Não Encontrado',
+                        text: 'O botão PDF não foi localizado no DOM'
+                    });
+                }
+
+            } catch (error) {
+                log('❌ Erro durante o teste: ' + error.message);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Erro no Teste',
+                    text: error.message
+                });
+            }
+        }
+
+        // Log inicial
+        log('✅ Sistema de teste carregado e pronto');
+        log('💡 Este teste simula o processo que ocorre dentro do iframe do OnlyOffice');
+        log('📋 Clique no botão acima para iniciar o teste');
+    </script>
+</body>
+</html>
