@@ -5870,13 +5870,18 @@ class ProposicaoController extends Controller
             // Atualizar status
             $proposicao->update($updateData);
 
+            // Verificar se é uma reversão devido à falha do S3
+            $isS3FailureRevert = $request->input('_reason') === 's3_export_failure';
+
             // Log da alteração
-            Log::info('Status da proposição alterado', [
+            Log::info($isS3FailureRevert ? 'Status da proposição REVERTIDO devido à falha do S3' : 'Status da proposição alterado', [
                 'proposicao_id' => $proposicao->id,
                 'status_anterior' => $statusAnterior,
                 'novo_status' => $novoStatus,
                 'user_id' => $user->id,
-                'user_email' => $user->email
+                'user_email' => $user->email,
+                'reason' => $request->input('_reason'),
+                's3_failure_revert' => $isS3FailureRevert
             ]);
 
             return response()->json([

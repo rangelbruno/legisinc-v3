@@ -100,12 +100,6 @@
     margin-bottom: 0;
 }
 </style>
-<style>
-
-.d-grid .btn-assinatura:last-child {
-    margin-bottom: 0;
-}
-</style>
 
 <style>
 
@@ -1908,6 +1902,68 @@ createApp({
         async submitStatusForm(form) {
             try {
                 const formData = new FormData(form);
+                const requestedStatus = formData.get('status');
+
+                // Se está tentando aprovar, primeiro testar S3 ANTES de alterar o status
+                if (requestedStatus === 'aprovado') {
+                    // Mostrar loading específico para teste do S3
+                    Swal.fire({
+                        title: 'Verificando exportação S3...',
+                        html: `
+                            <div class="text-center">
+                                <div class="spinner-border text-primary mb-3" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <p>Testando conexão com AWS S3 antes da aprovação...</p>
+                            </div>
+                        `,
+                        showConfirmButton: false,
+                        allowOutsideClick: false
+                    });
+
+                    try {
+                        // Testar S3 primeiro (sem alterar status ainda)
+                        await this.testS3ExportBeforeApproval();
+
+                        // Se S3 funciona, atualizar loading
+                        Swal.update({
+                            title: 'S3 OK! Aprovando proposição...',
+                            html: `
+                                <div class="text-center">
+                                    <div class="spinner-border text-success mb-3" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                    <p>AWS S3 está funcionando. Prosseguindo com aprovação...</p>
+                                </div>
+                            `
+                        });
+                    } catch (s3Error) {
+                        // S3 falhou - bloquear aprovação completamente
+                        Swal.close();
+                        await Swal.fire({
+                            title: 'Erro na Exportação S3',
+                            html: `
+                                <div class="text-center">
+                                    <i class="ki-duotone ki-cross-circle fs-3x text-danger mb-3">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                    </i>
+                                    <p><strong>Aprovação bloqueada!</strong></p>
+                                    <p>Não é possível aprovar porque a exportação para S3 está falhando:</p>
+                                    <p class="text-muted">${s3Error.message}</p>
+                                    <hr>
+                                    <p class="small text-muted">Verifique a configuração do AWS S3 antes de tentar novamente.</p>
+                                </div>
+                            `,
+                            icon: 'error',
+                            confirmButtonText: 'Entendido',
+                            confirmButtonColor: '#dc3545'
+                        });
+                        return; // PARAR AQUI - não executar aprovação
+                    }
+                }
+
+                // Prosseguir com mudança de status normal
                 const response = await fetch(form.action, {
                     method: 'POST',
                     body: formData,
@@ -1916,14 +1972,14 @@ createApp({
                         'Accept': 'application/json'
                     }
                 });
-                
+
                 const result = await response.json();
-                
+
                 if (result.success) {
-                    // Atualizar o status da proposição localmente
+                    // Atualizar status local
                     this.proposicao.status = result.novo_status;
 
-                    // Se foi aprovada, exportar automaticamente para S3
+                    // Se foi aprovada (e S3 já foi testado), fazer exportação final
                     if (result.novo_status === 'aprovado') {
                         await this.exportarPDFParaS3AposAprovacao();
                     } else {
@@ -2052,22 +2108,60 @@ createApp({
             } catch (error) {
                 console.error('Erro na exportação S3 após aprovação:', error);
 
-                // Mostrar erro mas manter aprovação
-                await Swal.fire({
-                    title: 'Proposição Aprovada!',
-                    html: `
-                        <div class="text-center">
-                            <p><strong>✅ Proposição aprovada com sucesso</strong></p>
-                            <hr>
-                            <p><strong>⚠️ Aviso: Falha na exportação automática para S3</strong></p>
-                            <p class="text-muted">Erro: ${error.message}</p>
-                            <p class="text-muted">Você pode exportar manualmente usando o botão "Exportar PDF para S3".</p>
-                        </div>
-                    `,
-                    icon: 'warning',
-                    confirmButtonText: 'OK',
-                    confirmButtonColor: '#ffc107'
+                // Fechar o loading
+                Swal.close();
+
+                // IMPORTANTE: Não mais mostrar sucesso - lançar exceção para bloquear aprovação
+                throw error;
+            }
+        },
+
+        async testS3ExportBeforeApproval() {
+            // Fazer uma chamada de teste para o S3 usando a mesma lógica de exportação
+            // mas sem alterar o status da proposição
+            const response = await fetch(`/proposicoes/${this.proposicao.id}/onlyoffice/exportar-pdf-s3-automatico?test_only=1`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                }
+            });
+
+            const result = await response.json();
+
+            if (!result.success) {
+                throw new Error(result.message || 'Teste de S3 falhou');
+            }
+
+            return result;
+        },
+
+        async revertApproval(previousStatus) {
+            try {
+                const response = await fetch(`/proposicoes/${this.proposicao.id}/status`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    },
+                    body: JSON.stringify({
+                        status: previousStatus,
+                        _reason: 's3_export_failure'
+                    })
                 });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    this.proposicao.status = previousStatus;
+                    console.log('Aprovação revertida com sucesso para:', previousStatus);
+                } else {
+                    console.error('Erro ao reverter aprovação:', result.message);
+                }
+            } catch (error) {
+                console.error('Erro na reversão da aprovação:', error);
             }
         },
 

@@ -1673,6 +1673,7 @@ Sistema funcionando!\par
     public function exportarPDFParaS3Automatico(Request $request, Proposicao $proposicao)
     {
         $startTime = microtime(true);
+        $isTestOnly = $request->query('test_only') === '1';
 
         try {
             // 1. Verificar permissões
@@ -1680,10 +1681,11 @@ Sistema funcionando!\par
                 return response()->json(['message' => 'Forbidden'], 403);
             }
 
-            Log::info('🤖 OnlyOffice S3: Exportação automática durante aprovação', [
+            Log::info($isTestOnly ? '🧪 OnlyOffice S3: TESTE de exportação antes da aprovação' : '🤖 OnlyOffice S3: Exportação automática durante aprovação', [
                 'proposicao_id' => $proposicao->id,
                 'user_id' => auth()->id(),
-                'status' => $proposicao->status
+                'status' => $proposicao->status,
+                'test_only' => $isTestOnly
             ]);
 
             // 2. Buscar a versão mais recente do documento (com edições salvas)
@@ -1806,26 +1808,122 @@ Sistema funcionando!\par
 
             // Estrutura: proposicoes/pdfs/YYYY/MM/DD/{proposicao_id}/automatic/proposicao_{id}_auto_{timestamp}.pdf
             $fileName = "proposicoes/pdfs/{$year}/{$month}/{$day}/{$proposicao->id}/automatic/proposicao_{$proposicao->id}_auto_{$timestamp}.pdf";
-            $uploaded = \Illuminate\Support\Facades\Storage::disk('s3')->put($fileName, $pdfContent);
 
-            if (!$uploaded) {
-                throw new \Exception('Falha ao enviar PDF para S3');
+            if ($isTestOnly) {
+                // MODO TESTE: Apenas testar a conexão com S3, não salvar o arquivo
+                Log::info('🧪 OnlyOffice S3: Modo teste - verificando apenas conexão', [
+                    'proposicao_id' => $proposicao->id,
+                    'test_file_name' => $fileName,
+                    'test_content_size' => $fileSizeBytes
+                ]);
+
+                // Testar se conseguimos acessar o bucket S3
+                try {
+                    $s3Disk = \Illuminate\Support\Facades\Storage::disk('s3');
+                    $testFileName = "test/connection_test_" . time() . ".txt";
+                    $testContent = "Test connection from LegisInc - " . now()->toISOString();
+
+                    Log::info('🧪 OnlyOffice S3: Iniciando teste detalhado', [
+                        'proposicao_id' => $proposicao->id,
+                        'test_file_name' => $testFileName,
+                        'test_content_size' => strlen($testContent),
+                        's3_config' => [
+                            'bucket' => config('filesystems.disks.s3.bucket'),
+                            'region' => config('filesystems.disks.s3.region'),
+                            'key_length' => strlen(config('filesystems.disks.s3.key')),
+                            'key_first8' => substr(config('filesystems.disks.s3.key'), 0, 8),
+                            'endpoint' => config('filesystems.disks.s3.endpoint'),
+                            'secret_length' => strlen(config('filesystems.disks.s3.secret'))
+                        ]
+                    ]);
+
+                    // Tentar fazer upload de teste
+                    try {
+                        $testUploaded = $s3Disk->put($testFileName, $testContent);
+
+                        Log::info('🧪 OnlyOffice S3: Resultado do upload teste', [
+                            'proposicao_id' => $proposicao->id,
+                            'test_uploaded' => $testUploaded,
+                            'test_file_name' => $testFileName
+                        ]);
+                    } catch (\Exception $uploadError) {
+                        Log::error('🧪 OnlyOffice S3: Erro específico no upload', [
+                            'proposicao_id' => $proposicao->id,
+                            'error_message' => $uploadError->getMessage(),
+                            'error_class' => get_class($uploadError)
+                        ]);
+                        throw $uploadError;
+                    }
+
+                    if (!$testUploaded) {
+                        throw new \Exception('Teste de conexão S3 falhou - não foi possível fazer upload');
+                    }
+
+                    // Verificar se arquivo existe
+                    $exists = $s3Disk->exists($testFileName);
+                    Log::info('🧪 OnlyOffice S3: Verificação de existência', [
+                        'proposicao_id' => $proposicao->id,
+                        'file_exists' => $exists
+                    ]);
+
+                    // Tentar deletar o arquivo de teste
+                    $deleted = $s3Disk->delete($testFileName);
+                    Log::info('🧪 OnlyOffice S3: Limpeza do teste', [
+                        'proposicao_id' => $proposicao->id,
+                        'file_deleted' => $deleted
+                    ]);
+
+                } catch (\Exception $s3TestError) {
+                    Log::error('🧪 OnlyOffice S3: Erro detalhado no teste', [
+                        'proposicao_id' => $proposicao->id,
+                        'error_message' => $s3TestError->getMessage(),
+                        'error_class' => get_class($s3TestError),
+                        'error_file' => $s3TestError->getFile(),
+                        'error_line' => $s3TestError->getLine()
+                    ]);
+
+                    throw new \Exception('Teste de conexão S3 falhou: ' . $s3TestError->getMessage());
+                }
+
+                $s3Url = null; // Não gerar URL para teste
+            } else {
+                // MODO NORMAL: Salvar arquivo real no S3
+                $uploaded = \Illuminate\Support\Facades\Storage::disk('s3')->put($fileName, $pdfContent);
+
+                if (!$uploaded) {
+                    throw new \Exception('Falha ao enviar PDF para S3');
+                }
+
+                // 9. Gerar URL assinada do S3 (válida por 1 hora)
+                $s3Url = \Illuminate\Support\Facades\Storage::disk('s3')->temporaryUrl($fileName, now()->addHour());
+
+                // 10. Atualizar proposição com informações do PDF no S3
+                $proposicao->update([
+                    'pdf_s3_path' => $fileName,
+                    'pdf_s3_url' => $s3Url,
+                    'pdf_exportado_em' => now(),
+                    'pdf_size_bytes' => $fileSizeBytes
+                ]);
             }
-
-            // 9. Gerar URL assinada do S3 (válida por 1 hora)
-            $s3Url = \Illuminate\Support\Facades\Storage::disk('s3')->temporaryUrl($fileName, now()->addHour());
-
-            // 10. Atualizar proposição com informações do PDF no S3
-            $proposicao->update([
-                'pdf_s3_path' => $fileName,
-                'pdf_s3_url' => $s3Url,
-                'pdf_exportado_em' => now(),
-                'pdf_size_bytes' => $fileSizeBytes
-            ]);
 
             $executionTimeMs = round((microtime(true) - $startTime) * 1000);
 
-            // 11. Log de sucesso
+            if ($isTestOnly) {
+                // Resposta para modo teste
+                Log::info('✅ OnlyOffice S3: Teste de conexão bem-sucedido', [
+                    'proposicao_id' => $proposicao->id,
+                    'execution_time_ms' => $executionTimeMs
+                ]);
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Teste de conexão S3 bem-sucedido',
+                    'test_mode' => true,
+                    'execution_time_ms' => $executionTimeMs
+                ]);
+            }
+
+            // 11. Log de sucesso (modo normal)
             DocumentWorkflowLog::logPdfExport(
                 proposicaoId: $proposicao->id,
                 status: 'success',

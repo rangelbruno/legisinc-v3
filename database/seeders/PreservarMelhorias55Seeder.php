@@ -10,273 +10,273 @@ class PreservarMelhorias55Seeder extends Seeder
 {
     /**
      * Preservar melhorias detectadas automaticamente
-     * Gerado em: 2025-09-08 06:43:39
+     * Gerado em: 2025-09-24 12:31:36
      * 
      * Alterações detectadas:
      * [
     {
         "arquivo": "app\/Http\/Controllers\/ProposicaoAssinaturaController.php",
         "tipo": "modificado",
-        "hash_anterior": "7ec40fb45cb03a0aff72ed6ec97d015d56d6ca51e4be264d6ae7c7c3adaa945f",
-        "hash_atual": "4af602a08be71b1229fc66949aab60a698cd1a5d7c6e0c999be1f388198f84a7",
-        "tamanho": 183240,
-        "modificado_em": "2025-09-08T06:35:43.000000Z"
+        "hash_anterior": "fbf48ab5bf0a79274685f8ff3e3ca7c49a67e15d9d823ffa64faf5415d35ed83",
+        "hash_atual": "41ae368cd06bbe788892d1e9508738067f99d453c1d50e03cfc2d3e2a3f57a6b",
+        "tamanho": 199451,
+        "modificado_em": "2025-09-24T10:58:41.000000Z"
     },
     {
         "arquivo": "app\/Http\/Controllers\/ProposicaoProtocoloController.php",
         "tipo": "modificado",
-        "hash_anterior": "88fbe79dbbf88a81f7a421c749a46913caa42b8efb74fa141e61327b65680535",
-        "hash_atual": "b94c90878c295c42ebb50a31f455a274e645cd26709f55a03adf9ca36e7b9e88",
-        "tamanho": 33855,
-        "modificado_em": "2025-09-08T06:35:43.000000Z"
+        "hash_anterior": "c5cc57c487a474181a5124b6f5d24f312686b65ba0199696f035c440a1399113",
+        "hash_atual": "8ad3bad5387aabc51c048f7b4c3363e491a9ae415a7c2b66b157b4d29704780b",
+        "tamanho": 38821,
+        "modificado_em": "2025-09-24T10:58:41.000000Z"
     },
     {
         "arquivo": "app\/Services\/OnlyOffice\/OnlyOfficeService.php",
         "tipo": "modificado",
-        "hash_anterior": "c26b8cee593dff3c3868445a152ce31aa123f4c8881cce4c4dbb73db17bf9cfd",
-        "hash_atual": "71353537afe84cb139e0184bde66f2e2c10c2d61bf90420117537f55ddf3b8b5",
-        "tamanho": 184884,
-        "modificado_em": "2025-09-08T06:35:43.000000Z"
+        "hash_anterior": "dcc5e755e7f4b01d1b46d5273967598c1a52516b178ba7be0901885aecfcdbc0",
+        "hash_atual": "7ae6244788b2e4315b8f4c531c2c6862308d862a8f26c5d609e5636098dd5ee6",
+        "tamanho": 190861,
+        "modificado_em": "2025-09-24T10:58:41.000000Z"
     },
     {
         "arquivo": "app\/Services\/Template\/TemplateProcessorService.php",
         "tipo": "modificado",
-        "hash_anterior": "caef0c91d4de68a4996acb22d9da057d10639d99d9299bf0cad3f1d10a9a5a38",
-        "hash_atual": "376bcf11798e624c10a049f62b130c3268fa1ba1c56f37627bbbca03869f8f2d",
+        "hash_anterior": "0ebbad191784ba4c494dfede738ad277cda61bc2f382514bdf28ae485974b588",
+        "hash_atual": "9eadb56b71e6ce35a72b98047680e21b06e1f536f8c71d2387c00eecb622bc06",
         "tamanho": 37954,
-        "modificado_em": "2025-09-08T06:35:43.000000Z"
+        "modificado_em": "2025-09-24T10:58:41.000000Z"
     },
     {
         "arquivo": "app\/Services\/Template\/TemplateVariableService.php",
         "tipo": "modificado",
-        "hash_anterior": "fddfda600e22ddd5ca9758f4a6b8981d9ac63f31d51c3969a888b63678ae21c9",
-        "hash_atual": "4c69e0d3011028f41edf2ce5487d0f2c4f47df17c7cc55b6133169ee60eee6f0",
+        "hash_anterior": "016939cb8d231db89d8503252c15d13d284eb6300129d6e9e22c7d252f52f95d",
+        "hash_atual": "17202168ccec3269e05a2f4b3d4cfdb89f1668af1fbd144e22d3889b5cf3452f",
         "tamanho": 16468,
-        "modificado_em": "2025-09-08T06:35:43.000000Z"
+        "modificado_em": "2025-09-24T10:58:41.000000Z"
     },
     {
         "arquivo": "app\/Models\/Proposicao.php",
         "tipo": "modificado",
-        "hash_anterior": "97e932f8f0209d66e57d3983e359bc0e7266aaaae5c161e631c053bc27aa0e9e",
-        "hash_atual": "9d617212fbe3737c30ffc20f79b3acde8693a4d830d5e3d21e152faf2efe04a6",
-        "tamanho": 16728,
-        "modificado_em": "2025-09-08T06:35:43.000000Z"
+        "hash_anterior": "435b05783c1b8dc944b4b74952faf230e09766f453dca867eeea5814f3f75b91",
+        "hash_atual": "da66c4532b12a3f5e5dc80eb96da86045a7fa004f4b4d588f5cd7317f6083559",
+        "tamanho": 19682,
+        "modificado_em": "2025-09-24T10:58:41.000000Z"
     },
     {
         "arquivo": "config\/dompdf.php",
         "tipo": "modificado",
-        "hash_anterior": "4dd1018ab7a2373074b3836a94fe944ed4f86181f21511faff12b33601c1645d",
-        "hash_atual": "123c1058fa421f9e838f9dbcaa4bd7ccbbec8bb31a7ce136e7ef057885e5a938",
-        "tamanho": 11594,
-        "modificado_em": "2025-09-08T06:35:43.000000Z"
+        "hash_anterior": "43512cc10a7aafa2de259447830337cdbe4f878322690968ff6648077f0a3ffc",
+        "hash_atual": "58c2ee65d87ea9e59464fcbba13271703c1feacf6938ec6b618a7a36c05fb8e6",
+        "tamanho": 11654,
+        "modificado_em": "2025-09-24T10:58:41.000000Z"
     },
     {
         "arquivo": "resources\/views\/proposicoes\/assinatura\/assinar-pdf-vue.blade.php",
         "tipo": "modificado",
-        "hash_anterior": "773411e32af24115d092947d34db717317569d355804d8a2f09fbe860cebb732",
-        "hash_atual": "52ecb445413c4b771a212873591f8fa381fef6e7ced552eadd2a8016245b953e",
+        "hash_anterior": "cee44eeb0e87c9e9dae2fcffff868aa25b7603b781356414b6603663a257fbea",
+        "hash_atual": "85f67d345cd1cce09f4feba67b4054aa8d520833be4fb56c8f1eda8a274eb772",
         "tamanho": 90333,
-        "modificado_em": "2025-09-08T06:35:42.000000Z"
+        "modificado_em": "2025-09-24T10:58:38.000000Z"
     },
     {
         "arquivo": "resources\/views\/proposicoes\/assinatura\/assinar-vue.blade.php",
         "tipo": "modificado",
-        "hash_anterior": "2f5724a3fd24b60d21bb7feb4f820508a57e8ce73d624f8cce07a11218998da1",
-        "hash_atual": "1bf5690c6d87610da61856a9b67539ded685f7e3cf146c007480061d2c400d18",
-        "tamanho": 49890,
-        "modificado_em": "2025-09-08T06:35:42.000000Z"
+        "hash_anterior": "fb9b1925063e17c11b2eb1ae77b43f1a61a136c956facbaa36109542d40d4492",
+        "hash_atual": "97279a0983a0f84d2b4cc2cfcc06c00632f2b793e99721d3e0de6de9bbc0f1d7",
+        "tamanho": 69556,
+        "modificado_em": "2025-09-24T10:58:38.000000Z"
     },
     {
         "arquivo": "resources\/views\/proposicoes\/assinatura\/assinar.blade.php",
         "tipo": "modificado",
-        "hash_anterior": "42cc5a815a3b028859035338a5f015f4fb42893fb81dee66ad90afc3861426e1",
-        "hash_atual": "1b53485236887fd5e40732d73a4165311ebfecc814fa7bce5fd0c991e252994c",
+        "hash_anterior": "d27994b7d1e58f9ceffd0586518d0a3628464d2ce15edc298de4b13eba9f9c4d",
+        "hash_atual": "dc359c72b2748e0a0b76774552a31ddf2bd5dcb77a7ac78f2f8107c5d45eaf87",
         "tamanho": 64199,
-        "modificado_em": "2025-09-08T06:35:42.000000Z"
+        "modificado_em": "2025-09-24T10:58:38.000000Z"
     },
     {
         "arquivo": "resources\/views\/proposicoes\/assinatura\/historico.blade.php",
         "tipo": "modificado",
-        "hash_anterior": "70ee31fa552f016739cb36d702740b4d529d95e6d921ad68d6fd6ce43421dc2b",
-        "hash_atual": "0e7eb09cd959365a2bd0991f188e865517319a7f52d02bb3f4c11e4782adfdf6",
+        "hash_anterior": "93864c8f678872ce4dcc39e9a457ac570931063afc5ebb0ff68a90c63d1180c3",
+        "hash_atual": "d6aa82f87b810efa8cd65977f66d0cf72f559442937e2de77f94e19a93fedf20",
         "tamanho": 21668,
-        "modificado_em": "2025-09-08T06:35:42.000000Z"
+        "modificado_em": "2025-09-24T10:58:38.000000Z"
     },
     {
         "arquivo": "resources\/views\/proposicoes\/assinatura\/index.blade.php",
         "tipo": "modificado",
-        "hash_anterior": "aa0ead1d101ce14cc4f049017b3d6431092b460958b8efccf7c10a18e0571198",
-        "hash_atual": "e1b46d470937f717047987f85c966febb16b0ac77ef47d6abe23694bfb34f279",
+        "hash_anterior": "144cf6fb12cac4e5104e51163da46c507fe314309e1758803b4a374527f81042",
+        "hash_atual": "d36742d3b0253bf9380cebdf4793a243f080ed30d114ce3a4a157ac1d9b2fb80",
         "tamanho": 39431,
-        "modificado_em": "2025-09-08T06:35:42.000000Z"
+        "modificado_em": "2025-09-24T10:58:38.000000Z"
     },
     {
         "arquivo": "resources\/views\/proposicoes\/assinatura\/visualizar-pdf-otimizado.blade.php",
         "tipo": "modificado",
-        "hash_anterior": "6b5a456f37ec7bddc13ac60f0209862a383f92be3187a0353619f3c2d97287ac",
-        "hash_atual": "cd25bdfafc911fef7256b880efd934f6a41c67ef731aad2374874bfc49b0a46c",
+        "hash_anterior": "5fc9af7d35529c3aac4f7d4b8591c23017757b4254ecd074cdfe70a05729b74f",
+        "hash_atual": "b51acde22d4524806801a4142fa191f0f830c80ca14a265bd063bd40766f0fb3",
         "tamanho": 9714,
-        "modificado_em": "2025-09-08T06:35:42.000000Z"
+        "modificado_em": "2025-09-24T10:58:38.000000Z"
     },
     {
         "arquivo": "resources\/views\/proposicoes\/consulta\/nao-encontrada.blade.php",
         "tipo": "modificado",
-        "hash_anterior": "544a9b7bf426368340ac2619914ebe589afdd53cf8db30ee67daa0e0e247bbfe",
-        "hash_atual": "0d7167985d90cabd7d2bd7647ed33752a7b9d82a1b82f0009fe48d22bf7ce3ab",
+        "hash_anterior": "7bb20ea63cb18f990c4f99124bb907926db20d753e71258f0f42ee310f8acb30",
+        "hash_atual": "a7468eb430c73f32c6e5c3a7a58b774ff5642204d9a615cb3d231562c640ac6a",
         "tamanho": 2116,
-        "modificado_em": "2025-09-08T06:35:42.000000Z"
+        "modificado_em": "2025-09-24T10:58:38.000000Z"
     },
     {
         "arquivo": "resources\/views\/proposicoes\/consulta\/publica.blade.php",
         "tipo": "modificado",
-        "hash_anterior": "aabcee7ea9490e94c834820d47ea5fc991f74872eb2fcbaea8698d2ce04b006c",
-        "hash_atual": "3a537620f7e228e06fc0e2bb32884b8b39cc8801e7440876222f80e009f47a66",
+        "hash_anterior": "e6c0bf2128518b17acc7b5f24e2d80425a448b98e3f2e49f46fd53f5214ce511",
+        "hash_atual": "f42c897ed17d1f50cc94d8ba6b623a5686d6ff04c6d5c29ca3f23450b1259292",
         "tamanho": 8438,
-        "modificado_em": "2025-09-08T06:35:42.000000Z"
+        "modificado_em": "2025-09-24T10:58:38.000000Z"
     },
     {
         "arquivo": "resources\/views\/proposicoes\/legislativo\/aguardando-protocolo.blade.php",
         "tipo": "modificado",
-        "hash_anterior": "90bfa91c52c4fad47802704123dd9d1fecb8042a47b0a845ab774ba282cfcc50",
-        "hash_atual": "67216d0129b1cf61a85dc1742e886f0624edab93cf28f75dad0378f8f4704a76",
+        "hash_anterior": "0eeec5c2323552f2098aef40a433391dd5148a949859e4a912228ac901b6cbe7",
+        "hash_atual": "1a2154601bfd77dc8a0ba4796f4232d1f549455e608a34463f668406f099ada5",
         "tamanho": 19647,
-        "modificado_em": "2025-09-08T06:35:42.000000Z"
+        "modificado_em": "2025-09-24T10:58:38.000000Z"
     },
     {
         "arquivo": "resources\/views\/proposicoes\/legislativo\/editar.blade.php",
         "tipo": "modificado",
-        "hash_anterior": "7111b750d5747800aa85df7a3aeb229fc74da34d4bb280b18f8423c5a87090a9",
-        "hash_atual": "a9a676a442aa6c2656170e6935c91a20c40ae8bd3e095b84478a2ea6ce3583b4",
+        "hash_anterior": "f8651e0d39c31e29939a662db4a94db6fcd57da7140730eed408f0b7aa4f19d1",
+        "hash_atual": "9cca88ead14b4a3543ca22d10937906f56e1d5f42c4ffd933dbe008c56ce0e75",
         "tamanho": 18651,
-        "modificado_em": "2025-09-08T06:35:42.000000Z"
+        "modificado_em": "2025-09-24T10:58:38.000000Z"
     },
     {
         "arquivo": "resources\/views\/proposicoes\/legislativo\/index.blade.php",
         "tipo": "modificado",
-        "hash_anterior": "a9409285bdb1050e1c5400d205d4519c60cd4e021f5ce4ca0cdcb1c1dae0df5b",
-        "hash_atual": "f90376eb7360066f17c57d1e937f3edf1dedfeea82e047f946b93d6cee7f5c28",
+        "hash_anterior": "d47ab823e1dcb6b5427def02a8c496631033670c30bb8c75b1a8039a455bd7ce",
+        "hash_atual": "a357499adb8c983370d9cc218b79c98c74366ff0be544bc3ec311532551a89ec",
         "tamanho": 44459,
-        "modificado_em": "2025-09-08T06:35:42.000000Z"
+        "modificado_em": "2025-09-24T10:58:38.000000Z"
     },
     {
         "arquivo": "resources\/views\/proposicoes\/legislativo\/onlyoffice-editor.blade.php",
         "tipo": "modificado",
-        "hash_anterior": "ae4edfe5c2319a427996cdff2f84203acbd07fa08cfde9772ec6cf5ce6d82d91",
-        "hash_atual": "9677f65de1d4f0252288565d48337472711408c073e70e8ef172b2ebf8f6aec8",
+        "hash_anterior": "f1b45e2f4a88eaa8e21e1fe9ef93314ad9238879bc23b9c4086996f93b41e021",
+        "hash_atual": "0e3baa800626da12f7c53e7e427f02aef597cea81f293a167abbecaabc5a291a",
         "tamanho": 1169,
-        "modificado_em": "2025-09-08T06:35:42.000000Z"
+        "modificado_em": "2025-09-24T10:58:38.000000Z"
     },
     {
         "arquivo": "resources\/views\/proposicoes\/legislativo\/relatorio-dados.blade.php",
         "tipo": "modificado",
-        "hash_anterior": "7c82deb231a97e6c150c40a30cf35b0c13406d0311dd7c53d9bec551655fde4f",
-        "hash_atual": "43fee6da29de27c999ed8c05084b51686bfa7b3730043b7c10ea3678cc8fbbea",
+        "hash_anterior": "e03de02f96b49f1555e0f4909fd7d42f7ecdf8e0396f281b5507a57435c163f9",
+        "hash_atual": "cf465849144b7b3db0942414d38467f0f8dee58301d65a2883f7bf1be85a1f4a",
         "tamanho": 10124,
-        "modificado_em": "2025-09-08T06:35:42.000000Z"
+        "modificado_em": "2025-09-24T10:58:38.000000Z"
     },
     {
         "arquivo": "resources\/views\/proposicoes\/legislativo\/relatorio-pdf.blade.php",
         "tipo": "modificado",
-        "hash_anterior": "b65cf154608c473c4daadf2c7773c263ca9f5a31cad57b81ddef753381870eaa",
-        "hash_atual": "129b5ff93d159d03fce059a367f44c06578eb340536ac2c3cb1e9db7ca15dc07",
+        "hash_anterior": "aa029442bd19b9942f78c207b610694f81d805c625c8bdf6a3174ce48ec08d64",
+        "hash_atual": "ab614b625376cd13180fd7efc29011d2af159de564e1408eeb81a1d5158c852c",
         "tamanho": 8297,
-        "modificado_em": "2025-09-08T06:35:42.000000Z"
+        "modificado_em": "2025-09-24T10:58:38.000000Z"
     },
     {
         "arquivo": "resources\/views\/proposicoes\/legislativo\/relatorio.blade.php",
         "tipo": "modificado",
-        "hash_anterior": "2528578d0f3cd89d471c2c25d8492bdae2a64aed77b21a8ca58df7ca4067b467",
-        "hash_atual": "e2810679d325534a96e43db4b1ea48de6ecccb651ba189ff3d0c66633e326ae4",
+        "hash_anterior": "62a481c47618c5270fb2003e4fa44dfddacb51538ed948732981b2791ab6ba40",
+        "hash_atual": "6f4672484fbb179c862e81903e408887993d437eb60c6a2886cbb281050233fc",
         "tamanho": 8524,
-        "modificado_em": "2025-09-08T06:35:42.000000Z"
+        "modificado_em": "2025-09-24T10:58:38.000000Z"
     },
     {
         "arquivo": "resources\/views\/proposicoes\/legislativo\/revisar.blade.php",
         "tipo": "modificado",
-        "hash_anterior": "80c5788e3735b48b989b960127f3335cd937ea4398ab599a271364938e7ca84d",
-        "hash_atual": "66de5f36a6ac511296a69b9163896aec9d6e997c1dbbd4fcc9e59d4721ad9441",
+        "hash_anterior": "ef1b14071b784efa20545a9e6bebd2b5f3df9c57fad22b97a6cc5408b5cf5a05",
+        "hash_atual": "319aa4530eabb668f1c64a3364d5664d3dc4b89cce6b8670f22be6d7f0ea2b38",
         "tamanho": 29449,
-        "modificado_em": "2025-09-08T06:35:42.000000Z"
+        "modificado_em": "2025-09-24T10:58:38.000000Z"
     },
     {
         "arquivo": "resources\/views\/proposicoes\/parlamentar\/onlyoffice-editor.blade.php",
         "tipo": "modificado",
-        "hash_anterior": "84ef3c0e0cfd55454d878f65b4bf185dd836e560fb4e85a97cae05405fe190ee",
-        "hash_atual": "a7a83e9c45850e237017f72964a63e4b9c484c41fe05bc84eb43527f8fe8b824",
+        "hash_anterior": "01a090c84c8ed6fdd6771b8f3123f140f3ac6bbc696787395d881f586db58049",
+        "hash_atual": "78e4a1df8c7f3bc0b56f97baeca887a80390929e41bbc0e8373f3b3ea2d5c1af",
         "tamanho": 10070,
-        "modificado_em": "2025-09-08T06:35:42.000000Z"
+        "modificado_em": "2025-09-24T10:58:38.000000Z"
     },
     {
         "arquivo": "resources\/views\/proposicoes\/pdf\/protocolo-otimizado.blade.php",
         "tipo": "modificado",
-        "hash_anterior": "b26443f583fad592cc61699cfdfc7021ac9c2e1881fb744f9b1d2c26912bb2a3",
-        "hash_atual": "95129d9467a1dcad7f512c357ba1f9eb0cff9aa435ee91eba77b0f0fcb30f2f2",
+        "hash_anterior": "5fe2f94825a31a41e9d904f7a1082a95242bd2669feb13a9bb5b0fe317e93b83",
+        "hash_atual": "6e844a489bd960038bda8a8ac9bf8225f94a5ac90e6da694dbda459de57abcc0",
         "tamanho": 6219,
-        "modificado_em": "2025-09-08T06:35:42.000000Z"
+        "modificado_em": "2025-09-24T10:58:38.000000Z"
     },
     {
         "arquivo": "resources\/views\/proposicoes\/pdf\/template-optimized.blade.php",
         "tipo": "modificado",
-        "hash_anterior": "2ed3ac7db06268979f8df0b3aa76eaadce9c3fe33be39b0580160674f4a69fb2",
-        "hash_atual": "4c5956983be4718db16d8114c65a15c7001d9683e314595cc7f52d866cd13234",
+        "hash_anterior": "43e8e8557ddfe000ae0e099c888188c3728a55730a341ceff6db7cc3faef7137",
+        "hash_atual": "c8e63103af3034aad42e89670d307fe2c5bf008817667e23debd06386da86ef3",
         "tamanho": 7208,
-        "modificado_em": "2025-09-08T06:35:42.000000Z"
+        "modificado_em": "2025-09-24T10:58:38.000000Z"
     },
     {
         "arquivo": "resources\/views\/proposicoes\/pdf\/template.blade.php",
         "tipo": "modificado",
-        "hash_anterior": "b54f6f1eb874dca4869a170715c4adff5993b81c1ecefb64ec452a1e114ab3aa",
-        "hash_atual": "d369375e1bd95a289b90357046580533099475e52558e0a72490200f09bd7b9f",
+        "hash_anterior": "8059986eba8da73b4e0921703497f5ad899b75e56ede0a53cd65d016d09c4f45",
+        "hash_atual": "ea44febe76588c4c232e7c17dc6e41229a12a28d81e0ea1c2fe7cdc39ed75be7",
         "tamanho": 9296,
-        "modificado_em": "2025-09-08T06:35:42.000000Z"
+        "modificado_em": "2025-09-24T10:58:38.000000Z"
     },
     {
         "arquivo": "resources\/views\/proposicoes\/protocolo\/index-melhorado.blade.php",
         "tipo": "modificado",
-        "hash_anterior": "e9c7a9a6072d8399cb8a6fd494e0fbfc4b4e3c3f90ef480edced03e7eb937d87",
-        "hash_atual": "f7b792c9e21ef88e802e064c1bfe3da3e0bbcf6e62794999dc49ea22c0e4da9b",
+        "hash_anterior": "06225f024c71589b8de981500cda982dff9f7ed0c65f7d7480d2eca5b898e74a",
+        "hash_atual": "89eae9f31d782e269cd378f66724c71d0a73e2a3d416dc431c266a923a29439d",
         "tamanho": 20506,
-        "modificado_em": "2025-09-08T06:35:42.000000Z"
+        "modificado_em": "2025-09-24T10:58:38.000000Z"
     },
     {
         "arquivo": "resources\/views\/proposicoes\/protocolo\/index-original.blade.php",
         "tipo": "modificado",
-        "hash_anterior": "c85abeb187a9c0ede93ad22be93ebcaaf22c7ad941cfc4b7db2a0219e14a4ed0",
-        "hash_atual": "7e28b99ad0ded2a6bf0df9babeb71b5ff6dc86685308591f4f87c7a218a2f152",
+        "hash_anterior": "db8a9d59f7c471e9e6c456650fa38d46efa5c950d4b7c7be3ad52d552f90f624",
+        "hash_atual": "c759051f29c98094c6469c41175276bd5dd1492791ec7040c1cc1ae2b31628b0",
         "tamanho": 59888,
-        "modificado_em": "2025-09-08T06:35:42.000000Z"
+        "modificado_em": "2025-09-24T10:58:38.000000Z"
     },
     {
         "arquivo": "resources\/views\/proposicoes\/protocolo\/index.blade.php",
         "tipo": "modificado",
-        "hash_anterior": "ac6ff3a9f16b647fd926c33cf4589c9a5751dfedfee7a2991427ee5edb744683",
-        "hash_atual": "d1b81401a9a83aad1f76fe6058e20d7f5a464a7c5f3db97029d26e5b1c0fe271",
+        "hash_anterior": "8aae0944b10769cae6fc93c054407038e22468102793032649c77a217f2b0384",
+        "hash_atual": "7ddc45f481b1ffd55f071276604f61566e5fb63834455288ef45c31677ac3f64",
         "tamanho": 28604,
-        "modificado_em": "2025-09-08T06:35:42.000000Z"
+        "modificado_em": "2025-09-24T10:58:38.000000Z"
     },
     {
         "arquivo": "resources\/views\/proposicoes\/protocolo\/protocolar-simples.blade.php",
         "tipo": "modificado",
-        "hash_anterior": "1f2b9f70444a550bc903ffc4c33cb467b67b2611c5158725ad8a24a2c70da5d2",
-        "hash_atual": "dd9448a34d524445291a4581c57f89ae472b62edffd9375977105e3a58558e9f",
+        "hash_anterior": "988656725be720bdfea51096a35b4022d97dc7d818f2b24350a34ccfd08ade66",
+        "hash_atual": "c6f78c4b407e650af3c9673e1524d6285108a68162f04d6cf12a8e9d5e1b4f21",
         "tamanho": 15343,
-        "modificado_em": "2025-09-08T06:35:42.000000Z"
+        "modificado_em": "2025-09-24T10:58:38.000000Z"
     },
     {
         "arquivo": "resources\/views\/proposicoes\/protocolo\/protocolar.blade.php",
         "tipo": "modificado",
-        "hash_anterior": "8e004d5f4013aa2939bf44fe69c75301bc098c9d2a7f1470b9104464195184ad",
-        "hash_atual": "4369f680a6d38054bfc1a14bdc21c692b2fc23b7809c07d1ceb9ac53b0efddc7",
+        "hash_anterior": "bcba508b11a74345ae05f038b0ad78c11f000ba999e7242f19c261f751253e81",
+        "hash_atual": "6adcfa58e32cfe87add37d48ac10c85478fc1f1e067bf3cbb60a852d0f052df0",
         "tamanho": 26051,
-        "modificado_em": "2025-09-08T06:35:42.000000Z"
+        "modificado_em": "2025-09-24T10:58:38.000000Z"
     },
     {
         "arquivo": "resources\/views\/proposicoes\/protocolo\/protocolos-hoje.blade.php",
         "tipo": "modificado",
-        "hash_anterior": "c42bdc92c8ef76ccc20ebd7b7e98fdf9d7e005518b7f92e6dcdbc68bea85009c",
-        "hash_atual": "64cc83536425c767e7301c2e58c1a8e0a59cc075454f0618496edc090cd9aff2",
+        "hash_anterior": "b4c199a77b68af11e2382f6988673eb79ad155440582ca6b0bbed2fb22ffc5e9",
+        "hash_atual": "87eaccce9840c04b2a9e4268cc1d6956f812d805a6c2cecb7049e34f9da88cc3",
         "tamanho": 25889,
-        "modificado_em": "2025-09-08T06:35:42.000000Z"
+        "modificado_em": "2025-09-24T10:58:38.000000Z"
     }
 ]
      */
