@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Storage;
 
 class SystemDiagnosticController extends Controller
 {
@@ -20,6 +21,8 @@ class SystemDiagnosticController extends Controller
             'storage' => $this->checkStorage(),
             'permissions' => $this->checkPermissions(),
             'containers' => $this->checkContainers(),
+            'docker_services' => $this->checkDockerServices(),
+            's3' => $this->checkS3Connection(),
         ];
 
         return view('admin.system-diagnostic.index', compact('diagnostics'));
@@ -802,6 +805,351 @@ class SystemDiagnosticController extends Controller
                 'message' => 'Erro ao executar correções',
                 'error' => $e->getMessage()
             ], 500);
+        }
+    }
+
+    private function checkDockerServices()
+    {
+        try {
+            // Since we're running inside a Docker container, we'll check services via HTTP health endpoints
+            // instead of Docker commands which aren't available in the container
+            $services = [
+                'postgresql' => [
+                    'name' => 'PostgreSQL Database',
+                    'host' => 'db',
+                    'port' => 5432,
+                    'healthcheck_url' => null,
+                    'check_type' => 'database'
+                ],
+                'redis' => [
+                    'name' => 'Redis Cache',
+                    'host' => 'redis',
+                    'port' => 6379,
+                    'healthcheck_url' => null,
+                    'check_type' => 'redis'
+                ],
+                'laravel-app' => [
+                    'name' => 'Laravel Application (Self)',
+                    'host' => 'localhost',
+                    'port' => 80,
+                    'healthcheck_url' => 'http://localhost/health',
+                    'check_type' => 'http'
+                ],
+                'nova-api' => [
+                    'name' => 'Nova API',
+                    'host' => 'nova-api',
+                    'port' => 3001,
+                    'healthcheck_url' => 'http://nova-api:3001/health',
+                    'check_type' => 'http'
+                ],
+                'onlyoffice' => [
+                    'name' => 'OnlyOffice Document Server',
+                    'host' => 'onlyoffice-documentserver',
+                    'port' => 80,
+                    'healthcheck_url' => 'http://onlyoffice-documentserver:80/healthcheck',
+                    'check_type' => 'http'
+                ],
+                'traefik' => [
+                    'name' => 'Traefik Gateway',
+                    'host' => 'traefik',
+                    'port' => 8080,
+                    'healthcheck_url' => 'http://traefik:8080/api/overview',
+                    'check_type' => 'http'
+                ],
+                'nginx-shadow' => [
+                    'name' => 'Nginx Shadow',
+                    'host' => 'nginx-shadow',
+                    'port' => 80,
+                    'healthcheck_url' => 'http://nginx-shadow:80',
+                    'check_type' => 'http'
+                ],
+                'shadow-comparator' => [
+                    'name' => 'Shadow Comparator',
+                    'host' => 'shadow-comparator',
+                    'port' => 3002,
+                    'healthcheck_url' => 'http://shadow-comparator:3002/health',
+                    'check_type' => 'http'
+                ],
+                'canary-monitor' => [
+                    'name' => 'Canary Monitor',
+                    'host' => 'canary-monitor',
+                    'port' => 3003,
+                    'healthcheck_url' => 'http://canary-monitor:3003/health',
+                    'check_type' => 'http'
+                ],
+                'prometheus' => [
+                    'name' => 'Prometheus',
+                    'host' => 'prometheus',
+                    'port' => 9090,
+                    'healthcheck_url' => 'http://prometheus:9090/-/healthy',
+                    'check_type' => 'http'
+                ],
+                'grafana' => [
+                    'name' => 'Grafana',
+                    'host' => 'grafana',
+                    'port' => 3000,
+                    'healthcheck_url' => 'http://grafana:3000/api/health',
+                    'check_type' => 'http'
+                ],
+                'postgres-exporter' => [
+                    'name' => 'PostgreSQL Exporter',
+                    'host' => 'postgres-exporter',
+                    'port' => 9187,
+                    'healthcheck_url' => 'http://postgres-exporter:9187/metrics',
+                    'check_type' => 'http'
+                ],
+                'swagger-ui' => [
+                    'name' => 'Swagger UI',
+                    'host' => 'swagger-ui',
+                    'port' => 8080,
+                    'healthcheck_url' => 'http://swagger-ui:8080',
+                    'check_type' => 'http'
+                ],
+                'mermaid-live-editor' => [
+                    'name' => 'Mermaid Live Editor',
+                    'host' => 'mermaid-live-editor',
+                    'port' => 8080,
+                    'healthcheck_url' => 'http://mermaid-live-editor:8080',
+                    'check_type' => 'http'
+                ]
+            ];
+
+            $results = [];
+            $overallStatus = 'success';
+            $healthyCount = 0;
+            $totalCount = 0;
+
+            foreach ($services as $serviceId => $config) {
+                $totalCount++;
+                $serviceResult = [
+                    'name' => $config['name'],
+                    'container_id' => $serviceId,
+                    'running' => false,
+                    'healthy' => false,
+                    'status' => 'Checking...',
+                    'uptime' => 'N/A',
+                    'health_check' => 'N/A',
+                    'error_message' => null,
+                    'port' => $config['port'],
+                    'has_healthcheck' => !empty($config['healthcheck_url'])
+                ];
+
+                // Check service based on type
+                $isHealthy = false;
+                $errorMessage = null;
+
+                switch ($config['check_type']) {
+                    case 'database':
+                        try {
+                            DB::connection()->getPdo();
+                            $isHealthy = true;
+                            $serviceResult['status'] = 'Connected';
+                        } catch (\Exception $e) {
+                            $errorMessage = 'Database connection failed: ' . $e->getMessage();
+                        }
+                        break;
+
+                    case 'redis':
+                        try {
+                            Cache::put('health_check_test', 'test', 1);
+                            $testValue = Cache::get('health_check_test');
+                            if ($testValue === 'test') {
+                                $isHealthy = true;
+                                $serviceResult['status'] = 'Connected';
+                                Cache::forget('health_check_test');
+                            } else {
+                                $errorMessage = 'Redis cache test failed';
+                            }
+                        } catch (\Exception $e) {
+                            $errorMessage = 'Redis connection failed: ' . $e->getMessage();
+                        }
+                        break;
+
+                    case 'http':
+                        // First try basic port connectivity with shorter timeout
+                        $connection = @fsockopen($config['host'], $config['port'], $errno, $errstr, 1);
+                        if ($connection) {
+                            fclose($connection);
+                            $isHealthy = true;
+                            $serviceResult['status'] = 'Port Open';
+                            $serviceResult['health_check'] = 'Port Accessible';
+
+                            // If port is accessible and we have a health URL, try that too
+                            if (!empty($config['healthcheck_url'])) {
+                                $healthResult = $this->checkHealthEndpointWithDetails($config['healthcheck_url'], 2);
+                                if ($healthResult['status']) {
+                                    $serviceResult['health_check'] = 'Healthy';
+                                } else {
+                                    $serviceResult['health_check'] = 'Port Open (Health check failed)';
+                                }
+                            }
+                        } else {
+                            $errorMessage = "Port {$config['port']} unreachable on {$config['host']} ($errstr)";
+                        }
+                        break;
+                }
+
+                if ($isHealthy) {
+                    $serviceResult['running'] = true;
+                    $serviceResult['healthy'] = true;
+                    $healthyCount++;
+                } else {
+                    $serviceResult['error_message'] = $errorMessage;
+                    $serviceResult['status'] = 'Error';
+                    $overallStatus = 'error';
+                }
+
+                $results[$serviceId] = $serviceResult;
+            }
+
+            if ($healthyCount < $totalCount && $overallStatus === 'success') {
+                $overallStatus = 'warning';
+            }
+
+            return [
+                'status' => $overallStatus,
+                'message' => "Container Services: {$healthyCount}/{$totalCount} healthy",
+                'details' => [
+                    'containers' => $results,
+                    'additional_containers' => [],
+                    'docker_available' => false, // We're not checking Docker directly
+                    'total_containers' => $totalCount,
+                    'healthy_containers' => $healthyCount,
+                    'note' => 'Service health checked via network connectivity and health endpoints'
+                ]
+            ];
+
+        } catch (\Exception $e) {
+            return [
+                'status' => 'error',
+                'message' => 'Error checking container services',
+                'error' => $e->getMessage()
+            ];
+        }
+    }
+
+    private function checkHealthEndpoint($url, $timeout = 5)
+    {
+        $result = $this->checkHealthEndpointWithDetails($url, $timeout);
+        return $result['status'];
+    }
+
+    private function checkHealthEndpointWithDetails($url, $timeout = 5)
+    {
+        try {
+            $context = stream_context_create([
+                'http' => [
+                    'timeout' => $timeout,
+                    'method' => 'GET',
+                    'ignore_errors' => true
+                ]
+            ]);
+
+            $response = @file_get_contents($url, false, $context);
+
+            if ($response !== false && isset($http_response_header)) {
+                $statusLine = $http_response_header[0];
+                $isHealthy = strpos($statusLine, '200') !== false || strpos($statusLine, '204') !== false;
+
+                return [
+                    'status' => $isHealthy,
+                    'error' => $isHealthy ? null : "HTTP error: $statusLine",
+                    'response' => $response
+                ];
+            }
+
+            return [
+                'status' => false,
+                'error' => 'No response received',
+                'response' => null
+            ];
+        } catch (\Exception $e) {
+            return [
+                'status' => false,
+                'error' => 'Exception: ' . $e->getMessage(),
+                'response' => null
+            ];
+        }
+    }
+
+    private function checkS3Connection()
+    {
+        try {
+            $awsAccessKey = env('AWS_ACCESS_KEY_ID');
+            $awsSecretKey = env('AWS_SECRET_ACCESS_KEY');
+            $awsRegion = env('AWS_DEFAULT_REGION', 'us-east-1');
+            $awsBucket = env('AWS_BUCKET');
+
+            $configDetails = [
+                'access_key_configured' => !empty($awsAccessKey),
+                'secret_key_configured' => !empty($awsSecretKey),
+                'region' => $awsRegion,
+                'bucket' => $awsBucket ?: 'Not configured',
+                's3_disk_configured' => config('filesystems.disks.s3') !== null
+            ];
+
+            // Basic configuration check
+            if (empty($awsAccessKey) || empty($awsSecretKey)) {
+                return [
+                    'status' => 'warning',
+                    'message' => 'S3 credentials not configured',
+                    'details' => $configDetails
+                ];
+            }
+
+            // Try to use Laravel's Storage facade to test S3 connection
+            if (!empty($awsBucket)) {
+                try {
+                    // Test connection by attempting to list objects (limited)
+                    $s3Disk = Storage::disk('s3');
+
+                    // Try to check if the disk is properly configured by testing a simple operation
+                    $testKey = 'diagnostic-test-' . time() . '.txt';
+                    $testContent = 'Diagnostic test content';
+
+                    // Try to put and then delete a test file
+                    $putResult = $s3Disk->put($testKey, $testContent);
+
+                    if ($putResult) {
+                        $exists = $s3Disk->exists($testKey);
+                        $s3Disk->delete($testKey); // Clean up
+
+                        if ($exists) {
+                            $configDetails['connection_test'] = 'Success';
+                            $configDetails['last_test'] = now()->format('Y-m-d H:i:s');
+
+                            return [
+                                'status' => 'success',
+                                'message' => 'S3 connection working correctly',
+                                'details' => $configDetails
+                            ];
+                        }
+                    }
+
+                    $configDetails['connection_test'] = 'Failed to write/read test file';
+
+                } catch (\Exception $storageException) {
+                    $configDetails['connection_test'] = 'Error: ' . $storageException->getMessage();
+                    $configDetails['connection_error'] = substr($storageException->getMessage(), 0, 200);
+                }
+            }
+
+            return [
+                'status' => 'error',
+                'message' => 'S3 connection failed',
+                'details' => $configDetails
+            ];
+
+        } catch (\Exception $e) {
+            return [
+                'status' => 'error',
+                'message' => 'Error checking S3 connection',
+                'error' => $e->getMessage(),
+                'details' => [
+                    'exception_type' => get_class($e),
+                    'error_message' => $e->getMessage()
+                ]
+            ];
         }
     }
 }

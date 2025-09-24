@@ -43,7 +43,7 @@
         <div class="app-container container-xxl">
                 <div class="row g-5 g-xl-8 mb-5 mb-xl-8">
                     @foreach($diagnostics as $name => $diagnostic)
-                        <div class="col-12 col-lg-6 col-xxl-4">
+                        <div class="col-12 @if($name === 'docker_services') col-12 @else col-lg-6 col-xxl-4 @endif">
                             <div class="card card-flush h-100">
                                 <div class="card-body p-6 p-lg-9">
                                     <div class="d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-between mb-4 mb-lg-5">
@@ -59,7 +59,16 @@
                                             </a>
                                         @else
                                             <h3 class="card-title fw-bold text-gray-800 fs-3 fs-lg-2 mb-2 mb-sm-0">
-                                                {{ ucfirst(str_replace('_', ' ', $name)) }}
+                                                @switch($name)
+                                                    @case('docker_services')
+                                                        Docker Services
+                                                        @break
+                                                    @case('s3')
+                                                        AWS S3
+                                                        @break
+                                                    @default
+                                                        {{ ucfirst(str_replace('_', ' ', $name)) }}
+                                                @endswitch
                                             </h3>
                                         @endif
                                         <span class="badge fs-8 fs-lg-7 fw-bold
@@ -72,9 +81,36 @@
                                         </span>
                                     </div>
 
-                                    <p class="text-gray-700 fs-6 fs-lg-5 mb-4 mb-lg-5">
-                                        {{ $diagnostic['message'] }}
-                                    </p>
+                                    @if($name === 'docker_services')
+                                        <div class="d-flex align-items-center mb-4 mb-lg-5">
+                                            <div class="flex-grow-1">
+                                                <p class="text-gray-700 fs-6 fs-lg-5 mb-2">
+                                                    {{ $diagnostic['message'] }}
+                                                </p>
+                                                <div class="d-flex gap-3">
+                                                    <div class="d-flex align-items-center">
+                                                        <i class="ki-duotone ki-check-circle fs-5 text-success me-1">
+                                                            <span class="path1"></span>
+                                                            <span class="path2"></span>
+                                                        </i>
+                                                        <span class="text-success fs-7 fw-semibold">{{ $diagnostic['details']['healthy_containers'] ?? 0 }} Healthy</span>
+                                                    </div>
+                                                    <div class="d-flex align-items-center">
+                                                        <i class="ki-duotone ki-information fs-5 text-primary me-1">
+                                                            <span class="path1"></span>
+                                                            <span class="path2"></span>
+                                                            <span class="path3"></span>
+                                                        </i>
+                                                        <span class="text-primary fs-7 fw-semibold">{{ $diagnostic['details']['total_containers'] ?? 0 }} Total</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    @else
+                                        <p class="text-gray-700 fs-6 fs-lg-5 mb-4 mb-lg-5">
+                                            {{ $diagnostic['message'] }}
+                                        </p>
+                                    @endif
 
                                     @if(isset($diagnostic['error']))
                                         <div class="alert alert-danger p-3 p-lg-4 mb-4 mb-lg-5">
@@ -87,7 +123,7 @@
                                     @if(isset($diagnostic['details']) && !empty($diagnostic['details']))
                                         <div class="mb-4 mb-lg-5">
                                             <h4 class="fw-semibold text-gray-800 fs-6 fs-lg-5 mb-3">Detalhes:</h4>
-                                    
+
                                             @if($name === 'storage')
                                                 <div class="table-responsive">
                                                     <table class="table table-row-dashed table-row-gray-300 gy-5">
@@ -127,16 +163,156 @@
                                                         </tbody>
                                                     </table>
                                                 </div>
+                                                            @elseif($name === 'docker_services' && isset($diagnostic['details']['containers']))
+                                                <!-- Individual Container Cards -->
+                                                <div class="row g-3">
+                                                    @foreach($diagnostic['details']['containers'] as $containerId => $container)
+                                                        <div class="col-12 col-md-6 col-xl-4">
+                                                            <div class="card card-flush h-100
+                                                                @if($container['running'] && $container['healthy'])
+                                                                    border-success
+                                                                @elseif($container['running'] && !$container['healthy'])
+                                                                    border-warning
+                                                                @else
+                                                                    border-danger
+                                                                @endif
+                                                            ">
+                                                                <div class="card-body p-4">
+                                                                    <div class="d-flex justify-content-between align-items-start mb-3">
+                                                                        <div class="flex-grow-1">
+                                                                            <h5 class="card-title fw-bold fs-6 mb-1">{{ $container['name'] }}</h5>
+                                                                            <small class="text-muted fs-7">{{ $containerId }}</small>
+                                                                        </div>
+                                                                        <div class="text-end">
+                                                                            @if($container['running'] && $container['healthy'])
+                                                                                <span class="badge badge-light-success fs-8 fw-bold">
+                                                                                    <i class="ki-duotone ki-check-circle fs-7 me-1">
+                                                                                        <span class="path1"></span>
+                                                                                        <span class="path2"></span>
+                                                                                    </i>
+                                                                                    Healthy
+                                                                                </span>
+                                                                            @elseif($container['running'] && !$container['healthy'])
+                                                                                <span class="badge badge-light-warning fs-8 fw-bold">
+                                                                                    <i class="ki-duotone ki-warning fs-7 me-1">
+                                                                                        <span class="path1"></span>
+                                                                                        <span class="path2"></span>
+                                                                                        <span class="path3"></span>
+                                                                                    </i>
+                                                                                    Unhealthy
+                                                                                </span>
+                                                                            @else
+                                                                                <span class="badge badge-light-danger fs-8 fw-bold">
+                                                                                    <i class="ki-duotone ki-cross-circle fs-7 me-1">
+                                                                                        <span class="path1"></span>
+                                                                                        <span class="path2"></span>
+                                                                                    </i>
+                                                                                    Stopped
+                                                                                </span>
+                                                                            @endif
+                                                                        </div>
+                                                                    </div>
+
+                                                                    <!-- Container Details -->
+                                                                    <div class="d-flex flex-column gap-2">
+                                                                        <div class="d-flex justify-content-between">
+                                                                            <span class="text-gray-600 fs-8">Status:</span>
+                                                                            <span class="badge fs-8 fw-bold {{ $container['running'] ? 'badge-light-success' : 'badge-light-danger' }}">
+                                                                                {{ $container['running'] ? 'Running' : 'Stopped' }}
+                                                                            </span>
+                                                                        </div>
+
+                                                                        @if($container['running'])
+                                                                            <div class="d-flex justify-content-between">
+                                                                                <span class="text-gray-600 fs-8">Uptime:</span>
+                                                                                <span class="text-gray-800 fs-8 fw-semibold">{{ $container['uptime'] }}</span>
+                                                                            </div>
+                                                                        @endif
+
+                                                                        <div class="d-flex justify-content-between">
+                                                                            <span class="text-gray-600 fs-8">Port:</span>
+                                                                            <span class="text-gray-800 fs-8">{{ $container['port'] }}</span>
+                                                                        </div>
+
+                                                                        @if($container['has_healthcheck'])
+                                                                            <div class="d-flex justify-content-between">
+                                                                                <span class="text-gray-600 fs-8">Health Check:</span>
+                                                                                <span class="badge fs-8 fw-bold {{ $container['health_check'] === 'Healthy' ? 'badge-light-success' : 'badge-light-danger' }}">
+                                                                                    {{ $container['health_check'] }}
+                                                                                </span>
+                                                                            </div>
+                                                                        @endif
+                                                                    </div>
+
+                                                                    <!-- Error Message -->
+                                                                    @if($container['error_message'])
+                                                                        <div class="mt-3 p-2 bg-light-danger rounded">
+                                                                            <div class="d-flex align-items-center">
+                                                                                <i class="ki-duotone ki-information fs-5 text-danger me-2">
+                                                                                    <span class="path1"></span>
+                                                                                    <span class="path2"></span>
+                                                                                    <span class="path3"></span>
+                                                                                </i>
+                                                                                <div>
+                                                                                    <div class="text-danger fs-8 fw-bold mb-1">Error Details:</div>
+                                                                                    <div class="text-danger fs-8">{{ $container['error_message'] }}</div>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    @endif
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    @endforeach
+                                                </div>
+
+                                                @if(!empty($diagnostic['details']['additional_containers']))
+                                                    <div class="mt-5">
+                                                        <h5 class="fw-semibold text-gray-700 fs-6 mb-3">
+                                                            <i class="ki-duotone ki-questionnaire-tablet fs-5 me-2">
+                                                                <span class="path1"></span>
+                                                                <span class="path2"></span>
+                                                            </i>
+                                                            Containers Adicionais:
+                                                        </h5>
+                                                        <div class="row g-2">
+                                                            @foreach($diagnostic['details']['additional_containers'] as $container)
+                                                                <div class="col-12 col-md-6">
+                                                                    <div class="d-flex justify-content-between bg-light p-3 rounded border">
+                                                                        <div>
+                                                                            <span class="fw-semibold fs-8">{{ $container['name'] }}</span>
+                                                                            <br><small class="text-muted fs-9">{{ $container['image'] }}</small>
+                                                                        </div>
+                                                                        <span class="badge badge-light-info fs-8">Running</span>
+                                                                    </div>
+                                                                </div>
+                                                            @endforeach
+                                                        </div>
+                                                    </div>
+                                                @endif
                                             @else
                                                 <div class="row g-3">
                                                     @foreach($diagnostic['details'] as $key => $value)
-                                                        <div class="col-12 col-sm-6 col-lg-12 col-xxl-6">
-                                                            <div class="d-flex flex-column flex-sm-row justify-content-between bg-light p-3 rounded">
+                                                        @if(is_array($value))
+                                                            @continue
+                                                        @endif
+                                                        <div class="col-12 @if($name === 's3') col-sm-6 @else col-sm-6 col-lg-12 col-xxl-6 @endif">
+                                                            <div class="d-flex flex-column flex-sm-row justify-content-between bg-light p-3 rounded border">
                                                                 <span class="fs-8 fs-lg-7 text-gray-600 fw-semibold mb-1 mb-sm-0">
                                                                     {{ ucfirst(str_replace('_', ' ', $key)) }}:
                                                                 </span>
                                                                 <span class="fs-8 fs-lg-7 text-gray-800">
-                                                                    <code class="text-break">{{ is_bool($value) ? ($value ? 'Sim' : 'Não') : $value }}</code>
+                                                                    @if(is_bool($value))
+                                                                        <span class="badge fs-8 fw-bold {{ $value ? 'badge-light-success' : 'badge-light-danger' }}">
+                                                                            {{ $value ? 'Sim' : 'Não' }}
+                                                                        </span>
+                                                                    @elseif($key === 'connection_test' && $value !== 'Success')
+                                                                        <span class="badge badge-light-danger fs-8 fw-bold">{{ $value }}</span>
+                                                                    @elseif($key === 'connection_test' && $value === 'Success')
+                                                                        <span class="badge badge-light-success fs-8 fw-bold">{{ $value }}</span>
+                                                                    @else
+                                                                        <code class="text-break">{{ $value }}</code>
+                                                                    @endif
                                                                 </span>
                                                             </div>
                                                         </div>

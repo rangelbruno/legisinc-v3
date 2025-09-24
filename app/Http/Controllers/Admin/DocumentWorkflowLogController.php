@@ -196,6 +196,9 @@ class DocumentWorkflowLogController extends Controller
             'protocolos_total' => DocumentWorkflowLog::where('event_type', 'protocol_assigned')->count(),
         ];
 
+        // Estatísticas S3 baseadas nos logs do sistema
+        $s3Stats = $this->getS3Statistics();
+
         // Estatísticas legacy (para comparação)
         $legacyStats = [
             'tramitacao_logs_hoje' => TramitacaoLog::whereDate('created_at', $hoje)->count(),
@@ -228,6 +231,7 @@ class DocumentWorkflowLogController extends Controller
             'pdf_stats' => $pdfStats,
             'signature_stats' => $signatureStats,
             'protocol_stats' => $protocolStats,
+            's3_stats' => $s3Stats,
             'legacy_stats' => $legacyStats,
             'usuarios_ativos' => $usuariosAtivos,
             'proposicoes_ativas' => $proposicoesAtivas,
@@ -1311,5 +1315,113 @@ class DocumentWorkflowLogController extends Controller
         }
 
         return $logsRemovidos;
+    }
+
+    /**
+     * Obtém estatísticas S3 baseadas nos logs do Laravel
+     */
+    private function getS3Statistics(): array
+    {
+        $hoje = Carbon::today();
+        $logPath = storage_path('logs/laravel.log');
+
+        $s3Stats = [
+            'uploads_hoje' => 0,
+            'uploads_sucesso' => 0,
+            'uploads_erro' => 0,
+            'tamanho_total_mb' => 0,
+            'tempo_medio_ms' => 0,
+            'ultimo_upload' => null,
+            'status_configuracao' => 'inativo',
+        ];
+
+        try {
+            // Verificar se S3 está configurado corretamente
+            $s3Config = config('filesystems.disks.s3');
+            $hasValidConfig = !empty($s3Config['key']) &&
+                             !empty($s3Config['secret']) &&
+                             !empty($s3Config['bucket']) &&
+                             $s3Config['key'] !== 'your_aws_access_key_here';
+
+            $s3Stats['status_configuracao'] = $hasValidConfig ? 'ativo' : 'inativo';
+
+            if (!$hasValidConfig) {
+                return $s3Stats;
+            }
+
+            // Ler logs do arquivo
+            if (file_exists($logPath)) {
+                $lines = file($logPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+                $temposExecucao = [];
+                $tamanhoTotal = 0;
+
+                foreach ($lines as $line) {
+                    // Procurar por logs S3 relacionados
+                    if (strpos($line, 'OnlyOffice S3') !== false || strpos($line, 'S3 Auto') !== false) {
+
+                        // Parse da linha de log
+                        if (preg_match('/\[([^\]]+)\]/', $line, $dateMatches)) {
+                            $logDate = Carbon::parse($dateMatches[1]);
+
+                            if ($logDate->isToday()) {
+                                $s3Stats['uploads_hoje']++;
+
+                                if (!$s3Stats['ultimo_upload'] || $logDate > $s3Stats['ultimo_upload']) {
+                                    $s3Stats['ultimo_upload'] = $logDate;
+                                }
+                            }
+
+                            // Verificar sucesso ou erro
+                            if (strpos($line, '✅') !== false || strpos($line, 'bem-sucedido') !== false || strpos($line, 'concluída') !== false) {
+                                $s3Stats['uploads_sucesso']++;
+                            } elseif (strpos($line, '❌') !== false || strpos($line, 'ERROR') !== false || strpos($line, 'falhou') !== false) {
+                                $s3Stats['uploads_erro']++;
+                            }
+
+                            // Extrair tempo de execução
+                            if (preg_match('/execution_time_ms["\']?[:\s]*(\d+(?:\.\d+)?)/', $line, $timeMatches)) {
+                                $temposExecucao[] = (float)$timeMatches[1];
+                            }
+
+                            // Extrair tamanho do arquivo
+                            if (preg_match('/file_size["\']?[:\s]*["\']?([^"\']*[KMGT]?B)["\']?/', $line, $sizeMatches)) {
+                                $tamanhoTotal += $this->convertToBytes($sizeMatches[1]);
+                            }
+                        }
+                    }
+                }
+
+                // Calcular estatísticas
+                if (!empty($temposExecucao)) {
+                    $s3Stats['tempo_medio_ms'] = round(array_sum($temposExecucao) / count($temposExecucao), 0);
+                }
+
+                $s3Stats['tamanho_total_mb'] = round($tamanhoTotal / (1024 * 1024), 2);
+            }
+
+        } catch (\Exception $e) {
+            \Log::warning('Erro ao obter estatísticas S3', [
+                'error' => $e->getMessage()
+            ]);
+        }
+
+        return $s3Stats;
+    }
+
+    /**
+     * Converte string de tamanho para bytes
+     */
+    private function convertToBytes(string $size): int
+    {
+        $size = trim($size);
+        $units = ['B' => 1, 'KB' => 1024, 'MB' => 1024*1024, 'GB' => 1024*1024*1024];
+
+        if (preg_match('/^([\d.]+)\s*([KMGT]?B)$/i', $size, $matches)) {
+            $number = (float)$matches[1];
+            $unit = strtoupper($matches[2]);
+            return (int)($number * ($units[$unit] ?? 1));
+        }
+
+        return 0;
     }
 }

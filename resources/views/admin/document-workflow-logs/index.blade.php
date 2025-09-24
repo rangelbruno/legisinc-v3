@@ -266,21 +266,9 @@
                 <div class="card-body py-3">
                     <div class="row g-3">
                         @php
-                            $s3Logs = $workflowLogs->filter(function($log) {
-                                return in_array($log->event_type, ['pdf_exported', 'onlyoffice_callback']) &&
-                                       isset($log->metadata['storage_disk']) &&
-                                       $log->metadata['storage_disk'] === 's3';
-                            });
-
-                            $s3Stats = [
-                                'uploads_hoje' => $s3Logs->where('created_at', '>=', \Carbon\Carbon::today())->count(),
-                                'uploads_sucesso' => $s3Logs->where('status', 'success')->count(),
-                                'uploads_erro' => $s3Logs->where('status', 'error')->count(),
-                                'tamanho_total' => $s3Logs->sum('file_size'),
-                                'tempo_medio' => $s3Logs->avg('execution_time_ms')
-                            ];
-
-                            $isS3Active = config('filesystems.default') === 's3';
+                            // Usar as estatísticas S3 do controller
+                            $s3StatsData = $estatisticas['s3_stats'] ?? [];
+                            $isS3Active = ($s3StatsData['status_configuracao'] ?? 'inativo') === 'ativo';
                         @endphp
 
                         <div class="col-md-3">
@@ -308,7 +296,7 @@
                                 </div>
                                 <div>
                                     <div class="fw-bold fs-6">Uploads Hoje</div>
-                                    <div class="text-primary fs-7">{{ $s3Stats['uploads_hoje'] }}</div>
+                                    <div class="text-primary fs-7">{{ $s3StatsData['uploads_hoje'] ?? 0 }}</div>
                                 </div>
                             </div>
                         </div>
@@ -323,7 +311,7 @@
                                 <div>
                                     <div class="fw-bold fs-6">Tamanho Total</div>
                                     <div class="text-info fs-7">
-                                        {{ number_format($s3Stats['tamanho_total'] / 1024 / 1024, 2) }} MB
+                                        {{ $s3StatsData['tamanho_total_mb'] ?? '0.00' }} MB
                                     </div>
                                 </div>
                             </div>
@@ -339,7 +327,7 @@
                                 <div>
                                     <div class="fw-bold fs-6">Tempo Médio</div>
                                     <div class="text-warning fs-7">
-                                        {{ number_format($s3Stats['tempo_medio'] ?? 0, 0) }} ms
+                                        {{ $s3StatsData['tempo_medio_ms'] ?? 0 }} ms
                                     </div>
                                 </div>
                             </div>
@@ -363,8 +351,9 @@
                                     <div class="fw-bold text-success mb-2">Taxa de Sucesso</div>
                                     <div class="fs-8">
                                         @php
-                                            $taxaSucesso = $s3Logs->count() > 0
-                                                ? ($s3Stats['uploads_sucesso'] / $s3Logs->count()) * 100
+                                            $totalUploads = ($s3StatsData['uploads_sucesso'] ?? 0) + ($s3StatsData['uploads_erro'] ?? 0);
+                                            $taxaSucesso = $totalUploads > 0
+                                                ? (($s3StatsData['uploads_sucesso'] ?? 0) / $totalUploads) * 100
                                                 : 0;
                                         @endphp
                                         <div class="progress h-20px">
@@ -377,8 +366,8 @@
                                             </div>
                                         </div>
                                         <div class="mt-2">
-                                            Sucesso: {{ $s3Stats['uploads_sucesso'] }} |
-                                            Erro: {{ $s3Stats['uploads_erro'] }}
+                                            Sucesso: {{ $s3StatsData['uploads_sucesso'] ?? 0 }} |
+                                            Erro: {{ $s3StatsData['uploads_erro'] ?? 0 }}
                                         </div>
                                     </div>
                                 </div>
