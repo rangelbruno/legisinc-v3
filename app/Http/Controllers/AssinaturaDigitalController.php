@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\ProposicaoController;
 use App\Models\Proposicao;
 use App\Services\AssinaturaDigitalService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
@@ -414,6 +416,172 @@ class AssinaturaDigitalController extends Controller
     }
 
     /**
+     * Servir PDF para visualização durante o processo de assinatura
+     */
+    public function servirPDFParaAssinatura(Proposicao $proposicao)
+    {
+        // Log detalhado de início
+        $user = Auth::user();
+        Log::info('📝 ASSINATURA: Servindo PDF para visualização durante assinatura', [
+            'proposicao_id' => $proposicao->id,
+            'proposicao_status' => $proposicao->status,
+            'proposicao_autor_id' => $proposicao->autor_id,
+            'proposicao_parlamentar_id' => $proposicao->parlamentar_id ?? 'N/A',
+            'user_id' => $user->id,
+            'user_name' => $user->name,
+            'user_email' => $user->email,
+            'user_roles' => $user->roles->pluck('name')->toArray(),
+            'user_permissions' => $user->getAllPermissions()->pluck('name')->toArray(),
+            'url_accessed' => request()->url(),
+            'pdf_s3_path' => $proposicao->pdf_s3_path,
+            'pdf_s3_url_exists' => !empty($proposicao->pdf_s3_url)
+        ]);
+
+        // Verificar permissões usando a mesma lógica do servePDF original
+
+        // Debug detalhado das verificações
+        Log::info('🔍 ASSINATURA DEBUG: Verificações de permissão detalhadas', [
+            'proposicao_id' => $proposicao->id,
+            'user_id' => $user->id,
+            'user_isLegislativo' => $user->isLegislativo(),
+            'proposicao_autor_id_equals_user' => $proposicao->autor_id === $user->id,
+            'user_isAssessorJuridico' => $user->isAssessorJuridico(),
+            'user_isProtocolo' => $user->isProtocolo(),
+            'user_isParlamentar' => $user->isParlamentar()
+        ]);
+
+        // Permitir acesso para:
+        // 1. Autor da proposição (parlamentar) - especialmente para status 'protocolado'
+        // 2. Usuários do legislativo
+        // 3. Usuários com perfil jurídico
+        // 4. Usuários do protocolo
+        if (! $user->isLegislativo() && $proposicao->autor_id !== $user->id && ! $user->isAssessorJuridico() && ! $user->isProtocolo()) {
+            Log::warning('🔴 ASSINATURA PDF: Acesso negado por permissões', [
+                'proposicao_id' => $proposicao->id,
+                'user_id' => Auth::id(),
+                'user_roles' => Auth::user()->roles->pluck('name'),
+                'proposicao_autor_id' => $proposicao->autor_id
+            ]);
+            abort(403, 'Acesso negado.');
+        }
+
+        // Para parlamentares, permitir apenas em status específicos onde o PDF já está disponível
+        if ($user->isParlamentar() && $proposicao->autor_id === $user->id) {
+            $statusPermitidos = ['protocolado', 'aprovado', 'assinado', 'enviado_protocolo', 'retornado_legislativo', 'aprovado_assinatura'];
+            if (! in_array($proposicao->status, $statusPermitidos)) {
+                Log::warning('🔴 ASSINATURA PDF: Status não permitido para parlamentar', [
+                    'proposicao_id' => $proposicao->id,
+                    'status_atual' => $proposicao->status,
+                    'status_permitidos' => $statusPermitidos
+                ]);
+                abort(403, 'PDF não disponível para download neste status.');
+            }
+        }
+
+        // Verificação adicional: para assinatura, deve estar em status apropriado
+        if (!in_array($proposicao->status, ['aprovado', 'aprovado_assinatura', 'retornado_legislativo'])) {
+            Log::warning('🔴 ASSINATURA PDF: Status inadequado para assinatura', [
+                'proposicao_id' => $proposicao->id,
+                'status_atual' => $proposicao->status
+            ]);
+            abort(403, 'Esta proposição não está disponível para assinatura no status atual.');
+        }
+
+        // 1) PRIORIDADE MÁXIMA: PDF na S3 (mais recente após exportação)
+        Log::info('🔍 ASSINATURA: Verificando PDF na S3', [
+            'proposicao_id' => $proposicao->id,
+            'pdf_s3_path_exists' => !empty($proposicao->pdf_s3_path),
+            'pdf_s3_path_value' => $proposicao->pdf_s3_path,
+            'pdf_s3_url_exists' => !empty($proposicao->pdf_s3_url)
+        ]);
+
+        if ($proposicao->pdf_s3_path) {
+            Log::info('🌐 ASSINATURA: PDF S3 encontrado, verificando disponibilidade', [
+                'proposicao_id' => $proposicao->id,
+                'pdf_s3_path' => $proposicao->pdf_s3_path
+            ]);
+
+            try {
+                // Primeiro, verificar se o arquivo existe na S3
+                if (Storage::disk('s3')->exists($proposicao->pdf_s3_path)) {
+                    Log::info('✅ ASSINATURA: Arquivo confirmado na S3', [
+                        'proposicao_id' => $proposicao->id,
+                        'pdf_s3_path' => $proposicao->pdf_s3_path
+                    ]);
+
+                    // Se existe URL válida, testar
+                    if ($proposicao->pdf_s3_url) {
+                        $context = stream_context_create([
+                            'http' => [
+                                'method' => 'HEAD',
+                                'timeout' => 5,
+                                'ignore_errors' => true
+                            ]
+                        ]);
+
+                        $headers = @get_headers($proposicao->pdf_s3_url, false, $context);
+
+                        if ($headers && strpos($headers[0], '200') !== false) {
+                            Log::info('✅ ASSINATURA: URL S3 válida - redirecionando', [
+                                'proposicao_id' => $proposicao->id,
+                                's3_status' => $headers[0]
+                            ]);
+
+                            return redirect($proposicao->pdf_s3_url);
+                        }
+                    }
+
+                    // URL não existe ou expirou - gerar nova
+                    Log::info('🔄 ASSINATURA: Gerando nova URL S3', [
+                        'proposicao_id' => $proposicao->id
+                    ]);
+
+                    $newS3Url = Storage::disk('s3')->temporaryUrl($proposicao->pdf_s3_path, now()->addHour());
+
+                    $proposicao->update(['pdf_s3_url' => $newS3Url]);
+
+                    Log::info('✅ ASSINATURA: Nova URL S3 gerada - redirecionando', [
+                        'proposicao_id' => $proposicao->id,
+                        'new_url_generated' => true
+                    ]);
+
+                    return redirect($newS3Url);
+                } else {
+                    Log::warning('⚠️ ASSINATURA: Arquivo não encontrado na S3', [
+                        'proposicao_id' => $proposicao->id,
+                        'pdf_s3_path' => $proposicao->pdf_s3_path
+                    ]);
+
+                    // Limpar campos S3 se arquivo não existir mais
+                    $proposicao->update([
+                        'pdf_s3_path' => null,
+                        'pdf_s3_url' => null,
+                        'pdf_size_bytes' => null
+                    ]);
+                }
+            } catch (\Exception $e) {
+                Log::error('❌ ASSINATURA: Erro ao acessar S3', [
+                    'proposicao_id' => $proposicao->id,
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
+                ]);
+            }
+        } else {
+            Log::info('ℹ️ ASSINATURA: Nenhum PDF na S3 para esta proposição', [
+                'proposicao_id' => $proposicao->id
+            ]);
+        }
+
+        // 2) FALLBACK: Usar o método padrão servePDF
+        Log::info('📄 ASSINATURA: Usando fallback para servePDF', [
+            'proposicao_id' => $proposicao->id
+        ]);
+
+        // Redirecionar para o endpoint padrão de PDF
+        return app(ProposicaoController::class)->servePDF($proposicao);
+    }
+
+    /**
      * Visualizar PDF assinado
      */
     public function visualizarPDFAssinado(Proposicao $proposicao)
@@ -478,6 +646,132 @@ class AssinaturaDigitalController extends Controller
             'expects_json' => $request->expectsJson(),
             'headers' => $request->headers->all()
         ]);
+    }
+
+    /**
+     * Debug: Verificar status S3 de uma proposição
+     */
+    public function debugS3Status(Proposicao $proposicao)
+    {
+        $status = [
+            'proposicao_id' => $proposicao->id,
+            'pdf_s3_path' => $proposicao->pdf_s3_path,
+            'pdf_s3_url' => $proposicao->pdf_s3_url,
+            'pdf_size_bytes' => $proposicao->pdf_size_bytes,
+            's3_file_exists' => false,
+            's3_url_valid' => false,
+            'error' => null
+        ];
+
+        if ($proposicao->pdf_s3_path) {
+            try {
+                // Verificar se arquivo existe na S3
+                $status['s3_file_exists'] = Storage::disk('s3')->exists($proposicao->pdf_s3_path);
+
+                // Se tem URL, verificar se é válida
+                if ($proposicao->pdf_s3_url) {
+                    $context = stream_context_create([
+                        'http' => [
+                            'method' => 'HEAD',
+                            'timeout' => 5,
+                            'ignore_errors' => true
+                        ]
+                    ]);
+
+                    $headers = @get_headers($proposicao->pdf_s3_url, false, $context);
+                    $status['s3_url_valid'] = $headers && strpos($headers[0], '200') !== false;
+                    $status['s3_headers'] = $headers[0] ?? 'No response';
+                }
+
+                // Se arquivo existe mas URL não é válida, gerar nova
+                if ($status['s3_file_exists'] && !$status['s3_url_valid']) {
+                    $newUrl = Storage::disk('s3')->temporaryUrl($proposicao->pdf_s3_path, now()->addHour());
+                    $status['new_url_generated'] = $newUrl;
+                }
+
+            } catch (\Exception $e) {
+                $status['error'] = $e->getMessage();
+            }
+        }
+
+        return response()->json($status);
+    }
+
+    /**
+     * Debug: Corrigir S3 path da proposição 4 (temporário)
+     */
+    public function fixProposicao4S3(Proposicao $proposicao)
+    {
+        if ($proposicao->id !== 4) {
+            return response()->json(['error' => 'Este endpoint é apenas para proposição 4'], 400);
+        }
+
+        $s3Path = 'proposicoes/pdfs/2025/09/24/4/automatic/proposicao_4_auto_1758720786.pdf';
+
+        try {
+            // Verificar se arquivo existe na S3
+            if (Storage::disk('s3')->exists($s3Path)) {
+                // Obter tamanho do arquivo
+                $size = Storage::disk('s3')->size($s3Path);
+
+                // Gerar URL temporária
+                $tempUrl = Storage::disk('s3')->temporaryUrl($s3Path, now()->addHour());
+
+                // Dados antes da atualização
+                $beforeUpdate = [
+                    'pdf_s3_path' => $proposicao->pdf_s3_path,
+                    'pdf_s3_url' => $proposicao->pdf_s3_url,
+                    'pdf_size_bytes' => $proposicao->pdf_size_bytes
+                ];
+
+                // Atualizar usando DB transaction para garantir persistência
+                \DB::transaction(function () use ($proposicao, $s3Path, $tempUrl, $size) {
+                    $proposicao->pdf_s3_path = $s3Path;
+                    $proposicao->pdf_s3_url = $tempUrl;
+                    $proposicao->pdf_size_bytes = $size;
+                    $saved = $proposicao->save();
+
+                    if (!$saved) {
+                        throw new \Exception('Falha ao salvar no banco de dados');
+                    }
+                });
+
+                // Forçar refresh dos dados
+                $proposicao->refresh();
+
+                // Dados após a atualização
+                $afterUpdate = [
+                    'pdf_s3_path' => $proposicao->pdf_s3_path,
+                    'pdf_s3_url' => $proposicao->pdf_s3_url,
+                    'pdf_size_bytes' => $proposicao->pdf_size_bytes
+                ];
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Proposição 4 atualizada com PDF S3 correto (com transação)',
+                    'data' => [
+                        'pdf_s3_path' => $s3Path,
+                        'pdf_size_bytes' => $size,
+                        'before_update' => $beforeUpdate,
+                        'after_update' => $afterUpdate,
+                        'persistence_verified' => $proposicao->pdf_s3_path === $s3Path,
+                        'new_url_generated' => true
+                    ]
+                ]);
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Arquivo não encontrado na S3',
+                    'pdf_s3_path' => $s3Path
+                ]);
+            }
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+        }
     }
     
     /**

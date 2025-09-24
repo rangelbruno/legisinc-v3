@@ -5064,15 +5064,103 @@ class ProposicaoController extends Controller
             }
         }
 
-        // NOVA ESTRATÉGIA: 1) PDF Exportado OnlyOffice 2) PDF OnlyOffice Conversion API 3) PDF oficial 4) DomPDF fallback
-        Log::info('🔴 PDF REQUEST: Verificando PDF exportado via OnlyOffice', [
+        // NOVA ESTRATÉGIA: 0) PDF S3 1) PDF Exportado OnlyOffice 2) PDF OnlyOffice Conversion API 3) PDF oficial 4) DomPDF fallback
+        Log::info('🔴 PDF REQUEST: Iniciando verificação com PRIORIDADE S3', [
             'proposicao_id' => $proposicao->id,
+            'pdf_s3_path' => $proposicao->pdf_s3_path,
+            'pdf_s3_url' => $proposicao->pdf_s3_url ? 'EXISTE' : 'NULO',
             'pdf_exportado_path' => $proposicao->pdf_exportado_path,
             'pdf_exportado_em' => $proposicao->pdf_exportado_em,
             'arquivo_pdf_path' => $proposicao->arquivo_pdf_path,
             'pdf_conversor_usado' => $proposicao->pdf_conversor_usado,
             'pdf_gerado_em' => $proposicao->pdf_gerado_em
         ]);
+
+        // 0) MÁXIMA PRIORIDADE: PDF armazenado na S3 (mais recente após exportação)
+        if ($proposicao->pdf_s3_path) {
+            try {
+                // Verificar se a URL S3 ainda é válida (URLs assinadas expiram)
+                if ($proposicao->pdf_s3_url) {
+                    Log::info('🌐 PDF REQUEST: Tentando servir PDF da S3', [
+                        'proposicao_id' => $proposicao->id,
+                        'pdf_s3_path' => $proposicao->pdf_s3_path,
+                        'pdf_size_bytes' => $proposicao->pdf_size_bytes
+                    ]);
+
+                    // Fazer HEAD request para verificar se a URL ainda é válida
+                    $context = stream_context_create([
+                        'http' => [
+                            'method' => 'HEAD',
+                            'timeout' => 5,
+                            'ignore_errors' => true
+                        ]
+                    ]);
+
+                    $headers = @get_headers($proposicao->pdf_s3_url, false, $context);
+
+                    if ($headers && strpos($headers[0], '200') !== false) {
+                        Log::info('✅ PDF REQUEST: URL S3 válida, redirecionando', [
+                            'proposicao_id' => $proposicao->id,
+                            's3_url_status' => $headers[0] ?? 'unknown'
+                        ]);
+
+                        // Redirecionar para a URL S3 assinada
+                        return redirect($proposicao->pdf_s3_url);
+                    } else {
+                        Log::warning('⚠️ PDF REQUEST: URL S3 expirada, regenerando', [
+                            'proposicao_id' => $proposicao->id,
+                            's3_headers' => $headers[0] ?? 'no response'
+                        ]);
+                    }
+                }
+
+                // URL S3 não existe ou expirou - tentar regenerar
+                if ($proposicao->pdf_s3_path) {
+                    Log::info('🔄 PDF REQUEST: Regenerando URL assinada S3', [
+                        'proposicao_id' => $proposicao->id,
+                        'pdf_s3_path' => $proposicao->pdf_s3_path
+                    ]);
+
+                    // Verificar se arquivo existe na S3
+                    if (Storage::disk('s3')->exists($proposicao->pdf_s3_path)) {
+                        // Gerar nova URL assinada (válida por 1 hora)
+                        $newS3Url = Storage::disk('s3')->temporaryUrl($proposicao->pdf_s3_path, now()->addHour());
+
+                        // Atualizar URL na proposição
+                        $proposicao->update(['pdf_s3_url' => $newS3Url]);
+
+                        Log::info('✅ PDF REQUEST: Nova URL S3 gerada', [
+                            'proposicao_id' => $proposicao->id,
+                            'nova_url_valida' => true
+                        ]);
+
+                        // Redirecionar para a nova URL S3
+                        return redirect($newS3Url);
+                    } else {
+                        Log::warning('⚠️ PDF REQUEST: Arquivo não encontrado na S3', [
+                            'proposicao_id' => $proposicao->id,
+                            'pdf_s3_path' => $proposicao->pdf_s3_path
+                        ]);
+
+                        // Limpar campos S3 se arquivo não existir mais
+                        $proposicao->update([
+                            'pdf_s3_path' => null,
+                            'pdf_s3_url' => null,
+                            'pdf_size_bytes' => null
+                        ]);
+                    }
+                }
+
+            } catch (\Exception $e) {
+                Log::error('❌ PDF REQUEST: Erro ao acessar S3', [
+                    'proposicao_id' => $proposicao->id,
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
+                ]);
+
+                // Continuar para próximas opções se S3 falhar
+            }
+        }
 
         // 1) MÁXIMA PRIORIDADE: PDF exportado diretamente via OnlyOffice (botão Exportar PDF)
         if ($proposicao->pdf_exportado_path && $proposicao->pdf_exportado_em) {

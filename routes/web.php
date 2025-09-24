@@ -1606,6 +1606,7 @@ Route::get('/consulta/proposicao/{id}/pdf', [\App\Http\Controllers\ProposicaoCon
 Route::prefix('proposicoes/{proposicao}/assinatura-digital')->name('proposicoes.assinatura-digital.')->middleware(['auth', 'check.assinatura.permission'])->group(function () {
     Route::get('/', [App\Http\Controllers\AssinaturaDigitalController::class, 'mostrarFormulario'])->name('formulario');
     Route::get('/dados', [App\Http\Controllers\AssinaturaDigitalController::class, 'dados'])->name('dados');
+    Route::get('/pdf', [App\Http\Controllers\AssinaturaDigitalController::class, 'servirPDFParaAssinatura'])->name('pdf');
     Route::post('/processar', [App\Http\Controllers\AssinaturaDigitalController::class, 'processarAssinatura'])->name('processar');
     Route::get('/visualizar', [App\Http\Controllers\AssinaturaDigitalController::class, 'visualizarPDFAssinado'])->name('visualizar');
     Route::get('/download', [App\Http\Controllers\AssinaturaDigitalController::class, 'downloadPDFAssinado'])->name('download');
@@ -1614,6 +1615,13 @@ Route::prefix('proposicoes/{proposicao}/assinatura-digital')->name('proposicoes.
 
 // Rota de teste JSON para debug
 Route::post('/teste-json', [App\Http\Controllers\AssinaturaDigitalController::class, 'testeJson'])->middleware('auth');
+
+// Debug S3 status (temporário)
+Route::get('/debug/proposicoes/{proposicao}/s3-status', [App\Http\Controllers\AssinaturaDigitalController::class, 'debugS3Status'])->middleware('auth');
+
+// Fix proposição 4 S3 (temporário)
+Route::post('/debug/proposicoes/{proposicao}/fix-s3', [App\Http\Controllers\AssinaturaDigitalController::class, 'fixProposicao4S3'])->middleware('auth');
+Route::get('/debug/proposicoes/{proposicao}/fix-s3', [App\Http\Controllers\AssinaturaDigitalController::class, 'fixProposicao4S3'])->middleware('auth');
 
 // ===== ROTA TEMPORÁRIA PARA PDF DE PROPOSIÇÕES PROTOCOLADAS (SEM AUTENTICAÇÃO) =====
 Route::get('/proposicoes/{proposicao}/pdf-publico', [\App\Http\Controllers\ProposicaoController::class, 'servePDFPublico'])

@@ -182,7 +182,25 @@ class CheckAssinaturaPermission
      */
     private function existePDFParaAssinatura(Proposicao $proposicao): bool
     {
-        // Verificar se existe PDF gerado pelo sistema
+        // PRIORIDADE 1: Verificar se existe PDF na S3
+        if ($proposicao->pdf_s3_path) {
+            try {
+                if (\Illuminate\Support\Facades\Storage::disk('s3')->exists($proposicao->pdf_s3_path)) {
+                    Log::info('CheckAssinaturaPermission - PDF encontrado na S3', [
+                        'proposicao_id' => $proposicao->id,
+                        'pdf_s3_path' => $proposicao->pdf_s3_path
+                    ]);
+                    return true;
+                }
+            } catch (\Exception $e) {
+                Log::warning('CheckAssinaturaPermission - Erro ao verificar S3', [
+                    'proposicao_id' => $proposicao->id,
+                    'error' => $e->getMessage()
+                ]);
+            }
+        }
+
+        // PRIORIDADE 2: Verificar se existe PDF gerado pelo sistema
         if ($proposicao->arquivo_pdf_path) {
             $caminho = storage_path('app/' . $proposicao->arquivo_pdf_path);
             if (file_exists($caminho)) {

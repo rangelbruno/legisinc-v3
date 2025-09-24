@@ -820,19 +820,24 @@ createApp({
         // PDF Methods
         async initializePdf() {
             try {
-                const pdfRoute = `/proposicoes/${this.proposicao.id}/pdf`;
+                // NOVA ROTA: Usar endpoint específico de assinatura que prioriza S3
+                const pdfRoute = `/proposicoes/${this.proposicaoId}/assinatura-digital/pdf`;
                 this.pdfUrl = pdfRoute;
-                
+
+                console.log('🔄 PDF: Inicializando com rota de assinatura:', pdfRoute);
+
                 // Check if PDF exists
                 const response = await fetch(pdfRoute, { method: 'HEAD' });
                 if (response.ok) {
+                    console.log('✅ PDF: Endpoint respondeu OK');
                     this.pdfLoading = false;
                 } else {
+                    console.log('⚠️ PDF: Endpoint não respondeu, gerando automaticamente');
                     this.pdfError = 'PDF não encontrado. Gerando automaticamente...';
                     this.generatePdf();
                 }
             } catch (error) {
-                console.error('Error initializing PDF:', error);
+                console.error('❌ PDF: Erro ao inicializar:', error);
                 this.pdfError = 'Erro ao carregar PDF';
                 this.pdfLoading = false;
             }
@@ -851,22 +856,54 @@ createApp({
         async generatePdf() {
             this.pdfLoading = true;
             this.pdfError = null;
-            
+
+            console.log('🔄 PDF: Gerando PDF automaticamente');
+
             try {
-                const response = await fetch(`/proposicoes/${this.proposicao.id}/assinar`, {
+                // Tentar gerar PDF através do endpoint de assinatura
+                const response = await fetch(`/proposicoes/${this.proposicaoId}/assinatura-digital/pdf`, {
                     method: 'GET',
                     headers: {
                         'X-Requested-With': 'XMLHttpRequest'
                     }
                 });
-                
+
+                if (response.ok) {
+                    console.log('✅ PDF: Geração iniciada, aguardando...');
+                    setTimeout(() => {
+                        this.initializePdf();
+                    }, 3000);
+                } else {
+                    console.log('⚠️ PDF: Falha na geração, usando fallback');
+                    // Fallback: tentar o endpoint antigo
+                    this.generatePdfFallback();
+                }
+            } catch (error) {
+                console.error('❌ PDF: Erro na geração:', error);
+                this.pdfError = 'Erro ao gerar PDF';
+                this.pdfLoading = false;
+            }
+        },
+
+        async generatePdfFallback() {
+            try {
+                const response = await fetch(`/proposicoes/${this.proposicaoId}/assinar`, {
+                    method: 'GET',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+
                 if (response.ok) {
                     setTimeout(() => {
                         this.initializePdf();
                     }, 3000);
+                } else {
+                    this.pdfError = 'Erro ao gerar PDF automaticamente';
+                    this.pdfLoading = false;
                 }
             } catch (error) {
-                console.error('Error generating PDF:', error);
+                console.error('Error in PDF fallback:', error);
                 this.pdfError = 'Erro ao gerar PDF';
                 this.pdfLoading = false;
             }
