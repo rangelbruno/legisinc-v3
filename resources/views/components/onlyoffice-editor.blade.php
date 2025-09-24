@@ -311,7 +311,26 @@
             </div>
             
             <div class="d-flex align-items-center gap-3">
-                @if($proposicaoId)
+                @php
+                    // Verificar se o botão de exportar PDF deve ser exibido
+                    $mostrarBotao = true; // Valor padrão
+
+                    try {
+                        $exibirBotaoPDF = \App\Models\Parametro::where('codigo', 'editor.exibir_botao_exportar_pdf_s3')->first();
+
+                        if ($exibirBotaoPDF) {
+                            $mostrarBotao = $exibirBotaoPDF->valor == '1';
+                        } else {
+                            // Fallback para cache se não estiver no banco
+                            $mostrarBotao = \Illuminate\Support\Facades\Cache::get('editor_config_editor.exibir_botao_exportar_pdf_s3', '1') == '1';
+                        }
+                    } catch (\Exception $e) {
+                        // Em caso de erro, manter valor padrão (true)
+                        $mostrarBotao = true;
+                    }
+                @endphp
+
+                @if($proposicaoId && $mostrarBotao)
                 <!-- Dropdown para opções de exportação PDF -->
                 <div class="btn-group">
                     <button id="btnExportarPDF" class="btn btn-warning btn-sm" onclick="exportarPDFParaS3WithUI(this)" data-proposicao-id="{{ $proposicaoId }}">

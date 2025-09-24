@@ -723,15 +723,19 @@ class ProposicaoLegislativoController extends Controller
     /**
      * Gera PDF após aprovação preservando formatação do template
      */
-    private function gerarPDFAposAprovacao(Proposicao $proposicao): void
+    public function gerarPDFAposAprovacao(Proposicao $proposicao): void
     {
         try {
             // Log início do processo
             Log::info('Iniciando geração de PDF após aprovação', [
                 'proposicao_id' => $proposicao->id,
                 'arquivo_path' => $proposicao->arquivo_path,
-                'status' => $proposicao->status
+                'status' => $proposicao->status,
+                's3_enabled' => config('filesystems.default') === 's3'
             ]);
+
+            // Verificar se há documento no OnlyOffice/S3 mais recente
+            $this->sincronizarDocumentoOnlyOffice($proposicao);
 
             if (empty($proposicao->arquivo_path) || !Storage::exists($proposicao->arquivo_path)) {
                 // Para documentos oficiais, isso é erro crítico
@@ -765,7 +769,7 @@ class ProposicaoLegislativoController extends Controller
             // Converter passando o status para governança
             $converter = app(DocumentConversionService::class);
             $result = $converter->convertToPDF(
-                $proposicao->arquivo_path, 
+                $proposicao->arquivo_path,
                 $pdfPath,
                 $proposicao->status  // ← Status para governança
             );
@@ -784,8 +788,30 @@ class ProposicaoLegislativoController extends Controller
                     'pdf_path' => $pdfPath,
                     'converter' => $result['converter'],
                     'duration_ms' => $result['duration'],
-                    'size_bytes' => $result['output_bytes']
+                    'size_bytes' => $result['output_bytes'],
+                    'storage_disk' => config('filesystems.default'),
+                    's3_bucket' => config('filesystems.disks.s3.bucket'),
+                    's3_region' => config('filesystems.disks.s3.region')
                 ]);
+
+                // Registrar sucesso no DocumentWorkflowLog
+                \App\Models\DocumentWorkflowLog::logPdfExport(
+                    proposicaoId: $proposicao->id,
+                    status: 'success',
+                    description: 'PDF gerado e salvo com sucesso no ' . config('filesystems.default'),
+                    filePath: $pdfPath,
+                    fileSizeBytes: $result['output_bytes'],
+                    fileHash: hash('sha256', Storage::get($pdfPath)),
+                    executionTimeMs: $result['duration'] ?? null,
+                    metadata: [
+                        'converter' => $result['converter'],
+                        'storage_disk' => config('filesystems.default'),
+                        's3_bucket' => config('filesystems.disks.s3.bucket'),
+                        's3_region' => config('filesystems.disks.s3.region'),
+                        'status' => $proposicao->status,
+                        'template_used' => $result['template'] ?? 'default'
+                    ]
+                );
 
                 // Limpeza segura com retenção
                 $this->limparPDFsAntigosComRetencao($proposicao->id, $pdfPath);
@@ -799,11 +825,28 @@ class ProposicaoLegislativoController extends Controller
                         'error' => $result['error']
                     ]);
                 }
-                
+
                 $proposicao->update([
                     'pdf_erro_geracao' => $result['error'],
                     'pdf_tentativa_em' => now()
                 ]);
+
+                // Registrar erro no DocumentWorkflowLog
+                \App\Models\DocumentWorkflowLog::logPdfExport(
+                    proposicaoId: $proposicao->id,
+                    status: 'error',
+                    description: 'Erro na geração do PDF',
+                    filePath: null,
+                    fileSizeBytes: null,
+                    fileHash: null,
+                    executionTimeMs: $result['duration'] ?? null,
+                    metadata: [
+                        'converter_attempted' => $result['converter'] ?? 'unknown',
+                        'storage_disk' => config('filesystems.default'),
+                        'status' => $proposicao->status
+                    ],
+                    errorMessage: $result['error']
+                );
             }
 
         } catch (\Exception $e) {
@@ -812,6 +855,24 @@ class ProposicaoLegislativoController extends Controller
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
+
+            // Registrar exceção no DocumentWorkflowLog
+            \App\Models\DocumentWorkflowLog::logPdfExport(
+                proposicaoId: $proposicao->id,
+                status: 'error',
+                description: 'Exceção crítica na geração de PDF',
+                filePath: null,
+                fileSizeBytes: null,
+                fileHash: null,
+                executionTimeMs: null,
+                metadata: [
+                    'error_type' => get_class($e),
+                    'error_code' => $e->getCode(),
+                    'storage_disk' => config('filesystems.default'),
+                    'status' => $proposicao->status
+                ],
+                errorMessage: $e->getMessage()
+            );
         }
     }
 
@@ -845,9 +906,73 @@ class ProposicaoLegislativoController extends Controller
                     'data_modificacao' => date('Y-m-d H:i:s', $item['modified'])
                 ]);
             }
-            
+
         } catch (\Exception $e) {
             Log::warning('Erro na limpeza com retenção', ['error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Sincroniza documento do OnlyOffice/S3 antes de gerar PDF
+     */
+    private function sincronizarDocumentoOnlyOffice(Proposicao $proposicao): void
+    {
+        try {
+            // Verificar se está usando S3
+            if (config('filesystems.default') !== 's3') {
+                return;
+            }
+
+            // Se tem chave do OnlyOffice, forçar download da versão mais recente
+            if (!empty($proposicao->onlyoffice_document_key)) {
+                Log::info('Sincronizando documento do OnlyOffice/S3', [
+                    'proposicao_id' => $proposicao->id,
+                    'document_key' => $proposicao->onlyoffice_document_key,
+                    'arquivo_path' => $proposicao->arquivo_path
+                ]);
+
+                // Verificar se o arquivo existe no S3 e obter metadados
+                if (Storage::exists($proposicao->arquivo_path)) {
+                    $metadata = Storage::getMetadata($proposicao->arquivo_path);
+
+                    Log::info('Documento sincronizado do S3', [
+                        'proposicao_id' => $proposicao->id,
+                        'file_size' => $metadata['size'] ?? 'unknown',
+                        'last_modified' => $metadata['last_modified'] ?? 'unknown',
+                        'content_type' => $metadata['content_type'] ?? 'unknown'
+                    ]);
+
+                    // Forçar atualização do timestamp para invalidar cache
+                    $proposicao->touch();
+                }
+            }
+
+            // Se houver arquivo temporário do OnlyOffice, usar ele
+            $tempPath = "proposicoes/temp/onlyoffice_{$proposicao->id}.rtf";
+            if (Storage::exists($tempPath)) {
+                $tempContent = Storage::get($tempPath);
+                $currentContent = Storage::exists($proposicao->arquivo_path)
+                    ? Storage::get($proposicao->arquivo_path)
+                    : '';
+
+                // Se o conteúdo for diferente, atualizar
+                if ($tempContent !== $currentContent) {
+                    Storage::put($proposicao->arquivo_path, $tempContent);
+                    Storage::delete($tempPath);
+
+                    Log::info('Documento atualizado do arquivo temporário OnlyOffice', [
+                        'proposicao_id' => $proposicao->id,
+                        'temp_path' => $tempPath,
+                        'new_size' => strlen($tempContent)
+                    ]);
+                }
+            }
+
+        } catch (\Exception $e) {
+            Log::warning('Erro ao sincronizar documento OnlyOffice', [
+                'proposicao_id' => $proposicao->id,
+                'error' => $e->getMessage()
+            ]);
         }
     }
 }

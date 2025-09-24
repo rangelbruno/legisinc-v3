@@ -252,6 +252,142 @@
                 </div>
             </div>
 
+            <!-- Card de Status do S3 -->
+            <div class="card mb-5 mb-xl-8">
+                <div class="card-header border-0 pt-5">
+                    <h3 class="card-title align-items-start flex-column">
+                        <span class="card-label fw-bold fs-3 mb-1">
+                            <i class="fab fa-aws text-warning me-2"></i>
+                            Status do Armazenamento S3
+                        </span>
+                        <span class="text-muted mt-1 fw-semibold fs-7">Monitoramento de uploads e operações do S3</span>
+                    </h3>
+                </div>
+                <div class="card-body py-3">
+                    <div class="row g-3">
+                        @php
+                            $s3Logs = $workflowLogs->filter(function($log) {
+                                return in_array($log->event_type, ['pdf_exported', 'onlyoffice_callback']) &&
+                                       isset($log->metadata['storage_disk']) &&
+                                       $log->metadata['storage_disk'] === 's3';
+                            });
+
+                            $s3Stats = [
+                                'uploads_hoje' => $s3Logs->where('created_at', '>=', \Carbon\Carbon::today())->count(),
+                                'uploads_sucesso' => $s3Logs->where('status', 'success')->count(),
+                                'uploads_erro' => $s3Logs->where('status', 'error')->count(),
+                                'tamanho_total' => $s3Logs->sum('file_size'),
+                                'tempo_medio' => $s3Logs->avg('execution_time_ms')
+                            ];
+
+                            $isS3Active = config('filesystems.default') === 's3';
+                        @endphp
+
+                        <div class="col-md-3">
+                            <div class="d-flex align-items-center">
+                                <div class="symbol symbol-45px me-3">
+                                    <span class="symbol-label {{ $isS3Active ? 'bg-light-success' : 'bg-light-danger' }}">
+                                        <i class="fas fa-cloud {{ $isS3Active ? 'text-success' : 'text-danger' }} fs-2"></i>
+                                    </span>
+                                </div>
+                                <div>
+                                    <div class="fw-bold fs-6">Status S3</div>
+                                    <div class="text-{{ $isS3Active ? 'success' : 'danger' }} fs-7">
+                                        {{ $isS3Active ? 'Ativo' : 'Inativo' }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-3">
+                            <div class="d-flex align-items-center">
+                                <div class="symbol symbol-45px me-3">
+                                    <span class="symbol-label bg-light-primary">
+                                        <i class="fas fa-upload text-primary fs-2"></i>
+                                    </span>
+                                </div>
+                                <div>
+                                    <div class="fw-bold fs-6">Uploads Hoje</div>
+                                    <div class="text-primary fs-7">{{ $s3Stats['uploads_hoje'] }}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-3">
+                            <div class="d-flex align-items-center">
+                                <div class="symbol symbol-45px me-3">
+                                    <span class="symbol-label bg-light-info">
+                                        <i class="fas fa-hdd text-info fs-2"></i>
+                                    </span>
+                                </div>
+                                <div>
+                                    <div class="fw-bold fs-6">Tamanho Total</div>
+                                    <div class="text-info fs-7">
+                                        {{ number_format($s3Stats['tamanho_total'] / 1024 / 1024, 2) }} MB
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-3">
+                            <div class="d-flex align-items-center">
+                                <div class="symbol symbol-45px me-3">
+                                    <span class="symbol-label bg-light-warning">
+                                        <i class="fas fa-clock text-warning fs-2"></i>
+                                    </span>
+                                </div>
+                                <div>
+                                    <div class="fw-bold fs-6">Tempo Médio</div>
+                                    <div class="text-warning fs-7">
+                                        {{ number_format($s3Stats['tempo_medio'] ?? 0, 0) }} ms
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    @if($isS3Active)
+                        <div class="separator separator-dashed my-5"></div>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="bg-light-primary rounded p-3">
+                                    <div class="fw-bold text-primary mb-2">Configuração S3</div>
+                                    <div class="fs-8">
+                                        <div>Bucket: <span class="text-dark fw-bold">{{ config('filesystems.disks.s3.bucket') }}</span></div>
+                                        <div>Região: <span class="text-dark fw-bold">{{ config('filesystems.disks.s3.region') }}</span></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="bg-light-success rounded p-3">
+                                    <div class="fw-bold text-success mb-2">Taxa de Sucesso</div>
+                                    <div class="fs-8">
+                                        @php
+                                            $taxaSucesso = $s3Logs->count() > 0
+                                                ? ($s3Stats['uploads_sucesso'] / $s3Logs->count()) * 100
+                                                : 0;
+                                        @endphp
+                                        <div class="progress h-20px">
+                                            <div class="progress-bar bg-success" role="progressbar"
+                                                 style="width: {{ $taxaSucesso }}%;"
+                                                 aria-valuenow="{{ $taxaSucesso }}"
+                                                 aria-valuemin="0"
+                                                 aria-valuemax="100">
+                                                {{ number_format($taxaSucesso, 1) }}%
+                                            </div>
+                                        </div>
+                                        <div class="mt-2">
+                                            Sucesso: {{ $s3Stats['uploads_sucesso'] }} |
+                                            Erro: {{ $s3Stats['uploads_erro'] }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
+                </div>
+            </div>
+
             <!-- Progresso do Workflow por Proposição -->
             @if($workflowLogs->count() > 0)
                 @php

@@ -816,6 +816,35 @@ Route::post('/parametros-dados-gerais-camara', function () {
     return app(App\Http\Controllers\DadosGeraisCamaraController::class)->store(request());
 })->name('parametros.dados-gerais-camara.store');
 
+// Rotas para Configurações do Editor
+Route::get('/parametros-editor-config', function () {
+    // Auto-login se não estiver logado
+    if (! Auth::check()) {
+        $user = new \App\Models\User;
+        $user->id = 5;
+        $user->name = 'Bruno Administrador';
+        $user->email = 'bruno@sistema.gov.br';
+        $user->exists = true;
+        Auth::login($user);
+    }
+
+    return app(App\Http\Controllers\EditorConfigController::class)->index();
+})->name('parametros.editor.config');
+
+Route::post('/parametros-editor-config', function () {
+    // Auto-login se não estiver logado
+    if (! Auth::check()) {
+        $user = new \App\Models\User;
+        $user->id = 5;
+        $user->name = 'Bruno Administrador';
+        $user->email = 'bruno@sistema.gov.br';
+        $user->exists = true;
+        Auth::login($user);
+    }
+
+    return app(App\Http\Controllers\EditorConfigController::class)->store(request());
+})->name('parametros.editor.config.store');
+
 // Test route para debug
 Route::get('/test-debug', function () {
     return response()->json(['message' => 'Route working', 'time' => now()]);
