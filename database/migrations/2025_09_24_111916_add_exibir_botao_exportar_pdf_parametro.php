@@ -12,27 +12,27 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // Verificar se existem os grupos e tipos necessários
-        $grupoEditor = DB::table('grupo_parametros')->where('codigo', 'editor')->first();
-        $tipoBoolean = DB::table('tipo_parametros')->where('codigo', 'boolean')->first();
+        // Criar tipo boolean se não existir
+        $tipoBooleanId = DB::table('tipos_parametros')->insertGetId([
+            'nome' => 'Boolean',
+            'codigo' => 'boolean',
+            'classe_validacao' => 'boolean',
+            'configuracao_padrao' => json_encode(['default' => false]),
+            'ativo' => true,
+            'created_at' => now(),
+            'updated_at' => now()
+        ]);
 
-        // Se não existir o grupo Editor, criar um básico
-        if (!$grupoEditor) {
-            $grupoEditorId = DB::table('grupo_parametros')->insertGetId([
-                'nome' => 'Editor',
-                'codigo' => 'editor',
-                'descricao' => 'Configurações do editor OnlyOffice',
-                'ativo' => true,
-                'ordem' => 100,
-                'created_at' => now(),
-                'updated_at' => now()
-            ]);
-        } else {
-            $grupoEditorId = $grupoEditor->id;
-        }
-
-        // Se não existir o tipo boolean, usar ID padrão
-        $tipoBooleanId = $tipoBoolean ? $tipoBoolean->id : 1;
+        // Criar grupo Editor se não existir
+        $grupoEditorId = DB::table('grupos_parametros')->insertGetId([
+            'nome' => 'Editor',
+            'codigo' => 'editor',
+            'descricao' => 'Configurações do editor OnlyOffice',
+            'ativo' => true,
+            'ordem' => 100,
+            'created_at' => now(),
+            'updated_at' => now()
+        ]);
 
         // Adicionar o parâmetro para controlar a exibição do botão de exportar PDF
         DB::table('parametros')->updateOrInsert(
@@ -64,6 +64,6 @@ return new class extends Migration
     {
         DB::table('parametros')->where('codigo', 'editor.exibir_botao_exportar_pdf_s3')->delete();
         // Opcional: remover o grupo se foi criado por esta migração
-        DB::table('grupo_parametros')->where('codigo', 'editor')->delete();
+        DB::table('grupos_parametros')->where('codigo', 'editor')->delete();
     }
 };
