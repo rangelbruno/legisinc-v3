@@ -1898,11 +1898,23 @@ Sistema funcionando!\par
                 $s3Url = \Illuminate\Support\Facades\Storage::disk('s3')->temporaryUrl($fileName, now()->addHour());
 
                 // 10. Atualizar proposição com informações do PDF no S3
-                $proposicao->update([
+                Log::info('🗂️ OnlyOffice S3: Atualizando banco de dados', [
+                    'proposicao_id' => $proposicao->id,
+                    'pdf_s3_path' => $fileName,
+                    'pdf_size_bytes' => $fileSizeBytes
+                ]);
+
+                $updateResult = $proposicao->update([
                     'pdf_s3_path' => $fileName,
                     'pdf_s3_url' => $s3Url,
                     'pdf_exportado_em' => now(),
                     'pdf_size_bytes' => $fileSizeBytes
+                ]);
+
+                Log::info('💾 OnlyOffice S3: Resultado da atualização do banco', [
+                    'proposicao_id' => $proposicao->id,
+                    'update_success' => $updateResult,
+                    'pdf_s3_path_after' => $proposicao->fresh()->pdf_s3_path
                 ]);
             }
 

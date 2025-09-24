@@ -1623,6 +1623,9 @@ Route::get('/debug/proposicoes/{proposicao}/s3-status', [App\Http\Controllers\As
 Route::post('/debug/proposicoes/{proposicao}/fix-s3', [App\Http\Controllers\AssinaturaDigitalController::class, 'fixProposicao4S3'])->middleware('auth');
 Route::get('/debug/proposicoes/{proposicao}/fix-s3', [App\Http\Controllers\AssinaturaDigitalController::class, 'fixProposicao4S3'])->middleware('auth');
 
+// Fix proposição S3 automático (qualquer proposição)
+Route::get('/debug/proposicoes/{proposicao}/fix-s3-auto', [App\Http\Controllers\AssinaturaDigitalController::class, 'fixProposicaoS3Auto'])->middleware('auth');
+
 // ===== ROTA TEMPORÁRIA PARA PDF DE PROPOSIÇÕES PROTOCOLADAS (SEM AUTENTICAÇÃO) =====
 Route::get('/proposicoes/{proposicao}/pdf-publico', [\App\Http\Controllers\ProposicaoController::class, 'servePDFPublico'])
     ->name('proposicoes.pdf.publico')
