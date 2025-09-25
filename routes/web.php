@@ -1103,6 +1103,11 @@ Route::prefix('proposicoes')->name('proposicoes.')->middleware(['auth', 'check.s
         ->name('onlyoffice.exportar-pdf-s3')
         ->middleware(['auth']);
 
+    // Rota para verificar última exportação S3
+    Route::get('/{proposicao}/onlyoffice/verificar-exportacao-s3', [App\Http\Controllers\OnlyOfficeController::class, 'verificarUltimaExportacaoS3'])
+        ->name('onlyoffice.verificar-exportacao-s3')
+        ->middleware(['auth']);
+
     // Rota para exportação automática S3 durante aprovação (server-side only)
     Route::post('/{proposicao}/onlyoffice/exportar-pdf-s3-automatico', [App\Http\Controllers\OnlyOfficeController::class, 'exportarPDFParaS3Automatico'])
         ->name('onlyoffice.exportar-pdf-s3-automatico')

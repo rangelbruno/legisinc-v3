@@ -1668,6 +1668,92 @@ Sistema funcionando!\par
     }
 
     /**
+     * Verifica a última exportação para S3
+     */
+    public function verificarUltimaExportacaoS3(Proposicao $proposicao)
+    {
+        try {
+            // Buscar no S3 o último arquivo exportado para esta proposição
+            $s3Disk = \Illuminate\Support\Facades\Storage::disk('s3');
+
+            // Padrões de busca para encontrar PDFs exportados desta proposição
+            $searchPaths = [
+                "proposicoes/pdf/{$proposicao->id}/",
+                "proposicoes/pdfs/"
+            ];
+
+            $lastExportedFile = null;
+            $lastExportedTime = null;
+            $lastExportedUrl = null;
+
+            // Buscar arquivos no S3
+            foreach ($searchPaths as $path) {
+                try {
+                    $files = $s3Disk->allFiles($path);
+                    foreach ($files as $file) {
+                        if (str_contains($file, "proposicao_{$proposicao->id}_")) {
+                            $fileTime = $s3Disk->lastModified($file);
+                            if (!$lastExportedTime || $fileTime > $lastExportedTime) {
+                                $lastExportedFile = $file;
+                                $lastExportedTime = $fileTime;
+                            }
+                        }
+                    }
+                } catch (\Exception $e) {
+                    // Continuar buscando em outros paths
+                    continue;
+                }
+            }
+
+            // Se encontrou um arquivo exportado
+            if ($lastExportedFile) {
+                // Gerar URL temporária (válida por 24 horas)
+                $lastExportedUrl = $s3Disk->temporaryUrl($lastExportedFile, now()->addDay());
+                $fileSize = $s3Disk->size($lastExportedFile);
+
+                Log::info('✅ Última exportação S3 encontrada', [
+                    'proposicao_id' => $proposicao->id,
+                    's3_path' => $lastExportedFile,
+                    'exported_at' => \Carbon\Carbon::createFromTimestamp($lastExportedTime)->format('d/m/Y H:i:s'),
+                    'file_size' => $fileSize
+                ]);
+
+                return response()->json([
+                    'success' => true,
+                    'has_export' => true,
+                    's3_path' => $lastExportedFile,
+                    's3_url' => $lastExportedUrl,
+                    'exported_at' => \Carbon\Carbon::createFromTimestamp($lastExportedTime)->format('d/m/Y H:i:s'),
+                    'file_size_kb' => round($fileSize / 1024, 2),
+                    'file_name' => basename($lastExportedFile)
+                ]);
+            }
+
+            Log::info('⚠️ Nenhuma exportação S3 encontrada', [
+                'proposicao_id' => $proposicao->id
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'has_export' => false,
+                'message' => 'Nenhuma exportação S3 encontrada para esta proposição'
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('❌ Erro ao verificar última exportação S3', [
+                'proposicao_id' => $proposicao->id,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'has_export' => false,
+                'message' => 'Erro ao verificar exportação: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * Exportação automática para S3 durante aprovação (server-side only)
      */
     public function exportarPDFParaS3Automatico(Request $request, Proposicao $proposicao)

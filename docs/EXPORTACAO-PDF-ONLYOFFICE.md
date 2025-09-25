@@ -654,6 +654,7 @@ php test-s3-connection.php
 
 ## 📋 Checklist de Implementação
 
+### **✅ Versão 2.0 - AWS S3 Integration**
 - [x] Migration S3 criada e executada
 - [x] Dependências AWS instaladas (`league/flysystem-aws-s3-v3`, `aws/aws-sdk-php`)
 - [x] Configuração AWS S3 no `.env`
@@ -672,7 +673,249 @@ php test-s3-connection.php
 - [x] **Upload direto S3 sem downloads locais**
 - [x] **Logging completo para debug e monitoramento**
 - [x] Testes de conectividade S3 realizados
-- [x] Documentação completa atualizada
+
+### **✅ Versão 2.1 - Validação Prévia S3 para Aprovação**
+- [x] **Nova rota `verificar-exportacao-s3` implementada**
+- [x] **Método `verificarUltimaExportacaoS3()` implementado**
+- [x] **Validação prévia S3 no frontend antes de aprovar**
+- [x] **Interface de confirmação com detalhes do PDF S3**
+- [x] **Bloqueio de aprovação quando PDF não existe**
+- [x] **Botão de redirecionamento para editor quando necessário**
+- [x] **Remoção da exportação automática após aprovação**
+- [x] **Remoção do método `exportarPDFParaS3AposAprovacao()`**
+- [x] **Eliminação do erro "Falha na exportação automática"**
+- [x] **Fluxo de aprovação simplificado e direto**
+- [x] **Documentação atualizada com nova versão**
+
+---
+
+## 🔍 Nova Validação Prévia S3 para Aprovação (v2.1)
+
+### **Problema Identificado na v2.0**
+Na versão anterior, o sistema tinha uma abordagem redundante:
+1. ✅ Usuário exportava PDF para S3 no editor OnlyOffice
+2. 🔄 Usuário aprovava proposição
+3. ❌ Sistema tentava exportar **novamente** para S3 após aprovação
+4. ❌ Erro aparecia: "Falha na exportação automática do PDF para S3"
+
+### **Nova Solução Implementada (v2.1)**
+
+#### **1. Validação Prévia antes de Aprovar**
+```javascript
+// Novo fluxo: verificar se já existe exportação S3
+const exportData = await fetch(`/proposicoes/${proposicaoId}/onlyoffice/verificar-exportacao-s3`);
+
+if (exportData.has_export) {
+    // ✅ Mostrar confirmação com detalhes do PDF existente
+    showApprovalConfirmation(exportData);
+} else {
+    // ❌ Bloquear aprovação e redirecionar para editor
+    showMustExportFirst();
+}
+```
+
+#### **2. Nova Rota de Verificação S3**
+```php
+// routes/web.php
+Route::get('/{proposicao}/onlyoffice/verificar-exportacao-s3',
+    [OnlyOfficeController::class, 'verificarUltimaExportacaoS3'])
+    ->name('onlyoffice.verificar-exportacao-s3');
+```
+
+#### **3. Novo Método no Controller**
+```php
+// OnlyOfficeController.php
+public function verificarUltimaExportacaoS3(Proposicao $proposicao)
+{
+    // Buscar no S3 o último arquivo exportado
+    $s3Disk = Storage::disk('s3');
+    $searchPaths = [
+        "proposicoes/pdf/{$proposicao->id}/",
+        "proposicoes/pdfs/"
+    ];
+
+    $lastExportedFile = null;
+    $lastExportedTime = null;
+
+    foreach ($searchPaths as $path) {
+        $files = $s3Disk->allFiles($path);
+        foreach ($files as $file) {
+            if (str_contains($file, "proposicao_{$proposicao->id}_")) {
+                $fileTime = $s3Disk->lastModified($file);
+                if (!$lastExportedTime || $fileTime > $lastExportedTime) {
+                    $lastExportedFile = $file;
+                    $lastExportedTime = $fileTime;
+                }
+            }
+        }
+    }
+
+    if ($lastExportedFile) {
+        return response()->json([
+            'success' => true,
+            'has_export' => true,
+            's3_path' => $lastExportedFile,
+            's3_url' => $s3Disk->temporaryUrl($lastExportedFile, now()->addDay()),
+            'exported_at' => Carbon::createFromTimestamp($lastExportedTime)->format('d/m/Y H:i:s'),
+            'file_size_kb' => round($s3Disk->size($lastExportedFile) / 1024, 2),
+            'file_name' => basename($lastExportedFile)
+        ]);
+    }
+
+    return response()->json([
+        'success' => true,
+        'has_export' => false,
+        'message' => 'Nenhuma exportação S3 encontrada para esta proposição'
+    ]);
+}
+```
+
+### **Novo Fluxo de Aprovação**
+
+#### **Cenário A: PDF já exportado para S3**
+```mermaid
+graph TD
+    A[Usuário clica 'Aprovar Proposição'] --> B[Sistema verifica exportação S3]
+    B --> C{PDF existe no S3?}
+    C -->|SIM| D[Mostrar confirmação com detalhes do PDF]
+    D --> E[Exibir: nome, tamanho, data, link para visualizar]
+    E --> F[Botões: 'Sim, Aprovar' | 'Cancelar']
+    F --> G[Usuário confirma aprovação]
+    G --> H[Executar aprovação diretamente]
+    H --> I[Mostrar: 'Sucesso! Proposição aprovada']
+
+    style C fill:#e8f5e8
+    style D fill:#e1f5fe
+    style I fill:#e8f5e8
+```
+
+#### **Cenário B: PDF NÃO exportado para S3**
+```mermaid
+graph TD
+    A[Usuário clica 'Aprovar Proposição'] --> B[Sistema verifica exportação S3]
+    B --> C{PDF existe no S3?}
+    C -->|NÃO| D[Mostrar aviso: 'PDF não exportado']
+    D --> E[Explicar: 'Para aprovar, precisa exportar primeiro']
+    E --> F[Botão: 'Ir para o Editor e Exportar PDF']
+    F --> G[Redirecionar para OnlyOffice Editor]
+    G --> H[Usuário exporta PDF para S3]
+    H --> I[Usuário retorna e aprova novamente]
+
+    style C fill:#fff3e0
+    style D fill:#ffebee
+    style F fill:#e3f2fd
+    style H fill:#e8f5e8
+```
+
+### **Interface de Aprovação Aprimorada**
+
+#### **Tela de Confirmação com PDF Existente**
+```html
+<!-- Quando PDF existe no S3 -->
+<div class="alert alert-success">
+    <div class="d-flex align-items-center">
+        <i class="ki-duotone ki-check-circle fs-2x text-success me-3"></i>
+        <div>
+            <strong>PDF encontrado no AWS S3!</strong><br>
+            <small class="text-muted">Exportado em: 24/09/2025 18:23:12</small>
+        </div>
+    </div>
+</div>
+
+<div class="bg-light p-3 rounded mb-3">
+    <p><strong>Arquivo:</strong> proposicao_1_exported_1758748992.pdf</p>
+    <p><strong>Tamanho:</strong> 62.07 KB</p>
+    <p><strong>Caminho S3:</strong> <code>proposicoes/pdf/1/proposicao_1_exported_1758748992.pdf</code></p>
+
+    <div class="d-grid">
+        <a href="https://s3-url..." target="_blank" class="btn btn-light-primary">
+            <i class="ki-duotone ki-eye fs-3 me-2"></i>
+            Visualizar PDF no S3
+        </a>
+    </div>
+</div>
+```
+
+#### **Tela de Bloqueio quando PDF não existe**
+```html
+<!-- Quando PDF NÃO existe no S3 -->
+<div class="text-center">
+    <i class="ki-duotone ki-information-5 fs-3x text-warning mb-3"></i>
+    <p><strong>Esta proposição ainda não foi exportada para o AWS S3.</strong></p>
+    <p class="text-muted mb-4">Para aprovar, é necessário primeiro exportar o PDF para o S3.</p>
+
+    <div class="d-grid gap-2">
+        <a href="/proposicoes/1/onlyoffice/editor" class="btn btn-primary">
+            <i class="ki-duotone ki-file-edit fs-3 me-2"></i>
+            Ir para o Editor e Exportar PDF
+        </a>
+    </div>
+</div>
+```
+
+### **Benefícios da Nova Abordagem**
+
+#### **✅ Eliminação de Redundância**
+- **Antes**: Exportação S3 manual + exportação automática após aprovação
+- **Depois**: Apenas exportação S3 manual (validada antes da aprovação)
+
+#### **✅ Melhor Experiência do Usuário**
+- **Feedback claro**: Usuário sabe exatamente se precisa exportar ou não
+- **Visualização prévia**: Link direto para visualizar o PDF no S3
+- **Bloqueio inteligente**: Impossível aprovar sem ter exportado
+
+#### **✅ Eliminação de Erros**
+- **Problema resolvido**: "Falha na exportação automática do PDF para S3"
+- **Fluxo direto**: Aprovação vai direto ao sucesso se PDF já existe
+
+#### **✅ Performance Aprimorada**
+- **Menos requisições**: Remove chamada automática desnecessária
+- **Aprovação mais rápida**: Sem espera para exportação redundante
+- **Feedback imediato**: Usuário sabe o status instantly
+
+### **Código Removido (Limpeza)**
+
+#### **Método removido: `exportarPDFParaS3AposAprovacao()`**
+```javascript
+// ❌ REMOVIDO - Era responsável pelo erro após aprovação
+async exportarPDFParaS3AposAprovacao() {
+    // Método completo removido - não é mais necessário
+    // Causava erro: "Falha na exportação automática do PDF para S3"
+}
+```
+
+#### **Chamada removida no fluxo de aprovação**
+```javascript
+// ❌ ANTES - Exportação redundante após aprovação
+if (result.novo_status === 'aprovado') {
+    await this.exportarPDFParaS3AposAprovacao(); // REMOVIDO
+}
+
+// ✅ DEPOIS - Aprovação direta e simples
+// Para qualquer status, apenas mostrar sucesso
+Swal.close();
+await Swal.fire({
+    title: 'Sucesso!',
+    text: result.message,
+    icon: 'success'
+});
+```
+
+### **Impacto e Resultados**
+
+#### **Antes (v2.0)**
+1. 👨‍💻 Usuário exporta PDF no editor → ✅ Sucesso
+2. 👨‍💻 Usuário aprova proposição → 🔄 Loading...
+3. 🖥️ Sistema tenta exportar novamente → ❌ Falha
+4. 👨‍💻 Usuário vê erro: "Falha na exportação automática"
+
+#### **Depois (v2.1)**
+1. 👨‍💻 Usuário exporta PDF no editor → ✅ Sucesso
+2. 👨‍💻 Usuário aprova proposição → 🔍 Verificação S3
+3. 🖥️ Sistema mostra: "PDF encontrado! Deseja aprovar?" → ✅
+4. 👨‍💻 Usuário confirma → ✅ "Sucesso! Proposição aprovada"
+
+**Resultado**: 🎉 **Zero erros, fluxo limpo, experiência perfeita!**
 
 ---
 
@@ -712,11 +955,12 @@ php test-s3-connection.php
 ---
 
 **Implementado em**: Setembro 2025
-**Versão**: 2.0 - AWS S3 Integration
+**Versão**: 2.1 - Validação Prévia S3 para Aprovação
 **Status**: ✅ Produção
-**Última Atualização**: 23/09/2025
+**Última Atualização**: 24/09/2025
 
 ### **Changelog**
+- **v2.1**: ✅ **Nova validação prévia S3 para aprovação** - Sistema verifica se PDF foi exportado antes de aprovar, removendo exportação automática redundante
 - **v2.0**: Implementação completa S3 com captura de estado atual editado
 - **v1.5**: Resolução problemas CORS via proxy backend
 - **v1.0**: Versão inicial com export local

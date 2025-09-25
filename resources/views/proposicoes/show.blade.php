@@ -100,6 +100,12 @@
     margin-bottom: 0;
 }
 </style>
+<style>
+
+.d-grid .btn-assinatura:last-child {
+    margin-bottom: 0;
+}
+</style>
 
 <style>
 
@@ -1904,9 +1910,9 @@ createApp({
                 const formData = new FormData(form);
                 const requestedStatus = formData.get('status');
 
-                // Se está tentando aprovar, primeiro testar S3 ANTES de alterar o status
+                // Se está tentando aprovar, verificar se existe exportação S3
                 if (requestedStatus === 'aprovado') {
-                    // Mostrar loading específico para teste do S3
+                    // Verificar última exportação S3
                     Swal.fire({
                         title: 'Verificando exportação S3...',
                         html: `
@@ -1914,7 +1920,7 @@ createApp({
                                 <div class="spinner-border text-primary mb-3" role="status">
                                     <span class="visually-hidden">Loading...</span>
                                 </div>
-                                <p>Testando conexão com AWS S3 antes da aprovação...</p>
+                                <p>Verificando última exportação para AWS S3...</p>
                             </div>
                         `,
                         showConfirmButton: false,
@@ -1922,44 +1928,118 @@ createApp({
                     });
 
                     try {
-                        // Testar S3 primeiro (sem alterar status ainda)
-                        await this.testS3ExportBeforeApproval();
-
-                        // Se S3 funciona, atualizar loading
-                        Swal.update({
-                            title: 'S3 OK! Aprovando proposição...',
-                            html: `
-                                <div class="text-center">
-                                    <div class="spinner-border text-success mb-3" role="status">
-                                        <span class="visually-hidden">Loading...</span>
-                                    </div>
-                                    <p>AWS S3 está funcionando. Prosseguindo com aprovação...</p>
-                                </div>
-                            `
+                        // Buscar última exportação S3
+                        const response = await fetch(`/proposicoes/${this.proposicao.id}/onlyoffice/verificar-exportacao-s3`, {
+                            method: 'GET',
+                            headers: {
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                            }
                         });
-                    } catch (s3Error) {
-                        // S3 falhou - bloquear aprovação completamente
+
+                        const exportData = await response.json();
+                        Swal.close();
+
+                        if (exportData.success && exportData.has_export) {
+                            // Tem exportação S3 - mostrar confirmação com URL
+                            const confirmResult = await Swal.fire({
+                                title: 'Confirmar Aprovação',
+                                html: `
+                                    <div class="text-start">
+                                        <div class="alert alert-success mb-3">
+                                            <div class="d-flex align-items-center">
+                                                <i class="ki-duotone ki-check-circle fs-2x text-success me-3">
+                                                    <span class="path1"></span>
+                                                    <span class="path2"></span>
+                                                </i>
+                                                <div>
+                                                    <strong>PDF encontrado no AWS S3!</strong><br>
+                                                    <small class="text-muted">Exportado em: ${exportData.exported_at}</small>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="bg-light p-3 rounded mb-3">
+                                            <p class="mb-2"><strong>Arquivo:</strong> ${exportData.file_name}</p>
+                                            <p class="mb-2"><strong>Tamanho:</strong> ${exportData.file_size_kb} KB</p>
+                                            <p class="mb-3"><strong>Caminho S3:</strong> <code>${exportData.s3_path}</code></p>
+
+                                            <div class="d-grid">
+                                                <a href="${exportData.s3_url}" target="_blank" class="btn btn-light-primary">
+                                                    <i class="ki-duotone ki-eye fs-3 me-2">
+                                                        <span class="path1"></span>
+                                                        <span class="path2"></span>
+                                                        <span class="path3"></span>
+                                                    </i>
+                                                    Visualizar PDF no S3
+                                                </a>
+                                            </div>
+                                        </div>
+
+                                        <p class="text-center text-muted">Deseja confirmar a aprovação desta proposição?</p>
+                                    </div>
+                                `,
+                                showCancelButton: true,
+                                confirmButtonText: 'Sim, Aprovar',
+                                cancelButtonText: 'Cancelar',
+                                confirmButtonColor: '#198754',
+                                cancelButtonColor: '#6c757d',
+                                customClass: {
+                                    confirmButton: 'btn btn-success',
+                                    cancelButton: 'btn btn-secondary'
+                                },
+                                buttonsStyling: false,
+                                width: '600px'
+                            });
+
+                            if (!confirmResult.isConfirmed) {
+                                return; // Usuário cancelou
+                            }
+                        } else {
+                            // Não tem exportação S3 - mostrar opção de voltar ao editor
+                            const result = await Swal.fire({
+                                title: 'PDF não exportado para S3',
+                                html: `
+                                    <div class="text-center">
+                                        <i class="ki-duotone ki-information-5 fs-3x text-warning mb-3">
+                                            <span class="path1"></span>
+                                            <span class="path2"></span>
+                                            <span class="path3"></span>
+                                        </i>
+                                        <p class="mb-3"><strong>Esta proposição ainda não foi exportada para o AWS S3.</strong></p>
+                                        <p class="text-muted mb-4">Para aprovar, é necessário primeiro exportar o PDF para o S3.</p>
+
+                                        <div class="d-grid gap-2">
+                                            <a href="/proposicoes/${this.proposicao.id}/onlyoffice/editor" class="btn btn-primary">
+                                                <i class="ki-duotone ki-file-edit fs-3 me-2">
+                                                    <span class="path1"></span>
+                                                    <span class="path2"></span>
+                                                </i>
+                                                Ir para o Editor e Exportar PDF
+                                            </a>
+                                        </div>
+                                    </div>
+                                `,
+                                showCancelButton: true,
+                                showConfirmButton: false,
+                                cancelButtonText: 'Fechar',
+                                customClass: {
+                                    cancelButton: 'btn btn-secondary'
+                                },
+                                buttonsStyling: false
+                            });
+                            return; // Não prosseguir com aprovação
+                        }
+                    } catch (error) {
                         Swal.close();
                         await Swal.fire({
-                            title: 'Erro na Exportação S3',
-                            html: `
-                                <div class="text-center">
-                                    <i class="ki-duotone ki-cross-circle fs-3x text-danger mb-3">
-                                        <span class="path1"></span>
-                                        <span class="path2"></span>
-                                    </i>
-                                    <p><strong>Aprovação bloqueada!</strong></p>
-                                    <p>Não é possível aprovar porque a exportação para S3 está falhando:</p>
-                                    <p class="text-muted">${s3Error.message}</p>
-                                    <hr>
-                                    <p class="small text-muted">Verifique a configuração do AWS S3 antes de tentar novamente.</p>
-                                </div>
-                            `,
+                            title: 'Erro ao verificar S3',
+                            text: 'Não foi possível verificar a exportação S3: ' + error.message,
                             icon: 'error',
-                            confirmButtonText: 'Entendido',
+                            confirmButtonText: 'OK',
                             confirmButtonColor: '#dc3545'
                         });
-                        return; // PARAR AQUI - não executar aprovação
+                        return;
                     }
                 }
 
@@ -1979,24 +2059,19 @@ createApp({
                     // Atualizar status local
                     this.proposicao.status = result.novo_status;
 
-                    // Se foi aprovada (e S3 já foi testado), fazer exportação final
-                    if (result.novo_status === 'aprovado') {
-                        await this.exportarPDFParaS3AposAprovacao();
-                    } else {
-                        // Para outros status, fechar loading e mostrar sucesso
-                        Swal.close();
+                    // Para qualquer status, fechar loading e mostrar sucesso
+                    Swal.close();
 
-                        await Swal.fire({
-                            title: 'Sucesso!',
-                            text: result.message,
-                            icon: 'success',
-                            confirmButtonText: 'OK',
-                            customClass: {
-                                confirmButton: 'btn btn-success'
-                            },
-                            buttonsStyling: false
-                        });
-                    }
+                    await Swal.fire({
+                        title: 'Sucesso!',
+                        text: result.message,
+                        icon: 'success',
+                        confirmButtonText: 'OK',
+                        customClass: {
+                            confirmButton: 'btn btn-success'
+                        },
+                        buttonsStyling: false
+                    });
 
                 } else {
                     throw new Error(result.message || 'Erro ao atualizar status');
@@ -2008,162 +2083,8 @@ createApp({
             }
         },
 
-        async exportarPDFParaS3AposAprovacao() {
-            try {
-                // Atualizar loading para indicar exportação S3
-                Swal.update({
-                    title: 'Proposição Aprovada!',
-                    html: `
-                        <div class="text-center">
-                            <i class="ki-duotone ki-check-circle fs-3x text-success mb-3">
-                                <span class="path1"></span>
-                                <span class="path2"></span>
-                            </i>
-                            <p class="mb-3">Proposição aprovada com sucesso!</p>
-                            <div class="progress mb-3">
-                                <div class="progress-bar progress-bar-striped progress-bar-animated"
-                                     role="progressbar" style="width: 50%"></div>
-                            </div>
-                            <p class="text-muted">
-                                <i class="spinner-border spinner-border-sm me-2"></i>
-                                Exportando PDF para AWS S3...
-                            </p>
-                        </div>
-                    `,
-                    showConfirmButton: false,
-                    allowOutsideClick: false
-                });
 
-                // Usar rota de exportação automática (server-side only)
-                const response = await fetch(`/proposicoes/${this.proposicao.id}/onlyoffice/exportar-pdf-s3-automatico`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                    }
-                });
 
-                const s3Result = await response.json();
-
-                if (!s3Result.success) {
-                    throw new Error(s3Result.message || 'Falha na exportação S3');
-                }
-
-                // Atualizar progresso
-                Swal.update({
-                    html: `
-                        <div class="text-center">
-                            <i class="ki-duotone ki-check-circle fs-3x text-success mb-3">
-                                <span class="path1"></span>
-                                <span class="path2"></span>
-                            </i>
-                            <p class="mb-3">Proposição aprovada com sucesso!</p>
-                            <div class="progress mb-3">
-                                <div class="progress-bar bg-success" role="progressbar" style="width: 100%"></div>
-                            </div>
-                            <p class="text-success">
-                                <i class="ki-duotone ki-check fs-6 me-2">
-                                    <span class="path1"></span>
-                                    <span class="path2"></span>
-                                </i>
-                                PDF exportado para AWS S3!
-                            </p>
-                        </div>
-                    `
-                });
-
-                // Aguardar um momento para mostrar o sucesso
-                await new Promise(resolve => setTimeout(resolve, 1500));
-
-                // Mostrar resultado final
-                await Swal.fire({
-                    title: '🎉 Proposição Aprovada e Exportada!',
-                    html: `
-                        <div class="text-center">
-                            <p><strong>✅ Proposição aprovada com sucesso</strong></p>
-                            <p><strong>📤 PDF exportado automaticamente para AWS S3</strong></p>
-                            <p><strong>📁 Local:</strong> ${s3Result.s3_path.split('/').pop()}</p>
-                            <p><strong>📏 Tamanho:</strong> ${s3Result.file_size}</p>
-                            <p><strong>⏱️ Tempo:</strong> ${s3Result.execution_time_ms}ms</p>
-                            <hr>
-                            <p><strong>🔗 URL Temporária:</strong></p>
-                            <p class="text-muted small">A URL é válida até ${new Date(s3Result.url_expires_at).toLocaleString()}</p>
-                            <div class="d-flex gap-2 justify-content-center mt-3">
-                                <button onclick="window.open('${s3Result.s3_url}', '_blank')" class="btn btn-primary btn-sm">
-                                    <i class="ki-duotone ki-eye fs-6 me-1"></i>Ver PDF
-                                </button>
-                                <button onclick="navigator.clipboard.writeText('${s3Result.s3_url}')" class="btn btn-secondary btn-sm">
-                                    <i class="ki-duotone ki-copy fs-6 me-1"></i>Copiar URL
-                                </button>
-                            </div>
-                        </div>
-                    `,
-                    icon: 'success',
-                    confirmButtonText: 'Perfeito!',
-                    confirmButtonColor: '#28a745',
-                    width: '700px'
-                });
-
-            } catch (error) {
-                console.error('Erro na exportação S3 após aprovação:', error);
-
-                // Fechar o loading
-                Swal.close();
-
-                // IMPORTANTE: Não mais mostrar sucesso - lançar exceção para bloquear aprovação
-                throw error;
-            }
-        },
-
-        async testS3ExportBeforeApproval() {
-            // Fazer uma chamada de teste para o S3 usando a mesma lógica de exportação
-            // mas sem alterar o status da proposição
-            const response = await fetch(`/proposicoes/${this.proposicao.id}/onlyoffice/exportar-pdf-s3-automatico?test_only=1`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                }
-            });
-
-            const result = await response.json();
-
-            if (!result.success) {
-                throw new Error(result.message || 'Teste de S3 falhou');
-            }
-
-            return result;
-        },
-
-        async revertApproval(previousStatus) {
-            try {
-                const response = await fetch(`/proposicoes/${this.proposicao.id}/status`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                    },
-                    body: JSON.stringify({
-                        status: previousStatus,
-                        _reason: 's3_export_failure'
-                    })
-                });
-
-                const result = await response.json();
-
-                if (result.success) {
-                    this.proposicao.status = previousStatus;
-                    console.log('Aprovação revertida com sucesso para:', previousStatus);
-                } else {
-                    console.error('Erro ao reverter aprovação:', result.message);
-                }
-            } catch (error) {
-                console.error('Erro na reversão da aprovação:', error);
-            }
-        },
 
         getStatusActionConfig(status) {
             const configs = {
