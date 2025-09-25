@@ -277,6 +277,47 @@ class ProposicaoLegislativoController extends Controller
             'analise_tecnica_legislativa' => 'required|boolean',
         ]);
 
+        // 🔍 VALIDAÇÃO PRÉVIA S3: Verificar se proposição foi exportada para S3 antes de aprovar
+        $s3ValidationResult = $this->validarExportacaoS3AntesAprovacao($proposicao);
+        if (!$s3ValidationResult['success']) {
+            Log::warning('🚫 LEGISLATIVO APPROVAL: Aprovação bloqueada - PDF não exportado para S3', [
+                'proposicao_id' => $proposicao->id,
+                'user_id' => $user->id,
+                's3_validation' => $s3ValidationResult
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'requires_s3_export' => true,
+                'message' => 'Para aprovar esta proposição, é necessário primeiro exportar o PDF para o AWS S3.',
+                's3_info' => $s3ValidationResult,
+                'editor_url' => route('proposicoes.onlyoffice.editor', $proposicao->id)
+            ], 400);
+        }
+
+        Log::info('✅ LEGISLATIVO APPROVAL: Validação S3 aprovada', [
+            'proposicao_id' => $proposicao->id,
+            'user_id' => $user->id,
+            's3_info' => $s3ValidationResult
+        ]);
+
+        // 📋 LOG: Registrar início da aprovação legislativa
+        \App\Models\DocumentWorkflowLog::logLegislativeApproval(
+            proposicaoId: $proposicao->id,
+            status: 'pending',
+            description: 'Iniciando processo de aprovação legislativa',
+            metadata: [
+                'user_roles' => $user->roles->pluck('name')->toArray(),
+                's3_validation' => $s3ValidationResult,
+                'form_data' => $request->only([
+                    'analise_constitucionalidade',
+                    'analise_juridicidade',
+                    'analise_regimentalidade',
+                    'analise_tecnica_legislativa'
+                ])
+            ]
+        );
+
         // Verificar se todas as análises foram aprovadas
         if (!$request->analise_constitucionalidade ||
             !$request->analise_juridicidade ||
@@ -372,6 +413,27 @@ class ProposicaoLegislativoController extends Controller
             'next_step' => 'awaiting_signature',
             'workflow_stage' => 'aprovacao_concluida'
         ]);
+
+        // 📋 LOG: Registrar conclusão da aprovação legislativa
+        \App\Models\DocumentWorkflowLog::logLegislativeApproval(
+            proposicaoId: $proposicao->id,
+            status: 'success',
+            description: 'Proposição aprovada pelo legislativo com sucesso',
+            metadata: [
+                'final_status' => 'aprovado',
+                'tipo_retorno' => 'aprovado_assinatura',
+                'aprovacao_data' => now()->toISOString(),
+                'analises_realizadas' => [
+                    'constitucionalidade' => $request->analise_constitucionalidade,
+                    'juridicidade' => $request->analise_juridicidade,
+                    'regimentalidade' => $request->analise_regimentalidade,
+                    'tecnica_legislativa' => $request->analise_tecnica_legislativa
+                ],
+                'parecer_tecnico_length' => strlen($request->parecer_tecnico),
+                'pdf_invalidated' => true,
+                'next_workflow_stage' => 'awaiting_signature'
+            ]
+        );
 
         return response()->json([
             'success' => true,
@@ -973,6 +1035,133 @@ class ProposicaoLegislativoController extends Controller
                 'proposicao_id' => $proposicao->id,
                 'error' => $e->getMessage()
             ]);
+        }
+    }
+
+    /**
+     * Validar se proposição foi exportada para S3 antes de aprovar
+     * Integrado com o novo sistema de substituição inteligente
+     */
+    private function validarExportacaoS3AntesAprovacao(Proposicao $proposicao): array
+    {
+        try {
+            // Primeiro, verificar se há um path S3 salvo no banco (novo sistema)
+            if (!empty($proposicao->pdf_s3_path)) {
+                $s3Disk = \Illuminate\Support\Facades\Storage::disk('s3');
+
+                if ($s3Disk->exists($proposicao->pdf_s3_path)) {
+                    $fileTime = $s3Disk->lastModified($proposicao->pdf_s3_path);
+                    $fileSize = $s3Disk->size($proposicao->pdf_s3_path);
+
+                    Log::info('✅ Validação S3: Arquivo encontrado no banco de dados', [
+                        'proposicao_id' => $proposicao->id,
+                        's3_path' => $proposicao->pdf_s3_path,
+                        'file_size' => $fileSize
+                    ]);
+
+                    return [
+                        'success' => true,
+                        'has_export' => true,
+                        's3_path' => $proposicao->pdf_s3_path,
+                        'exported_at' => \Carbon\Carbon::createFromTimestamp($fileTime)->format('d/m/Y H:i:s'),
+                        'file_size_kb' => round($fileSize / 1024, 2),
+                        'source' => 'database'
+                    ];
+                } else {
+                    Log::warning('⚠️ Validação S3: Path do banco não existe no S3', [
+                        'proposicao_id' => $proposicao->id,
+                        's3_path' => $proposicao->pdf_s3_path
+                    ]);
+                    // Limpar path inválido do banco
+                    $proposicao->update(['pdf_s3_path' => null, 'pdf_s3_url' => null]);
+                }
+            }
+
+            // Fallback: Buscar na estrutura por tipo (novo sistema) e antigas
+            $s3Disk = \Illuminate\Support\Facades\Storage::disk('s3');
+
+            $tipoProposicao = $proposicao->tipoProposicao;
+            $tipoCode = $tipoProposicao ? $tipoProposicao->codigo : 'generico';
+
+            $searchPaths = [
+                // Nova estrutura por tipo
+                "proposicoes/{$tipoCode}/",
+                // Estruturas antigas para compatibilidade
+                "proposicoes/pdf/{$proposicao->id}/",
+                "proposicoes/pdfs/"
+            ];
+
+            $lastExportedFile = null;
+            $lastExportedTime = null;
+
+            foreach ($searchPaths as $path) {
+                try {
+                    $files = $s3Disk->allFiles($path);
+                    foreach ($files as $file) {
+                        // Verificar se o arquivo pertence a esta proposição
+                        if (str_contains($file, "/{$proposicao->id}/") ||
+                            str_contains($file, "proposicao_{$proposicao->id}_")) {
+                            $fileTime = $s3Disk->lastModified($file);
+                            if (!$lastExportedTime || $fileTime > $lastExportedTime) {
+                                $lastExportedFile = $file;
+                                $lastExportedTime = $fileTime;
+                            }
+                        }
+                    }
+                } catch (\Exception $e) {
+                    continue;
+                }
+            }
+
+            if ($lastExportedFile) {
+                $fileSize = $s3Disk->size($lastExportedFile);
+
+                Log::info('✅ Validação S3: Arquivo encontrado via busca', [
+                    'proposicao_id' => $proposicao->id,
+                    's3_path' => $lastExportedFile,
+                    'file_size' => $fileSize
+                ]);
+
+                // Atualizar banco com o arquivo encontrado
+                $proposicao->update([
+                    'pdf_s3_path' => $lastExportedFile,
+                    'pdf_s3_url' => $s3Disk->temporaryUrl($lastExportedFile, now()->addDay())
+                ]);
+
+                return [
+                    'success' => true,
+                    'has_export' => true,
+                    's3_path' => $lastExportedFile,
+                    'exported_at' => \Carbon\Carbon::createFromTimestamp($lastExportedTime)->format('d/m/Y H:i:s'),
+                    'file_size_kb' => round($fileSize / 1024, 2),
+                    'source' => 'search'
+                ];
+            }
+
+            // Nenhum arquivo encontrado
+            Log::info('⚠️ Validação S3: Nenhuma exportação encontrada', [
+                'proposicao_id' => $proposicao->id,
+                'tipo_codigo' => $tipoCode
+            ]);
+
+            return [
+                'success' => false,
+                'has_export' => false,
+                'message' => 'Nenhuma exportação S3 encontrada para esta proposição',
+                'searched_paths' => $searchPaths
+            ];
+
+        } catch (\Exception $e) {
+            Log::error('❌ Erro na validação S3 antes da aprovação', [
+                'proposicao_id' => $proposicao->id,
+                'error' => $e->getMessage()
+            ]);
+
+            return [
+                'success' => false,
+                'has_export' => false,
+                'error' => $e->getMessage()
+            ];
         }
     }
 }

@@ -5,9 +5,11 @@ namespace App\Http\Controllers;
 use App\Models\DocumentWorkflowLog;
 use App\Models\Proposicao;
 use App\Models\TipoProposicao;
+use App\Services\CamaraIdentifierService;
 use App\Services\OnlyOffice\OnlyOfficeConversionService;
 use App\Services\OnlyOffice\OnlyOfficeService;
 use App\Services\Template\TemplateUniversalService;
+use App\Services\TemplateVariableService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
@@ -19,7 +21,9 @@ class OnlyOfficeController extends Controller
     public function __construct(
         private OnlyOfficeService $onlyOfficeService,
         private TemplateUniversalService $templateUniversalService,
-        private OnlyOfficeConversionService $conversionService
+        private OnlyOfficeConversionService $conversionService,
+        private TemplateVariableService $templateVariableService,
+        private CamaraIdentifierService $camaraIdentifierService
     ) {}
 
     /**
@@ -392,6 +396,9 @@ class OnlyOfficeController extends Controller
 
                 // Usar TemplateUniversalService para aplicar template
                 $rtfContent = $this->templateUniversalService->aplicarTemplateParaProposicao($proposicao);
+
+                // Processar variáveis de template no RTF
+                $rtfContent = $this->templateVariableService->replaceVariablesInRtf($rtfContent, $proposicao);
             } else {
                 // 🐳 LOG: Container recebendo RTF básico/específico
                 \App\Helpers\ComprehensiveLogger::onlyOfficeContainer('Container baixou RTF básico/específico', [
@@ -710,10 +717,35 @@ Sistema funcionando!\par
                     ]);
                 }
 
+                // 📋 LOG: Registrar edição OnlyOffice bem-sucedida
+                $editSuccess = !isset($resultado['error']) || $resultado['error'] == 0;
+                if ($editSuccess && isset($data['url'])) {
+                    $fileSize = $proposicao->arquivo_path && Storage::exists($proposicao->arquivo_path)
+                        ? Storage::size($proposicao->arquivo_path) : null;
+
+                    \App\Models\DocumentWorkflowLog::logOnlyOfficeEdit(
+                        proposicaoId: $proposicao->id,
+                        status: 'success',
+                        description: 'Documento editado com sucesso no OnlyOffice',
+                        filePath: $proposicao->arquivo_path,
+                        fileSizeBytes: $fileSize,
+                        metadata: [
+                            'callback_status' => $data['status'],
+                            'callback_time_seconds' => round($callbackTime, 2),
+                            'document_key' => $documentKey,
+                            'edit_type' => $data['status'] == 6 ? 'force_save' : 'normal_save',
+                            'users_count' => count($data['users'] ?? []),
+                            'changes_available' => isset($data['changesurl']),
+                            'file_downloaded' => isset($data['url']),
+                            'proposicao_status' => $proposicao->status
+                        ]
+                    );
+                }
+
                 Log::info('✅ ONLYOFFICE CONTAINER: Processamento de salvamento concluído', [
                     'proposicao_id' => $proposicao->id,
                     'callback_time_seconds' => round($callbackTime, 2),
-                    'success' => !isset($resultado['error']) || $resultado['error'] == 0,
+                    'success' => $editSuccess,
                     'resultado' => $resultado,
                     'container_response_to_laravel' => [
                         'error_code' => $resultado['error'] ?? 'unknown',
@@ -1569,8 +1601,8 @@ Sistema funcionando!\par
             $day = now()->format('d');
             $timestamp = time();
 
-            // Estrutura: proposicoes/pdfs/YYYY/MM/DD/{proposicao_id}/manual/proposicao_{id}_manual_{timestamp}.pdf
-            $fileName = "proposicoes/pdfs/{$year}/{$month}/{$day}/{$proposicao->id}/manual/proposicao_{$proposicao->id}_manual_{$timestamp}.pdf";
+            // Usar padrão organizado por tipo para upload manual
+            $fileName = $this->generateUniqueS3PathForManual($proposicao);
 
             Log::info('📤 OnlyOffice S3: Enviando PDF para S3', [
                 'proposicao_id' => $proposicao->id,
@@ -1673,25 +1705,65 @@ Sistema funcionando!\par
     public function verificarUltimaExportacaoS3(Proposicao $proposicao)
     {
         try {
-            // Buscar no S3 o último arquivo exportado para esta proposição
+            // Primeiro, verificar se há um path S3 salvo no banco (nova estrutura)
+            if (!empty($proposicao->pdf_s3_path)) {
+                $s3Disk = \Illuminate\Support\Facades\Storage::disk('s3');
+
+                if ($s3Disk->exists($proposicao->pdf_s3_path)) {
+                    $fileTime = $s3Disk->lastModified($proposicao->pdf_s3_path);
+                    $fileSize = $s3Disk->size($proposicao->pdf_s3_path);
+                    $s3Url = $s3Disk->temporaryUrl($proposicao->pdf_s3_path, now()->addDay());
+
+                    Log::info('✅ Arquivo S3 encontrado no banco de dados', [
+                        'proposicao_id' => $proposicao->id,
+                        's3_path' => $proposicao->pdf_s3_path,
+                        'exported_at' => \Carbon\Carbon::createFromTimestamp($fileTime)->format('d/m/Y H:i:s'),
+                        'file_size' => $fileSize
+                    ]);
+
+                    return response()->json([
+                        'success' => true,
+                        'has_export' => true,
+                        's3_path' => $proposicao->pdf_s3_path,
+                        's3_url' => $s3Url,
+                        'exported_at' => \Carbon\Carbon::createFromTimestamp($fileTime)->format('d/m/Y H:i:s'),
+                        'file_size_kb' => round($fileSize / 1024, 2),
+                        'file_name' => basename($proposicao->pdf_s3_path)
+                    ]);
+                }
+            }
+
+            // Fallback: Buscar na estrutura antiga e nova
             $s3Disk = \Illuminate\Support\Facades\Storage::disk('s3');
 
-            // Padrões de busca para encontrar PDFs exportados desta proposição
+            // Obter identificador único da câmara
+            $camaraIdentifier = $this->camaraIdentifierService->getFullIdentifier();
+
+            // Buscar por tipo (nova estrutura)
+            $tipoProposicao = $proposicao->tipoProposicao;
+            $tipoCode = $tipoProposicao ? $tipoProposicao->codigo : 'generico';
+
             $searchPaths = [
+                // Nova estrutura com identificador da câmara
+                "{$camaraIdentifier}/proposicoes/{$tipoCode}/",
+                // Nova estrutura sem identificador (compatibilidade recente)
+                "proposicoes/{$tipoCode}/",
+                // Estruturas antigas para compatibilidade
                 "proposicoes/pdf/{$proposicao->id}/",
                 "proposicoes/pdfs/"
             ];
 
             $lastExportedFile = null;
             $lastExportedTime = null;
-            $lastExportedUrl = null;
 
             // Buscar arquivos no S3
             foreach ($searchPaths as $path) {
                 try {
                     $files = $s3Disk->allFiles($path);
                     foreach ($files as $file) {
-                        if (str_contains($file, "proposicao_{$proposicao->id}_")) {
+                        // Verificar se o arquivo pertence a esta proposição
+                        if (str_contains($file, "/{$proposicao->id}/") ||
+                            str_contains($file, "proposicao_{$proposicao->id}_")) {
                             $fileTime = $s3Disk->lastModified($file);
                             if (!$lastExportedTime || $fileTime > $lastExportedTime) {
                                 $lastExportedFile = $file;
@@ -1713,6 +1785,7 @@ Sistema funcionando!\par
 
                 Log::info('✅ Última exportação S3 encontrada', [
                     'proposicao_id' => $proposicao->id,
+                    'camara_identifier' => $camaraIdentifier,
                     's3_path' => $lastExportedFile,
                     'exported_at' => \Carbon\Carbon::createFromTimestamp($lastExportedTime)->format('d/m/Y H:i:s'),
                     'file_size' => $fileSize
@@ -1892,8 +1965,8 @@ Sistema funcionando!\par
             $day = now()->format('d');
             $timestamp = time();
 
-            // Estrutura: proposicoes/pdfs/YYYY/MM/DD/{proposicao_id}/automatic/proposicao_{id}_auto_{timestamp}.pdf
-            $fileName = "proposicoes/pdfs/{$year}/{$month}/{$day}/{$proposicao->id}/automatic/proposicao_{$proposicao->id}_auto_{$timestamp}.pdf";
+            // Usar padrão organizado por tipo para export automático
+            $fileName = $this->generateUniqueS3PathForAutomatic($proposicao);
 
             if ($isTestOnly) {
                 // MODO TESTE: Apenas testar a conexão com S3, não salvar o arquivo
@@ -2121,8 +2194,8 @@ Sistema funcionando!\par
             $day = now()->format('d');
             $timestamp = time();
 
-            // Estrutura: proposicoes/pdfs/YYYY/MM/DD/{proposicao_id}/upload/proposicao_{id}_upload_{timestamp}.pdf
-            $s3Path = "proposicoes/pdfs/{$year}/{$month}/{$day}/{$proposicao->id}/upload/proposicao_{$proposicao->id}_upload_{$timestamp}.pdf";
+            // Usar o mesmo padrão organizacional por tipo
+            $s3Path = $this->generateUniqueS3PathForUpload($proposicao);
 
             // 3. Upload para S3
             $s3Disk = Storage::disk('s3');
@@ -2231,9 +2304,8 @@ Sistema funcionando!\par
                 'file_size' => $fileSize
             ]);
 
-            // Definir path no S3
-            $timestamp = time();
-            $s3Path = "proposicoes/pdf/{$proposicao->id}/proposicao_{$proposicao->id}_exported_{$timestamp}.pdf";
+            // Definir path no S3 com organização por tipo
+            $s3Path = $this->generateUniqueS3Path($proposicao);
 
             // Upload para S3
             $s3Disk = Storage::disk('s3');
@@ -2265,6 +2337,24 @@ Sistema funcionando!\par
             // Calcular tempo de execução
             $executionTime = round((microtime(true) - $startTime) * 1000, 2);
 
+            // 📋 LOG: Registrar exportação S3 bem-sucedida
+            \App\Models\DocumentWorkflowLog::logS3Export(
+                proposicaoId: $proposicao->id,
+                status: 'success',
+                description: 'PDF exportado para S3 com sucesso via download OnlyOffice',
+                s3Path: $s3Path,
+                fileSizeBytes: $fileSize,
+                executionTimeMs: (int) $executionTime,
+                metadata: [
+                    'export_method' => 'onlyoffice_download',
+                    'original_pdf_url' => $pdfUrl,
+                    'internal_url' => $internalUrl,
+                    'content_type' => 'application/pdf',
+                    'url_expires_at' => now()->addHour()->toISOString(),
+                    'tipo_proposicao' => $proposicao->tipoProposicao?->codigo ?? 'unknown'
+                ]
+            );
+
             Log::info('🎉 OnlyOffice S3: Exportação concluída via URL', [
                 'proposicao_id' => $proposicao->id,
                 'execution_time_ms' => $executionTime,
@@ -2285,6 +2375,21 @@ Sistema funcionando!\par
 
         } catch (\Exception $e) {
             $executionTime = round((microtime(true) - $startTime) * 1000, 2);
+
+            // 📋 LOG: Registrar erro na exportação S3
+            \App\Models\DocumentWorkflowLog::logS3Export(
+                proposicaoId: $proposicao->id,
+                status: 'error',
+                description: 'Falha na exportação PDF para S3 via download OnlyOffice',
+                executionTimeMs: (int) $executionTime,
+                errorMessage: $e->getMessage(),
+                metadata: [
+                    'export_method' => 'onlyoffice_download',
+                    'original_pdf_url' => $request->input('pdf_url'),
+                    'error_type' => get_class($e),
+                    'stack_trace' => $e->getTraceAsString()
+                ]
+            );
 
             Log::error('❌ OnlyOffice S3: Falha no download via URL', [
                 'proposicao_id' => $proposicao->id,
@@ -2385,5 +2490,160 @@ Sistema funcionando!\par
                 'error' => $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Gerar path único para S3 organizado por tipo de proposição
+     * Se já existe um path S3, reutiliza para substituir o arquivo
+     * Formato: {camara_identifier}/proposicoes/{tipo_codigo}/{ano}/{mes}/{dia}/{id}/{uuid}_{timestamp}.pdf
+     */
+    private function generateUniqueS3Path(Proposicao $proposicao): string
+    {
+        // Se já existe um path S3, reutilizar para substituir o arquivo atual
+        if (!empty($proposicao->pdf_s3_path)) {
+            Log::info('♻️ OnlyOffice S3: Reutilizando path existente para substituir arquivo', [
+                'proposicao_id' => $proposicao->id,
+                'existing_path' => $proposicao->pdf_s3_path
+            ]);
+            return $proposicao->pdf_s3_path;
+        }
+
+        $now = now();
+        $timestamp = time();
+        $uuid = \Illuminate\Support\Str::uuid();
+
+        // Obter identificador único da câmara
+        $camaraIdentifier = $this->camaraIdentifierService->getFullIdentifier();
+
+        // Buscar tipo da proposição
+        $tipoProposicao = $proposicao->tipoProposicao;
+        $tipoCode = $tipoProposicao ? $tipoProposicao->codigo : 'generico';
+
+        // Criar estrutura de pastas organizadas
+        $year = $now->year;
+        $month = str_pad($now->month, 2, '0', STR_PAD_LEFT);
+        $day = str_pad($now->day, 2, '0', STR_PAD_LEFT);
+
+        // Estrutura: {camara}/proposicoes/{tipo}/{ano}/{mes}/{dia}/{id}/{uuid}_{timestamp}.pdf
+        $newPath = "{$camaraIdentifier}/proposicoes/{$tipoCode}/{$year}/{$month}/{$day}/{$proposicao->id}/{$uuid}_{$timestamp}.pdf";
+
+        Log::info('🆕 OnlyOffice S3: Criando novo path S3 com identificador da câmara', [
+            'proposicao_id' => $proposicao->id,
+            'camara_identifier' => $camaraIdentifier,
+            'new_path' => $newPath
+        ]);
+
+        return $newPath;
+    }
+
+    /**
+     * Gerar path único para S3 para upload de arquivos
+     * Se já existe um path S3, reutiliza para substituir o arquivo
+     * Formato: {camara_identifier}/proposicoes/{tipo_codigo}/upload/{ano}/{mes}/{dia}/{id}/{uuid}_{timestamp}.pdf
+     */
+    private function generateUniqueS3PathForUpload(Proposicao $proposicao): string
+    {
+        // Se já existe um path S3, reutilizar para substituir o arquivo atual
+        if (!empty($proposicao->pdf_s3_path)) {
+            return $proposicao->pdf_s3_path;
+        }
+
+        $now = now();
+        $timestamp = time();
+        $uuid = \Illuminate\Support\Str::uuid();
+
+        // Obter identificador único da câmara
+        $camaraIdentifier = $this->camaraIdentifierService->getFullIdentifier();
+
+        // Buscar tipo da proposição
+        $tipoProposicao = $proposicao->tipoProposicao;
+        $tipoCode = $tipoProposicao ? $tipoProposicao->codigo : 'generico';
+
+        // Criar estrutura de pastas organizadas para uploads
+        $year = $now->year;
+        $month = str_pad($now->month, 2, '0', STR_PAD_LEFT);
+        $day = str_pad($now->day, 2, '0', STR_PAD_LEFT);
+
+        // Estrutura: {camara}/proposicoes/{tipo}/upload/{ano}/{mes}/{dia}/{id}/{uuid}_{timestamp}.pdf
+        return "{$camaraIdentifier}/proposicoes/{$tipoCode}/upload/{$year}/{$month}/{$day}/{$proposicao->id}/{$uuid}_{$timestamp}.pdf";
+    }
+
+    /**
+     * Gerar path único para S3 para upload manual
+     * Se já existe um path S3, reutiliza para substituir o arquivo
+     */
+    private function generateUniqueS3PathForManual(Proposicao $proposicao): string
+    {
+        // Se já existe um path S3, reutilizar para substituir o arquivo atual
+        if (!empty($proposicao->pdf_s3_path)) {
+            return $proposicao->pdf_s3_path;
+        }
+
+        $now = now();
+        $timestamp = time();
+        $uuid = \Illuminate\Support\Str::uuid();
+
+        // Obter identificador único da câmara
+        $camaraIdentifier = $this->camaraIdentifierService->getFullIdentifier();
+
+        $tipoProposicao = $proposicao->tipoProposicao;
+        $tipoCode = $tipoProposicao ? $tipoProposicao->codigo : 'generico';
+
+        $year = $now->year;
+        $month = str_pad($now->month, 2, '0', STR_PAD_LEFT);
+        $day = str_pad($now->day, 2, '0', STR_PAD_LEFT);
+
+        return "{$camaraIdentifier}/proposicoes/{$tipoCode}/manual/{$year}/{$month}/{$day}/{$proposicao->id}/{$uuid}_{$timestamp}.pdf";
+    }
+
+    /**
+     * Gerar path único para S3 para export automático
+     * Se já existe um path S3, reutiliza para substituir o arquivo
+     */
+    private function generateUniqueS3PathForAutomatic(Proposicao $proposicao): string
+    {
+        // Se já existe um path S3, reutilizar para substituir o arquivo atual
+        if (!empty($proposicao->pdf_s3_path)) {
+            return $proposicao->pdf_s3_path;
+        }
+
+        $now = now();
+        $timestamp = time();
+        $uuid = \Illuminate\Support\Str::uuid();
+
+        // Obter identificador único da câmara
+        $camaraIdentifier = $this->camaraIdentifierService->getFullIdentifier();
+
+        $tipoProposicao = $proposicao->tipoProposicao;
+        $tipoCode = $tipoProposicao ? $tipoProposicao->codigo : 'generico';
+
+        $year = $now->year;
+        $month = str_pad($now->month, 2, '0', STR_PAD_LEFT);
+        $day = str_pad($now->day, 2, '0', STR_PAD_LEFT);
+
+        return "{$camaraIdentifier}/proposicoes/{$tipoCode}/automatic/{$year}/{$month}/{$day}/{$proposicao->id}/{$uuid}_{$timestamp}.pdf";
+    }
+
+    /**
+     * Forçar criação de novo path S3 (para quando precisar de uma nova versão)
+     * Útil em casos especiais onde não queremos substituir o arquivo atual
+     */
+    private function generateNewS3Path(Proposicao $proposicao, string $type = 'export'): string
+    {
+        $now = now();
+        $timestamp = time();
+        $uuid = \Illuminate\Support\Str::uuid();
+
+        // Obter identificador único da câmara
+        $camaraIdentifier = $this->camaraIdentifierService->getFullIdentifier();
+
+        $tipoProposicao = $proposicao->tipoProposicao;
+        $tipoCode = $tipoProposicao ? $tipoProposicao->codigo : 'generico';
+
+        $year = $now->year;
+        $month = str_pad($now->month, 2, '0', STR_PAD_LEFT);
+        $day = str_pad($now->day, 2, '0', STR_PAD_LEFT);
+
+        return "{$camaraIdentifier}/proposicoes/{$tipoCode}/{$type}/{$year}/{$month}/{$day}/{$proposicao->id}/{$uuid}_{$timestamp}.pdf";
     }
 }

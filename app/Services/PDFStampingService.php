@@ -134,7 +134,7 @@ class PDFStampingService
                 'signed_size' => Storage::size($relativePath)
             ]);
 
-            return $outputPath;
+            return $absoluteSignedPath;
 
         } catch (\Exception $e) {
             Log::error('Error applying signature stamp', [
@@ -247,7 +247,7 @@ class PDFStampingService
                 'protocoled_size' => Storage::size($relativePath)
             ]);
 
-            return $outputPath;
+            return $absoluteProtocoledPath;
 
         } catch (\Exception $e) {
             Log::error('Error applying protocol stamp', [

@@ -100,12 +100,6 @@
     margin-bottom: 0;
 }
 </style>
-<style>
-
-.d-grid .btn-assinatura:last-child {
-    margin-bottom: 0;
-}
-</style>
 
 <style>
 
@@ -1972,7 +1966,7 @@ createApp({
                                                         <span class="path3"></span>
                                                     </i>
                                                     Visualizar PDF no S3
-                                                </a>
+                    
                                             </div>
                                         </div>
 
@@ -2016,7 +2010,7 @@ createApp({
                                                     <span class="path2"></span>
                                                 </i>
                                                 Ir para o Editor e Exportar PDF
-                                            </a>
+                
                                         </div>
                                     </div>
                                 `,
@@ -2082,9 +2076,6 @@ createApp({
                 this.showErrorAlert(error.message || 'Erro ao atualizar status da proposição');
             }
         },
-
-
-
 
         getStatusActionConfig(status) {
             const configs = {

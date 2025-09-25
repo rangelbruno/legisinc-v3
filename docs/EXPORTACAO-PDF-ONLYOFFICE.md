@@ -449,21 +449,32 @@ graph TD
 
 ## 📁 Estrutura de Arquivos
 
-### **AWS S3 - Estrutura de Diretórios**
+### **AWS S3 - Nova Estrutura Organizada por Tipo (v2.2)**
 ```
 legisinc (bucket)
 └── proposicoes/
-    └── pdf/
-        └── {proposicao_id}/
-            ├── proposicao_{id}_exported_{timestamp}.pdf
-            ├── proposicao_{id}_exported_{timestamp2}.pdf
-            └── ...
+    ├── projeto_lei_ordinaria/
+    │   ├── export/
+    │   │   └── {ano}/{mes}/{dia}/{id}/
+    │   │       └── {uuid}_{timestamp}.pdf
+    │   ├── upload/
+    │   ├── manual/
+    │   └── automatic/
+    ├── projeto_lei_complementar/
+    ├── proposta_emenda_constitucional/
+    └── ...
 ```
 
-### **Exemplo de Estrutura S3**
+### **Exemplo de Estrutura S3 Atualizada**
 ```
-s3://legisinc/proposicoes/pdf/123/proposicao_123_exported_1758634990.pdf
+s3://legisinc/proposicoes/projeto_lei_ordinaria/export/2025/09/25/123/6b269a20-498c-467e-bf03-b9f8cdb19b34_1758768812.pdf
 ```
+
+### **Sistema de Substituição Inteligente**
+- 🔄 **Primeira exportação**: Cria arquivo único com UUID
+- 🔄 **Exportações subsequentes**: Substitui o mesmo arquivo (mesmo path)
+- 🎯 **Arquivo sempre atualizado**: PDF no S3 reflete última versão editada
+- 💾 **Economia de espaço**: Não acumula arquivos antigos
 
 ### **URLs Temporárias Geradas**
 ```
@@ -686,6 +697,386 @@ php test-s3-connection.php
 - [x] **Eliminação do erro "Falha na exportação automática"**
 - [x] **Fluxo de aprovação simplificado e direto**
 - [x] **Documentação atualizada com nova versão**
+
+### **✅ Versão 2.2 - Sistema de Substituição Inteligente**
+- [x] **Nova estrutura S3 organizada por tipo de proposição**
+- [x] **Sistema de substituição automática de arquivos**
+- [x] **Método `generateUniqueS3Path()` com lógica de reutilização**
+- [x] **Campos S3 adicionados ao fillable do modelo Proposicao**
+- [x] **Identificação única com UUID + timestamp**
+- [x] **Organização temporal por ano/mês/dia**
+- [x] **Economia de espaço - não acumula arquivos antigos**
+- [x] **Diferentes tipos de operação (export, upload, manual, automatic)**
+- [x] **Logs detalhados para monitoramento**
+- [x] **Testes de funcionamento implementados**
+
+### **✅ Versão 2.3 - Validação Integrada na Aprovação**
+- [x] **Validação prévia S3 obrigatória antes de aprovar proposição**
+- [x] **Método `validarExportacaoS3AntesAprovacao()` implementado**
+- [x] **Integração com nova estrutura por tipo de proposição**
+- [x] **Bloqueio automático de aprovação sem exportação S3**
+- [x] **Redirecionamento inteligente para editor OnlyOffice**
+- [x] **Fallback para estruturas antigas (compatibilidade)**
+- [x] **Auto-atualização do banco com arquivos encontrados**
+- [x] **Limpeza automática de paths inválidos**
+- [x] **Logs detalhados do processo de validação**
+- [x] **Eliminação definitiva da geração redundante de PDF**
+
+---
+
+## 🔄 Sistema de Substituição Inteligente (v2.2)
+
+### **Problema Identificado na v2.1**
+Na versão anterior, o sistema criava novos arquivos a cada exportação:
+- ❌ Múltiplos arquivos por proposição acumulavam no S3
+- ❌ Conflitos entre proposições de tipos diferentes com mesmo ID
+- ❌ Estrutura simples `proposicoes/pdf/{id}/` causava sobreposições
+- ❌ Desperdício de espaço de armazenamento
+
+### **Nova Solução Implementada (v2.2)**
+
+#### **1. Estrutura Organizada por Tipo**
+```php
+// Novo padrão: proposicoes/{tipo_codigo}/{operacao}/{ano}/{mes}/{dia}/{id}/{uuid}_{timestamp}.pdf
+$s3Path = "proposicoes/projeto_lei_ordinaria/export/2025/09/25/123/6b269a20-498c-467e-bf03-b9f8cdb19b34_1758768812.pdf";
+```
+
+#### **2. Sistema de Substituição Automática**
+```php
+// OnlyOfficeController.php - Método generateUniqueS3Path()
+private function generateUniqueS3Path(Proposicao $proposicao): string
+{
+    // Se já existe um path S3, reutilizar para substituir o arquivo atual
+    if (!empty($proposicao->pdf_s3_path)) {
+        Log::info('♻️ OnlyOffice S3: Reutilizando path existente para substituir arquivo', [
+            'proposicao_id' => $proposicao->id,
+            'existing_path' => $proposicao->pdf_s3_path
+        ]);
+        return $proposicao->pdf_s3_path;
+    }
+
+    // Criar novo path único organizado por tipo
+    $tipoCode = $proposicao->tipoProposicao->codigo ?? 'generico';
+    return "proposicoes/{$tipoCode}/export/{$year}/{$month}/{$day}/{$proposicao->id}/{$uuid}_{$timestamp}.pdf";
+}
+```
+
+#### **3. Campos S3 no Modelo**
+```php
+// app/Models/Proposicao.php - Fillable atualizado
+protected $fillable = [
+    // ... outros campos ...
+
+    // ☁️ Campos S3
+    'pdf_s3_path',
+    'pdf_s3_url',
+    'pdf_size_bytes'
+];
+```
+
+### **Fluxo de Substituição**
+
+#### **Cenário A: Primeira Exportação**
+```mermaid
+graph TD
+    A[Usuário exporta PDF] --> B[Verificar se já existe pdf_s3_path]
+    B --> C{Path existe?}
+    C -->|NÃO| D[Criar novo path único]
+    D --> E[Upload para S3]
+    E --> F[Salvar path no banco]
+    F --> G[Arquivo criado no S3]
+
+    style C fill:#fff3e0
+    style D fill:#e8f5e8
+    style G fill:#e8f5e8
+```
+
+#### **Cenário B: Exportação Subsequente**
+```mermaid
+graph TD
+    A[Usuário exporta PDF novamente] --> B[Verificar se já existe pdf_s3_path]
+    B --> C{Path existe?}
+    C -->|SIM| D[Reutilizar path existente]
+    D --> E[Substituir arquivo no S3]
+    E --> F[Atualizar metadados no banco]
+    F --> G[Mesmo arquivo, conteúdo atualizado]
+
+    style C fill:#e8f5e8
+    style D fill:#e1f5fe
+    style G fill:#e8f5e8
+```
+
+### **Benefícios da Nova Implementação**
+
+#### **✅ Organização Melhorada**
+- **Por tipo**: Cada tipo de proposição tem sua pasta específica
+- **Por data**: Estrutura hierárquica ano/mês/dia
+- **Por operação**: Separação entre export, upload, manual, automatic
+- **Por proposição**: ID único dentro da estrutura
+
+#### **✅ Economia de Espaço**
+- **Substituição**: Mesmo arquivo sempre atualizado
+- **Sem acúmulo**: Não cria múltiplas versões desnecessárias
+- **Identificação única**: UUID + timestamp evita qualquer conflito
+
+#### **✅ Performance Aprimorada**
+- **Mesma URL**: Link do PDF permanece consistente
+- **Cache otimizado**: Browsers podem cachear melhor
+- **Menos requisições S3**: Reutilização de paths
+
+#### **✅ Experiência do Usuário**
+- **Link permanente**: URL do PDF não muda entre exportações
+- **Sempre atualizado**: PDF reflete última versão editada
+- **Feedback claro**: Logs indicam se é criação ou substituição
+
+### **Implementação Técnica**
+
+#### **Métodos Atualizados**
+1. **`generateUniqueS3Path()`** - Export padrão com substituição
+2. **`generateUniqueS3PathForUpload()`** - Upload com substituição
+3. **`generateUniqueS3PathForManual()`** - Upload manual com substituição
+4. **`generateUniqueS3PathForAutomatic()`** - Export automático com substituição
+5. **`generateNewS3Path()`** - Forçar novo path quando necessário
+
+#### **Exemplo de Uso**
+```php
+// Primeira exportação
+$proposicao = Proposicao::find(123); // pdf_s3_path = null
+$path = $this->generateUniqueS3Path($proposicao);
+// Resultado: proposicoes/projeto_lei_ordinaria/export/2025/09/25/123/uuid_123456.pdf
+
+// Segunda exportação (mesmo path)
+$proposicao = Proposicao::find(123); // pdf_s3_path = path anterior
+$path = $this->generateUniqueS3Path($proposicao);
+// Resultado: proposicoes/projeto_lei_ordinaria/export/2025/09/25/123/uuid_123456.pdf (MESMO!)
+```
+
+### **Comparação de Versões**
+
+| Aspecto | v2.1 (Anterior) | v2.2 (Atual) |
+|---------|-----------------|--------------|
+| **Estrutura** | `proposicoes/pdf/{id}/` | `proposicoes/{tipo}/export/{ano}/{mes}/{dia}/{id}/` |
+| **Arquivos** | Múltiplos arquivos acumulados | Um arquivo sempre atualizado |
+| **Conflitos** | Possíveis entre tipos diferentes | Impossível - separado por tipo |
+| **Espaço** | Cresce continuamente | Constante por proposição |
+| **URLs** | Mudam a cada export | Permanece a mesma |
+| **Organização** | Apenas por ID | Por tipo + data + ID |
+
+---
+
+## 🛡️ Validação Integrada na Aprovação (v2.3)
+
+### **Problema Identificado na v2.2**
+Mesmo com o sistema de substituição inteligente funcionando, ainda era possível:
+- ✅ Usuário exportar PDF para S3 no editor
+- ❌ Usuário aprovar proposição SEM ter exportado
+- ❌ Sistema gerar PDF redundante após aprovação
+- ❌ Conflito entre arquivo S3 e PDF gerado automaticamente
+
+### **Nova Solução Implementada (v2.3)**
+
+#### **1. Validação Prévia Obrigatória**
+```php
+// ProposicaoLegislativoController.php - Método aprovar()
+// 🔍 VALIDAÇÃO PRÉVIA S3: Verificar se proposição foi exportada para S3 antes de aprovar
+$s3ValidationResult = $this->validarExportacaoS3AntesAprovacao($proposicao);
+if (!$s3ValidationResult['success']) {
+    return response()->json([
+        'success' => false,
+        'requires_s3_export' => true,
+        'message' => 'Para aprovar esta proposição, é necessário primeiro exportar o PDF para o AWS S3.',
+        'editor_url' => route('proposicoes.onlyoffice.editor', $proposicao->id)
+    ], 400);
+}
+```
+
+#### **2. Método de Validação Inteligente**
+```php
+// ProposicaoLegislativoController.php - validarExportacaoS3AntesAprovacao()
+private function validarExportacaoS3AntesAprovacao(Proposicao $proposicao): array
+{
+    // Prioridade 1: Verificar pdf_s3_path no banco (novo sistema)
+    if (!empty($proposicao->pdf_s3_path)) {
+        $s3Disk = Storage::disk('s3');
+        if ($s3Disk->exists($proposicao->pdf_s3_path)) {
+            return ['success' => true, 'source' => 'database'];
+        }
+        // Limpar path inválido
+        $proposicao->update(['pdf_s3_path' => null, 'pdf_s3_url' => null]);
+    }
+
+    // Prioridade 2: Buscar na nova estrutura por tipo
+    $tipoCode = $proposicao->tipoProposicao->codigo ?? 'generico';
+    $searchPaths = [
+        "proposicoes/{$tipoCode}/",      // Nova estrutura
+        "proposicoes/pdf/{$proposicao->id}/",  // Antiga
+        "proposicoes/pdfs/"              // Antiga
+    ];
+
+    // Buscar e auto-atualizar banco se encontrar
+    foreach ($searchPaths as $path) {
+        $files = $s3Disk->allFiles($path);
+        foreach ($files as $file) {
+            if (str_contains($file, "/{$proposicao->id}/") ||
+                str_contains($file, "proposicao_{$proposicao->id}_")) {
+
+                // Auto-atualizar banco
+                $proposicao->update([
+                    'pdf_s3_path' => $file,
+                    'pdf_s3_url' => $s3Disk->temporaryUrl($file, now()->addDay())
+                ]);
+
+                return ['success' => true, 'source' => 'search'];
+            }
+        }
+    }
+
+    return ['success' => false, 'has_export' => false];
+}
+```
+
+#### **3. Integração com Sistema de Substituição**
+A validação funciona perfeitamente com o sistema de substituição inteligente:
+- **Primeira exportação**: Cria arquivo único e salva path no banco
+- **Validação**: Encontra arquivo rapidamente via `pdf_s3_path`
+- **Aprovação**: Permitida imediatamente
+- **Exportações subsequentes**: Substituem mesmo arquivo
+- **Validação**: Continua funcionando com mesmo path
+
+### **Fluxos de Aprovação Atualizados**
+
+#### **Cenário A: Proposição COM exportação S3**
+```mermaid
+graph TD
+    A[Usuário clica 'Aprovar Proposição'] --> B[Validar formulário]
+    B --> C[🔍 Validar exportação S3]
+    C --> D{PDF existe no S3?}
+    D -->|SIM| E[✅ Validação aprovada]
+    E --> F[Verificar análises técnicas]
+    F --> G[Atualizar proposição]
+    G --> H[🎉 Aprovação concluída]
+
+    style C fill:#e1f5fe
+    style E fill:#e8f5e8
+    style H fill:#e8f5e8
+```
+
+#### **Cenário B: Proposição SEM exportação S3**
+```mermaid
+graph TD
+    A[Usuário clica 'Aprovar Proposição'] --> B[Validar formulário]
+    B --> C[🔍 Validar exportação S3]
+    C --> D{PDF existe no S3?}
+    D -->|NÃO| E[❌ Aprovação bloqueada]
+    E --> F[Mostrar mensagem de erro]
+    F --> G[Fornecer link para editor]
+    G --> H[Usuário vai exportar PDF]
+    H --> I[Retorna e tenta aprovar novamente]
+    I --> C
+
+    style C fill:#e1f5fe
+    style E fill:#ffebee
+    style F fill:#fff3e0
+    style G fill:#e3f2fd
+```
+
+### **Resposta JSON da Validação**
+
+#### **Quando PDF NÃO existe:**
+```json
+{
+    "success": false,
+    "requires_s3_export": true,
+    "message": "Para aprovar esta proposição, é necessário primeiro exportar o PDF para o AWS S3.",
+    "s3_info": {
+        "success": false,
+        "has_export": false,
+        "message": "Nenhuma exportação S3 encontrada para esta proposição",
+        "searched_paths": [
+            "proposicoes/projeto_lei_ordinaria/",
+            "proposicoes/pdf/1/",
+            "proposicoes/pdfs/"
+        ]
+    },
+    "editor_url": "/proposicoes/1/onlyoffice/editor"
+}
+```
+
+#### **Quando PDF existe:**
+```json
+{
+    "success": true,
+    "message": "Proposição aprovada com sucesso",
+    "s3_validation": {
+        "success": true,
+        "has_export": true,
+        "s3_path": "proposicoes/projeto_lei_ordinaria/export/2025/09/25/1/uuid_123456.pdf",
+        "exported_at": "25/09/2025 12:34:56",
+        "file_size_kb": 124.5,
+        "source": "database"
+    }
+}
+```
+
+### **Benefícios da Validação Integrada**
+
+#### **✅ Controle Total do Processo**
+- **Antes**: Usuário podia aprovar sem exportar → PDF redundante
+- **Depois**: Aprovação IMPOSSÍVEL sem exportação S3 prévia
+
+#### **✅ Experiência do Usuário Aprimorada**
+- **Feedback claro**: Sabe exatamente o que precisa fazer
+- **Redirecionamento direto**: Link para editor OnlyOffice
+- **Processo guiado**: Não há dúvidas sobre próximos passos
+
+#### **✅ Eliminação de Redundância**
+- **Antes**: Exportação manual + geração automática
+- **Depois**: Apenas exportação manual (obrigatória)
+
+#### **✅ Performance e Confiabilidade**
+- **Cache primário**: Usa banco de dados como cache
+- **Auto-atualização**: Sincroniza banco com S3 automaticamente
+- **Limpeza automática**: Remove paths inválidos
+- **Compatibilidade**: Funciona com estruturas antigas
+
+### **Logs de Monitoramento**
+
+#### **Validação Aprovada:**
+```php
+Log::info('✅ LEGISLATIVO APPROVAL: Validação S3 aprovada', [
+    'proposicao_id' => $proposicao->id,
+    'user_id' => $user->id,
+    's3_info' => [
+        'source' => 'database',
+        's3_path' => 'proposicoes/projeto_lei_ordinaria/export/2025/09/25/1/uuid.pdf',
+        'file_size_kb' => 124.5
+    ]
+]);
+```
+
+#### **Validação Rejeitada:**
+```php
+Log::warning('🚫 LEGISLATIVO APPROVAL: Aprovação bloqueada - PDF não exportado para S3', [
+    'proposicao_id' => $proposicao->id,
+    'user_id' => $user->id,
+    's3_validation' => [
+        'success' => false,
+        'searched_paths' => [...],
+        'message' => 'Nenhuma exportação S3 encontrada'
+    ]
+]);
+```
+
+### **Comparação de Versões**
+
+| Aspecto | v2.2 (Anterior) | v2.3 (Atual) |
+|---------|-----------------|--------------|
+| **Exportação** | Opcional antes de aprovar | **Obrigatória** antes de aprovar |
+| **Validação** | Apenas durante exportação | **Validação prévia** na aprovação |
+| **Aprovação** | Sempre permitida | **Bloqueada** sem exportação S3 |
+| **PDF redundante** | Ainda gerado após aprovação | **Eliminado** completamente |
+| **Experiência** | Confusa (dois PDFs) | **Limpa** (um PDF sempre atualizado) |
+| **Performance** | Geração desnecessária | **Otimizada** (sem redundância) |
 
 ---
 
@@ -919,6 +1310,229 @@ await Swal.fire({
 
 ---
 
+## 🏛️ Sistema de Identificação de Câmara (v2.4)
+
+### **🚨 Problema dos Conflitos S3 entre Câmaras**
+
+Quando o banco de dados era resetado (`migrate:fresh --seed`), as proposições recomeçavam com ID 1, mas os arquivos PDF anteriores permaneciam no S3. Isso causava dois problemas críticos:
+
+1. **Conflito de IDs**: Nova proposição ID=1 encontrava PDF de proposição antiga ID=1
+2. **Falta de Isolamento**: Câmaras diferentes compartilhavam o mesmo namespace S3
+
+#### **Exemplo do Problema:**
+```
+# Antes do reset
+PDF no S3: proposicoes/projeto_lei/2025/09/25/1/arquivo_antigo.pdf
+
+# Após reset + nova proposição ID=1
+Sistema encontra: "PDF encontrado no AWS S3!" (arquivo antigo)
+Resultado: Confusão entre documentos de câmaras/períodos diferentes
+```
+
+### **✅ Solução Implementada: CamaraIdentifierService**
+
+#### **1. Novo Serviço de Identificação**
+Criado serviço para gerar identificadores únicos por câmara baseado em dados institucionais permanentes.
+
+**Localização**: `app/Services/CamaraIdentifierService.php`
+
+```php
+// Gera identificador único baseado no CNPJ ou dados da câmara
+public function getUniqueIdentifier(): string
+
+// Gera slug limpo do nome da câmara
+public function getSlugName(): string
+
+// Combina slug + identificador único
+public function getFullIdentifier(): string
+```
+
+#### **2. Lógica de Geração de Identificadores**
+
+1. **Se tem CNPJ**: Usa primeiros 8 dígitos (ex: `12345678`)
+2. **Fallback**: Hash MD5 dos dados combinados (sigla + cidade OU nome + cidade)
+3. **Prioridade**: Sigla da câmara > Nome completo > Fallback padrão
+4. **Resultado**: Identificador único tipo `cmc_46482865` (com sigla) ou `camaramunicipal_d1fb83c4` (nome completo)
+
+#### **3. Nova Estrutura de Caminhos S3 com Isolamento**
+
+##### **Antes (Conflitos Possíveis):**
+```
+proposicoes/{tipo}/{ano}/{mes}/{dia}/{id}/{uuid}_{timestamp}.pdf
+```
+
+##### **Depois (Isolamento por Câmara):**
+```
+{camara_identifier}/proposicoes/{tipo}/{ano}/{mes}/{dia}/{id}/{uuid}_{timestamp}.pdf
+```
+
+##### **Exemplos Práticos:**
+```
+# Câmara A (Sigla CMC configurada)
+cmc_46482865/proposicoes/projeto_lei/2025/09/25/1/uuid1_timestamp.pdf
+
+# Câmara B (Sigla CMSP configurada)
+cmsp_d1fb83c4/proposicoes/projeto_lei/2025/09/25/1/uuid2_timestamp.pdf
+
+# Câmara C (sem sigla - usa nome completo)
+camaramunicipal_d1fb83c4/proposicoes/projeto_lei/2025/09/25/1/uuid3_timestamp.pdf
+```
+
+#### **4. Integração com OnlyOfficeController**
+
+Todos os métodos de geração de caminhos S3 foram atualizados:
+
+- `generateUniqueS3Path()` - Inclui identificador da câmara
+- `generateUniqueS3PathForUpload()` - Upload com identificador
+- `generateUniqueS3PathForManual()` - Upload manual com identificador
+- `generateUniqueS3PathForAutomatic()` - Export automático com identificador
+- `generateNewS3Path()` - Novos paths com identificador
+- `verificarUltimaExportacaoS3()` - Busca considerando identificador da câmara
+
+```php
+// Injeção do serviço no constructor
+public function __construct(CamaraIdentifierService $camaraIdentifierService)
+{
+    $this->camaraIdentifierService = $camaraIdentifierService;
+}
+
+// Exemplo de uso nos métodos
+private function generateUniqueS3Path(Proposicao $proposicao): string
+{
+    // Obter identificador único da câmara
+    $camaraIdentifier = $this->camaraIdentifierService->getFullIdentifier();
+
+    // Estrutura: {camara}/proposicoes/{tipo}/{ano}/{mes}/{dia}/{id}/{uuid}_{timestamp}.pdf
+    $newPath = "{$camaraIdentifier}/proposicoes/{$tipoCode}/{$year}/{$month}/{$day}/{$proposicao->id}/{$uuid}_{$timestamp}.pdf";
+
+    return $newPath;
+}
+```
+
+### **🔄 Como Funciona na Prática**
+
+#### **Cenário 1: Nova Instalação**
+```bash
+# 1. Sistema gera identificador baseado na sigla/CNPJ configurado
+Identificador: cmc_46482865  # (com sigla CMC configurada)
+
+# 2. Novos PDFs são criados com namespace isolado
+Caminho: cmc_46482865/proposicoes/projeto_lei/2025/09/25/1/uuid_timestamp.pdf
+```
+
+#### **Cenário 2: Reset de Banco (Problema Original Resolvido)**
+```bash
+# 1. Banco resetado, proposição ID=1 criada novamente
+# 2. Busca por PDFs considera identificador da câmara
+# 3. NÃO encontra conflitos com arquivos antigos de outras câmaras/períodos
+# 4. Sistema funciona corretamente sem confusões
+```
+
+#### **Cenário 3: Múltiplas Câmaras no Mesmo S3**
+```bash
+# Câmara Municipal de Caraguatatuba (sigla: CMC)
+cmc_46482865/proposicoes/...
+
+# Câmara Municipal de São Paulo (sigla: CMSP)
+cmsp_d1fb83c4/proposicoes/...
+
+# Câmara sem sigla configurada
+camaramunicipal_c3d4e5f6/proposicoes/...
+
+# Isolamento completo entre instâncias
+```
+
+### **📊 Vantagens da Solução**
+
+#### **✅ Isolamento Completo**
+- Cada câmara tem seu namespace único no S3
+- Zero conflitos entre diferentes instâncias
+
+#### **✅ Persistência de Identificador**
+- Baseado em dados institucionais (CNPJ/sigla/nome)
+- Permanece o mesmo após resets de banco
+
+#### **✅ Compatibilidade Retroativa**
+- Busca em estruturas antigas e novas
+- Migração gradual sem quebras
+
+#### **✅ Organização Aprimorada**
+- Estrutura hierárquica clara no S3
+- Fácil identificação de arquivos por câmara
+- Identificadores compactos quando usa sigla
+
+#### **✅ Flexibilidade de Configuração**
+- **Prioriza sigla da câmara**: Mais limpo e profissional (ex: `CMC`, `CMSP`)
+- **Fallback inteligente**: Usa nome completo se sigla não configurada
+- **Fonte dos dados**: Campo "Sigla da Câmara" em `/parametros-dados-gerais-camara`
+
+### **🛠️ Configuração da Sigla**
+
+Para configurar a sigla da câmara:
+
+1. Acesse `/parametros-dados-gerais-camara`
+2. Vá para aba "Informações da Câmara"
+3. Configure o campo "Sigla da Câmara" (ex: `CMC`, `CMSP`, `CMRJ`)
+4. Salve as alterações
+5. A próxima exportação usará a sigla atualizada
+
+**Exemplo**: Câmara Municipal de Caraguatatuba com sigla `CMC`:
+- Identificador gerado: `cmc_46482865/proposicoes/...`
+
+### **🔧 Migração de Arquivos Existentes**
+
+Para migrar arquivos existentes para a nova estrutura:
+
+```bash
+# Simulação (dry-run)
+docker exec legisinc-app php artisan proposicoes:migrar-s3-camara --dry-run
+
+# Execução real
+docker exec legisinc-app php artisan proposicoes:migrar-s3-camara
+
+# Forçar sobrescrita se necessário
+docker exec legisinc-app php artisan proposicoes:migrar-s3-camara --force
+```
+
+**Comando criado**: `app/Console/Commands/MigrarCaminhosS3ParaCamara.php`
+
+### **📋 Arquivos Modificados/Criados**
+
+#### **Novos Arquivos:**
+- `app/Services/CamaraIdentifierService.php` - Serviço principal
+- `app/Console/Commands/MigrarCaminhosS3ParaCamara.php` - Comando de migração
+- `docs/SOLUCAO-CONFLITO-S3-CAMARA.md` - Documentação técnica detalhada
+
+#### **Arquivos Modificados:**
+- `app/Http/Controllers/OnlyOfficeController.php` - Integração do serviço
+- `docs/EXPORTACAO-PDF-ONLYOFFICE.md` - Esta documentação atualizada
+
+### **🧪 Teste da Solução**
+
+```bash
+# Testar geração de identificador
+docker exec legisinc-app php artisan tinker --execute="
+\$service = app(\App\Services\CamaraIdentifierService::class);
+echo 'Identificador: ' . \$service->getFullIdentifier();
+"
+
+# Resultado esperado: cmc_46482865 (ou similar baseado na configuração)
+```
+
+### **📝 Conclusão**
+
+A solução de identificação de câmara resolve completamente:
+
+✅ **Conflitos após reset de banco**
+✅ **Isolamento entre diferentes câmaras**
+✅ **Organização melhorada no S3**
+✅ **Compatibilidade com estruturas antigas**
+✅ **Sistema escalável para múltiplas instâncias**
+
+O sistema agora funciona de forma totalmente isolada e consistente, independente de resets de banco de dados, garantindo que cada câmara tenha seu próprio namespace no AWS S3.
+
+---
+
 ## 🔮 Próximos Passos
 
 ### **Melhorias Futuras**
@@ -955,11 +1569,14 @@ await Swal.fire({
 ---
 
 **Implementado em**: Setembro 2025
-**Versão**: 2.1 - Validação Prévia S3 para Aprovação
+**Versão**: 2.4 - Identificação de Câmara para Isolamento S3
 **Status**: ✅ Produção
-**Última Atualização**: 24/09/2025
+**Última Atualização**: 25/09/2025
 
 ### **Changelog**
+- **v2.4**: ✅ **Identificação de câmara para isolamento S3** - Sistema de identificadores únicos por câmara para resolver conflitos entre diferentes câmaras/períodos após reset de banco de dados
+- **v2.3**: ✅ **Validação integrada na aprovação** - Sistema bloqueia aprovação de proposições sem exportação S3, eliminando completamente a geração redundante de PDF e integrando perfeitamente com o sistema de substituição inteligente
+- **v2.2**: ✅ **Sistema de substituição inteligente** - Nova estrutura S3 organizada por tipo de proposição com substituição automática de arquivos, eliminando duplicatas e organizando melhor o armazenamento
 - **v2.1**: ✅ **Nova validação prévia S3 para aprovação** - Sistema verifica se PDF foi exportado antes de aprovar, removendo exportação automática redundante
 - **v2.0**: Implementação completa S3 com captura de estado atual editado
 - **v1.5**: Resolução problemas CORS via proxy backend

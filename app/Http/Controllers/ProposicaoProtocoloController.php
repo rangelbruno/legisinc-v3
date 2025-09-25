@@ -101,6 +101,25 @@ class ProposicaoProtocoloController extends Controller
             'verificacoes_realizadas' => $verificacoes,
         ]);
 
+        // 📋 LOG: Registrar atribuição de protocolo
+        \App\Models\DocumentWorkflowLog::logProtocolAssignment(
+            proposicaoId: $proposicao->id,
+            status: 'success',
+            description: "Número de protocolo {$numeroProcesso} atribuído com sucesso",
+            protocolNumber: $numeroProcesso,
+            metadata: [
+                'funcionario_protocolo_id' => Auth::id(),
+                'funcionario_nome' => Auth::user()->name,
+                'comissoes_destino' => $request->comissoes_destino,
+                'observacoes_protocolo' => $request->observacoes_protocolo,
+                'verificacoes_realizadas' => $verificacoes,
+                'data_protocolo' => now()->toISOString(),
+                'tipo_proposicao' => $proposicao->tipoProposicao?->codigo ?? 'unknown',
+                'status_anterior' => $proposicao->status,
+                'status_atual' => 'protocolado'
+            ]
+        );
+
         // CORREÇÃO: Forçar regeneração de PDF com número de protocolo usando template service
         try {
             error_log("Protocolo: Invalidando PDF antigo e forçando regeneração para proposição {$proposicao->id} com protocolo {$numeroProcesso}");

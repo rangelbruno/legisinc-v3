@@ -142,6 +142,27 @@ class ProposicaoAssinaturaController extends Controller
             'certificado' => $request->certificado_digital,
         ]);
 
+        // 📋 LOG: Registrar assinatura digital bem-sucedida
+        \App\Models\DocumentWorkflowLog::logDigitalSignature(
+            proposicaoId: $proposicao->id,
+            status: 'success',
+            description: 'Proposição assinada digitalmente pelo parlamentar',
+            signatureType: $request->certificado_digital ?: 'SIMULADO',
+            certificateInfo: $request->certificado_digital,
+            metadata: [
+                'nome_assinante' => $user->name,
+                'email_assinante' => $user->email,
+                'ip_assinatura' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+                'codigo_validacao' => $dadosValidacao['codigo_validacao'],
+                'url_validacao' => $dadosValidacao['url_validacao'],
+                'status_anterior' => $proposicao->status,
+                'status_atual' => 'assinado',
+                'confirmacao_leitura' => $proposicao->confirmacao_leitura,
+                'tipo_usuario' => $user->roles->pluck('name')->toArray()
+            ]
+        );
+
         // Log successful validation setup
         Log::info('Assinatura digital com validação processada', [
             'proposicao_id' => $proposicao->id,

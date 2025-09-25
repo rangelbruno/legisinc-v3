@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\ProposicaoController;
 use App\Models\Proposicao;
 use App\Services\AssinaturaDigitalService;
+use App\Services\PadesS3SignatureService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -15,10 +16,14 @@ use Illuminate\Support\Facades\Storage;
 class AssinaturaDigitalController extends Controller
 {
     protected $assinaturaService;
+    protected $padesS3Service;
 
-    public function __construct(AssinaturaDigitalService $assinaturaService)
-    {
+    public function __construct(
+        AssinaturaDigitalService $assinaturaService,
+        PadesS3SignatureService $padesS3Service
+    ) {
         $this->assinaturaService = $assinaturaService;
+        $this->padesS3Service = $padesS3Service;
     }
 
     /**
@@ -605,13 +610,53 @@ class AssinaturaDigitalController extends Controller
             ]);
         }
 
-        // 2) FALLBACK: Usar o método padrão servePDF
-        Log::info('📄 ASSINATURA: Usando fallback para servePDF', [
-            'proposicao_id' => $proposicao->id
+        // 2) FALLBACK: Tentar auto-fix antes de gerar erro
+        Log::warning('⚠️ ASSINATURA: PDF não encontrado na S3, tentando auto-fix', [
+            'proposicao_id' => $proposicao->id,
+            'status' => $proposicao->status
         ]);
 
-        // Redirecionar para o endpoint padrão de PDF
-        return app(ProposicaoController::class)->servePDF($proposicao);
+        try {
+            $autoFixResult = $this->executeAutoFix($proposicao);
+
+            if ($autoFixResult['success']) {
+                Log::info('✅ ASSINATURA AUTO-FIX: Correção bem-sucedida, recarregando proposição', [
+                    'proposicao_id' => $proposicao->id,
+                    'pdf_s3_path' => $autoFixResult['pdf_s3_path']
+                ]);
+
+                // Recarregar a proposição com os dados atualizados
+                $proposicao->refresh();
+
+                // Tentar novamente servir o PDF S3
+                if ($proposicao->pdf_s3_path) {
+                    if (Storage::disk('s3')->exists($proposicao->pdf_s3_path)) {
+                        // Gerar nova URL temporária
+                        $newS3Url = Storage::disk('s3')->temporaryUrl($proposicao->pdf_s3_path, now()->addHour());
+                        $proposicao->update(['pdf_s3_url' => $newS3Url]);
+
+                        Log::info('✅ ASSINATURA AUTO-FIX: Redirecionando para PDF S3 corrigido', [
+                            'proposicao_id' => $proposicao->id
+                        ]);
+
+                        return redirect($newS3Url);
+                    }
+                }
+            }
+        } catch (\Exception $e) {
+            Log::error('❌ ASSINATURA AUTO-FIX: Falha na correção automática', [
+                'proposicao_id' => $proposicao->id,
+                'error' => $e->getMessage()
+            ]);
+        }
+
+        // Se auto-fix falhou, retornar erro
+        Log::error('❌ ASSINATURA: PDF não encontrado na S3 e auto-fix falhou', [
+            'proposicao_id' => $proposicao->id,
+            'status' => $proposicao->status
+        ]);
+
+        abort(404, 'PDF não encontrado para assinatura. A proposição deve ter um PDF exportado na S3 para poder ser assinada digitalmente.');
     }
 
     /**
@@ -1601,7 +1646,71 @@ class AssinaturaDigitalController extends Controller
             }
             
             
-            // Processar assinatura usando o serviço
+            // 🆕 PRIORIDADE: Usar assinatura PAdES S3 se PDF está disponível no S3
+            if (!empty($proposicao->pdf_s3_path)) {
+                Log::info('🌟 Usando novo sistema PAdES S3 para assinatura', [
+                    'proposicao_id' => $proposicao->id,
+                    's3_path' => $proposicao->pdf_s3_path
+                ]);
+
+                // Verificar se PDF pode ser assinado
+                $canSignResult = $this->padesS3Service->canSignPDF($proposicao);
+                if (!$canSignResult['can_sign']) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => $canSignResult['message'],
+                        'checks' => $canSignResult['checks']
+                    ], 422);
+                }
+
+                // Preparar dados de assinatura para PAdES S3
+                $dadosAssinatura = [
+                    'tipo_certificado' => 'PFX',
+                    'certificado_path' => $caminhoCompleto,
+                    'certificado_senha' => $senhaCertificado,
+                    'arquivo_pfx' => $caminhoCompleto,
+                    'senha_pfx' => $senhaCertificado,
+                    'ip_assinatura' => $request->ip(),
+                    'user_agent' => $request->userAgent()
+                ];
+
+                // Assinar usando serviço PAdES S3
+                $result = $this->padesS3Service->signS3PDF($proposicao, $dadosAssinatura, $user);
+
+                if ($result['success']) {
+                    Log::info('✅ Assinatura PAdES S3 concluída com sucesso', [
+                        'proposicao_id' => $proposicao->id,
+                        'execution_time' => $result['execution_time_ms'] ?? 0
+                    ]);
+
+                    return response()->json([
+                        'success' => true,
+                        'message' => 'Proposição assinada digitalmente com PAdES no S3!',
+                        'signature_type' => 'PAdES-B',
+                        'signed_s3_path' => $result['signed_s3_path'],
+                        'verification_url' => $result['verification_url'],
+                        'execution_time_ms' => $result['execution_time_ms'],
+                        'redirect' => route('proposicoes.show', $proposicao)
+                    ]);
+                } else {
+                    Log::warning('⚠️ Falha na assinatura PAdES S3, usando fallback', [
+                        'error' => $result['message'] ?? 'Erro desconhecido'
+                    ]);
+
+                    return response()->json([
+                        'success' => false,
+                        'message' => $result['message'] ?? 'Falha na assinatura PAdES S3'
+                    ], 422);
+                }
+            }
+
+            // 🔄 FALLBACK: Sistema tradicional (arquivo local)
+            Log::info('📄 Usando sistema tradicional de assinatura (arquivo local)', [
+                'proposicao_id' => $proposicao->id,
+                'reason' => 'PDF não disponível no S3'
+            ]);
+
+            // Processar assinatura usando o serviço tradicional
             $dadosAssinatura = [
                 'nome_assinante' => $user->name,
                 'email_assinante' => $user->email,
@@ -1611,7 +1720,7 @@ class AssinaturaDigitalController extends Controller
                 'certificado_cn' => $user->certificado_digital_cn,
                 'certificado_validade' => $user->certificado_digital_validade
             ];
-            
+
             // Obter PDF para assinatura
             $pdfPath = $this->obterCaminhoPDFParaAssinatura($proposicao);
             if (!$pdfPath) {
@@ -1623,29 +1732,29 @@ class AssinaturaDigitalController extends Controller
                 }
                 return back()->withErrors(['pdf' => 'PDF não encontrado para assinatura.']);
             }
-            
+
             // Adicionar arquivo PFX e senha aos dados da assinatura
             $dadosAssinatura['arquivo_pfx'] = $caminhoCompleto;
             $dadosAssinatura['senha_pfx'] = $senhaCertificado;
             // Adicionar chaves alternativas que o serviço também verifica
             $dadosAssinatura['certificado_path'] = $caminhoCompleto;
             $dadosAssinatura['certificado_senha'] = $senhaCertificado;
-            
+
             // Log para debug dos dados
-            Log::info('Dados da assinatura enviados para service', [
+            Log::info('Dados da assinatura enviados para service tradicional', [
                 'pfx_path' => $caminhoCompleto,
                 'senha_length' => strlen($senhaCertificado ?? ''),
                 'dados_assinatura_keys' => array_keys($dadosAssinatura),
                 'tipo_certificado' => $dadosAssinatura['tipo_certificado']
             ]);
-            
-            // Usar serviço de assinatura digital
+
+            // Usar serviço de assinatura digital tradicional
             $pdfAssinado = $this->assinaturaService->assinarPDF(
                 $pdfPath,
                 $dadosAssinatura,
                 $user
             );
-            
+
             if (!$pdfAssinado) {
                 if ($request->expectsJson() || $request->ajax()) {
                     return response()->json([
@@ -1655,10 +1764,10 @@ class AssinaturaDigitalController extends Controller
                 }
                 return back()->withErrors(['assinatura' => 'Erro ao processar assinatura digital.']);
             }
-            
+
             // Gerar identificador da assinatura
             $identificador = $this->gerarIdentificadorAssinatura($proposicao, $user, 'PFX_CADASTRADO');
-            
+
             // Dados compactos para o banco
             $dadosCompactos = [
                 'id' => $identificador,
@@ -1667,7 +1776,7 @@ class AssinaturaDigitalController extends Controller
                 'data' => now()->format('d/m/Y H:i'),
                 'cn' => $user->certificado_digital_cn
             ];
-            
+
             // Atualizar proposição
             $proposicao->update([
                 'status' => 'enviado_protocolo',
@@ -1677,14 +1786,14 @@ class AssinaturaDigitalController extends Controller
                 'certificado_digital' => $identificador,
                 'arquivo_pdf_assinado' => $this->obterCaminhoRelativo($pdfAssinado)
             ]);
-            
-            Log::info('Proposição assinada com certificado cadastrado', [
+
+            Log::info('Proposição assinada com certificado cadastrado (método tradicional)', [
                 'proposicao_id' => $proposicao->id,
                 'usuario_id' => $user->id,
                 'certificado_cn' => $user->certificado_digital_cn,
                 'senha_salva' => $user->certificado_digital_senha_salva
             ]);
-            
+
             // Retornar JSON para requisições AJAX
             if ($request->expectsJson() || $request->ajax()) {
                 return response()->json([
@@ -1693,7 +1802,7 @@ class AssinaturaDigitalController extends Controller
                     'redirect' => route('proposicoes.show', $proposicao)
                 ]);
             }
-            
+
             return redirect()->route('proposicoes.show', $proposicao)
                 ->with('success', 'Proposição assinada digitalmente com sucesso usando certificado cadastrado!');
                 
@@ -1714,5 +1823,120 @@ class AssinaturaDigitalController extends Controller
             
             return back()->withErrors(['assinatura' => 'Erro ao processar assinatura: ' . $e->getMessage()]);
         }
+    }
+
+    /**
+     * Verificação pública de assinatura PAdES
+     */
+    public function verificarAssinaturaPublica(Proposicao $proposicao, $uuid = null)
+    {
+        try {
+            Log::info('🔍 Verificação pública de assinatura PAdES', [
+                'proposicao_id' => $proposicao->id,
+                'uuid' => $uuid,
+                'ip' => request()->ip(),
+                'user_agent' => request()->userAgent()
+            ]);
+
+            // Verificar se a proposição foi assinada
+            if (!in_array($proposicao->status, ['assinado', 'enviado_protocolo']) ||
+                empty($proposicao->assinatura_digital)) {
+                return view('proposicoes.verificacao.assinatura', [
+                    'proposicao' => $proposicao,
+                    'verificacao' => [
+                        'status' => 'not_signed',
+                        'message' => 'Esta proposição não foi assinada digitalmente.',
+                        'details' => null
+                    ]
+                ]);
+            }
+
+            // Decodificar dados da assinatura
+            $assinaturaData = json_decode($proposicao->assinatura_digital, true);
+
+            // Verificar se tem PDF assinado no S3
+            $temPdfAssinadoS3 = !empty($proposicao->pdf_s3_path_signed);
+
+            // Preparar dados de verificação
+            $verificacao = [
+                'status' => 'signed',
+                'message' => 'Documento assinado digitalmente com sucesso',
+                'signature_type' => $temPdfAssinadoS3 ? 'PAdES-B' : 'Digital Signature',
+                'signer_name' => $assinaturaData['nome'] ?? $assinaturaData['name'] ?? 'N/A',
+                'signer_cn' => $assinaturaData['cn'] ?? null,
+                'signature_date' => $proposicao->data_assinatura ?
+                    $proposicao->data_assinatura->format('d/m/Y H:i:s') :
+                    ($assinaturaData['data'] ?? 'N/A'),
+                'certificate_id' => $proposicao->certificado_digital,
+                'document_hash' => null,
+                'verification_details' => []
+            ];
+
+            // Se tem metadata PAdES, incluir informações adicionais
+            if (!empty($proposicao->pades_metadata)) {
+                $padesMetadata = json_decode($proposicao->pades_metadata, true);
+                $verificacao['document_hash'] = $padesMetadata['document_hash'] ?? null;
+                $verificacao['pades_level'] = $padesMetadata['type'] ?? 'PAdES-B';
+                $verificacao['verification_details'] = [
+                    'signature_id' => $padesMetadata['id'] ?? null,
+                    'timestamp' => $padesMetadata['signature_timestamp'] ?? null,
+                    'certificate_cn' => $padesMetadata['certificate_cn'] ?? null,
+                    'verification_url' => $padesMetadata['verification_url'] ?? null
+                ];
+            }
+
+            // Verificar integridade do PDF assinado (se disponível)
+            if ($temPdfAssinadoS3 && Storage::disk('s3')->exists($proposicao->pdf_s3_path_signed)) {
+                $verificacao['pdf_available'] = true;
+                $verificacao['pdf_size'] = $this->formatBytes($proposicao->pdf_size_bytes_signed ?? 0);
+                $verificacao['signed_pdf_url'] = Storage::disk('s3')->temporaryUrl(
+                    $proposicao->pdf_s3_path_signed,
+                    now()->addHours(1)
+                );
+            } else {
+                $verificacao['pdf_available'] = false;
+            }
+
+            Log::info('✅ Verificação de assinatura concluída', [
+                'proposicao_id' => $proposicao->id,
+                'status' => $verificacao['status'],
+                'signature_type' => $verificacao['signature_type']
+            ]);
+
+            return view('proposicoes.verificacao.assinatura', [
+                'proposicao' => $proposicao,
+                'verificacao' => $verificacao,
+                'uuid' => $uuid
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('❌ Erro na verificação de assinatura', [
+                'proposicao_id' => $proposicao->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return view('proposicoes.verificacao.assinatura', [
+                'proposicao' => $proposicao,
+                'verificacao' => [
+                    'status' => 'error',
+                    'message' => 'Erro ao verificar assinatura digital.',
+                    'details' => $e->getMessage()
+                ]
+            ]);
+        }
+    }
+
+    /**
+     * Format bytes to human readable format
+     */
+    private function formatBytes($bytes, $precision = 2)
+    {
+        if ($bytes == 0) return '0 B';
+
+        $units = array('B', 'KB', 'MB', 'GB', 'TB');
+        $factor = floor((strlen($bytes) - 1) / 3);
+
+        return sprintf("%.{$precision}f %s", $bytes / pow(1024, $factor), $units[$factor]);
     }
 }

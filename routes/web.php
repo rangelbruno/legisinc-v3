@@ -1621,6 +1621,10 @@ Route::prefix('proposicoes/{proposicao}/assinatura-digital')->name('proposicoes.
 // Rota de teste JSON para debug
 Route::post('/teste-json', [App\Http\Controllers\AssinaturaDigitalController::class, 'testeJson'])->middleware('auth');
 
+// Rota pública para verificação de assinatura PAdES
+Route::get('/proposicoes/{proposicao}/verificar-assinatura/{uuid?}', [App\Http\Controllers\AssinaturaDigitalController::class, 'verificarAssinaturaPublica'])
+    ->name('proposicoes.verificar.assinatura');
+
 // Debug S3 status (temporário)
 Route::get('/debug/proposicoes/{proposicao}/s3-status', [App\Http\Controllers\AssinaturaDigitalController::class, 'debugS3Status'])->middleware('auth');
 

@@ -194,6 +194,145 @@ class DocumentWorkflowLog extends Model
     }
 
     /**
+     * Método para logs de criação de proposição
+     */
+    public static function logProposicaoCreation(
+        int $proposicaoId,
+        string $status,
+        string $description,
+        string $filePath = null,
+        array $metadata = []
+    ): self {
+        return self::logWorkflowEvent(
+            proposicaoId: $proposicaoId,
+            eventType: 'proposicao_created',
+            stage: 'creation',
+            action: 'create_proposicao',
+            status: $status,
+            description: $description,
+            metadata: $metadata,
+            filePath: $filePath,
+            fileType: 'rtf'
+        );
+    }
+
+    /**
+     * Método para logs de edição OnlyOffice
+     */
+    public static function logOnlyOfficeEdit(
+        int $proposicaoId,
+        string $status,
+        string $description,
+        string $filePath = null,
+        int $fileSizeBytes = null,
+        array $metadata = []
+    ): self {
+        return self::logWorkflowEvent(
+            proposicaoId: $proposicaoId,
+            eventType: 'onlyoffice_edited',
+            stage: 'editing',
+            action: 'edit_document',
+            status: $status,
+            description: $description,
+            metadata: $metadata,
+            filePath: $filePath,
+            fileType: 'rtf',
+            fileSizeBytes: $fileSizeBytes
+        );
+    }
+
+    /**
+     * Método para logs de exportação S3
+     */
+    public static function logS3Export(
+        int $proposicaoId,
+        string $status,
+        string $description,
+        string $s3Path = null,
+        int $fileSizeBytes = null,
+        string $fileHash = null,
+        int $executionTimeMs = null,
+        array $metadata = [],
+        string $errorMessage = null
+    ): self {
+        return self::logWorkflowEvent(
+            proposicaoId: $proposicaoId,
+            eventType: 's3_exported',
+            stage: 'export_s3',
+            action: 'export_to_s3',
+            status: $status,
+            description: $description,
+            metadata: array_merge($metadata, ['s3_path' => $s3Path]),
+            filePath: $s3Path,
+            fileType: 'pdf',
+            fileSizeBytes: $fileSizeBytes,
+            fileHash: $fileHash,
+            executionTimeMs: $executionTimeMs,
+            errorMessage: $errorMessage
+        );
+    }
+
+    /**
+     * Método para logs de aprovação legislativa
+     */
+    public static function logLegislativeApproval(
+        int $proposicaoId,
+        string $status,
+        string $description,
+        array $metadata = []
+    ): self {
+        return self::logWorkflowEvent(
+            proposicaoId: $proposicaoId,
+            eventType: 'legislative_approved',
+            stage: 'approval',
+            action: 'approve_legislative',
+            status: $status,
+            description: $description,
+            metadata: $metadata
+        );
+    }
+
+    /**
+     * Método para logs de assinatura digital melhorado
+     */
+    public static function logDigitalSignature(
+        int $proposicaoId,
+        string $status,
+        string $description,
+        string $signatureType = null,
+        string $certificateInfo = null,
+        string $signedFilePath = null,
+        int $fileSizeBytes = null,
+        array $metadata = [],
+        string $errorMessage = null
+    ): self {
+        $log = self::logWorkflowEvent(
+            proposicaoId: $proposicaoId,
+            eventType: 'digital_signed',
+            stage: 'signature',
+            action: 'digital_sign',
+            status: $status,
+            description: $description,
+            metadata: $metadata,
+            filePath: $signedFilePath,
+            fileType: 'pdf',
+            fileSizeBytes: $fileSizeBytes,
+            errorMessage: $errorMessage
+        );
+
+        if ($signatureType) {
+            $log->signature_type = $signatureType;
+        }
+        if ($certificateInfo) {
+            $log->certificate_info = $certificateInfo;
+        }
+        $log->signature_date = now();
+        $log->save();
+
+        return $log;
+    }
+
+    /**
      * Scopes para filtrar logs
      */
     public function scopeByProposicao($query, int $proposicaoId)

@@ -74,7 +74,12 @@ class Proposicao extends Model
         'pdf_gerado_em',
         'pdf_conversor_usado',
         'pdf_exportado_path',
-        'pdf_exportado_em'
+        'pdf_exportado_em',
+
+        // ☁️ Campos S3
+        'pdf_s3_path',
+        'pdf_s3_url',
+        'pdf_size_bytes'
     ];
 
     protected $casts = [
