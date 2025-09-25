@@ -173,6 +173,10 @@ class ProposicaoAssinaturaController extends Controller
         // Regenerar PDF com assinatura digital e QR code
         try {
             $this->regenerarPDFAtualizado($proposicao->fresh());
+
+            // NOVO: Gerar PDF com assinatura integrada no documento
+            $this->gerarPDFComAssinaturaIntegrada($proposicao->fresh());
+
         } catch (\Exception $e) {
             Log::warning('Falha ao regenerar PDF após assinatura', [
                 'proposicao_id' => $proposicao->id,
@@ -2135,6 +2139,22 @@ class ProposicaoAssinaturaController extends Controller
     public function visualizarPDFOriginal(Proposicao $proposicao)
     {
         try {
+            // NOVA FUNCIONALIDADE: Tentar PDF modificado com assinatura integrada primeiro
+            if ($proposicao->assinatura_digital) {
+                $pdfIntegrado = $this->obterPDFComAssinaturaIntegrada($proposicao);
+                if ($pdfIntegrado && file_exists($pdfIntegrado)) {
+                    Log::info('PDF Original: Usando PDF com assinatura integrada', [
+                        'proposicao_id' => $proposicao->id,
+                        'path' => $pdfIntegrado
+                    ]);
+
+                    return response()->file($pdfIntegrado, [
+                        'Content-Type' => 'application/pdf',
+                        'Content-Disposition' => 'inline; filename="proposicao_'.$proposicao->id.'_assinado.pdf"',
+                    ]);
+                }
+            }
+
             // 1. Buscar arquivo DOCX mais recente editado no OnlyOffice
             $arquivoMaisRecente = $this->encontrarArquivoMaisRecente($proposicao);
 
@@ -4743,5 +4763,150 @@ class ProposicaoAssinaturaController extends Controller
         ]);
         
         return hash('sha256', $dataParaAssinar . $senha);
+    }
+
+    /**
+     * Obter PDF com assinatura integrada usando novo serviço
+     */
+    private function obterPDFComAssinaturaIntegrada(Proposicao $proposicao): ?string
+    {
+        try {
+            $serviceAssinatura = app(\App\Services\PDFAssinaturaIntegradaService::class);
+
+            // Verificar se pode modificar PDF
+            if (!$serviceAssinatura->podeModificarPDF($proposicao)) {
+                Log::warning('PDFAssinaturaIntegrada: Não foi possível modificar PDF', [
+                    'proposicao_id' => $proposicao->id
+                ]);
+                return null;
+            }
+
+            // Tentar buscar PDF integrado existente primeiro
+            $pdfExistente = $this->buscarPDFIntegradoExistente($proposicao);
+            if ($pdfExistente && file_exists($pdfExistente)) {
+                Log::info('PDFAssinaturaIntegrada: Usando PDF integrado existente', [
+                    'proposicao_id' => $proposicao->id,
+                    'path' => $pdfExistente
+                ]);
+                return $pdfExistente;
+            }
+
+            // Gerar novo PDF com assinatura integrada
+            Log::info('PDFAssinaturaIntegrada: Gerando novo PDF integrado', [
+                'proposicao_id' => $proposicao->id
+            ]);
+
+            $opcoes = [
+                'incluir_qr' => true,
+                'incluir_certificado' => true,
+            ];
+
+            $pdfModificado = $serviceAssinatura->modificarPDFComAssinatura($proposicao, $opcoes);
+
+            if ($pdfModificado && file_exists($pdfModificado)) {
+                // Limpar PDFs antigos para economizar espaço
+                $serviceAssinatura->limparPDFsAntigos($proposicao);
+
+                Log::info('PDFAssinaturaIntegrada: PDF integrado criado com sucesso', [
+                    'proposicao_id' => $proposicao->id,
+                    'path' => $pdfModificado,
+                    'tamanho' => filesize($pdfModificado)
+                ]);
+
+                return $pdfModificado;
+            }
+
+            return null;
+
+        } catch (\Exception $e) {
+            Log::error('PDFAssinaturaIntegrada: Erro ao obter PDF integrado', [
+                'proposicao_id' => $proposicao->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return null;
+        }
+    }
+
+    /**
+     * Buscar PDF integrado existente mais recente
+     */
+    private function buscarPDFIntegradoExistente(Proposicao $proposicao): ?string
+    {
+        $diretorio = storage_path("app/private/proposicoes/pdfs/{$proposicao->id}");
+        if (!is_dir($diretorio)) {
+            return null;
+        }
+
+        $pattern = $diretorio . "/proposicao_{$proposicao->id}_integrado_*.pdf";
+        $pdfs = glob($pattern);
+
+        if (empty($pdfs)) {
+            return null;
+        }
+
+        // Ordenar por data de modificação (mais recente primeiro)
+        usort($pdfs, function($a, $b) {
+            return filemtime($b) - filemtime($a);
+        });
+
+        // Retornar o mais recente se for válido (> 1KB)
+        foreach ($pdfs as $pdf) {
+            if (filesize($pdf) > 1000) {
+                return $pdf;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Gerar PDF com assinatura integrada após assinatura digital
+     */
+    private function gerarPDFComAssinaturaIntegrada(Proposicao $proposicao): void
+    {
+        try {
+            if (!$proposicao->assinatura_digital) {
+                Log::info('PDFAssinaturaIntegrada: Proposição não assinada, pulando geração', [
+                    'proposicao_id' => $proposicao->id
+                ]);
+                return;
+            }
+
+            Log::info('PDFAssinaturaIntegrada: Iniciando geração após assinatura', [
+                'proposicao_id' => $proposicao->id
+            ]);
+
+            $serviceAssinatura = app(\App\Services\PDFAssinaturaIntegradaService::class);
+
+            $opcoes = [
+                'incluir_qr' => true,
+                'incluir_certificado' => true,
+            ];
+
+            $pdfIntegrado = $serviceAssinatura->modificarPDFComAssinatura($proposicao, $opcoes);
+
+            if ($pdfIntegrado && file_exists($pdfIntegrado)) {
+                Log::info('PDFAssinaturaIntegrada: PDF integrado gerado com sucesso após assinatura', [
+                    'proposicao_id' => $proposicao->id,
+                    'path' => $pdfIntegrado,
+                    'tamanho' => filesize($pdfIntegrado)
+                ]);
+
+                // Limpar PDFs antigos
+                $serviceAssinatura->limparPDFsAntigos($proposicao, 2);
+            } else {
+                Log::warning('PDFAssinaturaIntegrada: Falha ao gerar PDF integrado após assinatura', [
+                    'proposicao_id' => $proposicao->id
+                ]);
+            }
+
+        } catch (\Exception $e) {
+            Log::error('PDFAssinaturaIntegrada: Erro ao gerar PDF integrado após assinatura', [
+                'proposicao_id' => $proposicao->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+        }
     }
 }

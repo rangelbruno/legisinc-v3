@@ -222,22 +222,41 @@
                 </div>
                 
                 <div class="card-body pt-0">
-                  <div class="pdf-viewer-container position-relative" style="height: 500px; border: 1px solid #e1e3ea; border-radius: 8px; overflow: hidden; background-color: #f8f9fa;">
+                  <div class="pdf-viewer-container position-relative"
+                       style="height: 500px; border: 1px solid #e1e3ea; border-radius: 8px; overflow: hidden; background-color: #f8f9fa;"
+                       ref="pdfContainer">
                     <div v-if="pdfLoading" class="position-absolute top-50 start-50 translate-middle text-center">
                       <div class="spinner-border text-primary mb-3" role="status">
                         <span class="visually-hidden">Carregando...</span>
                       </div>
                       <p class="text-muted">Carregando documento PDF...</p>
                     </div>
-                    
-                    <iframe 
+
+                    <iframe
                       v-show="!pdfLoading"
-                      :src="pdfUrl" 
-                      width="100%" 
-                      height="100%" 
+                      :src="pdfUrl"
+                      width="100%"
+                      height="100%"
                       frameborder="0"
                       @load="pdfLoading = false"
+                      ref="pdfIframe"
                     ></iframe>
+
+                  </div>
+
+                  <!-- Informações do Sistema Automático v2.0 -->
+                  <div class="mt-3">
+                    <div class="alert alert-info py-2">
+                      <div class="d-flex align-items-center">
+                        <i class="fas fa-magic me-2 text-primary"></i>
+                        <div>
+                          <strong>Assinatura Automática v2.0</strong>
+                          <div class="small text-muted mt-1">
+                            O carimbo será aplicado automaticamente na lateral direita do documento com QR Code de verificação
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -485,6 +504,7 @@ export default {
       pdfLoading: true,
       dragOver: false,
       senhaVisivel: false,
+
       
       // Formulário
       usarCertificadoCadastrado: true,
@@ -622,7 +642,8 @@ export default {
     
     dataAtual() {
       return new Date().toLocaleString('pt-BR')
-    }
+    },
+
   },
   
   mounted() {
@@ -792,7 +813,9 @@ export default {
         // Preparar dados
         const formData = new FormData()
         formData.append('_token', document.querySelector('meta[name="csrf-token"]').content)
-        
+
+        // Layout automático - sem necessidade de posicionamento manual
+
         if (this.usarCertificadoCadastrado) {
           formData.append('usar_certificado_cadastrado', '1')
           if (!this.certificado.dados.senha_salva) {
@@ -801,7 +824,7 @@ export default {
         } else {
           formData.append('tipo_certificado', this.tipoCertificadoSelecionado)
           formData.append('senha_certificado', this.senhaFormulario)
-          
+
           if (this.arquivoSelecionado) {
             formData.append('arquivo_certificado', this.arquivoSelecionado)
           }
@@ -819,8 +842,12 @@ export default {
           await this.$swal.fire({
             title: 'Sucesso!',
             html: `<div class="text-center">
-              <i class="fas fa-check-circle fs-2x text-success mb-3"></i>
-              <p>${result.message}</p>
+              <i class="ki-duotone ki-shield-tick fs-2x text-success mb-3">
+                <span class="path1"></span>
+                <span class="path2"></span>
+              </i>
+              <p class="mb-2">${result.message}</p>
+              <small class="text-muted">Layout padrão aplicado automaticamente com assinatura PAdES</small>
             </div>`,
             icon: null,
             confirmButtonText: 'Ver Documento',
@@ -863,6 +890,11 @@ export default {
     formatDate(date) {
       if (!date) return 'N/A'
       return new Date(date).toLocaleDateString('pt-BR')
+    },
+
+
+    generateSignatureId() {
+      return 'XXXX-XXXX-XXXX'
     },
     
     formatFileSize(bytes) {

@@ -160,8 +160,20 @@ class AssinaturaDigitalService
                 throw new \Exception('Certificado PFX inválido ou senha incorreta');
             }
             
-            // FALLBACK TEMPORÁRIO: Usar PDF stamping ao invés de PyHanko até resolvermos o Docker
-            Log::warning('PyHanko não disponível, usando fallback de PDF stamping');
+            try {
+                $signedPdfPath = $this->executarAssinaturaPyHanko($caminhoPDF, $pfxPath, $pfxPassword, $dadosAssinatura);
+
+                if ($signedPdfPath) {
+                    return $signedPdfPath;
+                }
+
+                Log::warning('PyHanko retornou caminho vazio, usando fallback de PDF stamping');
+            } catch (\Throwable $pyhankoException) {
+                Log::warning('PyHanko indisponível, usando fallback de PDF stamping', [
+                    'erro' => $pyhankoException->getMessage()
+                ]);
+            }
+
             return $this->adicionarAssinaturaDigitalAoPDF($caminhoPDF, $dadosAssinatura, $certificado);
             
         } catch (\Exception $e) {
@@ -557,6 +569,133 @@ class AssinaturaDigitalService
                 'error' => $e->getMessage()
             ]);
             return null;
+        }
+    }
+
+    /**
+     * Executar assinatura PAdES utilizando PyHanko (via container Docker).
+     */
+    private function executarAssinaturaPyHanko(string $pdfPath, string $pfxPath, string $pfxPassword, array $dadosAssinatura): ?string
+    {
+        $startTime = microtime(true);
+
+        $pdfRealPath = realpath($pdfPath) ?: $pdfPath;
+        if (!file_exists($pdfRealPath)) {
+            throw new \Exception('PDF original não encontrado para assinatura PAdES');
+        }
+
+        $certRealPath = realpath($pfxPath) ?: $pfxPath;
+        if (!file_exists($certRealPath)) {
+            throw new \Exception('Certificado PFX não encontrado para assinatura PAdES');
+        }
+
+        $pdfComCampo = $this->garantirCampoAssinatura($pdfRealPath);
+        $campoTemporario = $pdfComCampo !== $pdfRealPath ? $pdfComCampo : null;
+
+        $workDir = storage_path('app/private/tmp/pyhanko_' . Str::lower(Str::random(12)));
+        if (!is_dir($workDir) && !mkdir($workDir, 0775, true) && !is_dir($workDir)) {
+            throw new \Exception('Não foi possível preparar diretório temporário para PyHanko');
+        }
+
+        $inputPdfName = 'input.pdf';
+        $outputPdfName = 'output_signed.pdf';
+        $inputPdfPath = $workDir . '/' . $inputPdfName;
+        $outputPdfPath = $workDir . '/' . $outputPdfName;
+        $configPath = $workDir . '/pyhanko.yml';
+
+        $filesToClean = [$configPath, $inputPdfPath, $outputPdfPath];
+
+        try {
+            if (!copy($pdfComCampo, $inputPdfPath)) {
+                throw new \Exception('Falha ao copiar PDF para diretório temporário de assinatura');
+            }
+
+            $this->criarConfiguracaoTemporaria($certRealPath, $workDir);
+
+            $command = [
+                'docker', 'run', '--rm',
+                '-e', 'PFX_PASS=' . $pfxPassword,
+                '-v', $workDir . ':/work',
+                '-v', dirname($certRealPath) . ':/certs:ro',
+                'legisinc-pyhanko',
+                '--config', '/work/pyhanko.yml',
+                'sign', 'addsig',
+                '--use-pades',
+                '--timestamp-url', 'https://freetsa.org/tsr',
+                '--with-validation-info',
+                '--validation-context', 'icp-brasil',
+                '--field', 'AssinaturaDigital',
+                'pkcs12', '--p12-setup', 'legisinc',
+                '/work/' . $inputPdfName,
+                '/work/' . $outputPdfName,
+            ];
+
+            $sanitizedCommand = array_map(function ($part) {
+                return strpos($part, 'PFX_PASS=') === 0 ? 'PFX_PASS=***' : $part;
+            }, $command);
+
+            Log::info('Executando PyHanko para assinatura digital', [
+                'workdir' => $workDir,
+                'command' => implode(' ', $sanitizedCommand),
+                'pdf' => basename($pdfRealPath)
+            ]);
+
+            $process = new Process($command, null, null, null, 180);
+
+            try {
+                $process->mustRun();
+            } catch (ProcessFailedException $exception) {
+                $errorOutput = trim($exception->getProcess()->getErrorOutput());
+                $stdOutput = trim($exception->getProcess()->getOutput());
+
+                throw new \Exception('Falha ao executar PyHanko: ' . ($errorOutput !== '' ? $errorOutput : $stdOutput), 0, $exception);
+            }
+
+            if (!file_exists($outputPdfPath)) {
+                throw new \Exception('PyHanko não gerou o PDF assinado esperado');
+            }
+
+            $finalDir = storage_path('app/private/tmp');
+            if (!is_dir($finalDir) && !mkdir($finalDir, 0775, true) && !is_dir($finalDir)) {
+                throw new \Exception('Não foi possível preparar diretório final do PDF assinado');
+            }
+
+            $finalFileName = pathinfo($pdfRealPath, PATHINFO_FILENAME) . '_assinado_' . time() . '.pdf';
+            $finalPath = $finalDir . '/' . $finalFileName;
+
+            if (!@rename($outputPdfPath, $finalPath)) {
+                if (!copy($outputPdfPath, $finalPath)) {
+                    throw new \Exception('Falha ao mover PDF assinado para diretório final');
+                }
+                @unlink($outputPdfPath);
+            }
+
+            @chmod($finalPath, 0666);
+
+            $duration = round((microtime(true) - $startTime) * 1000, 2);
+
+            Log::info('PyHanko finalizou assinatura PAdES', [
+                'pdf_origem' => basename($pdfRealPath),
+                'pdf_assinado' => basename($finalPath),
+                'duracao_ms' => $duration,
+                'assinante' => $dadosAssinatura['nome_assinante'] ?? null
+            ]);
+
+            return $finalPath;
+        } finally {
+            foreach ($filesToClean as $file) {
+                if (is_file($file)) {
+                    @unlink($file);
+                }
+            }
+
+            if ($campoTemporario && file_exists($campoTemporario)) {
+                @unlink($campoTemporario);
+            }
+
+            if (is_dir($workDir)) {
+                @rmdir($workDir);
+            }
         }
     }
 

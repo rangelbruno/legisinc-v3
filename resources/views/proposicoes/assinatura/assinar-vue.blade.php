@@ -326,7 +326,22 @@
                             
                             <!--begin::Card body-->
                             <div class="card-body pt-0">
-                                <div class="pdf-viewer-container" style="height: 600px;">
+                                <!-- Informações do Sistema Automático v2.0 -->
+                                <div class="mt-3" v-if="!pdfLoading && pdfUrl">
+                                    <div class="alert alert-info py-2">
+                                        <div class="d-flex align-items-center">
+                                            <i class="fas fa-magic me-2 text-primary"></i>
+                                            <div>
+                                                <strong>Assinatura Automática v2.0</strong>
+                                                <div class="small text-muted mt-1">
+                                                    O carimbo será aplicado automaticamente na lateral direita do documento com QR Code de verificação
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="pdf-viewer-container" style="height: 600px; position: relative;" ref="pdfContainer">
                                     <!-- Loading state -->
                                     <div v-if="pdfLoading" class="pdf-loading">
                                         <div class="spinner-border text-primary mb-3" role="status">
@@ -335,13 +350,14 @@
                                         <p class="text-muted">Carregando documento PDF...</p>
                                         <small class="text-muted mt-2">Gerando PDF para assinatura...</small>
                                     </div>
-                                    
+
+
                                     <!-- PDF Display -->
-                                    <iframe 
+                                    <iframe
                                         v-if="pdfUrl && !pdfLoading"
-                                        :src="pdfUrl" 
-                                        width="100%" 
-                                        height="100%" 
+                                        :src="pdfUrl"
+                                        width="100%"
+                                        height="100%"
                                         frameborder="0"
                                         @@load="handlePdfLoad"
                                         @@error="handlePdfError">
@@ -779,7 +795,8 @@ createApp({
             // Toast system
             toasts: [],
             toastIdCounter: 0,
-            
+
+
             // Tipos de certificado
             tiposCertificado: [
                 {
@@ -813,7 +830,8 @@ createApp({
     computed: {
         proposicao() {
             return this.dados?.proposicao || null;
-        }
+        },
+
     },
     
     methods: {
@@ -969,8 +987,8 @@ createApp({
                         'X-CSRF-TOKEN': this.csrfToken,
                         'X-Requested-With': 'XMLHttpRequest'
                     },
-                    body: JSON.stringify({ 
-                        usar_certificado_cadastrado: true 
+                    body: JSON.stringify({
+                        usar_certificado_cadastrado: true
                     })
                 });
 
@@ -1061,9 +1079,9 @@ createApp({
                         'X-CSRF-TOKEN': this.csrfToken,
                         'X-Requested-With': 'XMLHttpRequest'
                     },
-                    body: JSON.stringify({ 
-                        usar_certificado_cadastrado: true, 
-                        senha_certificado: this.senhaManual 
+                    body: JSON.stringify({
+                        usar_certificado_cadastrado: true,
+                        senha_certificado: this.senhaManual
                     })
                 });
 
@@ -1422,15 +1440,7 @@ createApp({
         removeToast(id) {
             this.toasts = this.toasts.filter(toast => toast.id !== id);
         },
-        
-        // Certificado cadastrado methods
-        
-        // Formatação
-        formatDate(date) {
-            if (!date) return '';
-            const d = new Date(date);
-            return d.toLocaleDateString('pt-BR');
-        }
+
     }
 }).mount('#assinatura-app');
 </script>

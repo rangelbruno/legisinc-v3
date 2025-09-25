@@ -22,7 +22,11 @@ RUN apk add --no-cache \
     libpq-dev \
     autoconf \
     build-base \
-    libzip-dev
+    libzip-dev \
+    libreoffice \
+    openjdk11-jre-headless \
+    fontconfig \
+    ttf-dejavu
 
 # Instalar extensões PHP primeiro
 RUN docker-php-ext-install mbstring exif pcntl bcmath gd pdo zip

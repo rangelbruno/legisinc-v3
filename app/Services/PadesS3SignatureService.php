@@ -29,7 +29,7 @@ class PadesS3SignatureService
      * @param object $user
      * @return array
      */
-    public function signS3PDF(Proposicao $proposicao, array $signatureData, $user): array
+    public function signS3PDF(Proposicao $proposicao, array $signatureData, $user, ?string $stampedPdfPath = null): array
     {
         $startTime = microtime(true);
 
@@ -50,8 +50,19 @@ class PadesS3SignatureService
                 throw new \Exception('Arquivo PDF não encontrado no S3: ' . $proposicao->pdf_s3_path);
             }
 
-            // 2. Download PDF from S3 to temporary location
-            $tempPdfPath = $this->downloadS3PDFToTemp($proposicao->pdf_s3_path);
+            // 2. Use stamped PDF if provided, otherwise download from S3
+            $tempPdfPath = $stampedPdfPath ?: $this->downloadS3PDFToTemp($proposicao->pdf_s3_path);
+
+            if ($stampedPdfPath) {
+                Log::info('🎯 PAdES S3: Usando PDF pré-carimbado', [
+                    'stamped_pdf' => basename($stampedPdfPath),
+                    'proposicao_id' => $proposicao->id
+                ]);
+            } else {
+                Log::info('📥 PAdES S3: Baixando PDF original do S3', [
+                    's3_path' => $proposicao->pdf_s3_path
+                ]);
+            }
 
             // 3. Generate verification URL
             $verificationUrl = $this->generateVerificationUrl($proposicao);
@@ -66,29 +77,35 @@ class PadesS3SignatureService
                 'signature_timestamp' => now()->format('c')
             ]);
 
-            // 5. Create visual signature panel
-            $pdfWithPanel = $this->appearanceService->createSignaturePanel(
-                $tempPdfPath,
-                $proposicao,
-                $enhancedSignatureData,
-                $verificationUrl
-            );
+            // 5. Use the stamped PDF directly (no additional visual panel needed)
+            // The stamped PDF already contains the embedded lateral stamp with QR code and signature info
+            if ($stampedPdfPath) {
+                // Use the pre-stamped PDF directly for PAdES signing
+                $pdfWithPanel = $tempPdfPath;
 
-            if (!$pdfWithPanel || !file_exists($pdfWithPanel)) {
-                Log::error('❌ PAdES S3: Falha ao criar painel visual', [
-                    'temp_pdf_path' => $tempPdfPath,
-                    'pdf_with_panel' => $pdfWithPanel,
-                    'file_exists' => $pdfWithPanel ? file_exists($pdfWithPanel) : false
+                Log::info('🎯 PAdES S3: Usando PDF pré-carimbado diretamente (sem painel UI adicional)', [
+                    'stamped_pdf' => basename($pdfWithPanel),
+                    'skip_visual_overlay' => true,
+                    'embedded_stamp' => true
                 ]);
-                throw new \Exception('Falha ao criar painel de assinatura visual');
+            } else {
+                // Fallback: If no stamped PDF provided, use the stamped PDF as-is
+                // This should not happen in v2.0 architecture but kept for safety
+                Log::warning('⚠️ PAdES S3: Nenhum PDF carimbado fornecido - usando PDF original', [
+                    'temp_pdf' => basename($tempPdfPath),
+                    'architecture_version' => 'v2.0_fallback'
+                ]);
+
+                $pdfWithPanel = $tempPdfPath;
             }
 
-            Log::info('✅ PAdES S3: Painel visual criado com sucesso', [
+            Log::info('✅ PAdES S3: PDF preparado para assinatura PAdES', [
                 'original_pdf' => basename($tempPdfPath),
-                'panel_pdf' => basename($pdfWithPanel),
-                'panel_pdf_full_path' => $pdfWithPanel,
+                'target_pdf' => basename($pdfWithPanel),
+                'target_pdf_full_path' => $pdfWithPanel,
                 'file_exists' => file_exists($pdfWithPanel),
-                'file_size' => file_exists($pdfWithPanel) ? filesize($pdfWithPanel) : 0
+                'file_size' => file_exists($pdfWithPanel) ? filesize($pdfWithPanel) : 0,
+                'has_embedded_stamp' => $stampedPdfPath !== null
             ]);
 
             // 6. Apply PAdES digital signature
@@ -190,6 +207,39 @@ class PadesS3SignatureService
         ]);
 
         return $tempPath;
+    }
+
+    /**
+     * Baixar PDF do S3 para assinatura (método público para uso externo)
+     */
+    public function baixarPdfParaAssinatura(Proposicao $proposicao): ?string
+    {
+        try {
+            if (empty($proposicao->pdf_s3_path)) {
+                Log::warning('PDF não encontrado no S3 para proposição', [
+                    'proposicao_id' => $proposicao->id
+                ]);
+                return null;
+            }
+
+            if (!Storage::disk('s3')->exists($proposicao->pdf_s3_path)) {
+                Log::warning('Arquivo PDF não existe no S3', [
+                    's3_path' => $proposicao->pdf_s3_path,
+                    'proposicao_id' => $proposicao->id
+                ]);
+                return null;
+            }
+
+            return $this->downloadS3PDFToTemp($proposicao->pdf_s3_path);
+
+        } catch (\Exception $e) {
+            Log::error('Erro ao baixar PDF do S3 para assinatura', [
+                'error' => $e->getMessage(),
+                'proposicao_id' => $proposicao->id,
+                's3_path' => $proposicao->pdf_s3_path ?? null
+            ]);
+            return null;
+        }
     }
 
     /**

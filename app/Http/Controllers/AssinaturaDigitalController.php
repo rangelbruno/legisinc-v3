@@ -6,6 +6,8 @@ use App\Http\Controllers\ProposicaoController;
 use App\Models\Proposicao;
 use App\Services\AssinaturaDigitalService;
 use App\Services\PadesS3SignatureService;
+use App\Services\ESignMCPIntegrationService;
+use App\Services\PDFAssinaturaIntegradaService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -17,13 +19,19 @@ class AssinaturaDigitalController extends Controller
 {
     protected $assinaturaService;
     protected $padesS3Service;
+    protected $eSignMCPService;
+    protected $pdfIntegradoService;
 
     public function __construct(
         AssinaturaDigitalService $assinaturaService,
-        PadesS3SignatureService $padesS3Service
+        PadesS3SignatureService $padesS3Service,
+        ESignMCPIntegrationService $eSignMCPService,
+        PDFAssinaturaIntegradaService $pdfIntegradoService
     ) {
         $this->assinaturaService = $assinaturaService;
         $this->padesS3Service = $padesS3Service;
+        $this->eSignMCPService = $eSignMCPService;
+        $this->pdfIntegradoService = $pdfIntegradoService;
     }
 
     /**
@@ -1419,42 +1427,155 @@ class AssinaturaDigitalController extends Controller
     {
         // Para casos onde não há arquivo DOCX, usar conteúdo do banco
         $conteudo = $proposicao->conteudo ?: 'Conteúdo não disponível';
-        
-        // Gerar HTML simples
-        $html = "<html><body><pre>{$conteudo}</pre></body></html>";
-        
-        // Salvar como arquivo HTML temporário e converter
-        $htmlTemp = tempnam(sys_get_temp_dir(), 'proposicao_') . '.html';
-        file_put_contents($htmlTemp, $html);
-        
+
+        // Gerar HTML simples com encoding correto
+        $html = '<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Proposição - ' . htmlspecialchars($proposicao->numero ?? 'S/N') . '</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        pre { white-space: pre-wrap; word-wrap: break-word; }
+    </style>
+</head>
+<body>
+    <h1>Proposição Nº ' . htmlspecialchars($proposicao->numero ?? 'S/N') . '</h1>
+    <pre>' . htmlspecialchars($conteudo) . '</pre>
+</body>
+</html>';
+
+        // Usar diretório temporário padrão do Laravel Storage
+        $tempDir = storage_path('app/temp');
+        if (!is_dir($tempDir)) {
+            mkdir($tempDir, 0755, true);
+        }
+
+        // Criar arquivo HTML temporário com nome único
+        $htmlTemp = $tempDir . '/proposicao_' . $proposicao->id . '_' . time() . '_' . uniqid() . '.html';
+
+        Log::info('Criando arquivo HTML temporário', [
+            'html_path' => $htmlTemp,
+            'content_length' => strlen($html),
+            'proposicao_id' => $proposicao->id
+        ]);
+
+        // Salvar arquivo HTML
+        $bytesWritten = file_put_contents($htmlTemp, $html);
+
+        if ($bytesWritten === false) {
+            throw new \Exception("Falha ao criar arquivo HTML temporário: $htmlTemp");
+        }
+
+        // Verificar se arquivo foi criado corretamente
+        if (!file_exists($htmlTemp) || filesize($htmlTemp) === 0) {
+            throw new \Exception("Arquivo HTML temporário não foi criado ou está vazio: $htmlTemp");
+        }
+
         try {
-            $this->converterHtmlParaPdf($htmlTemp, $caminhoPdf);
+            Log::info('Iniciando conversão HTML para PDF', [
+                'html_path' => $htmlTemp,
+                'pdf_path' => $caminhoPdf,
+                'html_size' => filesize($htmlTemp),
+                'file_exists' => file_exists($htmlTemp),
+                'file_readable' => is_readable($htmlTemp)
+            ]);
+
+            // Usar DomPDF diretamente para converter HTML em memória
+            $this->converterHtmlParaPdfDireto($html, $caminhoPdf);
         } finally {
-            unlink($htmlTemp);
+            // Limpar arquivo temporário
+            if (file_exists($htmlTemp)) {
+                unlink($htmlTemp);
+            }
         }
     }
 
     /**
-     * Converter HTML para PDF usando LibreOffice
+     * Converter HTML diretamente para PDF usando DomPDF (sem arquivos temporários)
+     */
+    private function converterHtmlParaPdfDireto(string $html, string $caminhoPdf): void
+    {
+        try {
+            // Usar DomPDF diretamente com o HTML em memória
+            $dompdf = new \Dompdf\Dompdf();
+            $dompdf->loadHtml($html);
+            $dompdf->setPaper('A4', 'portrait');
+            $dompdf->render();
+
+            // Obter conteúdo do PDF
+            $pdfContent = $dompdf->output();
+
+            // Salvar o PDF usando Laravel Storage
+            $relativePdfPath = str_replace(storage_path('app/'), '', $caminhoPdf);
+            Storage::put($relativePdfPath, $pdfContent);
+
+            Log::info('HTML convertido para PDF com DomPDF', [
+                'pdf_path' => $caminhoPdf,
+                'pdf_relative_path' => $relativePdfPath,
+                'pdf_size' => strlen($pdfContent)
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Erro ao converter HTML para PDF com DomPDF', [
+                'pdf_path' => $caminhoPdf,
+                'error' => $e->getMessage()
+            ]);
+            throw new \Exception('Falha na conversão HTML para PDF: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Converter HTML para PDF usando DocumentConversionService (OnlyOffice ou LibreOffice fallback)
      */
     private function converterHtmlParaPdf(string $caminhoHtml, string $caminhoPdf): void
     {
-        $diretorioDestino = dirname($caminhoPdf);
-        
-        $comando = "libreoffice --headless --convert-to pdf --outdir " . escapeshellarg($diretorioDestino) . " " . escapeshellarg($caminhoHtml) . " 2>&1";
-        
-        exec($comando, $output, $returnCode);
-        
-        if ($returnCode !== 0) {
-            throw new \Exception('Falha na conversão HTML para PDF: ' . implode("\n", $output));
-        }
+        try {
+            // Usar o DocumentConversionService que gerencia conversores disponíveis
+            $conversionService = app(\App\Services\DocumentConversionService::class);
 
-        // LibreOffice gera PDF com nome baseado no HTML
-        $nomeBasePdf = pathinfo($caminhoHtml, PATHINFO_FILENAME) . '.pdf';
-        $pdfGerado = $diretorioDestino . '/' . $nomeBasePdf;
-        
-        if (file_exists($pdfGerado) && $pdfGerado !== $caminhoPdf) {
-            rename($pdfGerado, $caminhoPdf);
+            // DocumentConversionService espera caminhos relativos ao storage/app/
+            $relativePath = str_replace(storage_path('app/'), '', $caminhoHtml);
+            $relativeOutputPath = str_replace(storage_path('app/'), '', $caminhoPdf);
+
+            Log::info('Convertendo caminhos para relativos', [
+                'html_absolute' => $caminhoHtml,
+                'html_relative' => $relativePath,
+                'pdf_absolute' => $caminhoPdf,
+                'pdf_relative' => $relativeOutputPath
+            ]);
+
+            // Verificar se o Laravel Storage consegue acessar o arquivo
+            if (!Storage::exists($relativePath)) {
+                throw new \Exception("Arquivo não encontrado no Storage: $relativePath (absoluto: $caminhoHtml)");
+            }
+
+            $fileSize = Storage::size($relativePath);
+            Log::info('Arquivo acessível via Storage', [
+                'relative_path' => $relativePath,
+                'file_size' => $fileSize
+            ]);
+
+            $resultado = $conversionService->convertToPDF($relativePath, $relativeOutputPath, 'rascunho');
+
+            if (!$resultado['success']) {
+                throw new \Exception('Falha na conversão HTML para PDF via DocumentConversionService: ' . $resultado['error']);
+            }
+
+            Log::info('HTML convertido para PDF com sucesso', [
+                'html_path' => $relativePath,
+                'pdf_path' => $relativeOutputPath,
+                'converter_used' => $resultado['converter'] ?? 'unknown'
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Erro ao converter HTML para PDF', [
+                'html_path' => $caminhoHtml,
+                'pdf_path' => $caminhoPdf,
+                'error' => $e->getMessage()
+            ]);
+            throw $e;
         }
     }
 
@@ -1674,8 +1795,90 @@ class AssinaturaDigitalController extends Controller
                     'user_agent' => $request->userAgent()
                 ];
 
-                // Assinar usando serviço PAdES S3
-                $result = $this->padesS3Service->signS3PDF($proposicao, $dadosAssinatura, $user);
+                // Capturar posição personalizada da assinatura se fornecida
+                if ($request->has('assinatura_posicao')) {
+                    try {
+                        $posicaoData = json_decode($request->assinatura_posicao, true);
+                        if ($posicaoData && isset($posicaoData['customPosition']) && $posicaoData['customPosition']) {
+                            $dadosAssinatura['custom_position'] = [
+                                'x_percent' => $posicaoData['x'],
+                                'y_percent' => $posicaoData['y'],
+                                'width_percent' => $posicaoData['width'],
+                                'height_percent' => $posicaoData['height'],
+                                'use_custom_position' => true
+                            ];
+
+                            Log::info('🎯 Posição personalizada da assinatura capturada', [
+                                'proposicao_id' => $proposicao->id,
+                                'position' => $dadosAssinatura['custom_position']
+                            ]);
+                        }
+                    } catch (\Exception $e) {
+                        Log::warning('Erro ao processar posição personalizada da assinatura', [
+                            'error' => $e->getMessage(),
+                            'raw_data' => $request->assinatura_posicao
+                        ]);
+                    }
+                }
+
+                // ========== NOVA ARQUITETURA: PERFIL AUTOMÁTICO + PADES ==========
+
+                // 1) Obter caminho do PDF base (baixado do S3)
+                $inputPdfPath = $this->padesS3Service->baixarPdfParaAssinatura($proposicao);
+                if (!$inputPdfPath) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Não foi possível obter o PDF para assinatura.'
+                    ], 422);
+                }
+
+                // 2) PERFIL DETERMINÍSTICO: Aplicar layout padrão automático
+                try {
+                    // Detectar perfil baseado no tipo de proposição
+                    $profileId = $this->pdfIntegradoService->detectarPerfil($proposicao);
+
+                    // Gerar bindings automáticos
+                    $bindings = $this->pdfIntegradoService->gerarBindings($proposicao, $user);
+
+                    Log::info('🎨 PERFIL: Iniciando aplicação de perfil automático', [
+                        'proposicao_id' => $proposicao->id,
+                        'profile_id' => $profileId,
+                        'pdf_path' => basename($inputPdfPath)
+                    ]);
+
+                    // Aplicar perfil determinístico
+                    $stampedPdfPath = $this->pdfIntegradoService->aplicarPerfil($inputPdfPath, $profileId, $bindings);
+
+                    Log::info('✅ PERFIL: Layout padrão aplicado', [
+                        'profile_id' => $profileId,
+                        'input_pdf' => basename($inputPdfPath),
+                        'stamped_pdf' => basename($stampedPdfPath)
+                    ]);
+
+                } catch (\Exception $e) {
+                    Log::error('❌ PERFIL: Falha ao aplicar layout padrão', [
+                        'error' => $e->getMessage(),
+                        'proposicao_id' => $proposicao->id
+                    ]);
+
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Erro ao aplicar layout padrão: ' . $e->getMessage()
+                    ], 422);
+                }
+
+                // 3) PADES: Configurar baseado no perfil
+                $padesConfig = $this->pdfIntegradoService->getPadesConfig($profileId);
+                $dadosAssinatura = array_merge($dadosAssinatura, $padesConfig);
+
+                Log::info('🔧 PADES: Configuração aplicada do perfil', [
+                    'profile_id' => $profileId,
+                    'visible_widget' => $padesConfig['visible_widget'] ?? false,
+                    'reason' => $padesConfig['reason'] ?? 'N/A'
+                ]);
+
+                // 4) PADES: Assinar o PDF já carimbado
+                $result = $this->padesS3Service->signS3PDF($proposicao, $dadosAssinatura, $user, $stampedPdfPath);
 
                 if ($result['success']) {
                     Log::info('✅ Assinatura PAdES S3 concluída com sucesso', [
